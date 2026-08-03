@@ -12,10 +12,17 @@
   reachability. A remote that follows
   [ADR-013](docs/decisions/ADR-013.md) needs no lockfile: the code *is* the
   filename.
-- **Luria registers itself as remote `LU`**, and the `luria init` scaffold
-  cites it instead of pasting GitHub URLs into a new project's templates. The
-  mechanism is exercised by the package, not only by its tests — which is how
-  the `*.stub` hole below was found.
+- **Two remotes are registered, and their difference is the point.** `SG` is
+  the pilot this package was extracted from — private, filenames not yet
+  converted, so `--check` reports it *unverifiable*. `LU` is Luria itself,
+  which the `luria init` scaffold cites instead of pasting GitHub URLs into a
+  new project's templates, and which `--check` verifies for real. The mechanism
+  is exercised by the package, not only by its tests — which is how the
+  `*.stub` hole below was found.
+- **A citation may name a document before its URL resolves**
+  ([ADR-017](docs/decisions/ADR-017.md)). `SG-ADR-032` 404s today and will land
+  when strata-g's record is ported; naming the document is the durable half,
+  and the whole set flips to `ok` in one `--check` run when it does.
 - **`version:` is standard frontmatter for every scheme**, not just principles.
   Shown in the decision index only when it isn't 1, because a column of ones
   teaches nothing.

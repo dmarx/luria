@@ -62,16 +62,22 @@ A record extracted from another project cites it constantly, and an unprefixed
 code can't mean both "ours" and "theirs". Register the remote once:
 
 ```toml
-[luria.remotes.LU]
-repo = "dmarx/luria"
+[luria.remotes.SG]
+repo = "dmarx/strata-g"
 ```
 
-and `LU-ADR-013` becomes a first-class reference — `luria link --fix` writes the
+and `SG-ADR-032` becomes a first-class reference — `luria link --fix` writes the
 URL, `luria lint` demands it, and `luria remotes --check` says whether it still
 resolves. A remote that names its files after their codes needs nothing else; one
 whose filenames carry title slugs gets `luria remotes --refresh` once, which
 discovers them into a committed lockfile so CI and offline checkouts resolve
 identically ([ADR-016](docs/decisions/ADR-016.md)).
+
+A citation can land before its URL does. Luria cites both `SG` (the pilot it was
+extracted from, whose filenames haven't been converted yet) and `LU` (itself,
+which the `luria init` scaffold points at). Naming the document is the durable
+half and works immediately; the URL improves when the remote does
+([ADR-017](docs/decisions/ADR-017.md)).
 
 ## Why a lint
 

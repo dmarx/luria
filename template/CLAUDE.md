@@ -56,7 +56,6 @@ report. The suffix decides the scope, uniformly, and a directive is one line:
 `unresolved-ok` is for a code that resolves to **no document here**: a fixture
 number, or an example.
 
-<!-- unresolved-ok-block: ADR-032 — an example code; `SG` isn't registered here yet -->
 **Another project's decision is not that case — give it a prefix.**
 `SG-ADR-032` would be remote `SG`'s decision 32; one `[luria.remotes.SG]` entry in
 `luria.toml` makes it a first-class reference: the fixer writes the link, the

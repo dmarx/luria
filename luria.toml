@@ -32,14 +32,26 @@ active = "Active"
 render = "document"
 output = "docs/design-principles.md"
 
-# Another project's record, cited from this one. A reference composes the
-# prefix with that project's own code — `LU-ADR-013` — so the namespace is
-# explicit and nothing has to guess which project an unprefixed code meant
+# Other projects' records, cited from this one. A reference composes the prefix
+# with that project's own code — `SG-ADR-032`, `LU-ADR-013` — so the namespace
+# is explicit and nothing has to guess which project an unprefixed code meant
 # (ADR-016).
-#
-# `LU` is Luria itself, registered on purpose: it is what the `template/`
-# scaffold cites, and it means the remote machinery is exercised end to end by
-# this repo rather than only by its tests. `luria remotes --check` verifies it.
+
+# strata-g: the pilot this package was extracted from, and still the source of
+# most of its evidence. Its links resolve on the code-only convention, which is
+# what strata-g will use once its record is ported to Luria — until then they
+# are named-and-not-yet-followable, deliberately (ADR-017). `luria remotes
+# --check` reports them as unverifiable, because the repository is private.
+[luria.remotes.SG]
+name = "strata-g"
+repo = "dmarx/strata-g"
+ref  = "main"
+dir  = "docs/decisions"
+
+# Luria itself, registered on purpose: it is what the `template/` scaffold
+# cites, so the remote machinery is exercised by this repo rather than only by
+# its tests. Public and already on the code-only convention, so `luria remotes
+# --check` verifies it for real.
 [luria.remotes.LU]
 name = "luria"
 repo = "dmarx/luria"

@@ -329,9 +329,19 @@ def main() -> int:
                       + (f" — {result.url}" if result.url else ""))
         print()
         if unverifiable:
+            # Say which it is. "Unverified because we have a map we can't
+            # confirm" and "unverified because nothing here knows" are
+            # different claims, and a reader acts on them differently.
+            backed = sum(1 for p in unverifiable
+                         if p.code in lock().get(p.remote, {}))
+            evidence = (f"{backed} of them rest on a discovered filename; the "
+                        f"rest on the code-only convention alone"
+                        if backed else
+                        "their URLs rest on the code-only convention alone, "
+                        "which is a prediction about the remote, not a fact "
+                        "about it")
             print(f"remotes: {len(unverifiable)} could not be checked — the "
-                  "repository is not readable anonymously, so the lockfile is "
-                  "the only evidence those resolve")
+                  f"repository is not readable anonymously, so {evidence}")
         if absent:
             # Not a network result: the lockfile was read from the remote, so
             # its silence is a finding. `luria ref-status` lists these too, and

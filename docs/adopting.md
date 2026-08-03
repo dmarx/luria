@@ -92,12 +92,12 @@ Register the remote and cite it with a prefix
 ([ADR-016](decisions/ADR-016.md)):
 
 ```toml
-[luria.remotes.LU]
-name = "luria"
-repo = "dmarx/luria"
+[luria.remotes.SG]
+name = "strata-g"
+repo = "dmarx/strata-g"
 ```
 
-`LU-ADR-013` is then a first-class reference. Then:
+`SG-ADR-032` is then a first-class reference. Then:
 
 ```
 luria remotes --refresh     # discover filenames; commit remotes.lock.json
@@ -116,6 +116,10 @@ Three things worth knowing before you rely on it:
   remote Luria can't read is told so and left on the code-only convention. If
   that is wrong for your remote, give it a `url` template — the answer to an
   unreadable remote is configuration, not a credential path CI can't reproduce.
+- **A citation can land before its URL does.** If the remote hasn't adopted
+  the code-only filenames yet, register it anyway and cite it: naming the
+  document is the durable half, and the links start working when the remote
+  converts, with no edit on your side ([ADR-017](decisions/ADR-017.md)).
 - **`--check` reports, it never fails a build**, and it is never part of
   `luria lint`. It also can't distinguish "the document was deleted" from "this
   repo is private and you are anonymous", so it probes the repository once and
