@@ -26,8 +26,17 @@ globs = []
 # produces permanent, unactionable noise.
 historical = ["CHANGELOG.md", "docs/devlog.md"]
 
-# A referable document family. Add another (RFC, SPEC) as a second entry —
-# a prefix, a directory, and the status that means "in force".
+# A referable document family: a prefix, a directory, the status that means "in
+# force", and how its view is rendered — `index` when the documents are browsed
+# and read one at a time, `document` when the set is read as a whole (ADR-012).
+# Add another (RFC, SPEC) as a third entry; nothing else needs to change.
 [luria.schemes.ADR]
 dir = "docs/decisions"
 active = "Active"
+render = "index"
+
+[luria.schemes.DP]
+dir = "docs/principles"
+active = "Active"
+render = "document"
+output = "docs/design-principles.md"

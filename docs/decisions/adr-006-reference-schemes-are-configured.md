@@ -15,7 +15,7 @@ summary: >-
   the day a second scheme appears. Also configured: issue URL, code globs,
   fragment directories, and which files are dated records. Rejected: arguments
   threaded through every entry point (the second caller forgets one and the
-  linter and fixer diverge — [DP-4](../design-principles.md)).
+  linter and fixer diverge — [DP-4](../design-principles.md#dp-4)).
 ---
 
 # ADR-006: Reference schemes and paths are configuration, not constants
@@ -60,7 +60,7 @@ all, which is what lets `luria init` bootstrap.
 
 - **Arguments threaded through every entry point.** Works until the second
   caller forgets one and the linter and the fixer cover different files — the
-  exact failure [DP-4](../design-principles.md) and
+  exact failure [DP-4](../design-principles.md#dp-4) and
   [ADR-005](adr-005-references-are-hyperlinks.md) exist to prevent.
 - **`adr-ok:` with bare numbers.** Shorter to type, and a rename across every
   annotation in every adopting project the day a second scheme appears.

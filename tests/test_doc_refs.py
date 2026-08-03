@@ -254,12 +254,31 @@ def test_fragment_links_resolve_from_the_collected_file():
 
 def test_design_principle_links_to_its_anchor():
     out, _ = doc_refs.linkify("per design-principles #1", ANY_MD)
-    assert "(design-principles.md#1-no-silent-refusal)" in out
+    assert "(design-principles.md#dp-1)" in out
 
 
 def test_design_principles_page_links_to_its_own_anchor():
     out, _ = doc_refs.linkify("per design-principles #1", doc_refs.current().design_principles)
-    assert "[design-principles #1](#1-no-silent-refusal)" in out
+    assert "[design-principles #1](#dp-1)" in out
+
+
+def test_explicit_anchor_beats_the_heading_slug(project):
+    """A principle is a living document, so its heading moves. The generator
+    emits `<a name="dp-N">` for exactly that reason (ADR-012), and a link has to
+    prefer it — otherwise rewording a principle silently breaks every link to
+    it, which is the fail-stale polarity DP-3 rules out."""
+    (project / "docs" / "design-principles.md").write_text(
+        '<a name="dp-4"></a>\n\n## 4. Fire before trusting\n')
+    assert doc_refs.dp_anchors() == {4: "dp-4"}
+
+
+def test_heading_slug_is_the_fallback(project):
+    """A project whose principles are still one hand-written file has no
+    explicit anchors, and its links must still resolve — the fallback is what
+    keeps the convention adoptable before `luria index` has ever run."""
+    (project / "docs" / "design-principles.md").write_text(
+        "## 4. Fire before trusting\n")
+    assert doc_refs.dp_anchors() == {4: "4-fire-before-trusting"}
 
 
 # ── The corpus itself ────────────────────────────────────────────────────

@@ -1,0 +1,20 @@
+---
+status: Active
+version: 1
+tags:
+- record
+date: '2026-01-01'
+influenced_by: []
+origin: >-
+  Seeded from Luria. Replace this note with your own first instance.
+summary: >-
+  Knowledge is shared across collaborators regardless of species. Agent files
+  are bootloaders — pointers to the shared record — never knowledge stores.
+---
+
+# DP-005: No private brains
+
+Knowledge is shared across collaborators regardless of species. Agent files are
+legitimate as **bootloaders** — pointers to the shared record — never as
+knowledge stores. The test: *would a new human hire need this?* Then it belongs
+in the shared docs.

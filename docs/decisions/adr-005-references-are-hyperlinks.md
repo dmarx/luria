@@ -7,7 +7,7 @@ summary: >-
   Every document code, design principle and issue number cited in prose is a
   hyperlink, and `luria lint` fails on one that isn't; `luria link --fix` writes
   exactly the links the lint demands, from the same scanner, so the linter can
-  never demand a rewrite the fixer wouldn't make ([DP-4](../design-principles.md)).
+  never demand a rewrite the fixer wouldn't make ([DP-4](../design-principles.md#dp-4)).
   In the corpus this was extracted from, 2,246 references across 160 files were
   bare — and the split between linked and bare was random, which is worse than
   uniformly bare because a reader can't learn which references are worth
@@ -39,7 +39,7 @@ ones that aren't.**
 
 One scanner backs both the check and the fixer, so `luria lint`'s failure
 message is a command rather than a puzzle, and the two can't disagree about what
-counts ([DP-4](../design-principles.md)).
+counts ([DP-4](../design-principles.md#dp-4)).
 
 A reference only counts **in prose**. Code fences and spans, HTML comments, bare
 URLs, both halves of an existing link, defined shortcut references, HTML tags —

@@ -11,15 +11,15 @@ This project keeps its memory in four layers. Which one you want:
 
 | layer | holds | test |
 |---|---|---|
-| [`docs/design-principles.md`](docs/design-principles.md) | standing **values**, numbered, cited as "DP-2" | *have we re-derived this more than once?* |
+| [`docs/principles/`](docs/design-principles.md) | standing **values**, numbered, cited as "DP-2" | *have we re-derived this more than once?* |
 | [`docs/decisions/`](docs/decisions/README.md) | a **choice among alternatives** at a point in time | *did I reject an alternative or set a constraint?* |
 | `changelog.d/` | **what changed**, operator-facing, terse | *would someone running this notice?* |
 | `devlog.d/` | **how it went**, including the wrong theories | *will a future debugger want the narrative?* |
 
-**Write a fragment, never edit the assembled file.** `CHANGELOG.md`, the devlog
-and the decision index are *views*, generated or collected from fragments. One
-file per contribution, named after your branch. The lint fails on hand edits to
-generated files.
+**Write a fragment, never edit the assembled file.** `CHANGELOG.md`, the devlog,
+the decision index and `docs/design-principles.md` are all *views*, generated or
+collected from fragments. One file per contribution, named after your branch.
+The lint fails on hand edits to generated files.
 
 **File it in the same contribution as the work.** A fact filed while its context
 is loaded costs a paragraph; re-derived cold, it costs a session.
@@ -32,7 +32,7 @@ most, and they are the part that never appears in a commit message.
 ```
 luria lint            # the only one that can fail
 luria link --fix      # rewrite bare references as hyperlinks
-luria index           # regenerate the decision index (after adding a decision)
+luria index           # regenerate every generated view (decisions, principles)
 luria ref-status      # what still cites a retired decision
 luria pending         # what has been undecided, and for how long
 ```
@@ -61,3 +61,21 @@ empty "alternatives considered" usually wasn't a decision.
 
 Supersede by **adding** a decision and flipping the old one's status to
 `Superseded`. Never rewrite a decision's body — the history is the point.
+
+## Adding or revising a principle
+
+Same shape, one directory over: copy
+[`docs/principles/_template.md`](docs/principles/_template.md), take the next
+number, run `luria index`. Add one only on the **second** re-derivation of the
+same reasoning — one instance is a decision, a pattern is a principle.
+
+Principles are **living documents**, and a revision is the opposite of a
+supersession: when new experience shows an existing principle nearly covers it,
+widen that principle's wording, bump `version`, and add a `history:` entry
+saying what changed — don't write a neighbour it will be confused with. A value
+stated about one artifact is a value nobody applies to the next one, and that is
+the failure this field exists to make visible.
+
+Fill in `influenced_by:` with the decisions whose experience produced it. That
+is the evidence; without it a principle reads as taste, and taste gets
+re-litigated by the next person with different taste.

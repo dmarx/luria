@@ -1,0 +1,26 @@
+# Design principles
+
+Standing values that guide Luria — the things a project keeps re-deriving in
+review, written down once so they can be cited by number ("per DP-2") instead of
+re-argued.
+
+These are **principles, not decisions.** A [decision](decisions/README.md)
+records a choice among alternatives at a point in time; a principle is a value
+that decisions *cite*.
+
+**Principles are living documents.** Each carries a version, and a revised one
+says so — [DP-2](design-principles.md) and [DP-3](design-principles.md) are both
+at v2, because each was first written scoped too narrowly and failed to
+generalize until the second instance forced it. That history is the argument for
+the version field: a principle stated about one artifact is a principle nobody
+applies to the next one.
+
+Add a principle on the *second* re-derivation of the same reasoning — one
+instance is a decision, a pattern is a principle.
+
+<!-- GENERATED below this line by `luria index`, from the fragments in
+     docs/principles/. Edit those, not this file. -->
+
+---
+
+{principles}

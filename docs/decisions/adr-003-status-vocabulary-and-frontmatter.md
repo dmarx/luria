@@ -16,7 +16,7 @@ summary: >-
   metadata. `Deferred` earns its place: postponement stated is better than
   postponement faked as `Proposed`. Rejected: free-text status (drifted), and
   keeping the bold `**Status:**` header alongside frontmatter (two copies to
-  drift, [DP-4](../design-principles.md)).
+  drift, [DP-4](../design-principles.md#dp-4)).
 ---
 
 # ADR-003: Status is a closed vocabulary in frontmatter, enforced by lint
@@ -57,7 +57,7 @@ decision itself), `date`, an optional `issue`, and a `summary` — which is pros
 and therefore carries links like any other prose, while the rest stays data.
 
 **A vocabulary plus its lint, not a vocabulary alone.** That is the whole point
-of the audit's finding, and it is [DP-5](../design-principles.md) at rung four.
+of the audit's finding, and it is [DP-5](../design-principles.md#dp-5) at rung four.
 
 ## Alternatives considered
 
@@ -67,7 +67,7 @@ of the audit's finding, and it is [DP-5](../design-principles.md) at rung four.
   frontmatter also had to repair five records that an earlier prose-editing pass
   had mangled mid-sentence — evidence for the regex problem, not against it.
 - **Both, for readability.** Two copies of one fact, which is
-  [DP-4](../design-principles.md)'s definition of a latent bug. The frontmatter
+  [DP-4](../design-principles.md#dp-4)'s definition of a latent bug. The frontmatter
   is what the index shows, so the header would be the copy that drifts.
 - **An open vocabulary with a linter warning.** A warning on a field nobody
   reads is the status quo with extra output.

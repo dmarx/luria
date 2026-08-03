@@ -25,7 +25,7 @@ summary: >-
 Two checks take instructions from the prose they check: the reference-status
 report needs "this citation is deliberate", and the hyperlink lint needs "lint
 this code block anyway". Two ad-hoc syntaxes would be two things to learn and
-two parsers to keep in step — [DP-4](../design-principles.md).
+two parsers to keep in step — [DP-4](../design-principles.md#dp-4).
 
 ## Decision
 

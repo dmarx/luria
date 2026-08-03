@@ -52,9 +52,12 @@ def check_docs_index(errors: list[str]) -> None:
     if not index.exists():
         return
     text = index.read_text()
+    # A scheme's directory holds *sources*, not pages to browse — the thing a
+    # reader opens is the generated view, and that is what the index lists.
+    scheme_dirs = {s.dir for s in cfg.schemes.values()} | {cfg.tag_dir}
     pages = sorted(cfg.docs.glob("*.md"))
     for sub in sorted(p for p in cfg.docs.iterdir() if p.is_dir()):
-        if sub != cfg.decisions:
+        if sub not in scheme_dirs:
             pages += sorted(sub.glob("*.md"))
     for page in pages:
         rel = page.relative_to(cfg.docs)

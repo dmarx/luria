@@ -1,0 +1,58 @@
+---
+status: Active
+version: 2
+tags:
+- record
+date: '2026-08-03'
+influenced_by:
+- ADR-002
+- ADR-004
+history:
+- version: 1
+  date: '2026-08-03'
+  note: >-
+    Recorded as a decision about one file — the changelog — which is why nobody
+    generalized it when the same conflicts appeared on the narrative log months
+    later.
+- version: 2
+  date: '2026-08-03'
+  note: >-
+    Generalized from "the changelog" to any shared artifact, after the third
+    instance (the decision index) turned out to be the case where generation
+    beats fragments outright.
+origin: >-
+  Fragments assembled into a changelog; then, months later, the identical
+  conflicts recurring on the narrative log; then the decision index.
+summary: >-
+  When contributing requires editing a file everyone else also edits, in the
+  same place, that file is a lock — the conflicts carry no information and every
+  hand-resolution can silently drop somebody's work. Hand out fragments and
+  generate the view; where the content is derivable, generate it outright so
+  there is no collection step to forget.
+---
+
+# DP-002: A file every contribution must touch is a lock — hand out fragments, generate the view
+
+When contributing requires editing a file *everyone else* also edits, in the
+same place, that file is a lock. Concurrent branches serialize on it: every pair
+of contributions conflicts, every rebase re-conflicts, and the conflicts carry
+no information — two changes that share nothing still collide because both
+appended after the last thing.
+
+That is **contention, not carelessness**, so "resolve them carefully" is not the
+fix; each hand-resolution is another chance to silently drop somebody's
+contribution.
+
+The fix is structural: let each contribution own a file nobody else writes, and
+*generate* the shared artifact from those on a cadence. The shared file stops
+being a source and becomes a **view**. Better still, when the shared file's
+content is derivable from the contributions themselves, generate it outright and
+delete the hand-maintained copy — then there is no collection step to forget.
+
+The tell is a file whose diff, in every single contribution, is "+N lines in the
+same place". Notice it before the third instance.
+
+*Version 2 exists because version 1 didn't generalize.* The mechanism was
+written down as a decision about **one file**, so when the same conflicts
+appeared on a second shared document months later, nobody recognized it. A value
+stated about one artifact is a value nobody applies to the next one.

@@ -8,7 +8,7 @@ summary: >-
   Every contribution writes a fragment nobody else touches
   (`changelog.d/<slug>.md`, `devlog.d/<slug>.md`, one decision file); the shared
   documents are VIEWS assembled on a cadence, never hand-edited. A file every
-  contribution appends to is a lock ([DP-2](../design-principles.md)) — the
+  contribution appends to is a lock ([DP-2](../design-principles.md#dp-2)) — the
   conflicts carry no information and each hand-resolution can silently drop
   someone's work. Collection is deliberately NOT per-merge: the bot commit races
   in-flight rebases, so it runs weekly or on demand. A stub fragment (only an

@@ -61,7 +61,7 @@ DEFAULTS: dict = {
         "historical": ["CHANGELOG.md", "docs/devlog.md"],
     },
     "schemes": {
-        "ADR": {"dir": "docs/decisions", "active": "Active"},
+        "ADR": {"dir": "docs/decisions", "active": "Active", "render": "index"},
     },
     "stale_days": 90,
 }
@@ -103,6 +103,12 @@ class Scheme:
     prefix: str
     dir: Path
     active: str = "Active"
+    # How this scheme's generated view is built. "index" is a table of links
+    # plus per-tag pages — right when the documents are browsed and read one at
+    # a time. "document" concatenates the bodies into one page — right when the
+    # set is read as a whole, which is what a principles doc is (ADR-012).
+    render: str = "index"
+    output: Path | None = None
 
     @property
     def pattern(self):
@@ -145,16 +151,28 @@ class Config:
         return self.decisions / "tags"
 
     def is_generated(self, path: Path) -> bool:
-        return path == self.index or path.parent == self.tag_dir
+        """A view the generator owns. Rewriting one is pointless — the next
+        build undoes it — so the reference fixer skips them."""
+        if path == self.index or path.parent == self.tag_dir:
+            return True
+        return any(s.output == path for s in self.schemes.values())
 
     def link_base(self, path: Path) -> Path:
         """The directory a link written in `path` resolves against.
 
-        Not always `path.parent`: a fragment is *collected into* a file that
-        lives somewhere else, so a link relative to the fragment's own
-        directory is broken the moment it is assembled (ADR-004)."""
+        Not always `path.parent`. A fragment is *assembled into* a file that
+        lives somewhere else, so a link relative to the fragment's own directory
+        breaks the moment it is collected (ADR-005). Two kinds of fragment
+        qualify — a changelog/devlog fragment, and a document-rendered scheme's
+        source, which is the same relationship wearing a different name."""
         target = self.fragments.get(path.parent.name)
-        return (self.root / target).parent if target else path.parent
+        if target:
+            return (self.root / target).parent
+        for scheme in self.schemes.values():
+            if scheme.render == "document" and scheme.output \
+                    and path.parent == scheme.dir:
+                return scheme.output.parent
+        return path.parent
 
     def rel(self, path: Path) -> str:
         try:
@@ -183,8 +201,11 @@ def load(root: Path | None = None) -> Config:
         code_globs=tuple(raw["code"]["globs"]),
         historical=frozenset(root / p for p in raw["code"]["historical"]),
         schemes={
-            prefix: Scheme(prefix, root / spec["dir"],
-                           spec.get("active", "Active"))
+            prefix: Scheme(
+                prefix, root / spec["dir"], spec.get("active", "Active"),
+                spec.get("render", "index"),
+                root / spec["output"] if spec.get("output") else None,
+            )
             for prefix, spec in raw["schemes"].items()
         },
         stale_days=int(raw.get("stale_days", 90)),

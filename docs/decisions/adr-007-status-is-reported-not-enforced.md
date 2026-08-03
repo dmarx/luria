@@ -17,7 +17,7 @@ summary: >-
   CI artifact, because a warning with nowhere to be read is a warning nobody
   reads. Rejected: a lint error (fails CI on correct citations), a bot that
   auto-updates statuses (invents decisions nobody made), and a ratchet on a
-  checked-in baseline (a file every contribution touches — [DP-2](../design-principles.md)).
+  checked-in baseline (a file every contribution touches — [DP-2](../design-principles.md#dp-2)).
 ---
 
 # ADR-007: Document status is reported, not enforced
@@ -80,7 +80,7 @@ by side they read as an off-by-one.
   wrong and mechanically fixable, which is what makes failing right there.
 - **A ratchet: fail when the count rises.** Genuinely tempting. Rejected for now
   because the baseline would be a checked-in number every decision-bearing
-  contribution touches — the lock [DP-2](../design-principles.md) names, and the
+  contribution touches — the lock [DP-2](../design-principles.md#dp-2) names, and the
   exact thing [ADR-004](adr-004-generated-decision-index.md) removed from this
   directory. Worth revisiting if the reports get ignored.
 - **A bot that flips stale `Proposed` to `Rejected`.** Rejected outright: it

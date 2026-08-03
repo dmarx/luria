@@ -68,7 +68,7 @@ The traffic rules between them matter as much as the split:
   at all.
 - **Decisions only** (the plain ADR practice). The common baseline, and it has
   no home for a value that many decisions cite — so the value gets re-argued in
-  each one, which is the cost [DP-2](../design-principles.md) names in a
+  each one, which is the cost [DP-2](../design-principles.md#dp-2) names in a
   different domain.
 
 ## Consequences

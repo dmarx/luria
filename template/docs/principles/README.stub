@@ -1,0 +1,28 @@
+# Design principles
+
+Standing values this project keeps re-deriving in review, written down once so
+they can be cited by number ("per DP-1") instead of re-argued.
+
+These are **principles, not decisions.** A [decision](decisions/README.md)
+records a choice among alternatives at a point in time; a principle is a value
+that decisions *cite*.
+
+**Principles are living documents.** Each carries a version, and a revised one
+says so. A principle stated about one artifact is a principle nobody applies to
+the next one, so when the same reasoning shows up somewhere the wording doesn't
+cover, widen the wording and bump the version — don't write a second principle.
+
+Add one on the *second* re-derivation of the same reasoning: one instance is a
+decision, a pattern is a principle.
+
+Each principle ends with an **origin note** naming the incident that earned it,
+and the decisions whose experience produced it. This is not decoration. A rule
+whose evidence is missing reads as taste, and taste gets re-litigated by the
+next person with different taste.
+
+<!-- GENERATED below this line by `luria index`, from the fragments in
+     docs/principles/. Edit those, not this file. -->
+
+---
+
+{principles}

@@ -1,0 +1,56 @@
+---
+status: Active
+version: 2
+tags:
+- craft
+date: '2026-08-03'
+influenced_by:
+- ADR-004
+- ADR-005
+history:
+- version: 1
+  date: '2026-08-03'
+  note: Scoped to one kind of projection — a hardcoded identity union.
+- version: 2
+  date: '2026-08-03'
+  note: >-
+    Generalized to every projection, with the remedy ladder and the failure-
+    polarity vocabulary, after an arc in which five of five converted lists had
+    already drifted.
+origin: >-
+  A hardcoded type union that had drifted to 13 of 21 keys; generalized by a
+  later arc where every one of five converted projections was already wrong.
+summary: >-
+  No hand-maintained parallel copy of what an authoritative source already
+  knows. This is a rate, not a risk — five of five measured projections had
+  already drifted. Remedies, strongest first: derive the projection; guard the
+  property rather than the list; or, if a hand list must remain, choose its
+  failure polarity and say so. Fail-stale is never acceptable and is the naive
+  default.
+---
+
+# DP-003: A hand-maintained projection of a source of truth will drift — derive it
+
+No hand-maintained parallel copy of what an authoritative source already knows.
+The copy is written carefully, by someone looking directly at the source, and it
+drifts anyway: sooner or later an entry is missed, and a missed entry ships
+silently. This is **not a risk but a rate** — when one project converted five
+such lists, five out of five had already drifted.
+
+Three remedies, in order of strength:
+
+1. **Derive the projection from the source.** A registry query, a generated
+   view. Drift becomes impossible; a new entry extends every projection with no
+   edit.
+2. **When it must stay code, guard the property, not the list.** A test that
+   asserts "the list contains these names" is the drifting list in a costume.
+   Assert the invariant — *any change that alters the output must alter the
+   projection* — and fire the guard once to prove it catches
+   ([DP-6](design-principles.md#6-fire-before-trusting)).
+3. **When a hand list must remain, choose its failure polarity** and say so in a
+   comment. Fail-safe (the missed entry still works, suboptimally) and fail-loud
+   (the miss is immediately visible) are both acceptable. **Fail-stale — the
+   miss ships as silently wrong behavior — is never acceptable**, and it is the
+   polarity a naive list has by default.
+
+In this package, the decision index is rung 1 and the reference lint is rung 2.

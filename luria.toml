@@ -21,3 +21,12 @@ historical = ["CHANGELOG.md", "docs/devlog.md"]
 [luria.schemes.ADR]
 dir = "docs/decisions"
 active = "Active"
+render = "index"
+
+# Principles are read as a whole, not browsed one at a time, so their view is a
+# document rather than a table (ADR-012). Same fragment convention either way.
+[luria.schemes.DP]
+dir = "docs/principles"
+active = "Active"
+render = "document"
+output = "docs/design-principles.md"

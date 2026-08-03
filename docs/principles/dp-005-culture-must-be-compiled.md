@@ -1,0 +1,39 @@
+---
+status: Active
+version: 1
+tags:
+- record
+date: '2026-08-03'
+influenced_by:
+- ADR-003
+- ADR-005
+origin: >-
+  The strata-g project-memory doctrine. The linked-versus-bare reference split
+  was the demonstration: convention written down but unguarded, and the corpus
+  drifted toward random rather than toward wrong.
+summary: >-
+  A stateless collaborator can't be socialized, so a norm that exists only as
+  prose is followed probabilistically. Norms that matter get walked up the
+  ladder — prose, convention, mechanism, guarantee. When you find yourself
+  repeating a correction, that is the signal to walk the norm up a rung.
+---
+
+# DP-005: Culture must be compiled
+
+A stateless collaborator can't be socialized. Half the contributors to a modern
+codebase arrive with no memory, read some pages, work, and vanish — so a norm
+that exists only as prose is followed probabilistically, and the ones that
+matter get walked up the ladder:
+
+> prose → convention (file layout) → mechanism (a glob, a fragment directory) →
+> guarantee (types, CI, a lint)
+
+When you find yourself repeating a correction, that is the signal to walk the
+norm up a rung. This package is one set of norms at rung four, and every check
+in it started as a paragraph somebody kept having to repeat.
+
+The demonstration is worth keeping: with the "cite by link" convention written
+down but unguarded, one corpus drifted not toward *unlinked* but toward
+**random** — the same reference linked sixty times and bare thirty more.
+Randomness is worse than a uniform mistake, because a reader can't learn the
+convention from the corpus and stops trying.

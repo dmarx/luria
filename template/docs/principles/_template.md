@@ -1,0 +1,73 @@
+---
+# Copy this file to dp-<NNN>-<kebab-slug>.md — next number wins. Numbering is
+# sequential and permanent: a principle is cited by number ("per DP-3"), so a
+# number can be retired but never reused.
+#
+# This frontmatter is the ONLY place these facts live. `docs/design-principles.md`
+# is generated from it (ADR-012) — never edit that file by hand; run
+# `luria index`.
+
+# Same vocabulary as a decision (ADR-003): Active | Proposed | Deferred |
+# Superseded | Rejected, optionally " — <note>". A principle that stops being
+# believed is Superseded, not deleted — something out there cites it.
+status: Active
+
+# Principles are LIVING DOCUMENTS. Bump this whenever the principle's scope or
+# claim changes, and add a `history:` entry saying what changed. A principle
+# stated about one artifact is a principle nobody applies to the next one, and
+# the version is how the next reader can tell that already happened once.
+version: 1
+
+# Browsing categories, shared with the decisions (see decisions/tags.yaml).
+tags:
+- craft
+
+date: '2026-01-01'
+
+# The decisions whose experience produced this principle — the inverse of the
+# usual direction, in which decisions cite principles. Rendered as followable
+# backlinks under the principle, and they are the evidence that stops it reading
+# as taste. Empty is honest for a principle carried in from elsewhere.
+influenced_by:
+- ADR-000
+
+# Optional, and only once there IS a version 2. One entry per version, oldest
+# first, each saying what changed and why — the revision is usually the most
+# useful thing the principle teaches.
+# history:
+# - version: 1
+#   date: '2026-01-01'
+#   note: >-
+#     Stated narrowly, about one artifact.
+# - version: 2
+#   date: '2026-02-01'
+#   note: >-
+#     Generalized, after the second instance made the narrow statement useless.
+
+# Where this came from: the concrete episode that made it a principle, not a
+# preference. One sentence, rendered at the end of the principle's metadata line.
+origin: >-
+  The specific thing that happened twice.
+
+# Optional. Not rendered in the document — the principle's own text is right
+# there — but it is what a `render = "index"` scheme would show, and what a
+# reader of the frontmatter alone gets.
+summary: >-
+  The principle in two or three sentences, stated as a claim rather than a topic.
+---
+
+# DP-NNN: The principle, stated as a claim you can disagree with
+
+The claim, in the imperative or the declarative — never as a topic heading. A
+reader should be able to hold the first sentence in their head and apply it.
+
+Why it is true: the mechanism, not the vibe. What goes wrong when it is ignored,
+concretely enough that someone can recognize the situation from the description.
+
+Applied here: two or three places in *this* codebase where the principle is
+visibly in force. This section is what makes a principle citable instead of
+decorative — it shows the reader what compliance looks like.
+
+The corollary people skip, if there is one. Most principles have a second-order
+consequence that is the actually expensive part to follow, and naming it is
+worth more than restating the claim.

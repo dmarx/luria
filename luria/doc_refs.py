@@ -401,18 +401,31 @@ def adr_paths() -> dict[int, Path]:
     return out
 
 
+EXPLICIT_ANCHOR_RE = re.compile(r'^<a name="[a-z]+-(\d+)"></a>\s*$')
+HEADING_ANCHOR_RE = re.compile(r"^##\s+(\d+)\.\s+(.+?)\s*$")
+
+
 def dp_anchors() -> dict[int, str]:
-    """Principle number → GitHub heading anchor, from `## 13. Title`."""
+    """Principle number → the anchor a link to it should use.
+
+    An explicit `<a name="dp-13"></a>` wins over the heading's own slug, because
+    a principle is a living document: reword one and every heading-derived link
+    to it stops resolving, silently. The generator emits explicit anchors
+    (ADR-012), but a project whose principles are still one hand-written file
+    has only headings, and those still work."""
     anchors: dict[int, str] = {}
     principles = current().design_principles
     if not principles.exists():
         return {}
     for line in principles.read_text().splitlines():
-        m = re.match(r"^##\s+(\d+)\.\s+(.+?)\s*$", line)
-        if not m:
-            continue
-        slug = re.sub(r"[^a-z0-9 -]", "", f"{m.group(1)}. {m.group(2)}".lower())
-        anchors[int(m.group(1))] = slug.replace(" ", "-")
+        if m := EXPLICIT_ANCHOR_RE.match(line):
+            anchors[int(m.group(1))] = line.split('"')[1]
+        elif m := HEADING_ANCHOR_RE.match(line):
+            num = int(m.group(1))
+            if num in anchors:                     # explicit anchor already won
+                continue
+            slug = re.sub(r"[^a-z0-9 -]", "", f"{num}. {m.group(2)}".lower())
+            anchors[num] = slug.replace(" ", "-")
     return anchors
 
 

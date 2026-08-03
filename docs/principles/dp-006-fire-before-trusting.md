@@ -1,0 +1,37 @@
+---
+status: Active
+version: 1
+tags:
+- craft
+date: '2026-08-03'
+influenced_by:
+- ADR-007
+origin: >-
+  Two inert mechanisms in strata-g — an alert shape that could never fire, and a
+  CI fast path whose fail-safe polarity made a month of inertness invisible.
+  Both were discovered by accident rather than by the thing they guarded.
+summary: >-
+  Every guard, alert and CI gate gets one deliberate sabotage run to prove it
+  catches, before anyone relies on it. Provisioned is not working. Even a
+  fail-safe guard needs firing once, or it silently never delivers the benefit
+  it exists for — and the run belongs in the record, or the next person re-tests
+  it.
+---
+
+# DP-006: Fire before trusting
+
+Every guard, alert, and CI gate gets one deliberate sabotage run to prove it
+catches, before anyone relies on it. **Provisioned is not working.**
+
+One project has been bitten twice by mechanisms that sat green and inert: an
+alert shape that could never fire, and a CI fast path whose *fail-safe* polarity
+made a month of inertness invisible. Neither was found by the thing it guarded;
+both were found by accident.
+
+Even a fail-safe guard needs firing once, or it silently never delivers the
+benefit it exists for.
+
+**Say so in the record.** A devlog entry naming the sabotage run — what was
+broken, what the guard printed, what it printed after the repair — is the
+difference between a guard someone trusts and a guard someone re-tests from
+scratch because they can't tell whether it works.

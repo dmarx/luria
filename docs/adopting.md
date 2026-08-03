@@ -17,9 +17,14 @@ grew past) never gets used.
 Then:
 
 ```
-luria index     # build the decision index from frontmatter
+luria index     # build the generated views from frontmatter
 luria lint      # should be clean
 ```
+
+`luria index` is not optional after scaffolding: the two documents a reader
+actually opens — the decision index and `design-principles.md` — do not exist
+until it runs, because both are generated from the fragments beside them
+([ADR-012](decisions/adr-012-principles-are-fragments-too.md)).
 
 ## What you get
 
@@ -30,17 +35,26 @@ docs/
     _template.md            copy this to make a decision
     README.stub             the index's prose; the index itself is generated
     tags.yaml               tag order and blurbs
-  design-principles.md      seeded with the ones that earn this machinery
+  principles/
+    _template.md            copy this to make a principle
+    README.stub             the document's prose; the rest is generated
+    dp-00N-*.md             seeded with the ones that earn this machinery
 changelog.d/_template.md    one fragment per contribution
 devlog.d/_template.md       optional; significant work only
 CLAUDE.md                   a bootloader section pointing at the above
 ```
 
+Delete the seed principles you disagree with — a principle nobody believes is
+worse than an empty file. Keep the ones you keep *honest*: replace each
+`origin:` note with your own first instance, because a rule whose evidence is
+missing reads as taste, and taste gets re-litigated by the next person with
+different taste.
+
 ## Adopting into a project that already has decisions
 
 Point `luria.toml` at wherever they live and run `luria lint`. Expect failures
 on the first run — that is the machinery telling you what the prose convention
-had been letting through. Two are usual:
+had been letting through. Three are usual:
 
 - **Frontmatter.** If your decisions use a prose `**Status:**` header, they need
   frontmatter ([ADR-003](decisions/adr-003-status-vocabulary-and-frontmatter.md)).
@@ -51,6 +65,13 @@ had been letting through. Two are usual:
   sample of the diff rather than trusting it wholesale — that is how the
   code-span bug in [ADR-005](decisions/adr-005-references-are-hyperlinks.md) was
   caught.
+- **A hand-written principles document.** Split it: one `dp-NNN-*.md` per
+  section, `## N. Title` back up to `# DP-NNN: Title`, and the `README.stub`
+  keeping the prose that came before them. Set every `version: 1` except the
+  ones you know were reworded — those are the interesting ones, and `history:`
+  is where the rewording goes. Until you split it, leave the DP scheme out of
+  `luria.toml` and the document stays hand-maintained; links to `#N-the-heading`
+  keep resolving either way.
 
 Everything else is a warning and can wait
 ([ADR-007](decisions/adr-007-status-is-reported-not-enforced.md)).
