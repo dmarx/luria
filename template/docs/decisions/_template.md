@@ -2,11 +2,12 @@
 # Copy this file to ADR-<NNN>.md — next number wins, numbering is sequential and
 # carries information (it's the order decisions were made). The filename is the
 # code and nothing else; the title goes in `title:` below, where correcting it
-# costs an edit rather than a rename plus every link (ADR-013).
+# costs an edit rather than a rename plus every link. Why:
+#   https://github.com/dmarx/luria/blob/main/docs/decisions/ADR-013.md
 #
 # This frontmatter is the ONLY place these facts live. The index and the per-tag
-# pages are generated from it (ADR-004) — never edit them by hand; run
-# `luria index`.
+# pages are generated from it — never edit them by hand; run `luria index`.
+# Why:  https://github.com/dmarx/luria/blob/main/docs/decisions/ADR-004.md
 
 # Active | Proposed | Deferred | Superseded | Rejected, optionally " — <note>".
 # Supersede rather than rewrite: when a decision is replaced, set the old one to

@@ -17,15 +17,18 @@ Checks (each one fails the build):
    writes exactly the links this check demands.
 
 It also prints WARNINGS, which never affect the exit code (ADR-007): references
-to retired documents, directives that no longer apply, and a count of undecided
-decisions. Citing a `Rejected` decision — or leaving one `Proposed` — is often
-right, so neither can be an error; both should be visible. `luria ref-status`
-and `luria pending` give the detail, and an `inactive-ok:` comment acknowledges
-a deliberate reference so only the unconsidered ones stay listed.
+to retired documents, codes that resolve to no document at all, directives that
+no longer apply, and a count of undecided decisions. Citing a `Rejected`
+decision — or leaving one `Proposed`, or naming another project's ADR-032 — is
+often right, so none can be an error; all should be visible. `luria ref-status`
+and `luria pending` give the detail, and an `inactive-ok:` / `unresolved-ok:`
+comment acknowledges a deliberate one so only the unconsidered ones stay
+listed.
 
 Exit 0 when clean; exit 1 with one line per violation.
 """
 
+# unresolved-ok-file: ADR-032 — an illustrative foreign code in the docstring
 from __future__ import annotations
 
 import datetime as dt
@@ -150,6 +153,16 @@ def report_warnings() -> None:
               "unacknowledged from current docs/code (`luria ref-status` for "
               "the sites, `inactive-ok:` to acknowledge one)", file=sys.stderr)
         for line in lines:
+            print(f"  {line}", file=sys.stderr)
+
+    # A code that resolves to nothing is a reference the reader can't follow
+    # and the fixer can't link — until this existed it was silently dropped.
+    loose = ref_status.dangling_lines()
+    if loose:
+        print(f"luria: {len(loose)} code(s) resolve to no document "
+              "(`luria ref-status` for the sites, `unresolved-ok:` for the "
+              "deliberate ones)", file=sys.stderr)
+        for line in loose:
             print(f"  {line}", file=sys.stderr)
 
     # A directive that silently does nothing is worse than no directive.

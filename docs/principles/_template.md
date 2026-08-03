@@ -34,9 +34,9 @@ date: '2026-01-01'
 # The decisions whose experience produced this principle — the inverse of the
 # usual direction, in which decisions cite principles. Rendered as followable
 # backlinks under the principle, and they are the evidence that stops it reading
-# as taste. Empty is honest for a principle carried in from elsewhere.
-influenced_by:
-- ADR-000
+# as taste. List them as full codes, one per line. Empty is honest for a
+# principle carried in from elsewhere.
+influenced_by: []
 
 # Optional, and only once there IS a version 2. One entry per version, oldest
 # first, each saying what changed and why — the revision is usually the most

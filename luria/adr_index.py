@@ -79,7 +79,7 @@ def rebase_links(text: str, prefix: str) -> str:
     ADR body they were lifted from — and this index renders them both there
     (`README.md`, prefix "") and one level down (`tags/<tag>.md`, prefix "../").
     Owning the rendering is what lets a summary carry links at all: without this,
-    no single relative target could be correct in both (ADR-187)."""
+    no single relative target could be correct in both (ADR-005)."""
     if not prefix:
         return text
     return RELATIVE_LINK_RE.sub(lambda m: prefix + m.group(1), text)
@@ -132,7 +132,7 @@ class Adr:
 
         A summary may carry relative links, written — like the ADR's body —
         relative to `docs/decisions/`. `prefix` rebases them for output that
-        renders somewhere else (ADR-187); it is the same prefix the row's own
+        renders somewhere else (ADR-005); it is the same prefix the row's own
         ADR link already took."""
         return rebase_links(str(self.meta.get("summary") or self.title).strip(), prefix)
 
@@ -146,6 +146,7 @@ class Adr:
         return [str(x).strip() for x in raw]
 
     def row(self, prefix: str = "") -> str:
+        # unresolved-ok-block: ADR-100 — a stand-in number in the example below
         # Every rendered field is rebased, not just the ADR's own link: a
         # "Superseded — by [ADR-100](…)" note is prose too, and its link was
         # silently broken on the tag pages (four of them) until this existed.

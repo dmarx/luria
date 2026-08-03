@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Write the docs-status reports as markdown files (ADR-188).
+"""Write the docs-status reports as markdown files (ADR-007).
 
     luria reports               # → build/doc-reports/
     luria reports --out DIR
@@ -71,6 +71,25 @@ def reference_status(today: dt.date) -> str:
         for c in loud:
             out.append(f"- `{c}`")
         out.append("")
+
+    loose = ref_status.dangling(result, docs)
+    out += ["## Codes that resolve to no document", "",
+            "A reference nobody can follow. Three things look identical from "
+            "here and read very differently — a typo, a number carried in from "
+            "another project, and an illustrative code in an example — so this "
+            "is a report, not an error. `unresolved-ok:` retires the "
+            "deliberate ones, at the same three scopes.", ""]
+    acked = ref_status.dangling_acknowledged_count(result, docs)
+    out += [f"**{len(loose)} code(s) name no document.** {acked} reference(s) "
+            "carry an `unresolved-ok` annotation and are not listed below.", ""]
+    if not loose:
+        out.append("Every code resolves. ✅")
+    for code, sites, acked in loose:
+        tail = f" · {acked} acknowledged elsewhere" if acked else ""
+        out += ["", f"### {code} — no such document ({len(sites)} site(s)"
+                    f"{tail})", ""]
+        out += [f"- `{c}`" for c in sites]
+    out.append("")
 
     stale = ref_status.stale_annotations(result, docs)
     for path in doc_refs.doc_files():

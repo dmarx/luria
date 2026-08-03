@@ -1,13 +1,19 @@
 #!/usr/bin/env python3
-"""Report references to retired documents, and the annotations that excuse them.
+"""Report references that don't hold up, and the annotations that excuse them.
 
     luria ref-status            # grouped report, 5 sites per document
     luria ref-status --all      # every site
 
+Two ways a reference fails to mean what it says. It can point at a document
+that is no longer in force — the original subject of this module — or it can
+point at **no document at all**: a typo, a number carried over from another
+project, a decision that was renumbered. Both are reported here; neither fails
+a build (ADR-007).
+
 A reference to another document reads as "this is why things are the way they
 are". That claim is only true while the referenced document is in force. A
 `Deferred` ADR cited from live plugin code, or a `Proposed` one cited as settled
-architecture, is the same class of drift ADR-123 found in the status field
+architecture, is the same class of drift ADR-003 found in the status field
 itself — except nothing was looking for it.
 
 These are **warnings, not errors**. Citing a retired document is often exactly
@@ -122,7 +128,11 @@ def load_docs() -> dict[str, Doc]:
 # what lets one vocabulary serve more than one reference scheme.
 CODE_RE = re.compile(r"\b([A-Za-z]{2,10})-(\d{1,4})\b")
 BARE_NUMBER_RE = re.compile(r"(?<![\w-])\d{1,4}(?![\w-])")
+URL_RE = re.compile(r"\b[a-z][a-z0-9+.-]*://[^\s<>)\]\"']+", re.IGNORECASE)
 DIRECTIVE = "inactive-ok"
+# The mirror-image acknowledgement: this code names nothing here *on purpose*.
+# A fixture number in a test, or another project's decision cited as history.
+DANGLING_DIRECTIVE = "unresolved-ok"
 
 
 @dataclass(frozen=True)
@@ -130,6 +140,7 @@ class Annotation:
     directive: directives.Directive
     codes: frozenset[str]
     problem: str | None = None        # malformed: what's wrong with it
+    kind: str = DIRECTIVE             # which vocabulary word wrote it
 
     def __str__(self) -> str:
         return f"{_rel(self.directive.path)}:{self.directive.line}"
@@ -142,12 +153,19 @@ class Annotation:
         return self.directive.covers(line)
 
 
-def annotations(path: Path, text: str, known: set[str]) -> list[Annotation]:
-    """Every `inactive-ok` annotation in `path`, malformed ones included — they
+def annotations(path: Path, text: str, known: set[str],
+                directive: str = DIRECTIVE) -> list[Annotation]:
+    """Every annotation of one kind in `path`, malformed ones included — they
     are reported rather than dropped, because an annotation that silently does
-    nothing is worse than no annotation."""
+    nothing is worse than no annotation.
+
+    The two kinds share every rule but one, and it is inverted: `inactive-ok`
+    must name a document that exists (else it excuses nothing), while
+    `unresolved-ok` must name one that doesn't (else there is nothing to
+    excuse). Same check, opposite sign."""
+    resolvable = directive != DANGLING_DIRECTIVE
     found = []
-    for d in directives.find(path, text, {DIRECTIVE}):
+    for d in directives.find(path, text, {directive}):
         spec = " ".join(d.args)
         codes = {f"{p.upper()}-{int(n):03d}" for p, n in CODE_RE.findall(spec)}
         problem = None
@@ -156,11 +174,11 @@ def annotations(path: Path, text: str, known: set[str]) -> list[Annotation]:
         elif BARE_NUMBER_RE.search(CODE_RE.sub("", spec)):
             example = f"{next(iter(schemes()), 'ADR')}-012"
             problem = f"has a bare number — write the full code (e.g. {example})"
-        else:
-            unknown = sorted(c for c in codes if c not in known)
-            if unknown:
-                problem = f"names unknown document(s): {', '.join(unknown)}"
-        found.append(Annotation(d, frozenset(codes), problem))
+        elif resolvable and (unknown := sorted(c for c in codes if c not in known)):
+            problem = f"names unknown document(s): {', '.join(unknown)}"
+        elif not resolvable and (real := sorted(c for c in codes if c in known)):
+            problem = f"names {', '.join(real)}, which does resolve here"
+        found.append(Annotation(d, frozenset(codes), problem, directive))
     return found
 
 
@@ -181,11 +199,15 @@ class Citation:
 @dataclass
 class Scan:
     cited: dict[str, list[Citation]] = field(default_factory=dict)
+    # Codes cited that name no document here. Kept rather than dropped: a
+    # reference that resolves to nothing is a silent no-op, and a tool that
+    # refuses without saying so teaches nobody (DP-1).
+    dangling: dict[str, list[Citation]] = field(default_factory=dict)
     annotations: list[Annotation] = field(default_factory=list)
 
     def used(self, ann: Annotation) -> bool:
-        return any(c.excused_by is ann
-                   for sites in self.cited.values() for c in sites)
+        pool = self.dangling if ann.kind == DANGLING_DIRECTIVE else self.cited
+        return any(c.excused_by is ann for sites in pool.values() for c in sites)
 
 
 def scanned_files() -> list[Path]:
@@ -217,14 +239,22 @@ def scan(files: list[Path] | None = None, docs: dict[str, Doc] | None = None) ->
         except (OSError, UnicodeDecodeError):
             continue
         anns = annotations(path, text, known)
-        result.annotations += anns
+        dangling_anns = annotations(path, text, known, DANGLING_DIRECTIVE)
+        result.annotations += anns + dangling_anns
         usable = [a for a in anns if not a.problem]
+        usable_dangling = [a for a in dangling_anns if not a.problem]
         # Naming a code in a directive is not citing it — true of a live
         # annotation and of an example of one alike, which is why this matches
         # the *shape* rather than the parsed directives. Without it an
         # annotation excuses itself and could never go stale, and documenting
         # the syntax would inflate the report.
-        text = _blank(text, directives.shaped_spans(text, {DIRECTIVE}))
+        text = _blank(text, directives.shaped_spans(
+            text, {DIRECTIVE, DANGLING_DIRECTIVE}))
+        # A code inside a URL is part of an address, not a citation. Linking
+        # out to another project's ADR-013 is the *correct* way to name a
+        # foreign document (ADR-009), and counting it as a local reference
+        # would report every such link as dangling.
+        text = _blank(text, [m.span() for m in URL_RE.finditer(text)])
         for line_no, line in enumerate(text.splitlines(), 1):
             bare = line
             # One site per line: citing the same document twice in a sentence
@@ -234,7 +264,13 @@ def scan(files: list[Path] | None = None, docs: dict[str, Doc] | None = None) ->
                 codes |= {scheme.code(m.group("num"))
                           for m in scheme.pattern.finditer(bare)}
             for code in codes:
-                if own.get(path) == code or code not in docs:
+                if own.get(path) == code:
+                    continue
+                if code not in docs:
+                    excuse = next((a for a in usable_dangling
+                                   if code in a.codes and a.covers(line_no)), None)
+                    result.dangling.setdefault(code, []).append(
+                        Citation(path, line_no, code, excuse))
                     continue
                 # An annotation excuses a *retired* reference. Excusing an
                 # in-force one means nothing, and counting it as "used" would
@@ -245,8 +281,9 @@ def scan(files: list[Path] | None = None, docs: dict[str, Doc] | None = None) ->
                      if code in a.codes and a.covers(line_no)), None)
                 result.cited.setdefault(code, []).append(
                     Citation(path, line_no, code, excuse))
-    for sites in result.cited.values():
-        sites.sort(key=lambda c: (str(c.path), c.line))
+    for pool in (result.cited, result.dangling):
+        for sites in pool.values():
+            sites.sort(key=lambda c: (str(c.path), c.line))
     return result
 
 
@@ -285,6 +322,36 @@ def flagged(result: Scan | None = None, docs: dict[str, Doc] | None = None):
     return sorted(rows, key=lambda r: (-len(r[1]), r[0].code))
 
 
+def dangling(result: Scan | None = None,
+             docs: dict[str, Doc] | None = None) -> list[tuple[str, list[Citation], int]]:
+    """(code, unexcused sites, excused count) for codes that name no document
+    here — most-cited first.
+
+    Three things look identical from here and read very differently: a typo, a
+    number carried in from another project, and a fixture code in a test. Only
+    a human can tell them apart, which is why this is a report and not an error
+    (ADR-007) — and why `unresolved-ok` exists to retire the ones that are
+    deliberate."""
+    result = scan(docs=docs) if result is None else result
+    rows = []
+    for code, sites in result.dangling.items():
+        loud = [c for c in sites if c.excused_by is None]
+        if loud:
+            rows.append((code, loud, len(sites) - len(loud)))
+    return sorted(rows, key=lambda r: (-len(r[1]), r[0]))
+
+
+def dangling_lines(result: Scan | None = None,
+                   docs: dict[str, Doc] | None = None) -> list[str]:
+    out = []
+    for code, loud, excused in dangling(result, docs):
+        files = len({c.path for c in loud})
+        tail = f", {excused} acknowledged" if excused else ""
+        out.append(f"{code} resolves to no document, cited {len(loud)}× in "
+                   f"{files} file(s){tail}")
+    return out
+
+
 def acknowledged_count(result: Scan | None = None,
                        docs: dict[str, Doc] | None = None) -> int:
     """How many references to retired documents an annotation excused. Printed
@@ -293,6 +360,15 @@ def acknowledged_count(result: Scan | None = None,
     result = scan(docs=docs) if result is None else result
     return sum(1 for code, sites in result.cited.items()
                if not docs[code].active
+               for c in sites if c.excused_by is not None)
+
+
+def dangling_acknowledged_count(result: Scan | None = None,
+                                docs: dict[str, Doc] | None = None) -> int:
+    """The same count for `unresolved-ok`. Both are printed on a clean run, so
+    "nothing to report" can never mean "everything was silenced"."""
+    result = scan(docs=docs) if result is None else result
+    return sum(1 for sites in result.dangling.values()
                for c in sites if c.excused_by is not None)
 
 
@@ -308,11 +384,14 @@ def stale_annotations(result: Scan | None = None,
         if ann.problem:
             out.append(f"{ann}: annotation {ann.problem}")
         elif not result.used(ann):
-            active = sorted(c for c in ann.codes
-                            if c in docs and docs[c].active)
-            why = (f"{', '.join(active)} is Active now" if active
-                   else "nothing in scope cites "
-                        f"{', '.join(sorted(ann.codes))}")
+            named = ", ".join(sorted(ann.codes))
+            if ann.kind == DANGLING_DIRECTIVE:
+                why = f"nothing in scope cites {named}"
+            else:
+                active = sorted(c for c in ann.codes
+                                if c in docs and docs[c].active)
+                why = (f"{', '.join(active)} is Active now" if active
+                       else f"nothing in scope cites {named}")
             out.append(f"{ann}: annotation no longer applies — {why}")
     return sorted(out)
 
@@ -367,6 +446,24 @@ def main() -> int:
     else:
         print(f"reference status: no unacknowledged references to retired "
               f"documents ({excused} acknowledged)")
+
+    loose_excused = dangling_acknowledged_count(result, docs)
+
+    loose = dangling(result, docs)
+    if not loose:
+        print(f"reference status: every code resolves "
+              f"({loose_excused} acknowledged)")
+    if loose:
+        print(f"reference status: {len(loose)} code(s) resolve to no document",
+              file=sys.stderr)
+        for code, sites, excused in loose:
+            tail = f", {excused} acknowledged" if excused else ""
+            print(f"  {code} — cited {len(sites)}×{tail}", file=sys.stderr)
+            shown = _spread(sites, 0 if args.all else DEFAULT_SITES)
+            for c in sorted(shown, key=lambda c: (str(c.path), c.line)):
+                print(f"      {c}", file=sys.stderr)
+            if len(sites) > len(shown):
+                print(f"      … and {len(sites) - len(shown)} more", file=sys.stderr)
 
     stale = stale_annotations(result, docs)
     if stale:

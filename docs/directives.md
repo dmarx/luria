@@ -1,6 +1,6 @@
 # Comment directives
 
-Two checks take instructions from the prose they check. They share one parser,
+Three checks take instructions from the prose they check. They share one parser,
 one shape, and one scope rule ([ADR-008](decisions/ADR-008.md)).
 
 ```
@@ -12,6 +12,9 @@ real comments: HTML comments in markdown (outside code), `COMMENT` tokens in
 Python, text after a comment marker elsewhere. An example inside a fence or a
 docstring is not a comment and does not fire — which is deliberate, and was
 learned four separate times.
+
+**A directive is one line.** Arguments stop at the newline, so a comment that
+wraps loses everything after the break. Write a long list on one long line.
 
 ## Scope
 
@@ -71,8 +74,32 @@ literally, so the link the lint then demands shows as `[ADR-004](…)` in the
 sample. That is exactly the trade this directive exists to let an author make,
 per block, rather than being settled once for a whole corpus.
 
-## Adding a third directive
+## `unresolved-ok` — this code names nothing on purpose
+
+A cited code that resolves to no document is reported
+([ADR-014](decisions/ADR-014.md)): it is a typo, another project's decision, or
+an illustrative code in an example, and only a human can tell which. This
+retires the third kind.
+
+```
+<!-- unresolved-ok: ADR-053 — a strata-g code, quoted as the worked example -->
+# unresolved-ok-file: ADR-019 ADR-163 — fixture codes, deliberately not real
+```
+
+It is `inactive-ok` with **the validity check inverted**, which is the part
+worth knowing. `inactive-ok` is malformed when it names a code that doesn't
+resolve — it would excuse nothing. `unresolved-ok` is malformed when it names
+one that *does*. Either way the annotation reports itself the day it stops
+applying, which is the property that keeps a suppression from becoming a
+silence.
+
+A code inside a URL is never a citation, so linking out to another project's
+decision needs no annotation at all — and that, rather than a bare code, is
+how a foreign document should be named.
+
+## Adding a fourth directive
 
 A name, not a new syntax: parse it out of `luria.directives.find(...)`, validate
 its arguments with `directives.problems(...)`, and report the ones that no
-longer apply. The scope rules and the comment handling come free.
+longer apply. The scope rules and the comment handling come free —
+`unresolved-ok` needed one inverted predicate and nothing else.

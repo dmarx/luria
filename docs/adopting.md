@@ -3,7 +3,7 @@
 ## Install and scaffold
 
 ```
-pip install luria
+pip install git+https://github.com/dmarx/luria      # not on PyPI yet
 cd your-project
 luria init --issue-url https://github.com/owner/repo/issues
 ```

@@ -54,6 +54,7 @@ elsewhere. An example inside a fence or a docstring is not a comment, and does
 not fire.
 """
 
+# unresolved-ok-file: ADR-157, ADR-061 — illustrative codes in the docstring above
 from __future__ import annotations
 
 import io

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Find (and fix) documentation references that should be markdown hyperlinks.
 
-The docs cite three kinds of internal reference constantly — ADRs (`ADR-158`),
+The docs cite three kinds of internal reference constantly — ADRs (`ADR-004`),
 design principles (`design-principles #13`) and GitHub issues/PRs (`#551`). Most
 were already links; a long tail was bare text, so "read the ADR I just cited"
 meant grepping `docs/decisions/` by hand.
@@ -23,17 +23,18 @@ an existing markdown link, reference-style link definitions, and YAML
 frontmatter — except an ADR's `summary:`, which is prose. The generator renders
 a summary into `docs/decisions/README.md` *and* into
 `docs/decisions/tags/<tag>.md`, one directory deeper, and rebases relative
-targets per output, so a link written there is correct in both (ADR-187). The
+targets per output, so a link written there is correct in both (ADR-005). The
 rewrite is verified against the YAML rather than assumed safe.
 
 Link bases
 ----------
 Links are written relative to where the text is *rendered*, which is not always
 where the file lives: `changelog.d/*.md` is assembled into `/CHANGELOG.md` and
-`devlog.d/*.md` into `docs/devlog.md` (ADR-032, ADR-157). `link_base()` maps a
+`devlog.d/*.md` into `docs/devlog.md` (ADR-002). `link_base()` maps a
 path to the directory its links must resolve from.
 """
 
+# unresolved-ok-file: ADR-019, ADR-157 — illustrative codes in this module's prose
 from __future__ import annotations
 
 import re
@@ -151,7 +152,7 @@ def summary_span(text: str) -> tuple[int, int] | None:
     The rest of the frontmatter is data (`status:`, `issue:`, `tags:`) that the
     generator reads by value; a link there would be a link in a data field. The
     summary is different: `build_adr_index.py` renders it as markdown into the
-    index and the tag pages, and rebases relative targets per output (ADR-187),
+    index and the tag pages, and rebases relative targets per output (ADR-005),
     so a link written here works in every place it lands."""
     fm = _frontmatter_span(text)
     if not fm:

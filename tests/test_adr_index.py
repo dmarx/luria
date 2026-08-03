@@ -13,6 +13,7 @@ the page they assemble into.
 import sys
 from pathlib import Path
 
+# unresolved-ok-file: ADR-053, ADR-404 — fixture codes, deliberately not real
 REPO = Path(__file__).resolve().parents[1]
 
 from luria import adr_index as builder  # noqa: E402
@@ -39,7 +40,7 @@ def test_absolute_and_anchor_targets_are_left_alone():
 
 def test_no_prefix_is_a_no_op():
     """README.md renders from the ADRs' own directory, so its rows are the
-    unmodified text — that's what kept the ADR-158 migration byte-identical."""
+    unmodified text — that's what kept the ADR-004 migration byte-identical."""
     text = "see [ADR-053](adr-053-x.md) and [#1](https://example.com/1)"
     assert rebase(text, "") == text
 

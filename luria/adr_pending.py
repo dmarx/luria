@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Report ADRs still awaiting a decision, oldest first (ADR-188).
+"""Report ADRs still awaiting a decision, oldest first (ADR-007).
 
     luria pending                     # the table
     luria pending --stale-days 30     # a tighter "overdue" line
@@ -7,7 +7,7 @@
 
 `Proposed` and `Deferred` are the two statuses that describe an *open* question:
 "we haven't decided" and "we decided not to decide yet". Both are legitimate —
-[ADR-123](adr-123-adr-status-vocabulary-docs-lint.md) added `Deferred` precisely
+[ADR-003](../docs/decisions/ADR-003.md) added `Deferred` precisely
 so postponement could be stated rather than faked. What neither status records is
 *how long*, and that is the whole signal: a decision proposed a week ago is
 pending, the same one a year later is either overdue or was quietly settled in

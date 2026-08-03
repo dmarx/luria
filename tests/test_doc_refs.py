@@ -10,6 +10,7 @@ file it's collected into, not from where it sits.
 import sys
 from pathlib import Path
 
+# unresolved-ok-file: ADR-019, ADR-163 — fixture codes, deliberately not real
 REPO = Path(__file__).resolve().parents[1]
 
 from luria import doc_refs  # noqa: E402

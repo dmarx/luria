@@ -3,14 +3,14 @@
 # permanent: a principle is cited by number ("per DP-3"), so a number can be
 # retired but never reused. The filename is the code and nothing else; the title
 # goes in `title:` below, where a revision costs an edit rather than a rename
-# plus every link (ADR-013) — which matters more here than for a decision,
-# because principles are expected to be reworded.
+# plus every link — which matters more here than for a decision, because
+# principles are expected to be reworded. Why:  https://github.com/dmarx/luria/blob/main/docs/decisions/ADR-013.md
 #
 # This frontmatter is the ONLY place these facts live. `docs/design-principles.md`
-# is generated from it (ADR-012) — never edit that file by hand; run
-# `luria index`.
+# is generated from it — never edit that file by hand; run `luria index`.
+# Why:  https://github.com/dmarx/luria/blob/main/docs/decisions/ADR-012.md
 
-# Same vocabulary as a decision (ADR-003): Active | Proposed | Deferred |
+# Same vocabulary as a decision: Active | Proposed | Deferred |
 # Superseded | Rejected, optionally " — <note>". A principle that stops being
 # believed is Superseded, not deleted — something out there cites it.
 status: Active
@@ -34,9 +34,9 @@ date: '2026-01-01'
 # The decisions whose experience produced this principle — the inverse of the
 # usual direction, in which decisions cite principles. Rendered as followable
 # backlinks under the principle, and they are the evidence that stops it reading
-# as taste. Empty is honest for a principle carried in from elsewhere.
-influenced_by:
-- ADR-000
+# as taste. List them as full codes, one per line. Empty is honest for a
+# principle carried in from elsewhere.
+influenced_by: []
 
 # Optional, and only once there IS a version 2. One entry per version, oldest
 # first, each saying what changed and why — the revision is usually the most

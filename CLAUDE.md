@@ -50,14 +50,19 @@ issue number written in prose is a link, never bare text — `luria lint` fails
 otherwise. Don't hand-write them: `luria link --fix` writes exactly what the
 lint demands.
 
-**When a reference to a retired decision is deliberate, say so** rather than
-leaving it on the report:
+**When a reference is deliberately odd, say so** rather than leaving it on the
+report. The suffix decides the scope, uniformly, and a directive is one line:
 
 ```
 <!-- inactive-ok: ADR-012 — the decision this replaced -->     line + the line below
 <!-- inactive-ok-block: ADR-012 — this whole paragraph -->     the block it sits in
 <!-- inactive-ok-file: ADR-012 — this page is that history --> the whole document
+<!-- unresolved-ok: ADR-777 — a fixture code, not a real one --> names nothing on purpose
 ```
+
+`unresolved-ok` is for a code that resolves to **no document here**: a fixture
+number, or an example. Another project's decision is not that case — write it
+as a link out, which needs no annotation.
 
 ## Adding a decision
 

@@ -1,5 +1,11 @@
 # Luria
 
+[![CI](https://github.com/dmarx/luria/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/dmarx/luria/actions/workflows/ci.yml)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/github/license/dmarx/luria)](LICENSE)
+[![Decisions](https://img.shields.io/badge/decisions-generated%20index-informational)](docs/decisions/README.md)
+[![Principles](https://img.shields.io/badge/principles-versioned-informational)](docs/design-principles.md)
+
 A project's memory: the decisions, the principles, the changelog and the
 narrative log — kept where the next collaborator will find them, and kept honest
 by a lint.
@@ -11,7 +17,7 @@ that: [project memory](docs/project-memory.md) is the doctrine, and this package
 is what stops it drifting.
 
 ```
-pip install luria
+pip install git+https://github.com/dmarx/luria      # not on PyPI yet
 luria init --issue-url https://github.com/owner/repo/issues
 luria index && luria lint
 ```

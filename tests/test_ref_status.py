@@ -13,6 +13,7 @@ from _scheme import decision
 
 from luria import ref_status
 
+# unresolved-ok-file: ADR-020 ADR-777 — fixture codes, deliberately not real
 REPO = Path(__file__).resolve().parents[1]
 
 
@@ -239,3 +240,65 @@ def test_the_vocabulary_is_scheme_agnostic():
     second scheme is config rather than a fork."""
     for module in ("ref_status.py", "directives.py", "doc_refs.py"):
         assert "adr-ok:" not in (REPO / "luria" / module).read_text()
+
+
+# ── Codes that resolve to nothing (ADR-014) ──────────────────────────────
+
+
+def test_a_code_naming_no_document_is_reported(project):
+    """It used to be dropped: the fixer can't link it, so the lint said
+    nothing — and that silence hid ten stale numbers from another project."""
+    docs, result = scan(project, "ported from elsewhere: ADR-777\n")
+    assert [c.line for c in result.dangling["ADR-777"]] == [1]
+    assert [code for code, _, _ in ref_status.dangling(result, docs)] == ["ADR-777"]
+
+
+def test_a_resolvable_code_is_not_dangling(project):
+    docs, result = scan(project, "per ADR-001 it works\n")
+    assert result.dangling == {}
+
+
+def test_unresolved_ok_retires_one(project):
+    docs, result = scan(
+        project, "<!-- unresolved-ok: ADR-777 — another project's -->\nADR-777\n")
+    assert ref_status.dangling(result, docs) == []
+    assert ref_status.stale_annotations(result, docs) == []
+
+
+def test_unresolved_ok_is_scoped_like_every_other_directive(project):
+    """No per-directive defaults: the suffix decides, and a blank line between
+    the annotation and what it governs needs `-block`."""
+    body = "<!-- unresolved-ok{}: ADR-777 — deliberate -->\n\nADR-777\n"
+    _, loose = scan(project, body.format(""))
+    assert [c.line for c in loose.dangling["ADR-777"] if c.excused_by is None]
+    _, block = scan(project, body.format("-block"), name="b.md")
+    assert ref_status.dangling(block) == []
+
+
+def test_unresolved_ok_naming_a_real_document_is_malformed(project):
+    """The inverted check. `inactive-ok` is wrong when it names a code that
+    doesn't resolve; this one is wrong when it names a code that does — so an
+    annotation that stops applying is reported either way."""
+    docs, result = scan(
+        project, "<!-- unresolved-ok: ADR-001 — deliberate -->\nADR-001\n")
+    stale = ref_status.stale_annotations(result, docs)
+    assert stale and "does resolve here" in stale[0]
+
+
+def test_a_code_inside_a_url_is_not_a_citation(project):
+    """Linking out to another project's decision is the *correct* way to name
+    a foreign document, and the URL contains its code. Counting that as a local
+    reference would report every such link as dangling — which is exactly what
+    broke the `luria init` template's own scaffolded lint."""
+    docs, result = scan(
+        project,
+        "see [their ADR](https://github.com/o/r/blob/main/docs/ADR-777.md)\n")
+    assert result.dangling == {}
+
+
+def test_a_directive_naming_a_code_is_not_citing_it(project):
+    """True of a live annotation and of an example of one alike — otherwise
+    documenting the syntax inflates the report, and an annotation excuses
+    itself and can never go stale."""
+    docs, result = scan(project, "<!-- unresolved-ok: ADR-777 — why -->\n")
+    assert result.dangling == {}
