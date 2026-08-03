@@ -3,8 +3,10 @@
 [![CI](https://github.com/dmarx/luria/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/dmarx/luria/actions/workflows/ci.yml)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/github/license/dmarx/luria)](LICENSE)
-[![Decisions](https://img.shields.io/badge/decisions-generated%20index-informational)](docs/decisions/README.md)
-[![Principles](https://img.shields.io/badge/principles-versioned-informational)](docs/design-principles.md)
+<!-- luria:badges -->
+[![needs decision: 0](https://img.shields.io/badge/needs%20decision-0-brightgreen)](docs/decisions/README.md)
+[![cited but retired: 0](https://img.shields.io/badge/cited%20but%20retired-0-brightgreen)](docs/decisions/README.md)
+<!-- /luria:badges -->
 
 A project's memory: the decisions, the principles, the changelog and the
 narrative log — kept where the next collaborator will find them, and kept honest
@@ -30,7 +32,8 @@ luria index && luria lint
 | `luria link --fix` | rewrites bare references as hyperlinks — the same scanner the lint reads, so the failure names its own remedy |
 | `luria index` | regenerates every generated view from frontmatter — the decision index and its per-tag pages, the principles document |
 | `luria ref-status` | which retired decisions are still cited, and where |
-| `luria pending` | which decisions are undecided, by age **and** citation count |
+| `luria pending` | which documents are undecided, by age **and** citation count — every scheme |
+| `luria badges` | the README's two counts, derived from the record |
 | `luria reports` | both reports as markdown, for a CI artifact |
 | `luria collect` | assembles fragment directories into their views |
 | `luria remotes` | another project's record: how each foreign reference resolves, and whether it is reachable |

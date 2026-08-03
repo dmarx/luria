@@ -105,7 +105,7 @@ def pending_decisions(today: dt.date, stale_days: int) -> str:
     rows = adr_pending.pending()
     uncited = [r for r in rows if not r.cites]
 
-    out = ["# ADRs awaiting a decision", "", _stamp(today), ""]
+    out = ["# Documents awaiting a decision", "", _stamp(today), ""]
     out += [
         "`Proposed` and `Deferred` both describe an open question. Neither says "
         "*how long*, and that is the signal: a decision proposed last week is "
@@ -115,14 +115,14 @@ def pending_decisions(today: dt.date, stale_days: int) -> str:
         "",
     ]
     if rows:
-        out += ["| Age | Status | ADR | Cited | Unack. | Title |",
+        out += ["| Age | Status | Code | Cited | Unack. | Title |",
                 "|--:|---|---|--:|--:|---|"]
         for r in rows:
             age = r.age(today)
             mark = " ⚠️" if r.is_stale(today, stale_days) else ""
             label = f"{age} days{mark}" if age is not None else "undated"
             rel = current().rel(r.path)
-            link = f"[ADR-{r.number:03d}](../../{rel})"
+            link = f"[{r.code}](../../{rel})"
             out.append(f"| {label} | {r.status} | {link} | {r.cites} | "
                        f"{r.unacknowledged} | {r.title} |")
         out.append("")
@@ -135,11 +135,11 @@ def pending_decisions(today: dt.date, stale_days: int) -> str:
     out += ["This count and the reference-status report's will differ, and that "
             "is not an off-by-one. That report covers documents something "
             "actually **cites** and hasn't acknowledged; this one covers every "
-            "**undecided** ADR. An ADR here is missing from there for exactly "
+            "**undecided** document. One here is missing from there for exactly "
             "one of two reasons: nothing cites it, or every citation carries an "
             "`inactive-ok` annotation.", ""]
     if uncited:
-        codes = ", ".join(f"ADR-{r.number:03d}" for r in uncited)
+        codes = ", ".join(r.code for r in uncited)
         one = len(uncited) == 1
         out += [f"**Cited nowhere at all** ({len(uncited)}): {codes} — "
                 f"{'this is' if one else 'these are'} the cheapest to close, "

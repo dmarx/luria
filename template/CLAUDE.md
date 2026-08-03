@@ -32,7 +32,7 @@ most, and they are the part that never appears in a commit message.
 ```
 luria lint            # the only one that can fail
 luria link --fix      # rewrite bare references as hyperlinks
-luria index           # regenerate every generated view (decisions, principles)
+luria index           # regenerate every generated view (+ the README's counts)
 luria ref-status      # what still cites a retired decision
 luria pending         # what has been undecided, and for how long
 luria remotes         # other projects' records, and how they resolve
@@ -57,8 +57,9 @@ report. The suffix decides the scope, uniformly, and a directive is one line:
 number, or an example.
 
 **Another project's decision is not that case — give it a prefix.**
-`SG-ADR-032` would be remote `SG`'s decision 32; one `[luria.remotes.SG]` entry in
-`luria.toml` makes it a first-class reference: the fixer writes the link, the
+`LU-ADR-013` is remote `LU`'s decision 13 — the scaffold registers `LU` for
+Luria itself, and yours go beside it. One `[luria.remotes.X]` entry in
+`luria.toml` makes a code a first-class reference: the fixer writes the link, the
 lint demands it, and `luria remotes` shows how each one resolves. A remote whose
 filenames carry title slugs needs `luria remotes --refresh` once, to discover
 them into the committed lockfile; one that names files after their codes needs

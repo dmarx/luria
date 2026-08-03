@@ -40,7 +40,7 @@ most, and they are the part that never appears in a commit message.
 ```
 luria lint            # the only one that can fail
 luria link --fix      # rewrite bare references as hyperlinks
-luria index           # regenerate every generated view (decisions, principles)
+luria index           # regenerate every generated view (+ the README's counts)
 luria ref-status      # what still cites a retired decision
 luria pending         # what has been undecided, and for how long
 luria remotes         # other projects' records, and how they resolve

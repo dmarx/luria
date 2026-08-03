@@ -8,6 +8,7 @@
     luria reports       write both reports as markdown, for a CI artifact
     luria collect       assemble fragment directories into their views
     luria remotes       other projects' records cited from this one
+    luria badges        the README's needs-decision / cited-but-retired counts
     luria init          scaffold the record into a project that has none
 
 Subcommands delegate to modules that each keep their own `main()`, so any of
@@ -28,6 +29,7 @@ COMMANDS = {
     "reports": ("luria.reports", "write both reports as markdown"),
     "collect": ("luria.collect", "assemble fragments into their views"),
     "remotes": ("luria.remotes", "other projects' records, and how they resolve"),
+    "badges": ("luria.badges", "the README's two counts, derived from the record"),
     "init": ("luria.init", "scaffold the record into a project"),
 }
 

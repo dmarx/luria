@@ -48,6 +48,7 @@ DEFAULT_STALE_DAYS = 90
 
 @dataclass(frozen=True)
 class Pending:
+    code: str                # `ADR-012`, `DP-004` — every scheme, not just one
     number: int
     status: str
     title: str
@@ -75,45 +76,53 @@ def _date(meta: dict) -> dt.date | None:
 
 
 def pending() -> list[Pending]:
-    """Every undecided ADR, oldest first; undated ones last — an ADR with no
-    `date:` can't be aged, which is itself worth seeing."""
+    """Every undecided document in every scheme, oldest first; undated ones
+    last — a document with no `date:` can't be aged, which is itself worth
+    seeing.
+
+    Not just decisions. A `Proposed` principle is an open question in exactly
+    the same way, and a report that covered one scheme would go quietly blind
+    the day a project configured a second (ADR-018)."""
     cited = ref_status.scan().cited
     rows = []
-    for adr in builder.load_adrs():
-        status = re.split(r"\s+—\s+", adr.status, maxsplit=1)[0]
-        if status not in UNDECIDED:
-            continue
-        sites = cited.get(f"ADR-{adr.number:03d}", [])
-        rows.append(Pending(adr.number, status, adr.title, _date(adr.meta),
-                            len(sites),
-                            sum(1 for c in sites if c.excused_by is None),
-                            adr.path))
-    return sorted(rows, key=lambda r: (r.date is None, r.date, -r.cites))
+    for scheme in current().schemes.values():
+        for doc in builder.load_scheme(scheme):
+            status = re.split(r"\s+—\s+", doc.status, maxsplit=1)[0]
+            if status not in UNDECIDED:
+                continue
+            sites = cited.get(doc.code, [])
+            rows.append(Pending(doc.code, doc.number, status, doc.title,
+                                _date(doc.meta), len(sites),
+                                sum(1 for c in sites if c.excused_by is None),
+                                doc.path))
+    return sorted(rows, key=lambda r: (r.date is None, r.date, -r.cites, r.code))
 
 
 def table(rows: list[Pending], today: dt.date, stale_days: int) -> list[str]:
     if not rows:
         return []
     width = max(len(r.title) for r in rows)
-    lines = [f"{'age':>6}  {'status':<8}  {'ADR':<7}  {'cites':>5}  title"]
+    code_width = max(len(r.code) for r in rows)
+    lines = [f"{'age':>6}  {'status':<8}  {'code':<{code_width}}  "
+             f"{'cites':>5}  title"]
     for r in rows:
         age = r.age(today)
         mark = "!" if r.is_stale(today, stale_days) else " "
         lines.append(
             f"{(f'{age}d' if age is not None else '?'):>6}{mark} {r.status:<8}  "
-            f"ADR-{r.number:03d}  {r.cites:>5}  {r.title[:width]}"
+            f"{r.code:<{code_width}}  {r.cites:>5}  {r.title[:width]}"
         )
     return lines
 
 
 def headline(rows: list[Pending], today: dt.date, stale_days: int) -> str:
     if not rows:
-        return "ADR pending decisions: none — every ADR is decided"
+        return "pending decisions: none — every document is decided"
     ages = [a for a in (r.age(today) for r in rows) if a is not None]
     stale = sum(1 for r in rows if r.is_stale(today, stale_days))
     undated = sum(1 for r in rows if r.date is None)
     loud = sum(1 for r in rows if r.unacknowledged)
-    parts = [f"{len(rows)} undecided ADR(s)"]
+    parts = [f"{len(rows)} undecided document(s)"]
     if ages:
         parts.append(f"oldest {max(ages)} days")
     if stale:
@@ -125,7 +134,7 @@ def headline(rows: list[Pending], today: dt.date, stale_days: int) -> str:
     # UNACKNOWLEDGED citation, which is exactly this number.
     if loud != len(rows):
         parts.append(f"{loud} with unacknowledged references")
-    return "ADR pending decisions: " + ", ".join(parts)
+    return "pending decisions: " + ", ".join(parts)
 
 
 def main() -> int:

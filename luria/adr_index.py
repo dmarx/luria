@@ -304,6 +304,11 @@ def main() -> int:
                  if not p.exists() or p.read_text() != text]
         # A tag page whose tag no longer exists is stale too.
         stale += [p for p in current().tag_dir.glob("*.md") if p not in rendered]
+        from . import badges
+        readme = badges.readme()
+        if readme.exists() and badges.OPEN in (text := readme.read_text()) \
+                and badges.rewrite(text) != text:
+            stale.append(readme)
         if stale:
             print("stale (run `luria index`):", file=sys.stderr)
             for p in sorted(stale):
@@ -326,6 +331,13 @@ def main() -> int:
     counted = ", ".join(f"{len(load_scheme(s))} {p}s"
                         for p, s in sorted(cfg.schemes.items()))
     print(f"Wrote {len(rendered)} file(s) from {counted}.")
+    # The README's badge counts are derived from the same frontmatter, so they
+    # are regenerated here rather than by a command someone has to remember
+    # (ADR-018). A project with no badge region is left alone.
+    from . import badges
+    readme = badges.readme()
+    if readme.exists() and badges.OPEN in (text := readme.read_text()):
+        readme.write_text(badges.rewrite(text))
     return 0
 
 

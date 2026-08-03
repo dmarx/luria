@@ -35,7 +35,7 @@ import re
 import sys
 
 from . import adr_index as builder
-from . import adr_pending, doc_refs, ref_status
+from . import adr_pending, badges, doc_refs, ref_status
 from .config import current
 
 # The closed status vocabulary (ADR-003). `Active` is the in-force state; the
@@ -123,6 +123,13 @@ def check_generated_index(errors: list[str]) -> None:
     for path in cfg.tag_dir.glob("*.md"):
         if path not in rendered:
             errors.append(f"{cfg.rel(path)}: orphaned tag page — run `luria index`")
+    # The README's badge counts are derived from the same frontmatter, so a
+    # stale one is the same class of failure as a stale index (ADR-018).
+    readme = badges.readme()
+    if readme.exists() and badges.OPEN in (text := readme.read_text()) \
+            and badges.rewrite(text) != text:
+        errors.append(f"{cfg.rel(readme)}: badge counts are stale — "
+                      "run `luria index`")
 
 
 def check_bare_refs(errors: list[str]) -> None:

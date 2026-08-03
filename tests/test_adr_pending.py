@@ -18,9 +18,9 @@ TODAY = dt.date(2026, 8, 3)
 
 def row(number=1, status="Proposed", title="t", date=dt.date(2026, 1, 1),
         cites=0, unacknowledged=None):
-    return pending.Pending(number, status, title, date, cites,
+    return pending.Pending(f"ADR-{number:03d}", number, status, title, date, cites,
                            cites if unacknowledged is None else unacknowledged,
-                           Path(f"adr-{number:03d}-x.md"))
+                           Path(f"ADR-{number:03d}.md"))
 
 
 def test_only_open_statuses_are_pending(project):
@@ -58,13 +58,13 @@ def test_undated_decision_is_reported_not_dropped():
 def test_headline_counts_are_real():
     rows = [row(1, date=dt.date(2025, 1, 1)), row(2, date=dt.date(2026, 8, 1))]
     line = pending.headline(rows, TODAY, 90)
-    assert "2 undecided ADR(s)" in line
+    assert "2 undecided document(s)" in line
     assert f"oldest {(TODAY - dt.date(2025, 1, 1)).days} days" in line
     assert "1 over 90 days" in line
 
 
 def test_empty_corpus_says_so():
-    assert pending.headline([], TODAY, 90).endswith("every ADR is decided")
+    assert pending.headline([], TODAY, 90).endswith("every document is decided")
     assert pending.table([], TODAY, 90) == []
 
 
@@ -105,3 +105,25 @@ def test_headline_reconciles_with_the_reference_report(project):
 def test_report_never_fails_the_build():
     sys.argv = ["luria pending", "--as-of", TODAY.isoformat()]
     assert pending.main() == 0
+
+
+def test_every_scheme_is_covered(project):
+    """A `Proposed` principle is an open question exactly as a decision is, and
+    a report covering one scheme goes blind the day a second is configured
+    (ADR-018)."""
+    from _scheme import decision
+    decision(project, 1, "Proposed", "An open decision")
+    principles = project / "docs" / "principles"
+    principles.mkdir(parents=True, exist_ok=True)
+    (principles / "DP-002.md").write_text(
+        "---\nstatus: Deferred\ntitle: 'An open value'\ntags:\n- record\n"
+        "date: '2026-01-01'\n---\n\n# DP-002: An open value\n")
+    (project / "luria.toml").write_text(
+        '[luria]\nissue_url = "https://example.test/issues/{n}"\n'
+        '[luria.schemes.ADR]\ndir = "docs/decisions"\n'
+        '[luria.schemes.DP]\ndir = "docs/principles"\n'
+        'render = "document"\noutput = "docs/design-principles.md"\n')
+    from luria import config
+    config.reset()
+
+    assert {r.code for r in pending.pending()} == {"ADR-001", "DP-002"}

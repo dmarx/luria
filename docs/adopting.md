@@ -125,6 +125,26 @@ Three things worth knowing before you rely on it:
   repo is private and you are anonymous", so it probes the repository once and
   says *unverifiable* rather than inventing a shelf of 404s.
 
+## Badges that can be wrong
+
+Two numbers are worth putting on a README, because they are the ones a reader
+can't get any other way and both can turn amber
+([ADR-018](decisions/ADR-018.md)):
+
+```
+<!-- luria:badges -->
+<!-- /luria:badges -->
+```
+
+Add that region anywhere in `README.md` and `luria index` fills it with
+**needs decision** (`Proposed` + `Deferred`, every scheme) and **cited but
+retired** (retired documents still cited without an acknowledgement). The
+counts are baked into the URLs, so there is no service to configure and no
+committed JSON to keep current — and `luria lint` fails when the region
+disagrees with the record.
+
+A project with no region is left alone.
+
 ## Wiring it into CI
 
 ```yaml
