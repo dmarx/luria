@@ -114,6 +114,34 @@ Fill in `influenced_by:` with the decisions whose experience produced it. That
 is the evidence; without it a principle reads as taste, and taste gets
 re-litigated by the next person with different taste.
 
+## Landing changes
+
+**Work goes to a branch and a pull request, never straight to `main`.** The
+record is the deliverable here, and a decision record is an interpretation of
+somebody's intent — it needs a chance to be read before it becomes what the
+project believes. A commit on `main` skips that.
+
+That is also what makes the badge counts worth having: open the PR and its
+README already shows the numbers *that branch* produces, so a reviewer sees
+`needs decision` move in the same diff that moves it
+([ADR-018](docs/decisions/ADR-018.md)).
+
+## Correcting a decision that is already recorded
+
+Two failure modes, two remedies ([ADR-019](docs/decisions/ADR-019.md)):
+
+- **The choice changed** — supersede. New decision, old one `Superseded`, never
+  a rewritten body.
+- **A reason was wrong, the choice stands** — correct in place, bump `version:`,
+  and say in `history:` what the previous version claimed and why it was wrong.
+  Superseding here is theatre: it retires a decision still in force and makes
+  every citation point at an identical claim.
+
+The test: *would a reader who acted on the old version have done something
+different?* If yes, supersede. If they'd have done the same thing for a worse
+reason, correct in place. "Never rewrite a body" objects to **silent** revision;
+a version bump with a history note is the opposite of silent.
+
 ## Working on the package itself
 
 - `make ci` — the suite plus the lint.
