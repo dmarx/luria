@@ -84,15 +84,11 @@ index is read far more often than the decision. Say what was decided **and what
 was rejected**; a decision with an empty "alternatives considered" usually
 wasn't a decision.
 
-Supersede by **adding** a decision and flipping the old one's status to
-`Superseded`. Never rewrite a decision's body — the history is the point, and
-that holds for a decision that lasted an afternoon as much as one that lasted a
-year.
-
-`version:` is standard frontmatter here too, and it moves rarely: a decision
-that *changes* is superseded, not edited. Bump it when the same choice is
-restated more broadly — scope widened, wording generalized — and the index will
-show it.
+When the **choice** changes, supersede: add a decision and flip the old one's
+status to `Superseded`, leaving its body intact. That holds for a decision that
+lasted an afternoon as much as one that lasted a year. When the choice stands
+and only a **reason** was wrong, correct the body and bump `version:` — see
+*Correcting a decision that is already recorded* below.
 
 ## Adding or revising a principle
 
@@ -141,6 +137,11 @@ The test: *would a reader who acted on the old version have done something
 different?* If yes, supersede. If they'd have done the same thing for a worse
 reason, correct in place. "Never rewrite a body" objects to **silent** revision;
 a version bump with a history note is the opposite of silent.
+
+**Nothing in the record is frozen**, and this is not theory — every shape of
+revision has already happened here, with the examples listed in
+[project memory §2](docs/project-memory.md). A `history:` entry that doesn't say
+what the previous version claimed is the only thing this rule forbids.
 
 ## Working on the package itself
 

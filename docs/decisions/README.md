@@ -9,9 +9,16 @@ Values that decisions *cite* live in
 [design-principles.md](../design-principles.md) instead. The split, and why
 these are separate files, is [ADR-003](ADR-003.md).
 
-Supersede by **adding** a decision and flipping the old one's status — never by
-rewriting a body. The history is the point: a record you can rewrite is a record
-that can't be trusted about what you used to think.
+A decision whose **choice** changes is superseded by *adding* a decision and
+flipping the old one's status — not by rewriting its body. A record you can
+quietly rewrite can't be trusted about what you used to think.
+
+That is a rule about silence, not about editing. A decision whose choice stands
+but whose *reasoning* was wrong is corrected in place, with a `version` bump and
+a `history:` entry saying what the previous version claimed
+([ADR-019](ADR-019.md)). Nothing here is frozen; it is only
+un-silently revisable, and this record has worked examples of both
+([project memory §2](../project-memory.md)).
 
 <!-- GENERATED below this line by `luria index` — edit README.stub instead. -->
 
@@ -30,7 +37,7 @@ that can't be trusted about what you used to think.
 
 | # | Title | Status |
 |---|---|---|
-| [ADR-001](ADR-001.md) | Four layers, each with a one-line test for what belongs in it: design principles hold standing values, decisions hold a choice among alternatives at a point in time, changelog fragments hold what an operator would notice, devlog fragments hold how it went — including the wrong theories, which are the reusable part. Separate files rather than one document because they have different lifecycles: a principle is revised, a decision is superseded but never rewritten, a fragment is collected and deleted. Rejected: one CHANGELOG holding all four (the layers' different write patterns collide, and the one that gets skipped is always the narrative), and inferring the narrative from git history (commit messages are written to a different audience, and the failed approaches — the expensive part — never appear in them). | Active |
+| [ADR-001](ADR-001.md) v2 | Four layers, each with a one-line test for what belongs in it: design principles hold standing values, decisions hold a choice among alternatives at a point in time, changelog fragments hold what an operator would notice, devlog fragments hold how it went — including the wrong theories, which are the reusable part. Separate files rather than one document because they have different lifecycles: a principle is revised, a decision whose choice changes is superseded rather than rewritten, a fragment is collected and deleted. Rejected: one CHANGELOG holding all four (the layers' different write patterns collide, and the one that gets skipped is always the narrative), and inferring the narrative from git history (commit messages are written to a different audience, and the failed approaches — the expensive part — never appear in them). | Active |
 | [ADR-002](ADR-002.md) | Every contribution writes a fragment nobody else touches (`changelog.d/<slug>.md`, `devlog.d/<slug>.md`, one decision file); the shared documents are VIEWS assembled on a cadence, never hand-edited. A file every contribution appends to is a lock ([DP-2](../design-principles.md#dp-2)) — the conflicts carry no information and each hand-resolution can silently drop someone's work. Collection is deliberately NOT per-merge: the bot commit races in-flight rebases, so it runs weekly or on demand. A stub fragment (only an HTML comment) keeps "every contribution files one" enforceable when the honest answer is "nothing a reader would notice". Rejected: per-merge collection (the race), and asking contributors to hand-merge carefully (contention, not carelessness). | Active |
 | [ADR-003](ADR-003.md) | A decision's status comes from a closed vocabulary (Active | Proposed | Deferred | Superseded | Rejected, plus an optional em-dash note) and lives in YAML frontmatter alongside tags, date and issue — with the lint enforcing both. The vocabulary is closed because an open one drifts into synonyms: a strata-g audit found ~30 distinct status forms, with `Accepted` and `Active` split 44/46 and meaning the same thing. Frontmatter rather than a prose header because the index is generated from these fields ([ADR-004](ADR-004.md)), and parsing prose to build it puts a regex between a decision and its own metadata. `Deferred` earns its place: postponement stated is better than postponement faked as `Proposed`. Rejected: free-text status (drifted), and keeping the bold `**Status:**` header alongside frontmatter (two copies to drift, [DP-4](../design-principles.md#dp-4)). | Active |
 | [ADR-004](ADR-004.md) | The decision index and its per-tag pages are GENERATED from each decision's frontmatter; `luria lint` fails on a stale one. Hand-maintaining the index made it both a lock ([DP-2](../design-principles.md#dp-2)) and a drifting copy ([DP-3](../design-principles.md#dp-3)) — in strata-g, 45 of 155 rows disagreed with their own decision's status, and two were filed under a category their header didn't claim. Prose lives in a `README.stub` with `{categories}`/`{table}` placeholders so humans still edit prose in markdown. Adding a decision is one new file with no shared edit; adding a TAG needs no code change at all. Every rendered field is rebased for the directory it lands in, so a link in a summary works from both the index and the one-level-deeper tag pages. Rejected: a fragment directory like changelog.d (the data is derivable, so generation beats collection — no step to forget). | Active |

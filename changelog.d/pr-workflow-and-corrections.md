@@ -18,3 +18,21 @@
   an identical claim. "Never rewrite a body" objects to *silent* revision — a
   `version` bump with a `history:` note saying what the old version got wrong
   is the opposite of silent.
+
+### Documentation
+
+- **The docs no longer read as "these documents are frozen."**
+  [Project memory](docs/project-memory.md) gains a section on what is and isn't
+  revisable, with a table of the four shapes — choice changed, reason wrong,
+  value reworded, consequence falsified — and **a live example of each from this
+  repository**, because a rule a project has never applied to itself is a rule
+  nobody has tested.
+- **[ADR-001](docs/decisions/ADR-001.md) is at `v2`.** Its traffic rule said a
+  decision is "superseded but never rewritten", which reads as immutability and
+  leaves no way to fix a wrong argument short of retiring a decision still in
+  force. Narrowed to the case it governs — supersede when the *choice* changes —
+  with `history:` recording the over-broad version. The rule about which layer
+  holds what is unchanged.
+- The decision templates, both index stubs, `CLAUDE.md` and the adoption guide
+  now say the same thing, and the scaffold points a new project at Luria's
+  worked examples by remote code rather than a pasted URL.

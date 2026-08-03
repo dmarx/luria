@@ -9,9 +9,16 @@ Values that decisions *cite* live in
 [design-principles.md](../design-principles.md) instead. The split, and why
 these are separate files, is [ADR-003](ADR-003.md).
 
-Supersede by **adding** a decision and flipping the old one's status — never by
-rewriting a body. The history is the point: a record you can rewrite is a record
-that can't be trusted about what you used to think.
+A decision whose **choice** changes is superseded by *adding* a decision and
+flipping the old one's status — not by rewriting its body. A record you can
+quietly rewrite can't be trusted about what you used to think.
+
+That is a rule about silence, not about editing. A decision whose choice stands
+but whose *reasoning* was wrong is corrected in place, with a `version` bump and
+a `history:` entry saying what the previous version claimed
+([ADR-019](ADR-019.md)). Nothing here is frozen; it is only
+un-silently revisable, and this record has worked examples of both
+([project memory §2](../project-memory.md)).
 
 <!-- GENERATED below this line by `luria index` — edit README.stub instead. -->
 
