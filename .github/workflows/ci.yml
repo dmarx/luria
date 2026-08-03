@@ -1,0 +1,55 @@
+# Luria runs its own machinery on its own record (ADR-009), so this workflow is
+# both the package's CI and the worked example the docs point at.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    # Weekly fragment collection. The only wrong cadence is "every merge" — a
+    # per-merge bot commit races in-flight rebases (ADR-002).
+    - cron: "0 9 * * 1"
+  workflow_dispatch:
+
+jobs:
+  test:
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e ".[dev]"
+      - run: make test
+      - run: make lint
+      # The status reports are warnings, so they never fail this job — which is
+      # exactly why they need somewhere to be read. `if: always()` keeps them
+      # available when the lint failed, which is when they are most wanted.
+      - name: Status reports
+        if: always()
+        run: make reports
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: doc-reports
+          path: build/doc-reports/
+          if-no-files-found: warn
+
+  collect:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e .
+      - run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+      - run: luria collect --commit
+      - run: git push

@@ -1,0 +1,82 @@
+---
+status: Active
+tags:
+- record
+- mechanism
+date: '2026-08-03'
+summary: >-
+  A decision's status comes from a closed vocabulary (Active | Proposed |
+  Deferred | Superseded | Rejected, plus an optional em-dash note) and lives in
+  YAML frontmatter alongside tags, date and issue — with the lint enforcing
+  both. The vocabulary is closed because an open one drifts into synonyms: a
+  strata-g audit found ~30 distinct status forms, with `Accepted` and `Active`
+  split 44/46 and meaning the same thing. Frontmatter rather than a prose header
+  because the index is generated from these fields ([ADR-004](adr-004-generated-decision-index.md)),
+  and parsing prose to build it puts a regex between a decision and its own
+  metadata. `Deferred` earns its place: postponement stated is better than
+  postponement faked as `Proposed`. Rejected: free-text status (drifted), and
+  keeping the bold `**Status:**` header alongside frontmatter (two copies to
+  drift, [DP-4](../design-principles.md)).
+---
+
+# ADR-003: Status is a closed vocabulary in frontmatter, enforced by lint
+
+## Context
+
+A consolidation audit of 121 decision records found the status field had
+entropied into roughly thirty distinct forms. Forty-four said `Accepted` and
+forty-six said `Active`, with no difference in meaning. Several carried trailing
+whitespace. A long tail packed whole narrative paragraphs into the field.
+
+The audit's sharper finding: **every documentation surface guarded by an
+executable check had held; every surface governed by prose convention alone had
+drifted.** Not toward one wrong value — toward *variety*, which is worse,
+because a reader can't learn what the field means.
+
+## Decision
+
+**A closed vocabulary, in frontmatter, checked by the lint.**
+
+```
+status: Active | Proposed | Deferred | Superseded | Rejected
+```
+
+optionally followed by ` — <short note>`. Narrative belongs in the body.
+
+- `Active` — in force. (Absorbs `Accepted`; the distinction carried no
+  information.)
+- `Proposed` — awaiting a decision.
+- `Deferred` — explicitly postponed, with the revival trigger recorded. This one
+  earns its place: a postponement you can *state* is better than one faked as
+  `Proposed` forever.
+- `Superseded` — replaced; the note links the successor.
+- `Rejected` — considered and declined, kept for the record.
+
+Frontmatter also carries `tags` (the browsing category, pushed down onto the
+decision itself), `date`, an optional `issue`, and a `summary` — which is prose,
+and therefore carries links like any other prose, while the rest stays data.
+
+**A vocabulary plus its lint, not a vocabulary alone.** That is the whole point
+of the audit's finding, and it is [DP-5](../design-principles.md) at rung four.
+
+## Alternatives considered
+
+- **Free-text status.** What was there. It drifted, measurably.
+- **A prose header (`**Status:** Active`).** Human-readable, and it puts a regex
+  between the index generator and the field it needs. The migration to
+  frontmatter also had to repair five records that an earlier prose-editing pass
+  had mangled mid-sentence — evidence for the regex problem, not against it.
+- **Both, for readability.** Two copies of one fact, which is
+  [DP-4](../design-principles.md)'s definition of a latent bug. The frontmatter
+  is what the index shows, so the header would be the copy that drifts.
+- **An open vocabulary with a linter warning.** A warning on a field nobody
+  reads is the status quo with extra output.
+
+## Consequences
+
+- "Update the status to Superseded" has an enforced target vocabulary; a typo
+  fails the lint.
+- The index can be generated ([ADR-004](adr-004-generated-decision-index.md)),
+  because every fact it needs is a parseable field.
+- Adding a status word is now a deliberate change to the lint, which is the
+  point.

@@ -1,0 +1,70 @@
+---
+status: Active
+tags:
+- mechanism
+date: '2026-08-03'
+summary: >-
+  The decision index and its per-tag pages are GENERATED from each decision's
+  frontmatter; `luria lint` fails on a stale one. Hand-maintaining the index
+  made it both a lock ([DP-2](../design-principles.md)) and a drifting copy
+  ([DP-3](../design-principles.md)) — in strata-g, 45 of 155 rows disagreed with
+  their own decision's status, and two were filed under a category their header
+  didn't claim. Prose lives in a `README.stub` with `{categories}`/`{table}`
+  placeholders so humans still edit prose in markdown. Adding a decision is one
+  new file with no shared edit; adding a TAG needs no code change at all. Every
+  rendered field is rebased for the directory it lands in, so a link in a
+  summary works from both the index and the one-level-deeper tag pages.
+  Rejected: a fragment directory like changelog.d (the data is derivable, so
+  generation beats collection — no step to forget).
+---
+
+# ADR-004: The decision index is generated from frontmatter
+
+## Context
+
+The index carried a hand-maintained table — one row per decision — plus
+per-category link lists. Every contribution that added a decision edited that
+file, always in the same region. It was therefore both problems at once: the
+lock [DP-2](../design-principles.md) names, *and* the drifting projection
+[DP-3](../design-principles.md) names, since every row duplicated data the
+decision already owned.
+
+Both bit. Three decisions authored in one session collided in the same table
+region, and a cherry-pick between two of them conflicted. And at migration time
+**45 of 155 rows disagreed with their own decision's status**.
+
+## Decision
+
+**Generate the index and the per-tag pages from frontmatter.** `luria index`
+builds; `luria lint` fails on a stale result, so divergence is a failure rather
+than a discovery.
+
+- Prose lives in `README.stub` with `{categories}` and `{table}` placeholders —
+  humans edit prose in markdown, not in a generator.
+- Tag order and blurbs live in `tags.yaml`, and a tag used by a decision but
+  absent from that file still renders. **Adding a tag needs no code change.**
+- Every *rendered field* is rebased for the directory it lands in — not just the
+  row's own link. A summary and a status note are prose too, and they render
+  into both the index and the tag pages one directory deeper. Missing this left
+  four supersession links 404ing on the tag pages of the project this was
+  extracted from, undetected until something finally resolved a generated page's
+  links.
+
+## Alternatives considered
+
+- **A fragment directory, like the changelog.** Would fix the lock and not the
+  drift. When the shared file's content is *derivable*, generation beats
+  collection outright: there is no step to forget.
+- **Keep the table, add a test that it matches.** Rung 2 of
+  [DP-3](../design-principles.md) where rung 1 is available. The test would be
+  the drifting list in a costume.
+- **No index.** A directory listing is an index of sorts, and it can't show
+  status or summary — which is what makes the index worth reading at all.
+
+## Consequences
+
+- Adding a decision is one new file. No shared edit, no conflict.
+- The index is read far more often than the decisions, so `summary` is where the
+  effort goes.
+- Generated files are excluded from the reference rewriter — the generator wins,
+  and rewriting its output would be undone on the next build.

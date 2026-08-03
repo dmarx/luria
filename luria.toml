@@ -1,0 +1,23 @@
+# Luria's own configuration — this repo runs its own machinery on its own
+# record, which is the only way the machinery gets exercised before a consumer
+# hits the bug (DP-6).
+[luria]
+issue_url = "https://github.com/dmarx/luria/issues/{n}"
+
+[luria.paths]
+docs = "docs"
+decisions = "docs/decisions"
+design_principles = "docs/design-principles.md"
+reports = "build/doc-reports"
+
+[luria.fragments]
+"changelog.d" = "CHANGELOG.md"
+"devlog.d" = "docs/devlog.md"
+
+[luria.code]
+globs = ["luria/*.py", "tests/*.py", "Makefile", ".github/workflows/*.yml"]
+historical = ["CHANGELOG.md", "docs/devlog.md"]
+
+[luria.schemes.ADR]
+dir = "docs/decisions"
+active = "Active"

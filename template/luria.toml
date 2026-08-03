@@ -1,0 +1,33 @@
+# Luria configuration. Every key has a default, so the only one most projects
+# need is `issue_url` — without it, issue numbers stay bare rather than linking
+# somewhere wrong.
+[luria]
+issue_url = ""
+
+[luria.paths]
+docs = "docs"
+decisions = "docs/decisions"
+design_principles = "docs/design-principles.md"
+reports = "build/doc-reports"
+
+# Fragment directory → the file it is collected into. Links written in a
+# fragment resolve from the collected file's directory, not the fragment's
+# (ADR-005), so this mapping is load-bearing, not just bookkeeping.
+[luria.fragments]
+"changelog.d" = "CHANGELOG.md"
+"devlog.d" = "docs/devlog.md"
+
+# Source files to scan for references to retired decisions. A decision number in
+# a code comment is the strongest form of the claim being checked — it is the
+# stated reason the code is shaped that way — so include the code you care about.
+[luria.code]
+globs = []
+# Dated records: true about the day they were written, forever. Scanning them
+# produces permanent, unactionable noise.
+historical = ["CHANGELOG.md", "docs/devlog.md"]
+
+# A referable document family. Add another (RFC, SPEC) as a second entry —
+# a prefix, a directory, and the status that means "in force".
+[luria.schemes.ADR]
+dir = "docs/decisions"
+active = "Active"
