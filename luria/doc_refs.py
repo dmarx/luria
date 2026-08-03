@@ -95,8 +95,8 @@ class Ref:
     end: int
     text: str          # the matched source text
     line: int          # 1-based
-    # For a remote reference, the two halves of `SG-ADR-032`: which project,
-    # and which code in that project's namespace (ADR-015). Empty otherwise.
+    # For a remote reference, the two halves of `LU-ADR-013`: which project,
+    # and which code in that project's namespace (ADR-016). Empty otherwise.
     remote: str = ""
     code: str = ""
 
@@ -360,9 +360,9 @@ def find_refs(text: str, path: Path = ANY_MD) -> list[Ref]:
         refs.append(Ref(kind, num, start, end, text[start:end], line_of(start)))
         return True
 
-    # Remotes first: `SG-ADR-032` must claim its whole span before the local
+    # Remotes first: `LU-ADR-013` must claim its whole span before the local
     # ADR pattern reads the tail out of the middle of it and links a foreign
-    # reference to a local file (ADR-015).
+    # reference to a local file (ADR-016).
     if (remote_re := remotes.pattern()) is not None:
         for m in remote_re.finditer(text):
             span = range(m.start(), m.end())
@@ -573,11 +573,16 @@ def _apply(text: str, refs: list[Ref], source: Path, adrs: dict[int, Path],
 
 
 def doc_files() -> list[Path]:
-    """Every markdown file the reference rules apply to."""
+    """Every file the reference rules apply to.
+
+    `*.stub` counts. A stub is the one hand-written part of a generated view,
+    and its prose lands in a page the lint then skips *because* it is
+    generated — so a bare reference written there was invisible to both checks
+    at once. `link_base` already knows where a stub renders (ADR-016)."""
     cfg = current()
     paths = [cfg.root / name for name in ("README.md", "CLAUDE.md", "AGENTS.md")]
     paths += [cfg.root / target for target in cfg.fragments.values()]
-    paths += sorted(cfg.docs.rglob("*.md"))
+    paths += sorted(cfg.docs.rglob("*.md")) + sorted(cfg.docs.rglob("*.stub"))
     for fragment_dir in cfg.fragments:
         paths += sorted((cfg.root / fragment_dir).glob("*.md"))
     seen, out = set(), []

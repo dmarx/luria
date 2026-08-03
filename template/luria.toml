@@ -41,15 +41,19 @@ active = "Active"
 render = "document"
 output = "docs/design-principles.md"
 
-# Another project's record, cited from this one. `SG-ADR-032` then means that
-# project's ADR-032: the fixer links it, the lint demands it, and
-# `luria remotes --refresh` discovers filenames a code alone can't compute.
-# Uncomment and edit — the prefix is yours to choose.
+# Another project's record, cited from this one. `LU-ADR-013` then means that
+# project's ADR-013: the fixer links it, the lint demands it, and
+# `luria remotes` shows how each one resolves.
 #
-# [luria.remotes.SG]
-# name = "strata-g"
-# repo = "owner/name"
-# ref  = "main"
-# dir  = "docs/decisions"
-# path = "../strata-g"     # optional local clone; the only way a private
-#                          # remote's filenames can be discovered
+# `LU` is Luria itself, and the templates in this scaffold cite it — that is how
+# the reasoning behind a convention stays one click away without pasting URLs
+# into your own files. Delete it once you stop needing the pointers.
+[luria.remotes.LU]
+name = "luria"
+repo = "dmarx/luria"
+ref  = "main"
+dir  = "docs/decisions"
+
+# Add your own the same way. A remote whose filenames carry title slugs needs
+# `luria remotes --refresh` once, to discover them into remotes.lock.json; one
+# that names files after their codes needs nothing.

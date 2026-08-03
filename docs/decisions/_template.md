@@ -18,6 +18,13 @@ status: Proposed
 # that the two agree, because two copies of a string is a projection that drifts.
 title: Decision, stated as the thing you did
 
+# Which revision of this decision's claim you are reading. Standard frontmatter
+# for every scheme, and it moves rarely here: a decision that CHANGES is
+# superseded by a new one, not edited. Bump it when the same choice is restated
+# more broadly — scope widened, wording generalized — and say what changed in a
+# `history:` entry. Shown in the index only when it is not 1.
+version: 1
+
 # Browsing categories, pushed down onto the decision itself. One is normal; more
 # than one is fine. A tag not listed in tags.yaml still works.
 tags:

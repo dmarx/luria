@@ -140,7 +140,7 @@ def _codes(spec: str) -> tuple[set[str], str]:
 
     Composed codes come out first and whole: a remote's `DP-004` is that
     remote's principle, and reading the tail out of the middle of the composed
-    code would have the validator check the wrong project (ADR-015)."""
+    code would have the validator check the wrong project (ADR-016)."""
     codes: set[str] = set()
     if (remote_re := remotes.pattern()) is not None:
         for m in remote_re.finditer(spec):
@@ -280,9 +280,9 @@ def scan(files: list[Path] | None = None, docs: dict[str, Doc] | None = None) ->
         # foreign document (ADR-009), and counting it as a local reference
         # would report every such link as dangling.
         text = _blank(text, [m.span() for m in URL_RE.finditer(text)])
-        # `SG-ADR-032` names strata-g's decision 32, not this project's.
+        # `LU-ADR-013` names the remote's decision 13, not this project's.
         # Blanking the composed span is what stops the local scheme pattern
-        # reading a foreign code out of the middle of it (ADR-015) — but a
+        # reading a foreign code out of the middle of it (ADR-016) — but a
         # foreign code that resolves to nothing is still a dangling reference,
         # so it is recorded on the way past rather than dropped.
         if (remote_re := remotes.pattern()) is not None:

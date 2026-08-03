@@ -60,9 +60,10 @@ number, or an example.
 **Another project's decision is not that case — give it a prefix.**
 `SG-ADR-032` would be remote `SG`'s decision 32; one `[luria.remotes.SG]` entry in
 `luria.toml` makes it a first-class reference: the fixer writes the link, the
-lint demands it, and `luria remotes` shows how each one resolves. Run
-`luria remotes --refresh` after adding one, so the committed lockfile can
-resolve filenames the code alone can't.
+lint demands it, and `luria remotes` shows how each one resolves. A remote whose
+filenames carry title slugs needs `luria remotes --refresh` once, to discover
+them into the committed lockfile; one that names files after their codes needs
+nothing.
 
 ## Adding a decision
 
@@ -76,7 +77,14 @@ was rejected**; a decision with an empty "alternatives considered" usually
 wasn't a decision.
 
 Supersede by **adding** a decision and flipping the old one's status to
-`Superseded`. Never rewrite a decision's body — the history is the point.
+`Superseded`. Never rewrite a decision's body — the history is the point, and
+that holds for a decision that lasted an afternoon as much as one that lasted a
+year.
+
+`version:` is standard frontmatter here too, and it moves rarely: a decision
+that *changes* is superseded, not edited. Bump it when the same choice is
+restated more broadly — scope widened, wording generalized — and the index will
+show it.
 
 ## Adding or revising a principle
 

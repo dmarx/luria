@@ -65,7 +65,8 @@ DEFAULTS: dict = {
         "ADR": {"dir": "docs/decisions", "active": "Active", "render": "index"},
     },
     # Other projects whose records this one cites, keyed by a short prefix. A
-    # reference then composes: `SG-ADR-032` is strata-g's decision 32 (ADR-015).
+    # reference then composes: `LU-ADR-013` is that remote's decision 13
+    # (ADR-016).
     "remotes": {},
     "stale_days": 90,
 }
@@ -159,15 +160,14 @@ class Remote:
     """Another project's record, cited from this one.
 
     A reference to it composes the remote's prefix with the foreign scheme's
-    own code — `SG-ADR-032` — so the namespace is explicit at the point of use
-    and nothing has to guess which project an unprefixed code meant (ADR-015).
+    own code — `LU-ADR-013` — so the namespace is explicit at the point of use
+    and nothing has to guess which project an unprefixed code meant (ADR-016).
 
-        [luria.remotes.SG]
-        name = "strata-g"
-        repo = "dmarx/strata-g"          # GitHub owner/name
+        [luria.remotes.LU]
+        name = "luria"
+        repo = "dmarx/luria"             # GitHub owner/name
         ref  = "main"                    # branch or tag the links point at
         dir  = "docs/decisions"          # where its documents live
-        path = "../strata-g"             # optional local checkout, for discovery
         url  = "https://…/{code}.md"     # optional: overrides construction
 
     Everything but `repo` (or `url`) has a default, because the defaults are
@@ -177,7 +177,6 @@ class Remote:
     ref: str = "main"
     dir: str = "docs/decisions"
     name: str = ""
-    path: Path | None = None
     url: str = ""
 
     @property
@@ -309,7 +308,6 @@ def load(root: Path | None = None) -> Config:
                 ref=spec.get("ref", "main"),
                 dir=spec.get("dir", "docs/decisions"),
                 name=spec.get("name", ""),
-                path=(root / spec["path"]).resolve() if spec.get("path") else None,
                 url=spec.get("url", ""),
             )
             for prefix, spec in raw.get("remotes", {}).items()

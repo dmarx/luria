@@ -3,11 +3,11 @@
 # carries information (it's the order decisions were made). The filename is the
 # code and nothing else; the title goes in `title:` below, where correcting it
 # costs an edit rather than a rename plus every link. Why:
-#   https://github.com/dmarx/luria/blob/main/docs/decisions/ADR-013.md
+#   Why: LU-ADR-013.
 #
 # This frontmatter is the ONLY place these facts live. The index and the per-tag
 # pages are generated from it — never edit them by hand; run `luria index`.
-# Why:  https://github.com/dmarx/luria/blob/main/docs/decisions/ADR-004.md
+# Why: LU-ADR-004.
 
 # Active | Proposed | Deferred | Superseded | Rejected, optionally " — <note>".
 # Supersede rather than rewrite: when a decision is replaced, set the old one to
@@ -18,6 +18,13 @@ status: Proposed
 # heading — someone reading the file alone needs one — and `luria lint` checks
 # that the two agree, because two copies of a string is a projection that drifts.
 title: Decision, stated as the thing you did
+
+# Which revision of this decision's claim you are reading. Standard frontmatter
+# for every scheme, and it moves rarely here: a decision that CHANGES is
+# superseded by a new one, not edited. Bump it when the same choice is restated
+# more broadly — scope widened, wording generalized — and say what changed in a
+# `history:` entry. Shown in the index only when it is not 1.
+version: 1
 
 # Browsing categories, pushed down onto the decision itself. One is normal; more
 # than one is fine. A tag not listed in tags.yaml still works.

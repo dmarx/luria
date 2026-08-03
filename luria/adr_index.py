@@ -138,6 +138,13 @@ class Adr:
 
     @property
     def version(self) -> int:
+        """Which revision of this document's claim you are reading.
+
+        Standard frontmatter for every scheme (ADR-016), not just principles.
+        A decision is superseded rather than rewritten, so its version moves
+        rarely — but "rarely" is not "never": a decision whose *scope* widens
+        without its choice changing is a revision, and that is exactly the case
+        a reader needs told apart from a fresh decision."""
         return int(self.meta.get("version", 1) or 1)
 
     @property
@@ -150,7 +157,12 @@ class Adr:
         # Every rendered field is rebased, not just the ADR's own link: a
         # "Superseded — by [ADR-100](…)" note is prose too, and its link was
         # silently broken on the tag pages (four of them) until this existed.
-        return (f"| [{self.code}]({prefix}{self.path.name}) "
+        #
+        # The version is shown only when it isn't 1. A column of 1s teaches
+        # nothing; the field exists so a document that HAS been revised says so
+        # where it is read (ADR-016).
+        version = f" v{self.version}" if self.version > 1 else ""
+        return (f"| [{self.code}]({prefix}{self.path.name}){version} "
                 f"| {self.cell(prefix)} | {rebase_links(self.status, prefix)} |")
 
 

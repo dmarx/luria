@@ -89,16 +89,15 @@ Everything else is a warning and can wait
 A record extracted from — or working alongside — another project cites it
 constantly, and an unprefixed code can't mean both "ours" and "theirs".
 Register the remote and cite it with a prefix
-([ADR-015](decisions/ADR-015.md)):
+([ADR-016](decisions/ADR-016.md)):
 
 ```toml
-[luria.remotes.SG]
-name = "strata-g"
-repo = "dmarx/strata-g"
-path = "../strata-g"        # optional local clone
+[luria.remotes.LU]
+name = "luria"
+repo = "dmarx/luria"
 ```
 
-`SG-ADR-032` is then a first-class reference. Then:
+`LU-ADR-013` is then a first-class reference. Then:
 
 ```
 luria remotes --refresh     # discover filenames; commit remotes.lock.json
@@ -108,19 +107,19 @@ luria remotes --check       # HEAD them all (network; never part of the lint)
 
 Three things worth knowing before you rely on it:
 
-- **The lockfile matters when the remote's filenames carry title slugs.** No
-  template can turn `032` into `adr-032-changelog-ci-collection.md`, so it is
-  read from the remote and committed. A remote that follows
-  [ADR-013](decisions/ADR-013.md) needs no lockfile — the code *is* the
-  filename.
-- **A private remote resolves from a local clone.** Set `path`; discovery reads
-  the directory, and the remote's own `luria.toml` for where its documents
-  live. The committed lockfile then works for everyone, including CI, with no
-  access.
-- **`--check` reports, it never fails a build.** It also can't distinguish "the
-  document was deleted" from "this repo is private and you are anonymous", so
-  it probes the repository once and says *unverifiable* rather than inventing a
-  shelf of 404s.
+- **A remote that follows [ADR-013](decisions/ADR-013.md) needs no lockfile** —
+  the code *is* the filename, so the URL is exact with nothing to refresh. The
+  lockfile exists for records whose filenames carry title slugs, where no
+  template can turn `032` into `adr-032-a-long-title.md`; `--refresh` reads
+  those from the remote once and commits them.
+- **Discovery reads public repositories, over HTTPS, with no credentials.** A
+  remote Luria can't read is told so and left on the code-only convention. If
+  that is wrong for your remote, give it a `url` template — the answer to an
+  unreadable remote is configuration, not a credential path CI can't reproduce.
+- **`--check` reports, it never fails a build**, and it is never part of
+  `luria lint`. It also can't distinguish "the document was deleted" from "this
+  repo is private and you are anonymous", so it probes the repository once and
+  says *unverifiable* rather than inventing a shelf of 404s.
 
 ## Wiring it into CI
 

@@ -4,11 +4,11 @@
 # retired but never reused. The filename is the code and nothing else; the title
 # goes in `title:` below, where a revision costs an edit rather than a rename
 # plus every link — which matters more here than for a decision, because
-# principles are expected to be reworded. Why:  https://github.com/dmarx/luria/blob/main/docs/decisions/ADR-013.md
+# principles are expected to be reworded. Why: LU-ADR-013.
 #
 # This frontmatter is the ONLY place these facts live. `docs/design-principles.md`
 # is generated from it — never edit that file by hand; run `luria index`.
-# Why:  https://github.com/dmarx/luria/blob/main/docs/decisions/ADR-012.md
+# Why: LU-ADR-012.
 
 # Same vocabulary as a decision: Active | Proposed | Deferred |
 # Superseded | Rejected, optionally " — <note>". A principle that stops being

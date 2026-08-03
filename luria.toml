@@ -15,7 +15,8 @@ reports = "build/doc-reports"
 "devlog.d" = "docs/devlog.md"
 
 [luria.code]
-globs = ["luria/*.py", "tests/*.py", "Makefile", ".github/workflows/*.yml"]
+globs = ["luria/*.py", "tests/*.py", "Makefile", ".github/workflows/*.yml",
+         "template/**/*.md", "template/**/*.stub"]
 historical = ["CHANGELOG.md", "docs/devlog.md"]
 
 [luria.schemes.ADR]
@@ -32,13 +33,15 @@ render = "document"
 output = "docs/design-principles.md"
 
 # Another project's record, cited from this one. A reference composes the
-# prefix with that project's own code — `SG-ADR-032` — so the namespace is
-# explicit and nothing has to guess which project a bare `ADR-032` meant
-# (ADR-015). `path` points at a local clone, which is the only way to discover
-# filenames for a private remote; drop it and public repos still work.
-[luria.remotes.SG]
-name = "strata-g"
-repo = "dmarx/strata-g"
+# prefix with that project's own code — `LU-ADR-013` — so the namespace is
+# explicit and nothing has to guess which project an unprefixed code meant
+# (ADR-016).
+#
+# `LU` is Luria itself, registered on purpose: it is what the `template/`
+# scaffold cites, and it means the remote machinery is exercised end to end by
+# this repo rather than only by its tests. `luria remotes --check` verifies it.
+[luria.remotes.LU]
+name = "luria"
+repo = "dmarx/luria"
 ref  = "main"
 dir  = "docs/decisions"
-path = "../strata-g"
