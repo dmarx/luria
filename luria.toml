@@ -30,3 +30,15 @@ dir = "docs/principles"
 active = "Active"
 render = "document"
 output = "docs/design-principles.md"
+
+# Another project's record, cited from this one. A reference composes the
+# prefix with that project's own code — `SG-ADR-032` — so the namespace is
+# explicit and nothing has to guess which project a bare `ADR-032` meant
+# (ADR-015). `path` points at a local clone, which is the only way to discover
+# filenames for a private remote; drop it and public repos still work.
+[luria.remotes.SG]
+name = "strata-g"
+repo = "dmarx/strata-g"
+ref  = "main"
+dir  = "docs/decisions"
+path = "../strata-g"

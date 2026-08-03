@@ -19,7 +19,7 @@ Checks (each one fails the build):
 It also prints WARNINGS, which never affect the exit code (ADR-007): references
 to retired documents, codes that resolve to no document at all, directives that
 no longer apply, and a count of undecided decisions. Citing a `Rejected`
-decision — or leaving one `Proposed`, or naming another project's ADR-032 — is
+decision — or leaving one `Proposed`, or naming another project's SG-ADR-032 — is
 often right, so none can be an error; all should be visible. `luria ref-status`
 and `luria pending` give the detail, and an `inactive-ok:` / `unresolved-ok:`
 comment acknowledges a deliberate one so only the unconsidered ones stay
@@ -28,7 +28,6 @@ listed.
 Exit 0 when clean; exit 1 with one line per violation.
 """
 
-# unresolved-ok-file: ADR-032 — an illustrative foreign code in the docstring
 from __future__ import annotations
 
 import datetime as dt

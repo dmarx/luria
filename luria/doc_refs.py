@@ -43,7 +43,7 @@ from pathlib import Path
 
 import yaml  # noqa: F401  (re-exported for callers that parse frontmatter)
 
-from . import directives
+from . import directives, remotes
 from .adr_index import parse_frontmatter
 from .config import Config, current
 
@@ -89,14 +89,20 @@ KINDS = ("dp", "adr", "issue")
 
 @dataclass(frozen=True)
 class Ref:
-    kind: str          # "adr" | "dp" | "issue"
+    kind: str          # "adr" | "dp" | "issue" | "remote"
     num: int
     start: int
     end: int
     text: str          # the matched source text
     line: int          # 1-based
+    # For a remote reference, the two halves of `SG-ADR-032`: which project,
+    # and which code in that project's namespace (ADR-015). Empty otherwise.
+    remote: str = ""
+    code: str = ""
 
     def describe(self) -> str:
+        if self.kind == "remote":
+            return f"{self.remote}-{self.code}"
         return {"adr": f"ADR-{self.num:03d}",
                 "dp": f"design principle #{self.num}",
                 "issue": f"#{self.num}"}[self.kind]
@@ -354,6 +360,21 @@ def find_refs(text: str, path: Path = ANY_MD) -> list[Ref]:
         refs.append(Ref(kind, num, start, end, text[start:end], line_of(start)))
         return True
 
+    # Remotes first: `SG-ADR-032` must claim its whole span before the local
+    # ADR pattern reads the tail out of the middle of it and links a foreign
+    # reference to a local file (ADR-015).
+    if (remote_re := remotes.pattern()) is not None:
+        for m in remote_re.finditer(text):
+            span = range(m.start(), m.end())
+            if any(mask[i] or claimed[i] for i in span):
+                continue
+            for i in span:
+                claimed[i] = True
+            code = remotes.normalise(m.group("code"))
+            refs.append(Ref("remote", int(code.rsplit("-", 1)[1]),
+                            m.start(), m.end(), m.group(0), line_of(m.start()),
+                            remote=m.group("remote"), code=code))
+
     for kind, regex in (("dp", DP_RE), ("adr", ADR_RE), ("issue", ISSUE_RE)):
         for m in regex.finditer(text):
             if not take(kind, int(m.group("num")), m.start(), m.end()):
@@ -447,6 +468,10 @@ def resolve(ref: Ref, source: Path, adrs: dict[int, Path],
     ambiguous low `#N` (needs `text` to judge)."""
     cfg = current()
     base = cfg.link_base(source)
+    if ref.kind == "remote":
+        # A URL, never a relative path — it is a different repository, so no
+        # `link_base` applies and the same target is right from every file.
+        return remotes.resolve(ref.remote, ref.code) or None
     if ref.kind == "issue":
         if text is not None and is_ambiguous_issue(ref, text, anchors):
             return None

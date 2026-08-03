@@ -7,6 +7,7 @@
     luria pending       undecided decisions by age and citation count
     luria reports       write both reports as markdown, for a CI artifact
     luria collect       assemble fragment directories into their views
+    luria remotes       other projects' records cited from this one
     luria init          scaffold the record into a project that has none
 
 Subcommands delegate to modules that each keep their own `main()`, so any of
@@ -26,6 +27,7 @@ COMMANDS = {
     "pending": ("luria.adr_pending", "undecided decisions, by age"),
     "reports": ("luria.reports", "write both reports as markdown"),
     "collect": ("luria.collect", "assemble fragments into their views"),
+    "remotes": ("luria.remotes", "other projects' records, and how they resolve"),
     "init": ("luria.init", "scaffold the record into a project"),
 }
 

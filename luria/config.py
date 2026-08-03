@@ -64,6 +64,9 @@ DEFAULTS: dict = {
     "schemes": {
         "ADR": {"dir": "docs/decisions", "active": "Active", "render": "index"},
     },
+    # Other projects whose records this one cites, keyed by a short prefix. A
+    # reference then composes: `SG-ADR-032` is strata-g's decision 32 (ADR-015).
+    "remotes": {},
     "stale_days": 90,
 }
 
@@ -152,6 +155,55 @@ class Scheme:
 
 
 @dataclass(frozen=True)
+class Remote:
+    """Another project's record, cited from this one.
+
+    A reference to it composes the remote's prefix with the foreign scheme's
+    own code — `SG-ADR-032` — so the namespace is explicit at the point of use
+    and nothing has to guess which project an unprefixed code meant (ADR-015).
+
+        [luria.remotes.SG]
+        name = "strata-g"
+        repo = "dmarx/strata-g"          # GitHub owner/name
+        ref  = "main"                    # branch or tag the links point at
+        dir  = "docs/decisions"          # where its documents live
+        path = "../strata-g"             # optional local checkout, for discovery
+        url  = "https://…/{code}.md"     # optional: overrides construction
+
+    Everything but `repo` (or `url`) has a default, because the defaults are
+    Luria's own conventions — a remote that uses them needs one line."""
+    prefix: str
+    repo: str = ""
+    ref: str = "main"
+    dir: str = "docs/decisions"
+    name: str = ""
+    path: Path | None = None
+    url: str = ""
+
+    @property
+    def label(self) -> str:
+        return self.name or self.repo or self.prefix
+
+    def base(self) -> str:
+        """The directory its documents live in, as a URL."""
+        return f"https://github.com/{self.repo}/blob/{self.ref}/{self.dir}".rstrip("/")
+
+    def link(self, code: str, filename: str = "") -> str:
+        """The URL for a foreign code, best available construction.
+
+        Three rungs, strongest first: an explicit `url` template; a filename
+        discovered from the remote (`luria remotes --refresh`), which is the
+        only thing that can resolve a title-slug name; and the code-only
+        convention (ADR-013), which is right whenever the remote follows it."""
+        if self.url:
+            return self.url.format(code=code, number=int(code.rsplit("-", 1)[1]),
+                                   prefix=code.rsplit("-", 1)[0])
+        if not self.repo:
+            return ""
+        return f"{self.base()}/{filename or code + '.md'}"
+
+
+@dataclass(frozen=True)
 class Config:
     root: Path
     issue_url: str
@@ -163,6 +215,7 @@ class Config:
     code_globs: tuple[str, ...]
     historical: frozenset[Path]
     schemes: dict[str, Scheme]
+    remotes: dict[str, Remote]
     stale_days: int
     _raw: dict = field(default_factory=dict, repr=False)
 
@@ -181,6 +234,15 @@ class Config:
     @property
     def tag_dir(self) -> Path:
         return self.decisions / "tags"
+
+    @property
+    def remotes_lock(self) -> Path:
+        """Discovered code→filename maps for the remotes, checked in.
+
+        A lockfile rather than a live lookup: CI and an offline checkout have
+        to resolve a foreign reference the same way a laptop with network does,
+        and a private remote can only be read from a local clone anyway."""
+        return self.root / "remotes.lock.json"
 
     def is_generated(self, path: Path) -> bool:
         """A view the generator owns. Rewriting one is pointless — the next
@@ -239,6 +301,18 @@ def load(root: Path | None = None) -> Config:
                 root / spec["output"] if spec.get("output") else None,
             )
             for prefix, spec in raw["schemes"].items()
+        },
+        remotes={
+            prefix.upper(): Remote(
+                prefix.upper(),
+                repo=spec.get("repo", ""),
+                ref=spec.get("ref", "main"),
+                dir=spec.get("dir", "docs/decisions"),
+                name=spec.get("name", ""),
+                path=(root / spec["path"]).resolve() if spec.get("path") else None,
+                url=spec.get("url", ""),
+            )
+            for prefix, spec in raw.get("remotes", {}).items()
         },
         stale_days=int(raw.get("stale_days", 90)),
         _raw=raw,

@@ -32,5 +32,11 @@ pending: ## undecided decisions by age and citation count
 reports: ## write both reports to build/doc-reports/
 	luria reports
 
+remotes: ## other projects' records: how each foreign reference resolves
+	luria remotes
+
+remotes-refresh: ## rediscover remote filenames into remotes.lock.json
+	luria remotes --refresh
+
 collect: ## assemble fragment directories into their views
 	luria collect

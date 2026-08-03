@@ -62,7 +62,7 @@ from pathlib import Path
 from typing import Callable
 
 from . import adr_index as builder
-from . import directives, doc_refs
+from . import directives, doc_refs, remotes
 from .config import current
 
 DEFAULT_SITES = 5
@@ -135,6 +135,29 @@ DIRECTIVE = "inactive-ok"
 DANGLING_DIRECTIVE = "unresolved-ok"
 
 
+def _codes(spec: str) -> tuple[set[str], str]:
+    """The document codes an annotation names, and the text with them removed.
+
+    Composed codes come out first and whole: a remote's `DP-004` is that
+    remote's principle, and reading the tail out of the middle of the composed
+    code would have the validator check the wrong project (ADR-015)."""
+    codes: set[str] = set()
+    if (remote_re := remotes.pattern()) is not None:
+        for m in remote_re.finditer(spec):
+            codes.add(f"{m.group('remote')}-{remotes.normalise(m.group('code'))}")
+        spec = remote_re.sub(" ", spec)
+    codes |= {f"{p.upper()}-{int(n):03d}" for p, n in CODE_RE.findall(spec)}
+    return codes, spec
+
+
+def _exists(code: str, known: set[str]) -> bool:
+    """Whether a code names something. A composed one asks the remote."""
+    prefix, _, tail = code.partition("-")
+    if prefix.upper() in current().remotes:
+        return bool(remotes.resolve(prefix, tail))
+    return code in known
+
+
 @dataclass(frozen=True)
 class Annotation:
     directive: directives.Directive
@@ -167,16 +190,18 @@ def annotations(path: Path, text: str, known: set[str],
     found = []
     for d in directives.find(path, text, {directive}):
         spec = " ".join(d.args)
-        codes = {f"{p.upper()}-{int(n):03d}" for p, n in CODE_RE.findall(spec)}
+        codes, spec = _codes(spec)
         problem = None
         if not codes:
             problem = "names no document code"
         elif BARE_NUMBER_RE.search(CODE_RE.sub("", spec)):
             example = f"{next(iter(schemes()), 'ADR')}-012"
             problem = f"has a bare number — write the full code (e.g. {example})"
-        elif resolvable and (unknown := sorted(c for c in codes if c not in known)):
+        elif resolvable and (unknown := sorted(
+                c for c in codes if not _exists(c, known))):
             problem = f"names unknown document(s): {', '.join(unknown)}"
-        elif not resolvable and (real := sorted(c for c in codes if c in known)):
+        elif not resolvable and (real := sorted(
+                c for c in codes if _exists(c, known))):
             problem = f"names {', '.join(real)}, which does resolve here"
         found.append(Annotation(d, frozenset(codes), problem, directive))
     return found
@@ -255,6 +280,23 @@ def scan(files: list[Path] | None = None, docs: dict[str, Doc] | None = None) ->
         # foreign document (ADR-009), and counting it as a local reference
         # would report every such link as dangling.
         text = _blank(text, [m.span() for m in URL_RE.finditer(text)])
+        # `SG-ADR-032` names strata-g's decision 32, not this project's.
+        # Blanking the composed span is what stops the local scheme pattern
+        # reading a foreign code out of the middle of it (ADR-015) — but a
+        # foreign code that resolves to nothing is still a dangling reference,
+        # so it is recorded on the way past rather than dropped.
+        if (remote_re := remotes.pattern()) is not None:
+            spans = []
+            for m in remote_re.finditer(text):
+                spans.append(m.span())
+                if not remotes.resolve(m.group("remote"), m.group("code")):
+                    code = f"{m.group('remote')}-{remotes.normalise(m.group('code'))}"
+                    where = text.count("\n", 0, m.start()) + 1
+                    excuse = next((a for a in usable_dangling
+                                   if code in a.codes and a.covers(where)), None)
+                    result.dangling.setdefault(code, []).append(
+                        Citation(path, where, code, excuse))
+            text = _blank(text, spans)
         for line_no, line in enumerate(text.splitlines(), 1):
             bare = line
             # One site per line: citing the same document twice in a sentence

@@ -35,6 +35,7 @@ luria link --fix      # rewrite bare references as hyperlinks
 luria index           # regenerate every generated view (decisions, principles)
 luria ref-status      # what still cites a retired decision
 luria pending         # what has been undecided, and for how long
+luria remotes         # other projects' records, and how they resolve
 ```
 
 **Every reference is a hyperlink.** A decision code, a design principle or an
@@ -53,8 +54,15 @@ report. The suffix decides the scope, uniformly, and a directive is one line:
 ```
 
 `unresolved-ok` is for a code that resolves to **no document here**: a fixture
-number, or an example. Another project's decision is not that case — write it
-as a link out, which needs no annotation.
+number, or an example.
+
+<!-- unresolved-ok-block: ADR-032 — an example code; `SG` isn't registered here yet -->
+**Another project's decision is not that case — give it a prefix.**
+`SG-ADR-032` would be remote `SG`'s decision 32; one `[luria.remotes.SG]` entry in
+`luria.toml` makes it a first-class reference: the fixer writes the link, the
+lint demands it, and `luria remotes` shows how each one resolves. Run
+`luria remotes --refresh` after adding one, so the committed lockfile can
+resolve filenames the code alone can't.
 
 ## Adding a decision
 

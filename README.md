@@ -33,6 +33,7 @@ luria index && luria lint
 | `luria pending` | which decisions are undecided, by age **and** citation count |
 | `luria reports` | both reports as markdown, for a CI artifact |
 | `luria collect` | assembles fragment directories into their views |
+| `luria remotes` | another project's record: how each foreign reference resolves, and whether it is reachable |
 | `luria init` | scaffolds the record into a project that has none |
 
 ## The four layers
@@ -54,6 +55,23 @@ changelog and devlog are **collected**: their fragments are consumed, so the
 view can only be appended to. The decision index and the principles document are
 **generated** — a pure function of sources that persist, which is the only
 reason `luria lint` can tell you one has gone stale.
+
+## Citing another project
+
+A record extracted from another project cites it constantly, and an unprefixed
+code can't mean both "ours" and "theirs". Register the remote once:
+
+```toml
+[luria.remotes.SG]
+repo = "dmarx/strata-g"
+path = "../strata-g"        # optional clone, so private remotes resolve too
+```
+
+and `SG-ADR-032` becomes a first-class reference — `luria link --fix` writes the
+URL, `luria lint` demands it, and `luria remotes --refresh` discovers filenames
+a code alone can't compute, into a committed lockfile so CI and offline
+checkouts resolve identically
+([ADR-015](docs/decisions/ADR-015.md)).
 
 ## Why a lint
 

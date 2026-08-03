@@ -84,6 +84,44 @@ had been letting through. Three are usual:
 Everything else is a warning and can wait
 ([ADR-007](decisions/ADR-007.md)).
 
+## Citing another project
+
+A record extracted from — or working alongside — another project cites it
+constantly, and an unprefixed code can't mean both "ours" and "theirs".
+Register the remote and cite it with a prefix
+([ADR-015](decisions/ADR-015.md)):
+
+```toml
+[luria.remotes.SG]
+name = "strata-g"
+repo = "dmarx/strata-g"
+path = "../strata-g"        # optional local clone
+```
+
+`SG-ADR-032` is then a first-class reference. Then:
+
+```
+luria remotes --refresh     # discover filenames; commit remotes.lock.json
+luria remotes               # how each cited reference resolves
+luria remotes --check       # HEAD them all (network; never part of the lint)
+```
+
+Three things worth knowing before you rely on it:
+
+- **The lockfile matters when the remote's filenames carry title slugs.** No
+  template can turn `032` into `adr-032-changelog-ci-collection.md`, so it is
+  read from the remote and committed. A remote that follows
+  [ADR-013](decisions/ADR-013.md) needs no lockfile — the code *is* the
+  filename.
+- **A private remote resolves from a local clone.** Set `path`; discovery reads
+  the directory, and the remote's own `luria.toml` for where its documents
+  live. The committed lockfile then works for everyone, including CI, with no
+  access.
+- **`--check` reports, it never fails a build.** It also can't distinguish "the
+  document was deleted" from "this repo is private and you are anonymous", so
+  it probes the repository once and says *unverifiable* rather than inventing a
+  shelf of 404s.
+
 ## Wiring it into CI
 
 ```yaml
