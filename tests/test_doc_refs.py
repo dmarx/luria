@@ -144,9 +144,9 @@ def test_unexempt_reports_an_unknown_region():
 
 
 def test_existing_links_are_ignored():
-    assert kinds("[ADR-004](decisions/adr-004-generated-decision-index.md)") == []
+    assert kinds("[ADR-004](decisions/ADR-004.md)") == []
     assert kinds("[#551](https://github.com/dmarx/strata-g/issues/551)") == []
-    assert kinds("see [the index ADR](adr-004-generated-decision-index.md)") == []
+    assert kinds("see [the index ADR](ADR-004.md)") == []
 
 
 def test_defined_shortcut_reference_is_already_a_link():
@@ -179,7 +179,7 @@ def test_summary_rewrite_is_verified_against_the_yaml():
     meta, _ = doc_refs.parse_frontmatter(out)
     assert meta["status"] == "Active"
     assert meta["summary"] == (
-        "refines [ADR-001](adr-001-four-layers-of-record.md)")
+        "refines [ADR-001](ADR-001.md)")
 
 
 def test_unsurvivable_summary_rewrite_is_dropped_by_both_sides():
@@ -212,7 +212,7 @@ def test_urls_and_comments_are_ignored():
 def test_linkify_uses_repo_conventions():
     out, n = doc_refs.linkify("See ADR-004 and #551.", ANY_MD)
     assert n == 2
-    assert "[ADR-004](decisions/adr-004-generated-decision-index.md)" in out
+    assert "[ADR-004](decisions/ADR-004.md)" in out
     assert f"[#551]({ISSUE_551})" in out
 
 
@@ -234,7 +234,7 @@ def test_html_block_gets_an_html_anchor():
 
 def test_undefined_shortcut_brackets_are_absorbed():
     out, _ = doc_refs.linkify("as in [ADR-004] above", ANY_MD)
-    assert out == "as in [ADR-004](decisions/adr-004-generated-decision-index.md) above"
+    assert out == "as in [ADR-004](decisions/ADR-004.md) above"
 
 
 def test_self_reference_is_not_linked():
@@ -248,8 +248,8 @@ def test_fragment_links_resolve_from_the_collected_file():
     docs/devlog.md — links must be written for where the text lands."""
     changelog_out, _ = doc_refs.linkify("See ADR-004.", REPO / "changelog.d" / "x.md")
     devlog_out, _ = doc_refs.linkify("See ADR-004.", REPO / "devlog.d" / "x.md")
-    assert "(docs/decisions/adr-004-generated-decision-index.md)" in changelog_out
-    assert "(decisions/adr-004-generated-decision-index.md)" in devlog_out
+    assert "(docs/decisions/ADR-004.md)" in changelog_out
+    assert "(decisions/ADR-004.md)" in devlog_out
 
 
 def test_design_principle_links_to_its_anchor():

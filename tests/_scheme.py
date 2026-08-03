@@ -10,9 +10,10 @@ from pathlib import Path
 
 def decision(root: Path, number: int, status: str, title: str = "A decision",
              summary: str = "") -> Path:
-    path = root / "docs" / "decisions" / f"adr-{number:03d}-fixture.md"
+    path = root / "docs" / "decisions" / f"ADR-{number:03d}.md"
     path.parent.mkdir(parents=True, exist_ok=True)
-    front = [f"status: {status}", "tags:", "- record", "date: '2026-01-01'"]
+    front = [f"status: {status}", f"title: {title!r}",
+             "tags:", "- record", "date: '2026-01-01'"]
     if summary:
         front.append(f"summary: {summary!r}")
     path.write_text("---\n" + "\n".join(front) + "\n---\n\n"

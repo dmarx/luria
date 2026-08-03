@@ -7,7 +7,8 @@ Checks (each one fails the build):
 1. **Docs index** — every markdown page under the docs directory is linked from
    its `README.md`, so the index can't silently drift from the directory.
 2. **Frontmatter** — every document in a reference scheme carries a `status:`
-   from the canonical vocabulary and at least one `tags:` entry (ADR-003).
+   from the canonical vocabulary, at least one `tags:` entry (ADR-003), and a
+   `title:` that agrees with its body heading (ADR-013).
 3. **Generated index** — the decision index and its per-tag pages are built from
    frontmatter (ADR-004), so a stale index is a failure rather than a silent
    divergence. `luria index` regenerates.
@@ -71,12 +72,13 @@ def check_docs_index(errors: list[str]) -> None:
 def check_frontmatter(errors: list[str]) -> None:
     cfg = current()
     for scheme in cfg.schemes.values():
-        for path in sorted(scheme.dir.glob(f"{scheme.prefix.lower()}-*.md")):
+        for path in scheme.documents().values():
             rel = cfg.rel(path)
-            meta, _ = builder.parse_frontmatter(path.read_text())
+            meta, body = builder.parse_frontmatter(path.read_text())
             if not meta:
                 errors.append(f"{rel}: no YAML frontmatter (see _template.md)")
                 continue
+            check_title(errors, rel, meta, body)
             status = str(meta.get("status", "")).strip()
             if not status:
                 errors.append(f"{rel}: no `status:` in frontmatter")
@@ -87,6 +89,25 @@ def check_frontmatter(errors: list[str]) -> None:
                     "' — note')")
             if not (meta.get("tags") or []):
                 errors.append(f"{rel}: no `tags:` in frontmatter (see ADR-003)")
+
+
+def check_title(errors: list[str], rel: str, meta: dict, body: str) -> None:
+    """`title:` is the source of truth, and the body's H1 repeats it.
+
+    Two copies of one string is the drifting projection DP-3 names, and the
+    filename no longer carries a third (ADR-013). The H1 can't simply be
+    dropped — someone reading the file on its own needs a heading — so this is
+    rung 2: keep the copy, guard the property that they agree."""
+    title = str(meta.get("title") or "").strip()
+    if not title:
+        errors.append(f"{rel}: no `title:` in frontmatter (see ADR-013)")
+        return
+    first = next((ln for ln in body.splitlines() if ln.startswith("#")), "")
+    heading = builder.TITLE_RE.sub("", first).strip()
+    if heading and heading != title:
+        errors.append(
+            f"{rel}: `title:` and the body heading disagree — "
+            f"{title!r} vs {heading!r}")
 
 
 def check_generated_index(errors: list[str]) -> None:

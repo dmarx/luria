@@ -53,11 +53,14 @@ leaving it on the report:
 
 ## Adding a decision
 
-Copy [`docs/decisions/_template.md`](docs/decisions/_template.md), take the next
-number, fill in the frontmatter, then run `luria index`. Write the `summary:` —
-it is what the index shows, and the index is read far more often than the
-decision. Say what was decided **and what was rejected**; a decision with an
-empty "alternatives considered" usually wasn't a decision.
+Copy [`docs/decisions/_template.md`](docs/decisions/_template.md) to
+`ADR-<NNN>.md` with the next free number — the filename is the code and nothing
+else, and the title goes in `title:`. Repeat the title as the body's
+`# ADR-NNN:` heading; the lint checks that the two agree. Then run
+`luria index`. Write the `summary:` — it is what the index shows, and the
+index is read far more often than the decision. Say what was decided **and what
+was rejected**; a decision with an empty "alternatives considered" usually
+wasn't a decision.
 
 Supersede by **adding** a decision and flipping the old one's status to
 `Superseded`. Never rewrite a decision's body — the history is the point.
@@ -65,9 +68,9 @@ Supersede by **adding** a decision and flipping the old one's status to
 ## Adding or revising a principle
 
 Same shape, one directory over: copy
-[`docs/principles/_template.md`](docs/principles/_template.md), take the next
-number, run `luria index`. Add one only on the **second** re-derivation of the
-same reasoning — one instance is a decision, a pattern is a principle.
+[`docs/principles/_template.md`](docs/principles/_template.md) to
+`DP-<NNN>.md` with the next free number, run `luria index`. Add one only on the
+**second** re-derivation of the same reasoning — one instance is a decision, a pattern is a principle.
 
 Principles are **living documents**, and a revision is the opposite of a
 supersession: when new experience shows an existing principle nearly covers it,

@@ -1,7 +1,7 @@
 # Comment directives
 
 Two checks take instructions from the prose they check. They share one parser,
-one shape, and one scope rule ([ADR-008](decisions/adr-008-directive-vocabulary.md)).
+one shape, and one scope rule ([ADR-008](decisions/ADR-008.md)).
 
 ```
 <name>[-block|-file]: <args> — <reason>
@@ -31,7 +31,7 @@ block even when it contains blank lines.
 ## `inactive-ok` — this reference is deliberate
 
 Silences one reference to a retired (non-`Active`) document in the
-[reference-status report](decisions/adr-007-status-is-reported-not-enforced.md).
+[reference-status report](decisions/ADR-007.md).
 
 ```
 <!-- inactive-ok: ADR-012 — the decision this one replaced -->
@@ -43,7 +43,7 @@ Silences one reference to a retired (non-`Active`) document in the
 Write the **full prefixed code**. A bare number is reported as a malformed
 annotation rather than assumed to be a decision, which is what lets one
 vocabulary serve more than one reference scheme
-([ADR-006](decisions/adr-006-reference-schemes-are-configured.md)).
+([ADR-006](decisions/ADR-006.md)).
 
 Acknowledgements are **counted** in the report, not hidden — and one that stops
 applying (the document went `Active`, the reference moved) is reported in its

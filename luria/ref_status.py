@@ -95,17 +95,12 @@ def _load_scheme(scheme) -> dict[str, Doc]:
     Frontmatter-with-a-`status:` is the only contract a scheme has to meet, so
     a second scheme is a directory and a prefix — not a code change (ADR-006)."""
     docs: dict[str, Doc] = {}
-    for path in sorted(scheme.dir.glob("*.md")):
-        m = re.match(rf"{scheme.prefix.lower()}-(\d+)", path.name)
-        if not m:
-            continue
-        meta, body = builder.parse_frontmatter(path.read_text())
-        status = re.split(r"\s+—\s+", str(meta.get("status", "")).strip(),
-                          maxsplit=1)[0]
-        first = next((ln for ln in body.splitlines() if ln.startswith("#")), "")
-        title = builder.TITLE_RE.sub("", first).strip()
-        code = scheme.code(m.group(1))
-        docs[code] = Doc(code, status, title, path, status == scheme.active)
+    for number, path in scheme.documents().items():
+        doc = builder.Adr(path, scheme)
+        # The bare status word: `Superseded — by [ADR-011](…)` is `Superseded`.
+        status = re.split(r"\s+—\s+", doc.status, maxsplit=1)[0]
+        code = scheme.code(number)
+        docs[code] = Doc(code, status, doc.title, path, status == scheme.active)
     return docs
 
 

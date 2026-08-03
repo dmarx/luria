@@ -46,7 +46,6 @@ import yaml
 from .config import current
 
 TITLE_RE = re.compile(r"^#\s*[A-Z]+-\d+\s*(?::|—|-)\s*")
-NUM_RE = re.compile(r"^[a-z]+-(\d+)")
 TABLE_HEAD = "| # | Title | Status |\n|---|---|---|\n"
 
 # Used when a project has no `README.stub`. The stub exists so prose lives in
@@ -99,13 +98,20 @@ def parse_frontmatter(text: str) -> tuple[dict, str]:
 
 
 class Adr:
-    def __init__(self, path: Path):
+    def __init__(self, path: Path, scheme=None):
+        scheme = scheme or current().schemes["ADR"]
         self.path = path
-        self.prefix = path.name.split("-")[0].upper()
-        self.number = int(NUM_RE.match(path.name).group(1))
+        self.scheme = scheme
+        self.prefix = scheme.prefix
+        self.number = scheme.number_of(path)
         self.meta, body = parse_frontmatter(path.read_text())
+        # `title:` is the source of truth; the body's H1 is the fallback, so a
+        # document written before the field existed — or in a project that
+        # hasn't adopted it — still renders a title rather than a blank cell
+        # (ADR-013).
         first = next((ln for ln in body.splitlines() if ln.startswith("#")), "")
-        self.title = TITLE_RE.sub("", first).strip()
+        self.heading = TITLE_RE.sub("", first).strip()
+        self.title = str(self.meta.get("title") or "").strip() or self.heading
 
     @property
     def code(self) -> str:
@@ -154,8 +160,7 @@ def load_adrs() -> list[Adr]:
 
 
 def load_scheme(scheme) -> list[Adr]:
-    return sorted((Adr(p) for p in scheme.dir.glob(f"{scheme.prefix.lower()}-*.md")),
-                  key=lambda a: a.number)
+    return [Adr(p, scheme) for p in scheme.documents().values()]
 
 
 def tag_order(adrs: list[Adr]) -> list[tuple[str, dict]]:
@@ -251,13 +256,10 @@ def _link(code: str, base: Path) -> str:
     code rather than a link to nothing (DP-1: say what you can, don't invent)."""
     try:
         prefix, number = code.split("-")
-        scheme = current().schemes[prefix.upper()]
-        match = sorted(scheme.dir.glob(f"{prefix.lower()}-{int(number):03d}-*.md"))
+        path = current().schemes[prefix.upper()].documents().get(int(number))
     except (ValueError, KeyError):
         return ""
-    if not match:
-        return ""
-    return os.path.relpath(match[0], base)
+    return os.path.relpath(path, base) if path else ""
 
 
 def outputs() -> dict[Path, str]:

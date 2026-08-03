@@ -1,5 +1,5 @@
 """References to retired documents, and the annotations that excuse them
-([ADR-007](../docs/decisions/adr-007-status-is-reported-not-enforced.md)).
+([ADR-007](../docs/decisions/ADR-007.md)).
 
 The report is a warning, so nothing fails when it is wrong — which is exactly
 why its scoping and its acknowledgement syntax need tests. Every rule here
@@ -92,7 +92,7 @@ def test_line_annotation_excuses_the_line_below(project):
 
 def test_a_bare_annotation_does_not_reach_across_a_blank_line(project):
     """The suffix is the only thing that decides scope
-    ([ADR-008](../docs/decisions/adr-008-directive-vocabulary.md))."""
+    ([ADR-008](../docs/decisions/ADR-008.md))."""
     docs, result = scan(
         project, "<!-- inactive-ok: ADR-012 -->\n\nper ADR-012\n")
     assert [c.line for _, sites, _ in ref_status.flagged(result, docs)
@@ -142,7 +142,7 @@ def test_annotation_only_excuses_the_codes_it_names(project):
 
 def test_bare_numbers_are_rejected(project):
     """The vocabulary has to survive a second reference scheme, so a code
-    carries its prefix ([ADR-006](../docs/decisions/adr-006-reference-schemes-are-configured.md))."""
+    carries its prefix ([ADR-006](../docs/decisions/ADR-006.md))."""
     docs, result = scan(project, "<!-- inactive-ok: 012 -->\nper ADR-012\n")
     assert ref_status.flagged(result, docs)                      # not excused
     assert any("no document code" in s
@@ -216,7 +216,7 @@ def test_report_never_fails_the_build():
 
 def test_a_second_scheme_needs_no_code_change(project):
     """A prefix and a directory, per
-    [ADR-006](../docs/decisions/adr-006-reference-schemes-are-configured.md)."""
+    [ADR-006](../docs/decisions/ADR-006.md)."""
     from luria import config
     (project / "docs" / "rfcs").mkdir(parents=True)
     (project / "docs" / "rfcs" / "rfc-007-example.md").write_text(

@@ -2,7 +2,7 @@
 
 - **Design principles are fragments, and `docs/design-principles.md` is
   generated from them**
-  ([ADR-012](docs/decisions/adr-012-principles-are-fragments-too.md)). One file
+  ([ADR-012](docs/decisions/ADR-012.md)). One file
   per principle in `docs/principles/`, with frontmatter carrying a `version`
   (principles are living documents — two of Luria's eight are at v2, and now
   say so), `influenced_by` backlinks to the decisions whose experience produced
@@ -11,7 +11,7 @@
   browsable shape — a table plus per-tag pages; `render = "document"`
   concatenates the bodies into one page for a set that is read as a whole. This
   is the first exercise of
-  [ADR-006](docs/decisions/adr-006-reference-schemes-are-configured.md)'s claim
+  [ADR-006](docs/decisions/ADR-006.md)'s claim
   that a second scheme is a config entry and a directory: no scanner changed.
 - **`docs/principles/_template.md`**, and principles scaffolding in `luria init`
   — a fresh project now gets five seed principles as fragments rather than one

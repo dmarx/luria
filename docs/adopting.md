@@ -24,7 +24,7 @@ luria lint      # should be clean
 `luria index` is not optional after scaffolding: the two documents a reader
 actually opens — the decision index and `design-principles.md` — do not exist
 until it runs, because both are generated from the fragments beside them
-([ADR-012](decisions/adr-012-principles-are-fragments-too.md)).
+([ADR-012](decisions/ADR-012.md)).
 
 ## What you get
 
@@ -38,7 +38,7 @@ docs/
   principles/
     _template.md            copy this to make a principle
     README.stub             the document's prose; the rest is generated
-    dp-00N-*.md             seeded with the ones that earn this machinery
+    DP-00N.md               seeded with the ones that earn this machinery
 changelog.d/_template.md    one fragment per contribution
 devlog.d/_template.md       optional; significant work only
 CLAUDE.md                   a bootloader section pointing at the above
@@ -57,15 +57,23 @@ on the first run — that is the machinery telling you what the prose convention
 had been letting through. Three are usual:
 
 - **Frontmatter.** If your decisions use a prose `**Status:**` header, they need
-  frontmatter ([ADR-003](decisions/adr-003-status-vocabulary-and-frontmatter.md)).
-  Migrating is mechanical; the audit that motivated the closed vocabulary found
-  thirty distinct spellings across 121 files, so budget for a normalizing pass.
+  frontmatter ([ADR-003](decisions/ADR-003.md)). Migrating is mechanical; the
+  audit that motivated the closed vocabulary found thirty distinct spellings
+  across 121 files, so budget for a normalizing pass.
+- **`title:`.** Every document needs one, and it has to match the body's `#`
+  heading ([ADR-013](decisions/ADR-013.md)). Lift it from the heading in a
+  single pass — that is where the generator used to read it from.
+
+  Renaming the files to `ADR-<NNN>.md` is *not* required and is not linted:
+  Luria writes the short form and reads `adr-010-a-slug.md` too, so adoption
+  isn't a rename-everything-first proposition. Do it when you want the filename
+  to stop being a third copy of the title; expect to rewrite every inbound link
+  in the same commit.
 - **Bare references.** `luria link --fix` writes them all. In the corpus this
   package was extracted from that was 2,246 references across 160 files. Read a
   sample of the diff rather than trusting it wholesale — that is how the
-  code-span bug in [ADR-005](decisions/adr-005-references-are-hyperlinks.md) was
-  caught.
-- **A hand-written principles document.** Split it: one `dp-NNN-*.md` per
+  code-span bug in [ADR-005](decisions/ADR-005.md) was caught.
+- **A hand-written principles document.** Split it: one `DP-NNN.md` per
   section, `## N. Title` back up to `# DP-NNN: Title`, and the `README.stub`
   keeping the prose that came before them. Set every `version: 1` except the
   ones you know were reworded — those are the interesting ones, and `history:`
@@ -74,7 +82,7 @@ had been letting through. Three are usual:
   keep resolving either way.
 
 Everything else is a warning and can wait
-([ADR-007](decisions/adr-007-status-is-reported-not-enforced.md)).
+([ADR-007](decisions/ADR-007.md)).
 
 ## Wiring it into CI
 
@@ -95,7 +103,7 @@ failed.
 
 Collection runs on a cadence, **not on every merge** — a per-merge bot commit
 races in-flight rebases, reintroducing the conflict fragments exist to remove
-([ADR-002](decisions/adr-002-fragments-and-generated-views.md)):
+([ADR-002](decisions/ADR-002.md)):
 
 ```yaml
 on:

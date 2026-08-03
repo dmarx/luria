@@ -73,7 +73,7 @@ written down as a decision about **one file**, so when the same conflicts
 appeared on a second shared document months later, nobody recognized it. A value
 stated about one artifact is a value nobody applies to the next one.
 
-*v2 · shaped by [ADR-002](decisions/adr-002-fragments-and-generated-views.md), [ADR-004](decisions/adr-004-generated-decision-index.md) · origin: Fragments assembled into a changelog; then, months later, the identical conflicts recurring on the narrative log; then the decision index*
+*v2 · shaped by [ADR-002](decisions/ADR-002.md), [ADR-004](decisions/ADR-004.md) · origin: Fragments assembled into a changelog; then, months later, the identical conflicts recurring on the narrative log; then the decision index*
 
 <a name="dp-3"></a>
 
@@ -103,7 +103,7 @@ Three remedies, in order of strength:
 
 In this package, the decision index is rung 1 and the reference lint is rung 2.
 
-*v2 · shaped by [ADR-004](decisions/adr-004-generated-decision-index.md), [ADR-005](decisions/adr-005-references-are-hyperlinks.md) · origin: A hardcoded type union that had drifted to 13 of 21 keys; generalized by a later arc where every one of five converted projections was already wrong*
+*v2 · shaped by [ADR-004](decisions/ADR-004.md), [ADR-005](decisions/ADR-005.md) · origin: A hardcoded type union that had drifted to 13 of 21 keys; generalized by a later arc where every one of five converted projections was already wrong*
 
 <a name="dp-4"></a>
 
@@ -121,14 +121,14 @@ and the failure mode is the worst kind — a CI failure whose suggested remedy
 doesn't work.
 
 The same reasoning rejected threading configuration through every entry point
-([ADR-006](decisions/adr-006-reference-schemes-are-configured.md)): the
+([ADR-006](decisions/ADR-006.md)): the
 second caller forgets an argument, and the two checks quietly cover different
 files.
 
 "The new thing overrides the old at one site" is the smell; "the new thing
 *replaces* the old everywhere" is the fix.
 
-*v1 · shaped by [ADR-005](decisions/adr-005-references-are-hyperlinks.md), [ADR-006](decisions/adr-006-reference-schemes-are-configured.md) · origin: A tool-icon migration whose bug was precisely a fallback that only one render site preferred, so every other site leaked the legacy value*
+*v1 · shaped by [ADR-005](decisions/ADR-005.md), [ADR-006](decisions/ADR-006.md) · origin: A tool-icon migration whose bug was precisely a fallback that only one render site preferred, so every other site leaked the legacy value*
 
 <a name="dp-5"></a>
 
@@ -152,7 +152,7 @@ down but unguarded, one corpus drifted not toward *unlinked* but toward
 Randomness is worse than a uniform mistake, because a reader can't learn the
 convention from the corpus and stops trying.
 
-*v1 · shaped by [ADR-003](decisions/adr-003-status-vocabulary-and-frontmatter.md), [ADR-005](decisions/adr-005-references-are-hyperlinks.md) · origin: The strata-g project-memory doctrine. The linked-versus-bare reference split was the demonstration: convention written down but unguarded, and the corpus drifted toward random rather than toward wrong*
+*v1 · shaped by [ADR-003](decisions/ADR-003.md), [ADR-005](decisions/ADR-005.md) · origin: The strata-g project-memory doctrine. The linked-versus-bare reference split was the demonstration: convention written down but unguarded, and the corpus drifted toward random rather than toward wrong*
 
 <a name="dp-6"></a>
 
@@ -174,7 +174,7 @@ broken, what the guard printed, what it printed after the repair — is the
 difference between a guard someone trusts and a guard someone re-tests from
 scratch because they can't tell whether it works.
 
-*v1 · shaped by [ADR-007](decisions/adr-007-status-is-reported-not-enforced.md) · origin: Two inert mechanisms in strata-g — an alert shape that could never fire, and a CI fast path whose fail-safe polarity made a month of inertness invisible. Both were discovered by accident rather than by the thing they guarded*
+*v1 · shaped by [ADR-007](decisions/ADR-007.md) · origin: Two inert mechanisms in strata-g — an alert shape that could never fire, and a CI fast path whose fail-safe polarity made a month of inertness invisible. Both were discovered by accident rather than by the thing they guarded*
 
 <a name="dp-7"></a>
 
@@ -209,4 +209,4 @@ The corollary that people skip: **record the wrong theories.** The approach that
 failed on Tuesday leaves no commit, appears in no diff, and is the single most
 expensive thing for the next person to rediscover.
 
-*v1 · shaped by [ADR-002](decisions/adr-002-fragments-and-generated-views.md) · origin: The reason the fragment convention exists at all — the changelog was being reconstructed retroactively from git log, badly*
+*v1 · shaped by [ADR-002](decisions/ADR-002.md) · origin: The reason the fragment convention exists at all — the changelog was being reconstructed retroactively from git log, badly*

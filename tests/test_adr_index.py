@@ -50,18 +50,18 @@ def test_row_rebases_summary_and_status_together(tmp_path, monkeypatch):
     supersession links 404'd on the tag pages until this held."""
     from luria import config
     (tmp_path / "docs" / "decisions").mkdir(parents=True)
-    (tmp_path / "docs" / "decisions" / "adr-001-old.md").write_text(
-        "---\nstatus: 'Superseded — by [ADR-002](adr-002-new.md)'\n"
+    (tmp_path / "docs" / "decisions" / "ADR-001.md").write_text(
+        "---\nstatus: 'Superseded — by [ADR-002](ADR-002.md)'\n"
         "tags:\n- record\n"
-        "summary: 'refines [ADR-002](adr-002-new.md)'\n---\n\n# ADR-001: Old\n")
+        "summary: 'refines [ADR-002](ADR-002.md)'\n---\n\n# ADR-001: Old\n")
     monkeypatch.setenv("LURIA_ROOT", str(tmp_path))
     config.reset()
 
     adr = builder.load_adrs()[0]
-    assert "](adr-002-new.md)" in adr.row()        # from the index
+    assert "](ADR-002.md)" in adr.row()            # from the index
     row = adr.row("../")                            # from tags/, one deeper
-    assert "](../adr-002-new.md)" in row
-    assert row.count("](adr-002-new.md)") == 0      # summary AND status rebased
+    assert "](../ADR-002.md)" in row
+    assert row.count("](ADR-002.md)") == 0          # summary AND status rebased
     config.reset()
 
 
@@ -82,9 +82,9 @@ def test_every_generated_relative_link_resolves():
 
 def principle(root: Path, number: int, title: str, body: str = "Body.",
               **front) -> Path:
-    path = root / "docs" / "principles" / f"dp-{number:03d}-fixture.md"
+    path = root / "docs" / "principles" / f"DP-{number:03d}.md"
     path.parent.mkdir(parents=True, exist_ok=True)
-    lines = ["status: Active", "tags:", "- record"]
+    lines = ["status: Active", f"title: {title!r}", "tags:", "- record"]
     lines += [f"{k}: {v}" for k, v in front.items()]
     path.write_text("---\n" + "\n".join(lines) + "\n---\n\n"
                     f"# DP-{number:03d}: {title}\n\n{body}\n")
@@ -144,7 +144,7 @@ def test_influenced_by_renders_as_a_followable_backlink(project):
     from tests import _scheme
     _scheme.decision(project, 4, "Active")
     principle(project, 1, "A value", influenced_by="[ADR-004]")
-    assert "[ADR-004](decisions/adr-004-fixture.md)" in render(project)
+    assert "[ADR-004](decisions/ADR-004.md)" in render(project)
 
 
 def test_an_unresolvable_backlink_stays_a_bare_code(project):
@@ -171,3 +171,52 @@ def test_outputs_covers_every_scheme(project, monkeypatch):
     out = builder.outputs()
     assert project / "docs" / "design-principles.md" in out
     assert project / "docs" / "decisions" / "README.md" in out
+
+
+# ── Filenames and titles (ADR-013) ───────────────────────────────────────
+
+
+def test_filename_is_the_code(project):
+    scheme = builder.current().schemes["ADR"]
+    assert scheme.filename(13) == "ADR-013.md"
+    assert scheme.filename("4") == "ADR-004.md"
+
+
+def test_a_legacy_slug_filename_is_still_read(project):
+    """Most projects arrive with `adr-010-some-title.md`, and refusing to read
+    them would make adoption a rename-everything-first proposition. Luria
+    writes the short form and reads both."""
+    from tests import _scheme
+    path = _scheme.decision(project, 10, "Active")
+    path.rename(path.parent / "adr-010-some-old-title.md")
+    assert set(builder.current().schemes["ADR"].documents()) == {10}
+
+
+def test_a_readme_is_not_a_document(project):
+    """`README.md`, `README.stub`, `_template.md` and `tags.yaml` share the
+    directory with the sources — the scheme's own filename rule is what tells
+    them apart, and it is the only such rule in the package."""
+    from tests import _scheme
+    _scheme.decision(project, 1, "Active")
+    decisions = project / "docs" / "decisions"
+    (decisions / "README.md").write_text("# Index\n")
+    (decisions / "_template.md").write_text("---\nstatus: Proposed\n---\n")
+    assert set(builder.current().schemes["ADR"].documents()) == {1}
+
+
+def test_title_frontmatter_wins_over_the_heading(project):
+    from tests import _scheme
+    path = _scheme.decision(project, 1, "Active", title="The real title")
+    path.write_text(path.read_text().replace(
+        "# ADR-001: The real title", "# ADR-001: A stale heading"))
+    assert builder.load_adrs()[0].title == "The real title"
+
+
+def test_the_heading_is_the_fallback(project):
+    """A project mid-adoption has decisions with no `title:` yet, and a blank
+    index cell would be worse than a heading-derived one."""
+    from tests import _scheme
+    path = _scheme.decision(project, 1, "Active", title="From the heading")
+    path.write_text(path.read_text().replace(
+        "title: 'From the heading'\n", ""))
+    assert builder.load_adrs()[0].title == "From the heading"

@@ -7,7 +7,7 @@ number is the next one free.
 
 Values that decisions *cite* live in
 [design-principles.md](../design-principles.md) instead. The split, and why
-these are separate files, is [ADR-003](adr-003-status-vocabulary-and-frontmatter.md).
+these are separate files, is [ADR-003](ADR-003.md).
 
 Supersede by **adding** a decision and flipping the old one's status — never by
 rewriting a body. The history is the point: a record you can rewrite is a record

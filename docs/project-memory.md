@@ -22,7 +22,7 @@ place on its first try.
 | `changelog.d/` fragments | **what changed**, operator-facing, terse | *would someone running or using this notice?* |
 | `devlog.d/` fragments | **how it went** — including failed approaches and wrong theories, which are the reusable part | *will a future debugger want the narrative?* |
 
-The traffic rules between them are [ADR-001](decisions/adr-001-four-layers-of-record.md):
+The traffic rules between them are [ADR-001](decisions/ADR-001.md):
 principles are durable but **not sacred**; decisions are superseded by *adding*
 a decision and flipping a status line, never by rewriting a body; a principle is
 added on the *second* re-derivation of the same reasoning.
@@ -30,7 +30,7 @@ added on the *second* re-derivation of the same reasoning.
 The top two layers are one file each, in `docs/principles/` and
 `docs/decisions/`, with YAML frontmatter — `docs/design-principles.md` and the
 decision index are both **generated** from them
-([ADR-012](decisions/adr-012-principles-are-fragments-too.md)). A principle's
+([ADR-012](decisions/ADR-012.md)). A principle's
 frontmatter carries a `version`, because principles are living documents: a
 value first stated about one artifact is a value nobody applies to the next one,
 so the honest move is to widen the wording and bump the version rather than
@@ -51,7 +51,7 @@ assembled pages are **views**, built from fragments — never hand-edited, and t
 lint refuses hand edits.
 
 Two kinds, and the difference is *whether the sources survive*
-([ADR-012](decisions/adr-012-principles-are-fragments-too.md)). A **collected**
+([ADR-012](decisions/ADR-012.md)). A **collected**
 view — the changelog, the devlog — consumes its fragments: they are deleted, the
 view accumulates, and it can only ever be appended to. A **generated** view —
 the decision index, the principles document — is a pure function of sources that
@@ -63,7 +63,7 @@ The reasoning is [DP-2](design-principles.md#dp-2): a file every contribution mu
 append to is a *lock*. Concurrent branches collide in it contentlessly, and
 every hand-merge is a chance to drop someone's work. The fix is structural —
 each contribution owns a file nobody else writes, and the shared artifact is
-assembled on a cadence ([ADR-002](decisions/adr-002-fragments-and-generated-views.md)).
+assembled on a cadence ([ADR-002](decisions/ADR-002.md)).
 
 Practical consequences: the answer to "which file do I edit?" is always *a
 fragment*; and generated pages can be linted against their sources, so drift is
@@ -130,5 +130,5 @@ it. This page is what the bootloader points at.
   references are followable.
 - Deterministic assembly — same inputs, same view, so drift between record and
   view is mechanically checkable.
-- The reports ([ADR-007](decisions/adr-007-status-is-reported-not-enforced.md)):
+- The reports ([ADR-007](decisions/ADR-007.md)):
   what cites a retired decision, and what has been undecided for how long.

@@ -8,7 +8,7 @@ number is the next one free.
 Values that decisions *cite* live in
 [design-principles.md](../design-principles.md) instead — also generated, from
 the fragments in `../principles/`. The split, and why these are separate files,
-is [Luria's ADR-001](https://github.com/dmarx/luria/blob/main/docs/decisions/adr-001-four-layers-of-record.md).
+is [Luria's ADR-001](https://github.com/dmarx/luria/blob/main/docs/decisions/ADR-001.md).
 
 Supersede by **adding** a decision and flipping the old one's status — never by
 rewriting a body. The history is the point: a record you can rewrite is a record

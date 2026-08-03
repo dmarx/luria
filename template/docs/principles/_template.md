@@ -1,7 +1,10 @@
 ---
-# Copy this file to dp-<NNN>-<kebab-slug>.md — next number wins. Numbering is
-# sequential and permanent: a principle is cited by number ("per DP-3"), so a
-# number can be retired but never reused.
+# Copy this file to DP-<NNN>.md — next number wins. Numbering is sequential and
+# permanent: a principle is cited by number ("per DP-3"), so a number can be
+# retired but never reused. The filename is the code and nothing else; the title
+# goes in `title:` below, where a revision costs an edit rather than a rename
+# plus every link (ADR-013) — which matters more here than for a decision,
+# because principles are expected to be reworded.
 #
 # This frontmatter is the ONLY place these facts live. `docs/design-principles.md`
 # is generated from it (ADR-012) — never edit that file by hand; run
@@ -11,6 +14,10 @@
 # Superseded | Rejected, optionally " — <note>". A principle that stops being
 # believed is Superseded, not deleted — something out there cites it.
 status: Active
+
+# The claim, as it appears in the rendered document. Repeat it as the body's
+# `# DP-NNN:` heading; `luria lint` checks that the two agree.
+title: The principle, stated as a claim you can disagree with
 
 # Principles are LIVING DOCUMENTS. Bump this whenever the principle's scope or
 # claim changes, and add a `history:` entry saying what changed. A principle

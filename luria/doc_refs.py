@@ -393,12 +393,7 @@ def _line_index(text: str):
 
 
 def adr_paths() -> dict[int, Path]:
-    out: dict[int, Path] = {}
-    for p in sorted(current().decisions.glob("adr-*.md")):
-        m = re.match(r"adr-(\d+)", p.name)
-        if m:
-            out.setdefault(int(m.group(1)), p)
-    return out
+    return current().schemes["ADR"].documents()
 
 
 EXPLICIT_ANCHOR_RE = re.compile(r'^<a name="[a-z]+-(\d+)"></a>\s*$')

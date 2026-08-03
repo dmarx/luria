@@ -35,6 +35,7 @@ config object, resolved once from disk.
 from __future__ import annotations
 
 import os
+import re
 import tomllib
 from dataclasses import dataclass, field
 from functools import lru_cache
@@ -112,11 +113,42 @@ class Scheme:
 
     @property
     def pattern(self):
-        import re
         return re.compile(rf"\b{self.prefix}[- ](?P<num>\d{{1,4}})\b")
 
     def code(self, number: str | int) -> str:
         return f"{self.prefix}-{int(number):03d}"
+
+    def filename(self, number: str | int) -> str:
+        """`ADR-013.md` — the file is named for the code and nothing else.
+
+        The title lives in the frontmatter, where a correction costs an edit
+        rather than a rename plus every link that pointed at the old name
+        (ADR-013)."""
+        return f"{self.code(number)}.md"
+
+    def number_of(self, path: Path) -> int | None:
+        """The document number a filename carries, or None if it isn't one.
+
+        Deliberately tolerant of a trailing slug: `adr-010-some-title.md` is
+        what most projects arrive with, and refusing to read them would make
+        adoption a rename-everything-first proposition. Luria *writes* the short
+        form and *reads* both."""
+        m = re.fullmatch(rf"{self.prefix}-0*(\d+)(?:-[^/]*)?\.md", path.name,
+                         re.IGNORECASE)
+        return int(m.group(1)) if m else None
+
+    def documents(self) -> dict[int, Path]:
+        """Number → path for every document in this scheme, ascending.
+
+        The one place a scheme directory is read. Five copies of this glob had
+        accumulated, each with its own regex — the drift DP-4 names, harmless
+        only for as long as the filename shape never changed."""
+        found: dict[int, Path] = {}
+        for path in sorted(self.dir.glob("*.md")):
+            number = self.number_of(path)
+            if number is not None:
+                found.setdefault(number, path)
+        return dict(sorted(found.items()))
 
 
 @dataclass(frozen=True)

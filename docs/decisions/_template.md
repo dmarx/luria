@@ -1,6 +1,8 @@
 ---
-# Copy this file to adr-<NNN>-<kebab-slug>.md — next number wins, numbering is
-# sequential and carries information (it's the order decisions were made).
+# Copy this file to ADR-<NNN>.md — next number wins, numbering is sequential and
+# carries information (it's the order decisions were made). The filename is the
+# code and nothing else; the title goes in `title:` below, where correcting it
+# costs an edit rather than a rename plus every link (ADR-013).
 #
 # This frontmatter is the ONLY place these facts live. The index and the per-tag
 # pages are generated from it (ADR-004) — never edit them by hand; run
@@ -8,8 +10,13 @@
 
 # Active | Proposed | Deferred | Superseded | Rejected, optionally " — <note>".
 # Supersede rather than rewrite: when a decision is replaced, set the old one to
-# "Superseded — by [ADR-NNN](adr-nnn-slug.md)" and leave its body intact.
+# "Superseded — by [ADR-NNN](ADR-NNN.md)" and leave its body intact.
 status: Proposed
+
+# What the index shows in place of the code. Repeat it as the body's `# ADR-NNN:`
+# heading — someone reading the file alone needs one — and `luria lint` checks
+# that the two agree, because two copies of a string is a projection that drifts.
+title: Decision, stated as the thing you did
 
 # Browsing categories, pushed down onto the decision itself. One is normal; more
 # than one is fine. A tag not listed in tags.yaml still works.
