@@ -51,6 +51,19 @@ from .config import current
 TITLE_RE = re.compile(r"^#\s*[A-Z]+-\d+\s*(?::|—|-)\s*")
 TABLE_HEAD = "| # | Title | Status |\n|---|---|---|\n"
 
+# A literal `|` in a summary is a cell delimiter to the table parser: the row
+# grows extra columns, the summary truncates and its tail lands in the status
+# column (#14). Escaping belongs to the renderer, not the author — a summary is
+# prose, and GFM unescapes `\|` everywhere in a table, code spans included.
+# `\\?\|` normalises rather than doubles: an author who already hand-escaped
+# must not end up with `\\|`, which is a stray backslash and a broken row again.
+_CELL_PIPE_RE = re.compile(r"\\?\|")
+
+
+def escape_cell(text: str) -> str:
+    """`text` as one table cell, however many `|` it contains."""
+    return _CELL_PIPE_RE.sub(r"\\|", text)
+
 # Used when a project has no `README.stub`. The stub exists so prose lives in
 # markdown rather than in this generator; not having written one yet shouldn't
 # stop the index from building.
@@ -174,7 +187,8 @@ class Adr:
         # where it is read (ADR-016).
         version = f" v{self.version}" if self.version > 1 else ""
         return (f"| [{self.code}]({prefix}{self.path.name}){version} "
-                f"| {self.cell(prefix)} | {rebase_links(self.status, prefix)} |")
+                f"| {escape_cell(self.cell(prefix))} "
+                f"| {escape_cell(rebase_links(self.status, prefix))} |")
 
 
 def load_adrs() -> list[Adr]:
