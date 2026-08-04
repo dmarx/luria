@@ -60,8 +60,9 @@ issue number written in prose is a link, never bare text — `luria lint` fails
 otherwise. Don't hand-write them: `luria link --fix` writes exactly what the
 lint demands.
 
+<!-- unresolved-ok-block: ADR-777 — an illustrative wikilink below; your own codes go here -->
 **To force a link the prose heuristics would pass over, type wikilink
-brackets**: `[[ADR-013]]`, `[[DP-3]]`, `[[SG-DP-18]]`, `[[#10]]`, or
+brackets**: `[[ADR-777]]`, `[[DP-3]]`, `[[LU-DP-9]]`, `[[#10]]`, or
 `[[ARXIV-2403.05530|the report]]` with a label. The brackets assert "this is
 a reference", so no cue words are needed inside them — and an unresolvable
 one fails the lint outright, because an explicit request deserves an explicit

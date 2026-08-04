@@ -4,7 +4,7 @@
 
 What the four layers hold, and the rules between them.
 
-18 of 26 decisions. Back to the [full index](../README.md).
+18 of 27 decisions. Back to the [full index](../README.md).
 
 | # | Title | Status |
 |---|---|---|

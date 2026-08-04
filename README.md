@@ -19,7 +19,7 @@ that: [project memory](docs/project-memory.md) is the doctrine, and this package
 is what stops it drifting.
 
 ```
-pip install git+https://github.com/dmarx/luria      # not on PyPI yet
+pip install luria
 luria init --issue-url https://github.com/owner/repo/issues
 luria index && luria lint
 ```

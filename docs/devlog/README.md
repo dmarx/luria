@@ -6,6 +6,7 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 
 ## Currently — [August 2026](2026-08.md)
 
+- [4 Aug 18:44 — Shipping: the wheel that worked was working by accident](2026-08.md#20260804184404)
 - [4 Aug 18:18 — Parallelism measured first: the probes were the win, the rest is seams](2026-08.md#20260804181814)
 - [4 Aug 18:12 — Wikilinks: the brackets are consent, and typing them flips the rules](2026-08.md#20260804181244)
 - [4 Aug 17:29 — Numbers were the special case: uid remotes and one parser for a code's anatomy](2026-08.md#20260804172947)
@@ -22,8 +23,8 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 
 ## All books
 
-13 entries across 1 book, newest first.
+14 entries across 1 book, newest first.
 
 | Book | Entries | First | Last |
 |---|--:|---|---|
-| [2026-08](2026-08.md) | 13 | 2026-08-03 | 2026-08-04 |
+| [2026-08](2026-08.md) | 14 | 2026-08-03 | 2026-08-04 |
