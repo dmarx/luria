@@ -38,7 +38,9 @@
   foreign code (`SG-DP-18`) but whose URL is hand-written rather than
   constructed is reported as a warning until acknowledged, because a hand URL
   is frozen at writing time. Same shape and scope rules as every other
-  directive; stale acknowledgements report themselves.
+  directive; stale acknowledgements report themselves. Foreign codes only —
+  [ADR-022](record/decisions.d/ADR-022.md) records why it does not widen to
+  local codes or arbitrary hand-targeted links.
 
 ### Fixed
 

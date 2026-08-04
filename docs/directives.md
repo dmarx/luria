@@ -120,6 +120,13 @@ link it covers *matches* the construction (or is gone), so a suppression
 reports itself the day it stops applying. A quoted link in backticks is a
 specimen, not a citation, and needs no annotation.
 
+Foreign codes only, deliberately ([ADR-022](../record/decisions.d/ADR-022.md)):
+a foreign code has exactly one constructed URL, so "differs" means something,
+while a local code has a family of legitimate targets and the same check would
+flag correct links until acknowledging became reflex. A project that wants
+stable absolute citations to its own record registers itself as a remote — as
+Luria does with `LU` — and gets the check instead of an exemption from it.
+
 ## Adding a fifth directive
 
 A name, not a new syntax: parse it out of `luria.directives.find(...)`, validate
