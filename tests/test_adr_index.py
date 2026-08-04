@@ -10,6 +10,7 @@ The second half covers `render = "document"` (ADR-012), where the same trap
 arrives from a different direction: the fragments live one directory *below*
 the page they assemble into.
 """
+import re
 import sys
 from pathlib import Path
 
@@ -329,3 +330,45 @@ def test_a_collocated_view_dir_is_not_policed(project):
     # The ADR source sits in the same directory as the rendered index, and it
     # is not an orphan — only the tag dir is policed here.
     assert builder.orphans(rendered) == []
+
+
+def test_a_pipe_in_a_summary_stays_one_cell(tmp_path, monkeypatch):
+    """A literal `|` in a summary is a cell delimiter to the table parser: the
+    row grows extra columns and the summary's tail lands in the status column
+    (#14 — ADR-003's status vocabulary listing put 'Proposed' there). The
+    renderer escapes, because a summary is prose and escaping is table syntax."""
+    from luria import config
+    monkeypatch.setenv("LURIA_ROOT", str(tmp_path))
+    config.reset()
+    adr_dir = config.current().schemes["ADR"].dir
+    adr_dir.mkdir(parents=True)
+    (adr_dir / "ADR-001.md").write_text(
+        "---\nstatus: Active\ntags:\n- record\n"
+        "summary: 'a closed vocabulary (Active | Proposed | Rejected)'\n"
+        "---\n\n# ADR-001: Vocab\n")
+
+    row = builder.load_adrs()[0].row()
+    # Unescaped pipes bound exactly the four cells; every summary pipe is `\|`.
+    assert re.findall(r"(?<!\\)\|", row) == ["|"] * 4
+    assert "(Active \\| Proposed \\| Rejected)" in row
+    config.reset()
+
+
+def test_a_hand_escaped_pipe_is_not_double_escaped(tmp_path, monkeypatch):
+    """An author who worked around #14 by writing `\\|` in the source must not
+    get `\\\\|` — a stray backslash and a broken row again. The escape
+    normalises both spellings to one."""
+    from luria import config
+    monkeypatch.setenv("LURIA_ROOT", str(tmp_path))
+    config.reset()
+    adr_dir = config.current().schemes["ADR"].dir
+    adr_dir.mkdir(parents=True)
+    (adr_dir / "ADR-001.md").write_text(
+        "---\nstatus: Active\ntags:\n- record\n"
+        "summary: 'data is {subject: node\\|selection}'\n"
+        "---\n\n# ADR-001: Macro\n")
+
+    row = builder.load_adrs()[0].row()
+    assert "node\\|selection" in row
+    assert "\\\\|" not in row
+    config.reset()
