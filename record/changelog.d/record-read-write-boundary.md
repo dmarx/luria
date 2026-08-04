@@ -28,9 +28,11 @@
   one is a lint violation naming the file and the remedy. This generalizes the
   old orphaned-tag-page check to every view directory, and also catches a
   journal book stranded by a granularity change.
-- [DP-9](docs/design-principles.md#dp-9) — browsing lands on views; filing is
-  deliberate. The boundary between them is structural (a directory name),
-  never documentary (a comment).
+- [DP-9](docs/design-principles.md#dp-9) — structure is read before text, so
+  affordances are spent deliberately: on shaping attention, on making
+  locations discoverable, and as smells to read when they turn inconsistent.
+  A structural signal beats a documentary one; the read/write boundary is the
+  worked application.
 
 ### Fixed
 

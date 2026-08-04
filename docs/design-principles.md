@@ -213,35 +213,56 @@ expensive thing for the next person to rediscover.
 
 <a name="dp-9"></a>
 
-## 9. Browsing lands on views; filing is deliberate
+## 9. Structure is read before text — spend affordances deliberately
 
-A repository that keeps a record contains two kinds of thing: **ground truth**
-that contributors file — decisions, principles, journal entries, fragments —
-and **views** rendered from it — indexes, assembled documents, books. They have
-different audiences in different postures. A reader *browses*: they arrive
-curious, follow whatever the tree offers, and judge the project by what they
-land on. A writer *files*: they arrive with content and a destination in mind.
+An artifact tree — a repository, a directory, a document set — is an interface,
+and it is read before any file is opened. Names, placement, sort order,
+prominence, a suffix: these reach a visitor ahead of every sentence, and they
+are doing work whether or not anyone designed them. The only choice available
+is *deliberate or accidental*.
 
-The layout should serve both postures at once: **easy to land on the read
-content by accident, hard to land on the write content by accident.** Views
-and entrypoints sit where wandering finds them; sources sit in a marked
-domain — a named root, a `.d` suffix, some structural signal that says *you
-have crossed into the write side* even when a deep link drops you past the
-signpost.
+Spent deliberately, affordances do three jobs:
 
-The boundary must be **structural, not documentary**. A comment saying
-"GENERATED — do not edit" is read only after landing in the wrong place, and
-it enforces nothing; a directory name is read before, and a linter can hold
-it. The corollary that turns the principle into a check: a view directory
-contains *only* what the generator wrote. Then "don't hand-edit" stops being
-etiquette — an edit that belongs in a source is a visible failure, with the
-failure polarity pointing the right way
-([DP-3](design-principles.md#dp-3)).
+**Shaping attention.** What wandering lands on is what gets read, so prominence
+is a budget. Entrypoints and summaries belong front-and-center; archives,
+machinery and ground truth belong a step removed, reachable on purpose. The
+polarity runs both ways: burying an entrypoint quietly reclassifies it (a log
+whose newest page sits two clicks deep reads as an archive, whatever it says),
+and exposing internals taxes every visitor with a decision they shouldn't have
+to make.
 
-The tell that this principle is being violated is affordance drift: the same
-filename or shape meaning opposite things in different places — one `README.md`
-you must edit and another you must not, one fragment directory marked and its
-sibling unmarked. Every such inconsistency is a rule that moved from the tree
-into somebody's memory.
+**Enabling discovery.** Structure answers *where would X be?* before anyone
+greps. Consistent marks and mirrors make locations predictable — what you read
+at one path, you file at its counterpart — and predictability compounds: a
+rule expressible as a path convention is discoverable by every visitor,
+human or stateless; a rule living only in prose is discoverable by whoever
+happens to read that prose.
 
-*v1 · shaped by [ADR-012](../record/decisions.d/ADR-012.md), [ADR-013](../record/decisions.d/ADR-013.md), [ADR-021](../record/decisions.d/ADR-021.md) · origin: An inventory of one repository's layout found sources and views interleaved five distinct ways — two source containers marked `.d` and two not, a generated document sitting beside its own sources, an index buried under the things it indexes, and the filename README.md meaning "edit me" in one directory and "never edit me" in the next*
+**Diagnosis.** Affordance inconsistency is a smell to *read*, not an
+untidiness to tolerate. The same shape carrying opposite rules — one
+`README.md` you must edit and another you must not; a marked container beside
+an unmarked sibling doing the same job — says a rule has moved out of the tree
+and into somebody's memory. A file whose neighbours are the wrong kind — an
+authored `.stub` sitting beside the generated page it feeds — says something
+is filed where it doesn't belong. When an affordance feels wrong, trust the
+feeling and ask which boundary it is straddling; the discomfort is usually a
+distinction the layout has stopped expressing.
+
+Two disciplines keep the spend honest. **Structural beats documentary**: a
+comment saying "GENERATED — do not edit" is read after landing in the wrong
+place and enforces nothing; a directory name is read before, and a linter can
+hold it. And where the structure encodes a checkable property, walk it up
+[DP-5](design-principles.md#dp-5)'s ladder — the read/write boundary
+([ADR-021](../record/decisions.d/ADR-021.md)) is this principle's worked
+application, and its payoff rung is a lint: a view directory holds only what
+the generator wrote, so a hand edit there fails with the polarity
+[DP-3](design-principles.md#dp-3) demands.
+
+The sibling claim, from the pilot: [SG-DP-18, "the affordance is the
+contract"](https://github.com/dmarx/strata-g/blob/main/docs/design-principles.md#18-the-affordance-is-the-contract)
+— an affordance must not *lie*; what a control suggests is what the action
+does, verified from the same inputs. That principle binds affordances to the
+truth. This one is its complement about *reach*: affordances are the widest
+channel an artifact has — spend them, don't merely avoid falsifying them.
+
+*v1 · shaped by [ADR-012](../record/decisions.d/ADR-012.md), [ADR-013](../record/decisions.d/ADR-013.md), [ADR-021](../record/decisions.d/ADR-021.md) · origin: An inventory of one repository's layout found the same rules expressed structurally in some places and not at all in others — two source containers marked `.d` and two unmarked, a generated document beside its own sources, an index buried under the things it indexes, and `README.md` meaning "edit me" in one directory and "never edit me" in the next. The layout had been shaping attention the whole time; nobody had been steering it*
