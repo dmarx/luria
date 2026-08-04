@@ -34,7 +34,7 @@ where the file lives: `changelog.d/*.md` is assembled into `/CHANGELOG.md` and
 path to the directory its links must resolve from.
 """
 
-# unresolved-ok-file: ADR-019, ADR-157 — illustrative codes in this module's prose
+# unresolved-ok-file: ADR-919, ADR-157 — illustrative codes in this module's prose
 from __future__ import annotations
 
 import re
@@ -332,7 +332,7 @@ def masked(text: str, path: Path = ANY_MD) -> list[bool]:
     # hyperlink's text, and the target is a URL/path.
     for m in LINK_RE.finditer(text):
         cover(m.start(), m.end())
-    # Shortcut reference links — `[ADR-019]` with an `[ADR-019]: …` definition
+    # Shortcut reference links — `[ADR-919]` with an `[ADR-919]: …` definition
     # further down. Already a hyperlink; only the *undefined* ones are bare.
     labels = {m.group(1).strip().lower() for m in LINK_DEF_LABEL_RE.finditer(text)}
     for m in SHORTCUT_RE.finditer(text):
@@ -492,9 +492,9 @@ def resolve(ref: Ref, source: Path, adrs: dict[int, Path],
 
 
 def _absorb_brackets(text: str, ref: Ref) -> tuple[int, int]:
-    """`[ADR-019]` — a shortcut reference link with no definition, so it renders
+    """`[ADR-919]` — a shortcut reference link with no definition, so it renders
     as literal brackets. Swallow them rather than nesting a link inside, which
-    would render as `[ADR-019]` with the text linked."""
+    would render as `[ADR-919]` with the text linked."""
     if (ref.start > 0 and text[ref.start - 1] == "["
             and ref.end < len(text) and text[ref.end] == "]"):
         return ref.start - 1, ref.end + 1

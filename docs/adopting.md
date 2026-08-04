@@ -182,3 +182,11 @@ The first `luria lint` on an established project is not a clean bill of health,
 and it isn't meant to be. It is the difference between what the convention said
 and what the corpus does — which, in every case measured so far, has been
 larger than anyone expected.
+
+**The documents you bring with you are not frozen either.** A decision whose
+choice still stands but whose reasoning has aged badly is corrected in place,
+with a `version` bump and a `history:` entry saying what the old version
+claimed — you do not have to retire a decision that is still in force in order
+to fix a paragraph in it ([ADR-019](decisions/ADR-019.md)). Luria's own record
+has worked examples of every shape of revision; they are listed in
+[project memory §2](project-memory.md).

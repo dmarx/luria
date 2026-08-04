@@ -22,10 +22,10 @@ place on its first try.
 | `changelog.d/` fragments | **what changed**, operator-facing, terse | *would someone running or using this notice?* |
 | `devlog.d/` fragments | **how it went** — including failed approaches and wrong theories, which are the reusable part | *will a future debugger want the narrative?* |
 
-The traffic rules between them are [ADR-001](decisions/ADR-001.md):
-principles are durable but **not sacred**; decisions are superseded by *adding*
-a decision and flipping a status line, never by rewriting a body; a principle is
-added on the *second* re-derivation of the same reasoning.
+The traffic rules between them are [ADR-001](decisions/ADR-001.md): principles
+are durable but **not sacred**; a decision whose *choice* changes is superseded
+by adding a decision rather than by rewriting its body; a principle is added on
+the *second* re-derivation of the same reasoning.
 
 The top two layers are one file each, in `docs/principles/` and
 `docs/decisions/`, with YAML frontmatter — `docs/design-principles.md` and the
@@ -44,7 +44,65 @@ cold, it costs a session ([DP-8](design-principles.md#dp-8)).
 
 ---
 
-## 2. Fragments and generated views
+## 2. Nothing here is immutable — only un-silently revisable
+
+The rule that gets over-read is "never rewrite a decision's body". Read as
+*documents are frozen*, it makes the record brittle: a wrong sentence stays
+wrong because fixing it looks like tampering, and a decision gets retired over a
+bad paragraph.
+
+What the rule is actually protecting is narrower and more useful. **The
+objection is to *silent* revision** — to a record that can quietly change what
+it says it used to think. A change that announces itself is not that. So every
+layer is revisable, and each has a shape for saying so:
+
+| what happened | remedy | how a reader sees it |
+|---|---|---|
+| the **choice** changed | supersede: add a decision, retire the old one | two documents, and when the second replaced the first |
+| a **reason** was wrong, the choice stands | correct in place; bump `version`, add `history:` | one document at `v2`, and what `v1` got wrong |
+| a **value** widened or was reworded | same: `version` + `history:` | the principle, versioned, with what changed |
+| a **consequence** stopped being true | a later document records the new state | both, and the order they happened in |
+
+The rule of thumb for the ambiguous case: *would a reader who acted on the old
+version have done something different?* If yes, the choice changed — supersede.
+If they would have done the same thing for a worse reason, correct in place.
+That split is [ADR-019](decisions/ADR-019.md).
+
+<!-- inactive-ok-file: ADR-010, ADR-015 — this page names them as the supersession examples -->
+
+### Luria's own record is the worked example
+
+None of this is hypothetical here. Every row above has already happened in this
+repository, which is the point of the dogfooding clause in
+[ADR-009](decisions/ADR-009.md) — a rule the project has never had to apply to
+itself is a rule nobody has tested:
+
+- **Choice changed.** [ADR-010](decisions/ADR-010.md) named the project
+  `chester`; [ADR-011](decisions/ADR-011.md) replaced it. Later,
+  [ADR-015](decisions/ADR-015.md) was superseded by
+  [ADR-016](decisions/ADR-016.md) *within hours* — a decision that lasted an
+  afternoon is exactly the kind whose reversal is worth being able to see.
+- **Reason wrong, choice stands.** [ADR-018](decisions/ADR-018.md) is at `v2`.
+  It rejected an alternative by citing a decision that didn't apply; the
+  rejection survives on a better argument, and `history:` records both.
+- **Value reworded.** [DP-2](design-principles.md#dp-2) and
+  [DP-3](design-principles.md#dp-3) are both at `v2`. Each was first written
+  about a single artifact and failed to generalize until a second instance
+  forced it — which is the most useful thing either of them teaches, and it
+  only survives because the version is on the document.
+- **Consequence falsified.** [ADR-016](decisions/ADR-016.md) states as a
+  consequence that a certain project's decisions are no longer cited anywhere.
+  [ADR-017](decisions/ADR-017.md) made that false. [ADR-016](decisions/ADR-016.md)'s body stands as
+  written and [ADR-017](decisions/ADR-017.md) is where a reader learns the state changed back —
+  a consequence is an observation, and observations expire.
+
+The failure mode to avoid is not editing. It is editing **without leaving a
+trace**: a `history:` entry that doesn't say what the previous version claimed
+is a correction wearing an improvement's clothes.
+
+---
+
+## 3. Fragments and generated views
 
 `CHANGELOG.md`, the decision index, the principles document and similar
 assembled pages are **views**, built from fragments — never hand-edited, and the
@@ -71,7 +129,7 @@ caught instead of discovered.
 
 ---
 
-## 3. The drift doctrine
+## 4. The drift doctrine
 
 The most-earned lesson, [DP-3](design-principles.md#dp-3): **a hand-maintained
 projection of a source of truth will drift** — not as a risk but as a rate. The
@@ -92,7 +150,7 @@ Provisioned is not working.
 
 ---
 
-## 4. The collaboration model, in the open
+## 5. The collaboration model, in the open
 
 **Culture must be compiled** ([DP-5](design-principles.md#dp-5)). A stateless
 collaborator can't be socialized, so a norm that exists only as prose is
@@ -108,7 +166,7 @@ it. This page is what the bootloader points at.
 
 ---
 
-## 5. Leaving knowledge behind: the checklist
+## 6. Leaving knowledge behind: the checklist
 
 - [ ] `changelog.d/` fragment for anything an operator or user would notice.
 - [ ] `devlog.d/` fragment if the work *taught* something — and record wrong

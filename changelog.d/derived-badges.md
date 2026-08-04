@@ -14,5 +14,7 @@
 
 - **`luria badges`**, and `luria index` regenerates the counts into a
   `<!-- luria:badges -->` region. The numbers are baked into static shields
-  URLs — no endpoint to configure, no committed JSON, no per-merge bot commit —
-  and `luria lint` fails when the region disagrees with the record.
+  URLs — no endpoint to configure and no committed JSON — and `luria lint`
+  fails when the region disagrees with the record. Baked in rather than served
+  means the count is correct *per commit*, so a pull request shows its own
+  numbers rather than the default branch's.

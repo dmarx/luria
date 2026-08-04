@@ -76,15 +76,20 @@ index is read far more often than the decision. Say what was decided **and what
 was rejected**; a decision with an empty "alternatives considered" usually
 wasn't a decision.
 
-Supersede by **adding** a decision and flipping the old one's status to
-`Superseded`. Never rewrite a decision's body — the history is the point, and
-that holds for a decision that lasted an afternoon as much as one that lasted a
-year.
+When the **choice** changes, supersede: add a decision and flip the old one's
+status to `Superseded`, leaving its body intact.
 
-`version:` is standard frontmatter here too, and it moves rarely: a decision
-that *changes* is superseded, not edited. Bump it when the same choice is
-restated more broadly — scope widened, wording generalized — and the index will
-show it.
+When the choice stands and only a **reason** was wrong, correct the body in
+place, bump `version:`, and say in `history:` what the previous version claimed
+and why it was wrong. Superseding there is theatre — it retires a decision still
+in force and points every citation at an identical claim.
+
+**Nothing in the record is frozen.** The rule objects to *silent* revision, and
+a version bump with a history note is the opposite of silent. The test for the
+ambiguous case: *would a reader who acted on the old version have done something
+different?* If yes, supersede; if they'd have done the same thing for a worse
+reason, correct in place. Luria's own record carries a worked example of each:
+[LU-ADR-019](https://github.com/dmarx/luria/blob/main/docs/decisions/ADR-019.md).
 
 ## Adding or revising a principle
 

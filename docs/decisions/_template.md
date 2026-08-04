@@ -9,8 +9,10 @@
 # `luria index`.
 
 # Active | Proposed | Deferred | Superseded | Rejected, optionally " — <note>".
-# Supersede rather than rewrite: when a decision is replaced, set the old one to
-# "Superseded — by [ADR-NNN](ADR-NNN.md)" and leave its body intact.
+# Supersede when the CHOICE changes: set the old one to
+# "Superseded — by [ADR-NNN](ADR-NNN.md)" and leave its body intact. When the
+# choice stands and only a REASON was wrong, correct this body in place and
+# bump `version:` below — the rule objects to silent revision, not to editing.
 status: Proposed
 
 # What the index shows in place of the code. Repeat it as the body's `# ADR-NNN:`

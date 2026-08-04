@@ -10,7 +10,7 @@ file it's collected into, not from where it sits.
 import sys
 from pathlib import Path
 
-# unresolved-ok-file: ADR-019, ADR-163 — fixture codes, deliberately not real
+# unresolved-ok-file: ADR-919, ADR-163 — fixture codes, deliberately not real
 REPO = Path(__file__).resolve().parents[1]
 
 from luria import doc_refs  # noqa: E402
@@ -151,12 +151,12 @@ def test_existing_links_are_ignored():
 
 
 def test_defined_shortcut_reference_is_already_a_link():
-    text = "the registry ([ADR-019]) turned it around.\n\n[ADR-019]: adr-019.md\n"
+    text = "the registry ([ADR-919]) turned it around.\n\n[ADR-919]: ADR-919.md\n"
     assert kinds(text) == []
 
 
 def test_undefined_shortcut_reference_is_bare():
-    assert kinds("the registry ([ADR-019]) turned it around.") == [("adr", 19)]
+    assert kinds("the registry ([ADR-919]) turned it around.") == [("adr", 919)]
 
 
 def test_frontmatter_data_is_exempt_but_the_summary_is_not():

@@ -10,9 +10,15 @@ Values that decisions *cite* live in
 the fragments in `../principles/`. The split, and why these are separate files,
 is [LU-ADR-001](https://github.com/dmarx/luria/blob/main/docs/decisions/ADR-001.md).
 
-Supersede by **adding** a decision and flipping the old one's status — never by
-rewriting a body. The history is the point: a record you can rewrite is a record
-that can't be trusted about what you used to think.
+A decision whose **choice** changes is superseded by *adding* a decision and
+flipping the old one's status — not by rewriting its body. A record you can
+quietly rewrite can't be trusted about what you used to think.
+
+That is a rule about silence, not about editing. A decision whose choice stands
+but whose *reasoning* was wrong is corrected in place, with a `version` bump and
+a `history:` entry saying what the previous version claimed. Nothing here is
+frozen; it is only un-silently revisable. Luria's own record carries worked
+examples of both: [LU-ADR-019](https://github.com/dmarx/luria/blob/main/docs/decisions/ADR-019.md).
 
 <!-- GENERATED below this line by `luria index` — edit README.stub instead. -->
 
