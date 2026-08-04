@@ -51,13 +51,14 @@ def test_row_rebases_summary_and_status_together(tmp_path, monkeypatch):
     are prose rendered into the same row and need the same treatment. Four
     supersession links 404'd on the tag pages until this held."""
     from luria import config
-    (tmp_path / "docs" / "decisions").mkdir(parents=True)
-    (tmp_path / "docs" / "decisions" / "ADR-001.md").write_text(
+    monkeypatch.setenv("LURIA_ROOT", str(tmp_path))
+    config.reset()
+    adr_dir = config.current().schemes["ADR"].dir
+    adr_dir.mkdir(parents=True)
+    (adr_dir / "ADR-001.md").write_text(
         "---\nstatus: 'Superseded — by [ADR-002](ADR-002.md)'\n"
         "tags:\n- record\n"
         "summary: 'refines [ADR-002](ADR-002.md)'\n---\n\n# ADR-001: Old\n")
-    monkeypatch.setenv("LURIA_ROOT", str(tmp_path))
-    config.reset()
 
     adr = builder.load_adrs()[0]
     assert "](ADR-002.md)" in adr.row()            # from the index
@@ -149,12 +150,18 @@ def test_a_retired_principle_says_so(project):
 
 
 def test_influenced_by_renders_as_a_followable_backlink(project):
-    """Relative to where the text *renders* — `docs/`, one level above the
-    fragment — which is the trap that caught two links in the first eight."""
+    """Relative to where the text *renders* — `docs/`, not the fragment's own
+    directory — which is the trap that caught two links in the first eight.
+    Under the record layout the decision sources are a tree away (ADR-021),
+    and the relpath is derived so this asserts the rule, not the location."""
+    import os
+    from luria.config import current
     from tests import _scheme
     _scheme.decision(project, 4, "Active")
     principle(project, 1, "A value", influenced_by="[ADR-004]")
-    assert "[ADR-004](decisions/ADR-004.md)" in render(project)
+    target = os.path.relpath(current().schemes["ADR"].dir / "ADR-004.md",
+                             current().design_principles.parent)
+    assert f"[ADR-004]({target})" in render(project)
 
 
 def test_an_unresolvable_backlink_stays_a_bare_code(project):
@@ -230,3 +237,95 @@ def test_the_heading_is_the_fallback(project):
     path.write_text(path.read_text().replace(
         "title: 'From the heading'\n", ""))
     assert builder.load_adrs()[0].title == "From the heading"
+
+
+# ── The read/write boundary (ADR-021) ────────────────────────────────────
+
+
+def test_prefix_for_collocated_scheme_is_empty():
+    """Unset `output` is the old layout — view beside sources — and its
+    rendering must stay byte-identical, or every pre-record project's index
+    goes stale on upgrade."""
+    s = Scheme("ADR", REPO / "x")
+    assert builder.prefix_for(s, s.view) == ""
+
+
+def test_split_scheme_rows_link_into_the_source_tree(project, monkeypatch):
+    """An index rendered away from its sources reaches back with a relative
+    prefix — the row's own link, the summary's links and the status note all
+    take the same one."""
+    from luria import config
+    (project / "luria.toml").write_text(
+        '[luria]\nissue_url = "https://example.test/issues/{n}"\n'
+        '[luria.schemes.ADR]\ndir = "record/decisions.d"\n'
+        'output = "docs/decisions"\n')
+    config.reset()
+    from tests import _scheme
+    _scheme.decision(project, 1, "Active", summary="see [ADR-002](ADR-002.md)")
+    _scheme.decision(project, 2, "Active")
+
+    rendered = builder.outputs()
+    index = rendered[project / "docs" / "decisions" / "README.md"]
+    assert "[ADR-001](../../record/decisions.d/ADR-001.md)" in index
+    assert "see [ADR-002](../../record/decisions.d/ADR-002.md)" in index
+    tag = rendered[project / "docs" / "decisions" / "tags" / "record.md"]
+    assert "[ADR-001](../../../record/decisions.d/ADR-001.md)" in tag
+
+
+def test_stub_lives_with_the_sources_and_renders_in_the_view(project):
+    """The stub is authored, so it sits on the write side; the view directory
+    holds only what the generator wrote (ADR-021)."""
+    from luria import config
+    (project / "luria.toml").write_text(
+        '[luria]\nissue_url = "https://example.test/issues/{n}"\n'
+        '[luria.schemes.ADR]\ndir = "record/decisions.d"\n'
+        'output = "docs/decisions"\n')
+    config.reset()
+    from tests import _scheme
+    _scheme.decision(project, 1, "Active")
+    stub = project / "record" / "decisions.d" / "README.stub"
+    stub.write_text("# Mine\n\nProse.\n\n{categories}\n\n{table}\n")
+
+    index = builder.outputs()[project / "docs" / "decisions" / "README.md"]
+    assert index.startswith("# Mine")
+
+
+def test_orphans_reports_strays_in_every_view_dir(project):
+    from luria import config
+    (project / "luria.toml").write_text(
+        '[luria]\nissue_url = "https://example.test/issues/{n}"\n'
+        '[luria.schemes.ADR]\ndir = "record/decisions.d"\n'
+        'output = "docs/decisions"\n'
+        '[luria.journals.devlog]\ndir = "record/devlog.d"\n'
+        'output = "docs/devlog"\n')
+    config.reset()
+    from tests import _scheme
+    _scheme.decision(project, 1, "Active")
+    rendered = builder.outputs()
+    for path, text in rendered.items():
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text)
+    assert builder.orphans(rendered) == []
+
+    stray = project / "docs" / "decisions" / "notes.md"
+    stray.write_text("# Handwritten\n")
+    assert builder.orphans(rendered) == [stray]
+
+
+def test_a_collocated_view_dir_is_not_policed(project):
+    """With no separate `output` the scheme's directory holds the sources —
+    calling every ADR an orphan would fail the entire pre-record layout."""
+    from luria import config
+    (project / "luria.toml").write_text(
+        '[luria]\nissue_url = "https://example.test/issues/{n}"\n'
+        '[luria.schemes.ADR]\ndir = "docs/decisions"\n')
+    config.reset()
+    from tests import _scheme
+    _scheme.decision(project, 1, "Active")
+    rendered = builder.outputs()
+    for path, text in rendered.items():
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text)
+    # The ADR source sits in the same directory as the rendered index, and it
+    # is not an orphan — only the tag dir is policed here.
+    assert builder.orphans(rendered) == []

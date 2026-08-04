@@ -24,25 +24,31 @@ luria lint      # should be clean
 `luria index` is not optional after scaffolding: the two documents a reader
 actually opens — the decision index and `design-principles.md` — do not exist
 until it runs, because both are generated from the fragments beside them
-([ADR-012](decisions/ADR-012.md)).
+([ADR-012](../record/decisions.d/ADR-012.md)).
 
 ## What you get
 
 ```
 luria.toml                  paths, issue URL, code globs, reference schemes
-docs/
-  decisions/
+docs/                       the READ surface: prose + every generated view
+  README.md                 the index a reader lands on; hand-written
+record/                     the WRITE surface: every source, marked `.d`
+  decisions.d/
     _template.md            copy this to make a decision
-    README.stub             the index's prose; the index itself is generated
+    README.stub             the index's prose; the index renders to docs/decisions/
     tags.yaml               tag order and blurbs
-  principles/
+  principles.d/
     _template.md            copy this to make a principle
-    README.stub             the document's prose; the rest is generated
+    README.stub             the document's prose; renders to docs/design-principles.md
     DP-00N.md               seeded with the ones that earn this machinery
-changelog.d/_template.md    one fragment per contribution; collected, then consumed
-devlog.d/_template.md       the shape of a journal entry; optional, significant work only
+  changelog.d/_template.md  one fragment per contribution; collected, then consumed
+  devlog.d/_template.md     the shape of a journal entry; optional, significant work only
 CLAUDE.md                   a bootloader section pointing at the above
 ```
+
+The split is [LU-ADR-021](https://github.com/dmarx/luria/blob/main/record/decisions.d/ADR-021.md):
+you read in `docs/`, you file in `record/`, and a view directory holds only
+what the generator wrote — the lint enforces all three.
 
 Delete the seed principles you disagree with — a principle nobody believes is
 worse than an empty file. Keep the ones you keep *honest*: replace each
@@ -57,11 +63,11 @@ on the first run — that is the machinery telling you what the prose convention
 had been letting through. Three are usual:
 
 - **Frontmatter.** If your decisions use a prose `**Status:**` header, they need
-  frontmatter ([ADR-003](decisions/ADR-003.md)). Migrating is mechanical; the
+  frontmatter ([ADR-003](../record/decisions.d/ADR-003.md)). Migrating is mechanical; the
   audit that motivated the closed vocabulary found thirty distinct spellings
   across 121 files, so budget for a normalizing pass.
 - **`title:`.** Every document needs one, and it has to match the body's `#`
-  heading ([ADR-013](decisions/ADR-013.md)). Lift it from the heading in a
+  heading ([ADR-013](../record/decisions.d/ADR-013.md)). Lift it from the heading in a
   single pass — that is where the generator used to read it from.
 
   Renaming the files to `ADR-<NNN>.md` is *not* required and is not linted:
@@ -72,7 +78,7 @@ had been letting through. Three are usual:
 - **Bare references.** `luria link --fix` writes them all. In the corpus this
   package was extracted from that was 2,246 references across 160 files. Read a
   sample of the diff rather than trusting it wholesale — that is how the
-  code-span bug in [ADR-005](decisions/ADR-005.md) was caught.
+  code-span bug in [ADR-005](../record/decisions.d/ADR-005.md) was caught.
 - **A hand-written principles document.** Split it: one `DP-NNN.md` per
   section, `## N. Title` back up to `# DP-NNN: Title`, and the `README.stub`
   keeping the prose that came before them. Set every `version: 1` except the
@@ -82,7 +88,7 @@ had been letting through. Three are usual:
   keep resolving either way.
 
 Everything else is a warning and can wait
-([ADR-007](decisions/ADR-007.md)).
+([ADR-007](../record/decisions.d/ADR-007.md)).
 
 ## Adopting into a project that already has a devlog
 
@@ -96,11 +102,11 @@ If you already keep devlog *fragments*, they can be migrated — their real
 authoring times are in the history:
 
 ```
-git log --diff-filter=A --format=%aI -1 -- devlog.d/<name>.md
+git log --diff-filter=A --format=%aI -1 -- <old-fragment-path>.md
 ```
 
 That is how Luria's own seven entries got their timestamps
-([ADR-020](decisions/ADR-020.md)), and it is worth the trouble: a migration that
+([ADR-020](../record/decisions.d/ADR-020.md)), and it is worth the trouble: a migration that
 stamps everything with the day it ran makes the log's first page a lie. Two
 things to watch. Timestamps come out in the *committer's* offset, so normalise
 to a single zone before deriving the paths, or an evening entry sorts into the
@@ -113,7 +119,7 @@ will not catch, because a link is not a bare reference.
 A record extracted from — or working alongside — another project cites it
 constantly, and an unprefixed code can't mean both "ours" and "theirs".
 Register the remote and cite it with a prefix
-([ADR-016](decisions/ADR-016.md)):
+([ADR-016](../record/decisions.d/ADR-016.md)):
 
 ```toml
 [luria.remotes.SG]
@@ -131,7 +137,7 @@ luria remotes --check       # HEAD them all (network; never part of the lint)
 
 Three things worth knowing before you rely on it:
 
-- **A remote that follows [ADR-013](decisions/ADR-013.md) needs no lockfile** —
+- **A remote that follows [ADR-013](../record/decisions.d/ADR-013.md) needs no lockfile** —
   the code *is* the filename, so the URL is exact with nothing to refresh. The
   lockfile exists for records whose filenames carry title slugs, where no
   template can turn `032` into `adr-032-a-long-title.md`; `--refresh` reads
@@ -143,7 +149,7 @@ Three things worth knowing before you rely on it:
 - **A citation can land before its URL does.** If the remote hasn't adopted
   the code-only filenames yet, register it anyway and cite it: naming the
   document is the durable half, and the links start working when the remote
-  converts, with no edit on your side ([ADR-017](decisions/ADR-017.md)).
+  converts, with no edit on your side ([ADR-017](../record/decisions.d/ADR-017.md)).
 - **`--check` reports, it never fails a build**, and it is never part of
   `luria lint`. It also can't distinguish "the document was deleted" from "this
   repo is private and you are anonymous", so it probes the repository once and
@@ -153,7 +159,7 @@ Three things worth knowing before you rely on it:
 
 Two numbers are worth putting on a README, because they are the ones a reader
 can't get any other way and both can turn amber
-([ADR-018](decisions/ADR-018.md)):
+([ADR-018](../record/decisions.d/ADR-018.md)):
 
 ```
 <!-- luria:badges -->
@@ -188,7 +194,7 @@ failed.
 
 Collection runs on a cadence, **not on every merge** — a per-merge bot commit
 races in-flight rebases, reintroducing the conflict fragments exist to remove
-([ADR-002](decisions/ADR-002.md)):
+([ADR-002](../record/decisions.d/ADR-002.md)):
 
 ```yaml
 on:
@@ -211,6 +217,6 @@ larger than anyone expected.
 choice still stands but whose reasoning has aged badly is corrected in place,
 with a `version` bump and a `history:` entry saying what the old version
 claimed — you do not have to retire a decision that is still in force in order
-to fix a paragraph in it ([ADR-019](decisions/ADR-019.md)). Luria's own record
+to fix a paragraph in it ([ADR-019](../record/decisions.d/ADR-019.md)). Luria's own record
 has worked examples of every shape of revision; they are listed in
 [project memory §2](project-memory.md).

@@ -7,10 +7,20 @@ every decision is Active. A fixture states what it needs.
 """
 from pathlib import Path
 
+from luria.config import current
+
 
 def decision(root: Path, number: int, status: str, title: str = "A decision",
              summary: str = "") -> Path:
-    path = root / "docs" / "decisions" / f"ADR-{number:03d}.md"
+    """File a decision where the *current* config's ADR scheme reads them.
+
+    Derived rather than hardcoded, because the conventional location moved
+    once already (`docs/decisions` → `record/decisions.d`, ADR-021) and a
+    fixture that spells the path writes documents the scheme can't see —
+    every test downstream then passes on an empty corpus."""
+    scheme = current().schemes["ADR"]
+    assert root == current().root, "fixture root and LURIA_ROOT disagree"
+    path = scheme.dir / f"ADR-{number:03d}.md"
     path.parent.mkdir(parents=True, exist_ok=True)
     front = [f"status: {status}", f"title: {title!r}",
              "tags:", "- record", "date: '2026-01-01'"]

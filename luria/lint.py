@@ -57,13 +57,19 @@ def check_docs_index(errors: list[str]) -> None:
     if not index.exists():
         return
     text = index.read_text()
-    # A scheme's directory holds *sources*, not pages to browse — the thing a
-    # reader opens is the generated view, and that is what the index lists.
-    scheme_dirs = ({s.dir for s in cfg.schemes.values()} | {cfg.tag_dir}
-                   | {j.output for j in cfg.journals.values()})
+    # Two kinds of directory are exempt. A *source* directory holds things a
+    # writer files, not pages a reader browses — the thing a reader opens is
+    # the view. A *view* directory is wholly generated and carries its own
+    # index (the decision index, a journal's book list), so the docs index
+    # links the entrypoint and the rest indexes itself (ADR-021).
+    exempt = ({s.dir for s in cfg.schemes.values()}
+              | {s.view for s in cfg.schemes.values() if s.render == "index"}
+              | {s.tag_dir for s in cfg.schemes.values() if s.render == "index"}
+              | {j.dir for j in cfg.journals.values()}
+              | {j.output for j in cfg.journals.values()})
     pages = sorted(cfg.docs.glob("*.md"))
     for sub in sorted(p for p in cfg.docs.iterdir() if p.is_dir()):
-        if sub not in scheme_dirs:
+        if sub not in exempt:
             pages += sorted(sub.glob("*.md"))
     for page in pages:
         rel = page.relative_to(cfg.docs)
@@ -145,7 +151,7 @@ def check_version_history(errors: list[str]) -> None:
     """`version:` and `history:` have to agree.
 
     Correcting a document in place is only honest because the correction is
-    visible ([ADR-019](../docs/decisions/ADR-019.md)), and nothing was checking
+    visible ([ADR-019](../record/decisions.d/ADR-019.md)), and nothing was checking
     that the visible part exists. A bumped version with no history entry is a
     silent revision wearing a version number."""
     cfg = current()
@@ -176,9 +182,10 @@ def check_generated_index(errors: list[str]) -> None:
     for path, text in rendered.items():
         if not path.exists() or path.read_text() != text:
             errors.append(f"{cfg.rel(path)}: stale — run `luria index`")
-    for path in cfg.tag_dir.glob("*.md"):
-        if path not in rendered:
-            errors.append(f"{cfg.rel(path)}: orphaned tag page — run `luria index`")
+    for path in builder.orphans(rendered):
+        errors.append(f"{cfg.rel(path)}: not something the generator wrote — "
+                      "a view directory holds only generated files (ADR-021); "
+                      "run `luria index`, or file the content as a source")
     # The README's badge counts are derived from the same frontmatter, so a
     # stale one is the same class of failure as a stale index (ADR-018).
     readme = badges.readme()

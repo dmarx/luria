@@ -1,5 +1,5 @@
 """Tests for the journal: dated entries that persist, rendered into books
-([ADR-020](../docs/decisions/ADR-020.md)).
+([ADR-020](../record/decisions.d/ADR-020.md)).
 
 The property the whole scheme rests on is that **the path is the timestamp**.
 Ordering, book membership and the contents list are all derived from it, so
@@ -200,3 +200,20 @@ def test_an_unused_journal_renders_nothing(tmp_path, monkeypatch):
     assert current().journals                      # configured…
     assert journal.outputs() == {}                 # …and silent
     config_mod.reset()
+
+
+def test_index_inlines_the_current_book(tmp_path):
+    """Hot on top: the newest book's contents render on the journal's front
+    page, newest entry first, so the current writing is one click from the
+    entrypoint instead of two (ADR-021)."""
+    j = jrnl(tmp_path)
+    file_entry(j, "2026-07-01T09:00:00", "Old month")
+    file_entry(j, "2026-08-03T21:19:26", "Recent")
+    file_entry(j, "2026-08-04T03:27:11", "Newest")
+    index = journal.render_index(j, journal.books(j))
+    assert "## Currently — [August 2026](2026-08.md)" in index
+    assert "- [4 Aug 03:27 — Newest](2026-08.md#20260804032711)" in index
+    # Newest first in the inline list…
+    assert index.index("Newest") < index.index("Recent")
+    # …and the old book appears only on the shelf.
+    assert "Old month" not in index and "[2026-07](2026-07.md)" in index

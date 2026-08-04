@@ -17,6 +17,9 @@ declares how its documents are rendered (ADR-012):
   render = "index"      the browsable shape — a table plus per-tag pages
       docs/decisions/README.md        stub prose + category lists + the table
       docs/decisions/tags/<tag>.md    one page per tag
+      (sources in record/decisions.d/ — the view directory holds only what
+       this generator wrote, which is what lets the lint call anything else
+       in it an error, ADR-021)
 
   render = "document"   the read-as-a-whole shape — bodies concatenated
       docs/design-principles.md       stub prose + every principle in order
@@ -73,16 +76,24 @@ RELATIVE_LINK_RE = re.compile(r"(?<=\]\()(?![#/]|[A-Za-z][A-Za-z0-9+.-]*:)([^)\s
 
 
 def rebase_links(text: str, prefix: str) -> str:
-    """Rewrite relative link targets in `text` for output `prefix` levels away.
+    """Rewrite relative link targets in `text` for an output `prefix` away.
 
-    Summaries are authored relative to `docs/decisions/` — the same base as the
-    ADR body they were lifted from — and this index renders them both there
-    (`README.md`, prefix "") and one level down (`tags/<tag>.md`, prefix "../").
-    Owning the rendering is what lets a summary carry links at all: without this,
-    no single relative target could be correct in both (ADR-005)."""
+    Summaries are authored relative to the scheme's *source* directory — the
+    same base as the ADR body they were lifted from — and this index renders
+    them into the view directory and again one level down in `tags/<tag>.md`.
+    Owning the rendering is what lets a summary carry links at all: without
+    this, no single relative target could be correct everywhere (ADR-005)."""
     if not prefix:
         return text
     return RELATIVE_LINK_RE.sub(lambda m: prefix + m.group(1), text)
+
+
+def prefix_for(scheme, out_dir: Path) -> str:
+    """The rebase prefix for text authored in `scheme.dir`, rendered into
+    `out_dir`. "" when they are the same place — the collocated layout — so
+    the old output is byte-identical where nothing moved."""
+    rel = os.path.relpath(scheme.dir, out_dir)
+    return "" if rel == "." else rel + "/"
 
 
 def parse_frontmatter(text: str) -> tuple[dict, str]:
@@ -131,9 +142,9 @@ class Adr:
         keeping that shape is what made the migration byte-identical.
 
         A summary may carry relative links, written — like the ADR's body —
-        relative to `docs/decisions/`. `prefix` rebases them for output that
-        renders somewhere else (ADR-005); it is the same prefix the row's own
-        ADR link already took."""
+        relative to the scheme's source directory. `prefix` rebases them for
+        output that renders somewhere else (ADR-005); it is the same prefix
+        the row's own ADR link already took."""
         return rebase_links(str(self.meta.get("summary") or self.title).strip(), prefix)
 
     @property
@@ -176,11 +187,11 @@ def load_scheme(scheme) -> list[Adr]:
     return [Adr(p, scheme) for p in scheme.documents().values()]
 
 
-def tag_order(adrs: list[Adr]) -> list[tuple[str, dict]]:
+def tag_order(adrs: list[Adr], scheme=None) -> list[tuple[str, dict]]:
     """Declared tags first, in tags.yaml order; then any undeclared tag an ADR
     actually uses, alphabetically. Using a new tag must never require a code
     change — that's the whole point of pushing categories down onto the ADRs."""
-    tags_file = current().tags_yaml
+    tags_file = scheme.tags_yaml if scheme else current().tags_yaml
     declared = yaml.safe_load(tags_file.read_text()) if tags_file.exists() else {}
     declared = declared or {}
     used = {t for a in adrs for t in a.tags}
@@ -189,26 +200,33 @@ def tag_order(adrs: list[Adr]) -> list[tuple[str, dict]]:
     return ordered
 
 
-def render_categories(adrs: list[Adr], tags: list[tuple[str, dict]]) -> str:
+def render_categories(adrs: list[Adr], tags: list[tuple[str, dict]],
+                      prefix: str = "") -> str:
     blocks = []
     for tag, meta in tags:
         listed = [a for a in adrs if tag in a.tags]
         label = meta.get("label", tag.title())
         blurb = f" — {meta['blurb']}" if meta.get("blurb") else ""
-        links = " · ".join(f"[{a.number:03d}]({a.path.name})" for a in listed)
+        links = " · ".join(f"[{a.number:03d}]({prefix}{a.path.name})" for a in listed)
         blocks.append(f"**[{label}](tags/{tag}.md)** ({len(listed)}){blurb}:\n{links}")
     return "\n\n".join(blocks)
 
 
-def render_index(adrs: list[Adr], tags: list[tuple[str, dict]]) -> str:
-    table = TABLE_HEAD + "\n".join(a.row() for a in adrs) + "\n"
-    stub = current().stub
+def render_index(adrs: list[Adr], tags: list[tuple[str, dict]],
+                 scheme=None) -> str:
+    scheme = scheme or current().schemes["ADR"]
+    prefix = prefix_for(scheme, scheme.view)
+    table = TABLE_HEAD + "\n".join(a.row(prefix) for a in adrs) + "\n"
+    stub = scheme.stub
     prose = stub.read_text() if stub.exists() else DEFAULT_STUB
-    return (prose.replace("{categories}", render_categories(adrs, tags))
+    return (prose.replace("{categories}", render_categories(adrs, tags, prefix))
                  .replace("{table}", table))
 
 
-def render_tag_page(tag: str, meta: dict, adrs: list[Adr]) -> str:
+def render_tag_page(tag: str, meta: dict, adrs: list[Adr],
+                    scheme=None) -> str:
+    scheme = scheme or current().schemes["ADR"]
+    prefix = prefix_for(scheme, scheme.tag_dir)
     label = meta.get("label", tag.title())
     listed = [a for a in adrs if tag in a.tags]
     blurb = f"\n{meta['blurb'].capitalize()}.\n" if meta.get("blurb") else ""
@@ -218,7 +236,7 @@ def render_tag_page(tag: str, meta: dict, adrs: list[Adr]) -> str:
         f"{blurb}\n"
         f"{len(listed)} of {len(adrs)} decisions. Back to the [full index](../README.md).\n\n"
         + TABLE_HEAD
-        + "\n".join(a.row(prefix="../") for a in listed)
+        + "\n".join(a.row(prefix=prefix) for a in listed)
         + "\n"
     )
 
@@ -231,7 +249,7 @@ def render_document(scheme, docs: list[Adr]) -> str:
     read it in the context of its neighbours. The metadata line is what the
     fragment frontmatter buys: a version, so a revised principle says so
     (ADR-012), and the decisions whose experience produced it."""
-    stub = scheme.dir / "README.stub"
+    stub = scheme.stub
     head = stub.read_text() if stub.exists() else DEFAULT_DOCUMENT_STUB
     base = scheme.output.parent if scheme.output else scheme.dir
     parts = []
@@ -275,6 +293,29 @@ def _link(code: str, base: Path) -> str:
     return os.path.relpath(path, base) if path else ""
 
 
+def view_dirs() -> list[Path]:
+    """Every directory the generator owns outright. Anything in one of these
+    it didn't render is an orphan — a stale tag page, a book from an old
+    granularity, or a hand-written file that will read as generated (ADR-021).
+    A collocated scheme (no separate `output`) contributes only its tag dir,
+    because its view directory also holds the sources."""
+    cfg = current()
+    dirs: list[Path] = []
+    for s in cfg.schemes.values():
+        if s.render != "index":
+            continue
+        dirs.append(s.tag_dir)
+        if s.view != s.dir:
+            dirs.append(s.view)
+    dirs += [j.output for j in cfg.journals.values()]
+    return dirs
+
+
+def orphans(rendered: dict[Path, str]) -> list[Path]:
+    return [p for d in view_dirs() if d.is_dir()
+            for p in sorted(d.glob("*.md")) if p not in rendered]
+
+
 def outputs() -> dict[Path, str]:
     """Every generated view, across every scheme — one place, so the lint's
     staleness check covers a new scheme the moment it is configured."""
@@ -286,10 +327,10 @@ def outputs() -> dict[Path, str]:
             if scheme.output:
                 out[scheme.output] = render_document(scheme, docs)
             continue
-        tags = tag_order(docs)
-        out[cfg.index] = render_index(docs, tags)
+        tags = tag_order(docs, scheme)
+        out[scheme.index_path] = render_index(docs, tags, scheme)
         for tag, meta in tags:
-            out[cfg.tag_dir / f"{tag}.md"] = render_tag_page(tag, meta, docs)
+            out[scheme.tag_dir / f"{tag}.md"] = render_tag_page(tag, meta, docs, scheme)
     from . import journal
     out.update(journal.outputs())
     return out
@@ -304,8 +345,9 @@ def main() -> int:
     if args.check:
         stale = [p for p, text in rendered.items()
                  if not p.exists() or p.read_text() != text]
-        # A tag page whose tag no longer exists is stale too.
-        stale += [p for p in current().tag_dir.glob("*.md") if p not in rendered]
+        # Anything in a view directory the generator didn't render is stale
+        # too — a tag page whose tag is gone, a book from an old granularity.
+        stale += orphans(rendered)
         from . import badges
         readme = badges.readme()
         if readme.exists() and badges.OPEN in (text := readme.read_text()) \
@@ -320,10 +362,8 @@ def main() -> int:
         return 0
 
     cfg = current()
-    cfg.tag_dir.mkdir(parents=True, exist_ok=True)
-    for p in cfg.tag_dir.glob("*.md"):
-        if p not in rendered:
-            p.unlink()
+    for stale_file in orphans(rendered):
+        stale_file.unlink()
     for p, text in rendered.items():
         p.parent.mkdir(parents=True, exist_ok=True)
         p.write_text(text)

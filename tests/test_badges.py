@@ -39,36 +39,36 @@ def with_schemes(project) -> None:
 
 
 def test_a_settled_record_counts_zero(project):
-    decision(project, 1, "Active")
     with_schemes(project)
+    decision(project, 1, "Active")
     assert badges.counts() == (0, 0)
 
 
 def test_proposed_and_deferred_both_need_a_decision(project):
     """Two statuses, one question: "we haven't decided" and "we decided not to
     decide yet" are both open (ADR-003)."""
+    with_schemes(project)
     decision(project, 1, "Proposed")
     decision(project, 2, "Deferred")
     decision(project, 3, "Active")
-    with_schemes(project)
     assert badges.counts()[0] == 2
 
 
 def test_every_scheme_is_counted(project):
     """"All reachable schemes" is the point: a `Proposed` principle is an open
     question exactly as a decision is."""
+    with_schemes(project)
     decision(project, 1, "Proposed")
     principle(project, 2, "Deferred")
-    with_schemes(project)
     assert badges.counts()[0] == 2
 
 
 def test_a_retired_document_counts_only_while_cited(project):
     """The number is *cited* but retired. A superseded decision nothing points
     at is history, not a problem."""
+    with_schemes(project)
     decision(project, 1, "Superseded")
     decision(project, 2, "Active")
-    with_schemes(project)
     assert badges.counts()[1] == 0
 
     (project / "docs" / "notes.md").write_text("per ADR-001 we do this\n")
@@ -78,8 +78,8 @@ def test_a_retired_document_counts_only_while_cited(project):
 def test_an_acknowledged_citation_does_not_count(project):
     """Citing a retired decision is often right, and the whole point of the
     acknowledgement is that the considered ones stop being noise (ADR-007)."""
-    decision(project, 1, "Superseded")
     with_schemes(project)
+    decision(project, 1, "Superseded")
     (project / "docs" / "notes.md").write_text(
         "<!-- inactive-ok: ADR-001 — deliberate -->\nper ADR-001 we do this\n")
     assert badges.counts()[1] == 0
@@ -96,8 +96,8 @@ def test_zero_is_green_and_nonzero_is_amber(project):
 
 
 def test_rewrite_replaces_only_the_region(project):
-    decision(project, 1, "Active")
     with_schemes(project)
+    decision(project, 1, "Active")
     text = f"# Title\n\n{badges.OPEN}\nstale junk\n{badges.CLOSE}\n\nProse.\n"
     out = badges.rewrite(text)
     assert out.startswith("# Title") and out.endswith("Prose.\n")
@@ -107,8 +107,8 @@ def test_rewrite_replaces_only_the_region(project):
 def test_a_project_without_a_region_is_left_alone(project):
     """Not everyone wants badges, and a tool that edits a README nobody asked
     it to edit is a tool people stop running."""
-    decision(project, 1, "Active")
     with_schemes(project)
+    decision(project, 1, "Active")
     assert badges.rewrite("# Title\n\nNo region here.\n") == \
         "# Title\n\nNo region here.\n"
 
@@ -116,7 +116,7 @@ def test_a_project_without_a_region_is_left_alone(project):
 def test_rewriting_twice_changes_nothing(project):
     """Idempotence is what makes the staleness check meaningful — otherwise
     every run would report the previous run's output as stale."""
-    decision(project, 1, "Proposed")
     with_schemes(project)
+    decision(project, 1, "Proposed")
     once = badges.rewrite(f"{badges.OPEN}\n{badges.CLOSE}\n")
     assert badges.rewrite(once) == once
