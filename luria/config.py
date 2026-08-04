@@ -7,7 +7,7 @@ particular project. It reads `luria.toml` from the project root:
     issue_url = "https://github.com/owner/repo/issues/{n}"
 
     [luria.paths]
-    docs = "docs"
+    docs = "docs"                       # or a list: ["docs", "meta"]
     decisions = "docs/decisions"
     design_principles = "docs/design-principles.md"
 
@@ -251,7 +251,7 @@ class Journal:
 class Config:
     root: Path
     issue_url: str
-    docs: Path
+    doc_roots: tuple[Path, ...]
     decisions: Path
     design_principles: Path
     reports: Path
@@ -263,6 +263,12 @@ class Config:
     journals: dict[str, Journal]
     stale_days: int
     _raw: dict = field(default_factory=dict, repr=False)
+
+    @property
+    def docs(self) -> Path:
+        """The first documentation root — where a page goes when nothing says
+        otherwise. Callers that mean *every* root want `doc_roots`."""
+        return self.doc_roots[0]
 
     @property
     def index(self) -> Path:
@@ -355,7 +361,8 @@ def load(root: Path | None = None) -> Config:
     return Config(
         root=root,
         issue_url=raw.get("issue_url", ""),
-        docs=root / paths["docs"],
+        doc_roots=tuple(root / d for d in (
+            [paths["docs"]] if isinstance(paths["docs"], str) else paths["docs"])),
         decisions=root / paths["decisions"],
         design_principles=root / paths["design_principles"],
         reports=root / paths["reports"],

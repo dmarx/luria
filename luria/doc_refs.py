@@ -583,7 +583,13 @@ def doc_files() -> list[Path]:
     cfg = current()
     paths = [cfg.root / name for name in ("README.md", "CLAUDE.md", "AGENTS.md")]
     paths += [cfg.root / target for target in cfg.fragments.values()]
-    paths += sorted(cfg.docs.rglob("*.md")) + sorted(cfg.docs.rglob("*.stub"))
+    for docs in cfg.doc_roots:
+        paths += sorted(docs.rglob("*.md")) + sorted(docs.rglob("*.stub"))
+    # A scheme's directory need not sit under a documentation root — Luria's own
+    # record lives in `meta/` (ADR-021) — so it is scanned on its own account
+    # rather than by happening to be a descendant of somewhere else.
+    for scheme in cfg.schemes.values():
+        paths += sorted(scheme.dir.glob("*.md")) + sorted(scheme.dir.glob("*.stub"))
     for fragment_dir in cfg.fragments:
         paths += sorted((cfg.root / fragment_dir).glob("*.md"))
     # A journal's entries are nested (`yyyy/mm/dd/`), so rglob rather than glob.

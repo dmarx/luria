@@ -52,26 +52,36 @@ INDEX_EXEMPT = {"README.md"}
 
 
 def check_docs_index(errors: list[str]) -> None:
+    """Each documentation root's README covers its own directory.
+
+    Per root rather than repo-wide: `docs/` is what the package documents and
+    `meta/` is the project's own record (ADR-021). One index spanning both
+    would make either reader wade through the other's material, which is the
+    thing the split exists to prevent."""
     cfg = current()
-    index = cfg.docs / "README.md"
-    if not index.exists():
-        return
-    text = index.read_text()
     # A scheme's directory holds *sources*, not pages to browse — the thing a
-    # reader opens is the generated view, and that is what the index lists.
-    scheme_dirs = ({s.dir for s in cfg.schemes.values()} | {cfg.tag_dir}
-                   | {j.output for j in cfg.journals.values()})
-    pages = sorted(cfg.docs.glob("*.md"))
-    for sub in sorted(p for p in cfg.docs.iterdir() if p.is_dir()):
-        if sub not in scheme_dirs:
-            pages += sorted(sub.glob("*.md"))
-    for page in pages:
-        rel = page.relative_to(cfg.docs)
-        if str(rel) in INDEX_EXEMPT:
+    # reader opens is the generated view, and that is what the index lists. A
+    # journal is both: its entries are sources and its books are the view, and
+    # the books already have an index of their own.
+    source_dirs = ({s.dir for s in cfg.schemes.values()} | {cfg.tag_dir}
+                   | {j.output for j in cfg.journals.values()}
+                   | {j.dir for j in cfg.journals.values()})
+    for docs in cfg.doc_roots:
+        index = docs / "README.md"
+        if not index.exists():
             continue
-        # A page is "indexed" when README.md links its relative path.
-        if f"({rel})" not in text:
-            errors.append(f"{cfg.rel(index)}: missing index entry for {rel}")
+        text = index.read_text()
+        pages = sorted(docs.glob("*.md"))
+        for sub in sorted(p for p in docs.iterdir() if p.is_dir()):
+            if sub not in source_dirs:
+                pages += sorted(sub.glob("*.md"))
+        for page in pages:
+            rel = page.relative_to(docs)
+            if str(rel) in INDEX_EXEMPT:
+                continue
+            # A page is "indexed" when README.md links its relative path.
+            if f"({rel})" not in text:
+                errors.append(f"{cfg.rel(index)}: missing index entry for {rel}")
 
 
 def check_frontmatter(errors: list[str]) -> None:
@@ -145,7 +155,7 @@ def check_version_history(errors: list[str]) -> None:
     """`version:` and `history:` have to agree.
 
     Correcting a document in place is only honest because the correction is
-    visible ([ADR-019](../docs/decisions/ADR-019.md)), and nothing was checking
+    visible ([ADR-019](../meta/decisions/ADR-019.md)), and nothing was checking
     that the visible part exists. A bumped version with no history entry is a
     silent revision wearing a version number."""
     cfg = current()

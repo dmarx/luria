@@ -4,7 +4,7 @@
 
 Collectors, generators, the lint, the directive vocabulary.
 
-14 of 20 decisions. Back to the [full index](../README.md).
+14 of 21 decisions. Back to the [full index](../README.md).
 
 | # | Title | Status |
 |---|---|---|

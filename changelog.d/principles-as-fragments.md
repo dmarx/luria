@@ -2,7 +2,7 @@
 
 - **Design principles are fragments, and `docs/design-principles.md` is
   generated from them**
-  ([ADR-012](docs/decisions/ADR-012.md)). One file
+  ([ADR-012](meta/decisions/ADR-012.md)). One file
   per principle in `docs/principles/`, with frontmatter carrying a `version`
   (principles are living documents — two of Luria's eight are at v2, and now
   say so), `influenced_by` backlinks to the decisions whose experience produced
@@ -11,7 +11,7 @@
   browsable shape — a table plus per-tag pages; `render = "document"`
   concatenates the bodies into one page for a set that is read as a whole. This
   is the first exercise of
-  [ADR-006](docs/decisions/ADR-006.md)'s claim
+  [ADR-006](meta/decisions/ADR-006.md)'s claim
   that a second scheme is a config entry and a directory: no scanner changed.
 - **`docs/principles/_template.md`**, and principles scaffolding in `luria init`
   — a fresh project now gets five seed principles as fragments rather than one
@@ -26,7 +26,7 @@
   `<a name="dp-N">` beside each heading, and `luria link` prefers it over the
   heading slug: a principle is a living document, so a heading-derived anchor
   stops resolving the moment the wording moves — silently, which is the
-  fail-stale polarity [DP-3](docs/design-principles.md#dp-3) rules out. Projects
+  fail-stale polarity [DP-3](meta/design-principles.md#dp-3) rules out. Projects
   whose principles are still one hand-written file keep the heading-slug
   fallback.
 

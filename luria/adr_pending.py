@@ -7,7 +7,7 @@
 
 `Proposed` and `Deferred` are the two statuses that describe an *open* question:
 "we haven't decided" and "we decided not to decide yet". Both are legitimate —
-[ADR-003](../docs/decisions/ADR-003.md) added `Deferred` precisely
+[ADR-003](../meta/decisions/ADR-003.md) added `Deferred` precisely
 so postponement could be stated rather than faked. What neither status records is
 *how long*, and that is the whole signal: a decision proposed a week ago is
 pending, the same one a year later is either overdue or was quietly settled in

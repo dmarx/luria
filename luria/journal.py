@@ -10,7 +10,7 @@ observation** — it was true when written and stays true, so it should no more 
 deleted than a decision should (ADR-020).
 
 So a journal is fragments that persist, plus a generated view — the same
-collected-vs-generated split [ADR-012](../docs/decisions/ADR-012.md) draws, and
+collected-vs-generated split [ADR-012](../meta/decisions/ADR-012.md) draws, and
 the reason it matters here is that nothing is ever *appended to*. Two branches
 each add a file nobody else writes; there is no shared insertion point to
 conflict at, and no collection step whose absence would go unnoticed.

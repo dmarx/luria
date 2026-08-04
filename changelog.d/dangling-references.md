@@ -1,7 +1,7 @@
 ### Added
 
 - **A cited code that names no document is now reported** rather than silently
-  dropped ([ADR-014](docs/decisions/ADR-014.md)). It shows up in `luria lint`,
+  dropped ([ADR-014](meta/decisions/ADR-014.md)). It shows up in `luria lint`,
   `luria ref-status` and the CI artifact. A warning, never an error — a typo,
   another project's decision and an illustrative code look identical to a
   scanner, and only a human can tell them apart.

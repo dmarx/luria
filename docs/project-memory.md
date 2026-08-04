@@ -17,12 +17,12 @@ place on its first try.
 
 | layer | holds | one-line test |
 |---|---|---|
-| [`principles/`](design-principles.md) | standing **values**, numbered, cited as "DP-2" instead of re-argued | *have we re-derived this reasoning more than once?* |
-| [`decisions/`](decisions/README.md) | a **choice among alternatives** at a point in time, one file each | *did we reject an alternative, or set a constraint a future edit could violate?* |
+| [`principles/`](../meta/design-principles.md) | standing **values**, numbered, cited as "DP-2" instead of re-argued | *have we re-derived this reasoning more than once?* |
+| [`decisions/`](../meta/decisions/README.md) | a **choice among alternatives** at a point in time, one file each | *did we reject an alternative, or set a constraint a future edit could violate?* |
 | `changelog.d/` fragments | **what changed**, operator-facing, terse | *would someone running or using this notice?* |
 | `devlog.d/` entries | **how it went** — including failed approaches and wrong theories, which are the reusable part | *will a future debugger want the narrative?* |
 
-The traffic rules between them are [ADR-001](decisions/ADR-001.md): principles
+The traffic rules between them are [ADR-001](../meta/decisions/ADR-001.md): principles
 are durable but **not sacred**; a decision whose *choice* changes is superseded
 by adding a decision rather than by rewriting its body; a principle is added on
 the *second* re-derivation of the same reasoning.
@@ -30,7 +30,7 @@ the *second* re-derivation of the same reasoning.
 The top two layers are one file each, in `docs/principles/` and
 `docs/decisions/`, with YAML frontmatter — `docs/design-principles.md` and the
 decision index are both **generated** from them
-([ADR-012](decisions/ADR-012.md)). A principle's
+([ADR-012](../meta/decisions/ADR-012.md)). A principle's
 frontmatter carries a `version`, because principles are living documents: a
 value first stated about one artifact is a value nobody applies to the next one,
 so the honest move is to widen the wording and bump the version rather than
@@ -40,7 +40,7 @@ evidence that stops a principle reading as taste.
 
 **File in the same contribution as the work.** "Later" is a euphemism for never,
 and a fact filed while its context is loaded costs a paragraph — re-derived
-cold, it costs a session ([DP-8](design-principles.md#dp-8)).
+cold, it costs a session ([DP-8](../meta/design-principles.md#dp-8)).
 
 ---
 
@@ -66,7 +66,7 @@ layer is revisable, and each has a shape for saying so:
 The rule of thumb for the ambiguous case: *would a reader who acted on the old
 version have done something different?* If yes, the choice changed — supersede.
 If they would have done the same thing for a worse reason, correct in place.
-That split is [ADR-019](decisions/ADR-019.md).
+That split is [ADR-019](../meta/decisions/ADR-019.md).
 
 <!-- inactive-ok-file: ADR-010, ADR-015 — this page names them as the supersession examples -->
 
@@ -74,26 +74,26 @@ That split is [ADR-019](decisions/ADR-019.md).
 
 None of this is hypothetical here. Every row above has already happened in this
 repository, which is the point of the dogfooding clause in
-[ADR-009](decisions/ADR-009.md) — a rule the project has never had to apply to
+[ADR-009](../meta/decisions/ADR-009.md) — a rule the project has never had to apply to
 itself is a rule nobody has tested:
 
-- **Choice changed.** [ADR-010](decisions/ADR-010.md) named the project
-  `chester`; [ADR-011](decisions/ADR-011.md) replaced it. Later,
-  [ADR-015](decisions/ADR-015.md) was superseded by
-  [ADR-016](decisions/ADR-016.md) *within hours* — a decision that lasted an
+- **Choice changed.** [ADR-010](../meta/decisions/ADR-010.md) named the project
+  `chester`; [ADR-011](../meta/decisions/ADR-011.md) replaced it. Later,
+  [ADR-015](../meta/decisions/ADR-015.md) was superseded by
+  [ADR-016](../meta/decisions/ADR-016.md) *within hours* — a decision that lasted an
   afternoon is exactly the kind whose reversal is worth being able to see.
-- **Reason wrong, choice stands.** [ADR-018](decisions/ADR-018.md) is at `v2`.
+- **Reason wrong, choice stands.** [ADR-018](../meta/decisions/ADR-018.md) is at `v2`.
   It rejected an alternative by citing a decision that didn't apply; the
   rejection survives on a better argument, and `history:` records both.
-- **Value reworded.** [DP-2](design-principles.md#dp-2) and
-  [DP-3](design-principles.md#dp-3) are both at `v2`. Each was first written
+- **Value reworded.** [DP-2](../meta/design-principles.md#dp-2) and
+  [DP-3](../meta/design-principles.md#dp-3) are both at `v2`. Each was first written
   about a single artifact and failed to generalize until a second instance
   forced it — which is the most useful thing either of them teaches, and it
   only survives because the version is on the document.
-- **Consequence falsified.** [ADR-016](decisions/ADR-016.md) states as a
+- **Consequence falsified.** [ADR-016](../meta/decisions/ADR-016.md) states as a
   consequence that a certain project's decisions are no longer cited anywhere.
-  [ADR-017](decisions/ADR-017.md) made that false. [ADR-016](decisions/ADR-016.md)'s body stands as
-  written and [ADR-017](decisions/ADR-017.md) is where a reader learns the state changed back —
+  [ADR-017](../meta/decisions/ADR-017.md) made that false. [ADR-016](../meta/decisions/ADR-016.md)'s body stands as
+  written and [ADR-017](../meta/decisions/ADR-017.md) is where a reader learns the state changed back —
   a consequence is an observation, and observations expire.
 
 The failure mode to avoid is not editing. It is editing **without leaving a
@@ -109,7 +109,7 @@ assembled pages are **views**, built from fragments — never hand-edited, and t
 lint refuses hand edits.
 
 Two kinds, and the difference is *whether the sources survive*
-([ADR-012](decisions/ADR-012.md)). A **collected**
+([ADR-012](../meta/decisions/ADR-012.md)). A **collected**
 view — the changelog — consumes its fragments: they are deleted, the view
 accumulates, and it can only ever be appended to. A **generated** view — the
 decision index, the principles document, the devlog — is a pure function of
@@ -118,7 +118,7 @@ a stale one can be *detected*. Prefer generation where the data is derivable;
 there is then no collection step to forget.
 
 The devlog is the case where that choice was got wrong first and corrected
-([ADR-020](decisions/ADR-020.md)). It looked like a changelog and was collected
+([ADR-020](../meta/decisions/ADR-020.md)). It looked like a changelog and was collected
 like one, but a changelog entry is a claim about a release and a devlog entry is
 a **dated observation** — true when written, and still true. Consuming it throws
 away the only copy of something that never expires. So the devlog is a
@@ -129,11 +129,11 @@ list built from the titles. The timestamp is also the ordering, so what the log
 says happened first is a property of the record rather than of the order the
 branches landed.
 
-The reasoning is [DP-2](design-principles.md#dp-2): a file every contribution must
+The reasoning is [DP-2](../meta/design-principles.md#dp-2): a file every contribution must
 append to is a *lock*. Concurrent branches collide in it contentlessly, and
 every hand-merge is a chance to drop someone's work. The fix is structural —
 each contribution owns a file nobody else writes, and the shared artifact is
-assembled on a cadence ([ADR-002](decisions/ADR-002.md)).
+assembled on a cadence ([ADR-002](../meta/decisions/ADR-002.md)).
 
 Practical consequences: the answer to "which file do I edit?" is always *a
 fragment*; and generated pages can be linted against their sources, so drift is
@@ -143,7 +143,7 @@ caught instead of discovered.
 
 ## 4. The drift doctrine
 
-The most-earned lesson, [DP-3](design-principles.md#dp-3): **a hand-maintained
+The most-earned lesson, [DP-3](../meta/design-principles.md#dp-3): **a hand-maintained
 projection of a source of truth will drift** — not as a risk but as a rate. The
 remedy ladder:
 
@@ -156,7 +156,7 @@ remedy ladder:
    a comment: *fail-safe* or *fail-loud*. *Fail-stale* — the miss ships as
    silently wrong behavior — is never acceptable, and it is the naive default.
 
-The enforcement clause is [DP-6](design-principles.md#dp-6): **fire before
+The enforcement clause is [DP-6](../meta/design-principles.md#dp-6): **fire before
 trusting.** Every guard gets one deliberate sabotage run to prove it catches.
 Provisioned is not working.
 
@@ -164,13 +164,13 @@ Provisioned is not working.
 
 ## 5. The collaboration model, in the open
 
-**Culture must be compiled** ([DP-5](design-principles.md#dp-5)). A stateless
+**Culture must be compiled** ([DP-5](../meta/design-principles.md#dp-5)). A stateless
 collaborator can't be socialized, so a norm that exists only as prose is
 followed probabilistically. Norms that matter get walked up the ladder *prose →
 convention → mechanism → guarantee*. When you find yourself repeating a
 correction, that is the signal to walk the norm up a rung.
 
-**No private brains** ([DP-7](design-principles.md#dp-7)). Agent files are legitimate
+**No private brains** ([DP-7](../meta/design-principles.md#dp-7)). Agent files are legitimate
 as **bootloaders** — pointers to the shared record, plus harness mechanics no
 human needs — never as knowledge stores. The decision test: *would a new human
 hire need this?* Then it belongs in the shared docs, and the agent file links to
@@ -192,7 +192,7 @@ it. This page is what the bootloader points at.
 - [ ] In code, cite the record inline (`# ADR-004`, `# DP-3`): comments that
       name their justification survive refactors that arguments don't.
 - [ ] If you built a guard or gate: note the sabotage run that fired it
-      ([DP-6](design-principles.md#dp-6)).
+      ([DP-6](../meta/design-principles.md#dp-6)).
 
 ## What keeps this true
 
@@ -200,5 +200,5 @@ it. This page is what the bootloader points at.
   references are followable.
 - Deterministic assembly — same inputs, same view, so drift between record and
   view is mechanically checkable.
-- The reports ([ADR-007](decisions/ADR-007.md)):
+- The reports ([ADR-007](../meta/decisions/ADR-007.md)):
   what cites a retired decision, and what has been undecided for how long.

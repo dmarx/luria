@@ -1,5 +1,5 @@
 """Tests for the journal: dated entries that persist, rendered into books
-([ADR-020](../docs/decisions/ADR-020.md)).
+([ADR-020](../meta/decisions/ADR-020.md)).
 
 The property the whole scheme rests on is that **the path is the timestamp**.
 Ordering, book membership and the contents list are all derived from it, so

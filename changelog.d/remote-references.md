@@ -2,7 +2,7 @@
 
 - **Another project's decision is cited as `LU-ADR-013`** — a registered remote
   prefix composed with that project's own code
-  ([ADR-016](docs/decisions/ADR-016.md)). One `[luria.remotes.LU]` entry makes
+  ([ADR-016](meta/decisions/ADR-016.md)). One `[luria.remotes.LU]` entry makes
   it a **first-class reference**: `luria link --fix` writes the URL, `luria
   lint` fails on a bare one, and the citation scan no longer has to guess which
   project a code belonged to.
@@ -10,7 +10,7 @@
   resolves; `--refresh` discovers code→filename maps from a **public**
   repository into a committed `remotes.lock.json`; `--check` probes
   reachability. A remote that follows
-  [ADR-013](docs/decisions/ADR-013.md) needs no lockfile: the code *is* the
+  [ADR-013](meta/decisions/ADR-013.md) needs no lockfile: the code *is* the
   filename.
 - **Two remotes are registered, and their difference is the point.** `SG` is
   the pilot this package was extracted from — private, filenames not yet
@@ -20,7 +20,7 @@
   is exercised by the package, not only by its tests — which is how the
   `*.stub` hole below was found.
 - **A citation may name a document before its URL resolves**
-  ([ADR-017](docs/decisions/ADR-017.md)). `SG-ADR-032` 404s today and will land
+  ([ADR-017](meta/decisions/ADR-017.md)). `SG-ADR-032` 404s today and will land
   when strata-g's record is ported; naming the document is the durable half,
   and the whole set flips to `ok` in one `--check` run when it does.
 - **`version:` is standard frontmatter for every scheme**, not just principles.
@@ -46,5 +46,5 @@
   option is gone: a resolution that depends on what happens to be on somebody's
   disk produces a committed lockfile nobody else can regenerate. A remote Luria
   can't read gets a `url` template, not a credential path
-  ([ADR-016](docs/decisions/ADR-016.md) supersedes
-  [ADR-015](docs/decisions/ADR-015.md)).
+  ([ADR-016](meta/decisions/ADR-016.md) supersedes
+  [ADR-015](meta/decisions/ADR-015.md)).

@@ -1,7 +1,7 @@
 ### Changed
 
 - **The README's two record badges are counts now, not adjectives**
-  ([ADR-018](docs/decisions/ADR-018.md)). "generated index" and "versioned"
+  ([ADR-018](meta/decisions/ADR-018.md)). "generated index" and "versioned"
   were assertions that could never be false; they are replaced by **needs
   decision** (`Proposed` + `Deferred`) and **cited but retired** (retired
   documents still cited without an acknowledgement). Zero is green, non-zero is

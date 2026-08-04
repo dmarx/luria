@@ -1,7 +1,7 @@
 """Shared fixtures.
 
 Every test runs against *this* repo's record, because Luria's first consumer is
-Luria ([ADR-009](../docs/decisions/ADR-009.md)) — a
+Luria ([ADR-009](../meta/decisions/ADR-009.md)) — a
 check that passes on a synthetic fixture and fails on a real corpus has told you
 nothing. Tests that need a controlled tree build one and repoint the config at
 it via `LURIA_ROOT`.

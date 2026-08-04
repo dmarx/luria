@@ -61,7 +61,18 @@ def badge(label: str, value: int, target: str) -> str:
     return f"[![{label}: {value}](https://img.shields.io/badge/{text})]({target})"
 
 
-def region(link: str = "docs/decisions/README.md") -> str:
+def index_link() -> str:
+    """Where a badge points, read from config rather than assumed.
+
+    It was the literal `docs/decisions/README.md` until the record moved to
+    `meta/` (ADR-021) and the badges quietly pointed at nothing. A default that
+    restates a configured path is a projection, and projections drift
+    ([DP-3](../meta/design-principles.md#dp-3))."""
+    return current().rel(current().index)
+
+
+def region(link: str | None = None) -> str:
+    link = link or index_link()
     undecided, retired = counts()
     return "\n".join([
         OPEN,
@@ -71,7 +82,7 @@ def region(link: str = "docs/decisions/README.md") -> str:
     ])
 
 
-def rewrite(text: str, link: str = "docs/decisions/README.md") -> str:
+def rewrite(text: str, link: str | None = None) -> str:
     """The README with its badge region refreshed.
 
     Returns the text unchanged when there is no region — a project that hasn\'t

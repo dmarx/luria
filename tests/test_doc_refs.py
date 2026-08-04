@@ -7,6 +7,7 @@ only a link where the surrounding syntax lets it be one: markdown inside a raw
 HTML block renders as literal brackets, and a fragment's links resolve from the
 file it's collected into, not from where it sits.
 """
+import os
 import sys
 from pathlib import Path
 
@@ -18,8 +19,19 @@ from luria import doc_refs  # noqa: E402
 DOCS = REPO / "docs"
 ANY_MD = DOCS / "project-memory.md"       # a plain page; links resolve from docs/
 
-# Read from config rather than hardcoded: the URL is per-project (ADR-006).
+# Read from config rather than hardcoded: the URL is per-project (ADR-006), and
+# so is where the record lives — Luria keeps its own in `meta/` (ADR-021), which
+# a test asserting a literal `decisions/…` would silently be wrong about.
 ISSUE_551 = doc_refs.current().issue_url.format(n=551)
+
+
+def _from(base: Path, target: Path) -> str:
+    return os.path.relpath(target, base)
+
+
+DECISIONS = _from(DOCS, doc_refs.current().decisions)          # links written in docs/
+PRINCIPLES = _from(DOCS, doc_refs.current().design_principles)
+ROOT_DECISIONS = _from(REPO, doc_refs.current().decisions)     # …and at the repo root
 
 
 def kinds(text):
@@ -213,7 +225,7 @@ def test_urls_and_comments_are_ignored():
 def test_linkify_uses_repo_conventions():
     out, n = doc_refs.linkify("See ADR-004 and #551.", ANY_MD)
     assert n == 2
-    assert "[ADR-004](decisions/ADR-004.md)" in out
+    assert f"[ADR-004]({DECISIONS}/ADR-004.md)" in out
     assert f"[#551]({ISSUE_551})" in out
 
 
@@ -235,7 +247,7 @@ def test_html_block_gets_an_html_anchor():
 
 def test_undefined_shortcut_brackets_are_absorbed():
     out, _ = doc_refs.linkify("as in [ADR-004] above", ANY_MD)
-    assert out == "as in [ADR-004](decisions/ADR-004.md) above"
+    assert out == f"as in [ADR-004]({DECISIONS}/ADR-004.md) above"
 
 
 def test_self_reference_is_not_linked():
@@ -248,21 +260,23 @@ def test_fragment_links_resolve_from_the_collected_file():
     """changelog.d/* is assembled into /CHANGELOG.md — links must be written
     for where the text lands, not for where the fragment sits."""
     out, _ = doc_refs.linkify("See ADR-004.", REPO / "changelog.d" / "x.md")
-    assert "(docs/decisions/ADR-004.md)" in out
+    assert f"({ROOT_DECISIONS}/ADR-004.md)" in out
 
 
 def test_journal_entry_links_resolve_from_its_book():
-    """A journal entry is nested (`devlog.d/2026/08/03/`) and renders into
-    `docs/devlog/<book>.md`, so its links resolve from the *output* directory
-    however deep the entry is (ADR-020)."""
-    entry = REPO / "devlog.d" / "2026" / "08" / "03" / "211926.md"
+    """A journal entry is nested (`.../2026/08/03/`) and renders into the
+    journal's output directory, so its links resolve from *there* however deep
+    the entry is (ADR-020) — which is why moving the whole record into `meta/`
+    left every one of them untouched (ADR-021)."""
+    journal = next(iter(doc_refs.current().journals.values()))
+    entry = journal.dir / "2026" / "08" / "03" / "211926.md"
     out, _ = doc_refs.linkify("See ADR-004.", entry)
     assert "(../decisions/ADR-004.md)" in out
 
 
 def test_design_principle_links_to_its_anchor():
     out, _ = doc_refs.linkify("per design-principles #1", ANY_MD)
-    assert "(design-principles.md#dp-1)" in out
+    assert f"({PRINCIPLES}#dp-1)" in out
 
 
 def test_design_principles_page_links_to_its_own_anchor():
@@ -304,3 +318,23 @@ def test_repo_docs_have_no_bare_references():
             for r in doc_refs.rewritable_refs(text, path, adrs, anchors)
         ]
     assert bare == []
+
+
+def test_a_scheme_outside_a_doc_root_is_still_scanned():
+    """The reference lint used to reach the decisions only because they sat
+    under `docs/`. Once the record moved to `meta/` (ADR-021) that was no
+    longer true, and a scheme silently dropping out of the lint is the failure
+    polarity DP-3 rules out."""
+    scanned = set(doc_refs.doc_files())
+    for scheme in doc_refs.current().schemes.values():
+        present = set(scheme.documents().values())
+        assert present, f"{scheme.prefix} has no documents to check"
+        assert present <= scanned, f"{scheme.prefix} documents are unscanned"
+
+
+def test_every_documentation_root_is_scanned():
+    cfg = doc_refs.current()
+    assert len(cfg.doc_roots) > 1, "this repo configures docs/ and meta/"
+    scanned = set(doc_refs.doc_files())
+    for root in cfg.doc_roots:
+        assert (root / "README.md") in scanned

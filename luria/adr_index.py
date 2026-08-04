@@ -6,7 +6,7 @@
 
 A scheme's view used to be hand-maintained: every decision-bearing branch
 appended a row to the same table and a link to the same category list. That
-makes it the shared-file lock [DP-2](../docs/design-principles.md#dp-2) names,
+makes it the shared-file lock [DP-2](../meta/design-principles.md#dp-2) names,
 and it *drifts*, because the row duplicates data the document already owns — in
 the corpus this was extracted from, 45 of 155 rows disagreed with their own
 decision's status (ADR-004).

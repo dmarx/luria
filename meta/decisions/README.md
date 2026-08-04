@@ -18,20 +18,20 @@ but whose *reasoning* was wrong is corrected in place, with a `version` bump and
 a `history:` entry saying what the previous version claimed
 ([ADR-019](ADR-019.md)). Nothing here is frozen; it is only
 un-silently revisable, and this record has worked examples of both
-([project memory §2](../project-memory.md)).
+([project memory §2](../../docs/project-memory.md)).
 
 <!-- GENERATED below this line by `luria index` — edit README.stub instead. -->
 
 ## By tag
 
-**[The record](tags/record.md)** (13) — what the four layers hold, and the rules between them:
-[001](ADR-001.md) · [002](ADR-002.md) · [003](ADR-003.md) · [009](ADR-009.md) · [012](ADR-012.md) · [013](ADR-013.md) · [014](ADR-014.md) · [015](ADR-015.md) · [016](ADR-016.md) · [017](ADR-017.md) · [018](ADR-018.md) · [019](ADR-019.md) · [020](ADR-020.md)
+**[The record](tags/record.md)** (14) — what the four layers hold, and the rules between them:
+[001](ADR-001.md) · [002](ADR-002.md) · [003](ADR-003.md) · [009](ADR-009.md) · [012](ADR-012.md) · [013](ADR-013.md) · [014](ADR-014.md) · [015](ADR-015.md) · [016](ADR-016.md) · [017](ADR-017.md) · [018](ADR-018.md) · [019](ADR-019.md) · [020](ADR-020.md) · [021](ADR-021.md)
 
 **[Mechanism](tags/mechanism.md)** (14) — collectors, generators, the lint, the directive vocabulary:
 [002](ADR-002.md) · [003](ADR-003.md) · [004](ADR-004.md) · [005](ADR-005.md) · [006](ADR-006.md) · [007](ADR-007.md) · [008](ADR-008.md) · [012](ADR-012.md) · [013](ADR-013.md) · [014](ADR-014.md) · [015](ADR-015.md) · [016](ADR-016.md) · [018](ADR-018.md) · [020](ADR-020.md)
 
-**[Process](tags/process.md)** (6) — how the machinery is adopted, run, and reported on:
-[007](ADR-007.md) · [009](ADR-009.md) · [010](ADR-010.md) · [011](ADR-011.md) · [017](ADR-017.md) · [019](ADR-019.md)
+**[Process](tags/process.md)** (7) — how the machinery is adopted, run, and reported on:
+[007](ADR-007.md) · [009](ADR-009.md) · [010](ADR-010.md) · [011](ADR-011.md) · [017](ADR-017.md) · [019](ADR-019.md) · [021](ADR-021.md)
 
 ## Chronological
 
@@ -57,4 +57,5 @@ un-silently revisable, and this record has worked examples of both
 | [ADR-018](ADR-018.md) v2 | The two decorative badges ("generated index", "versioned") said nothing a reader couldn't guess and could never be wrong, which makes them furniture. They are replaced by the two numbers the record actually has to answer for — **needs decision** (`Proposed` + `Deferred`, across every scheme) and **cited but retired** (retired documents still cited without an acknowledgement) — baked into static shields URLs that `luria index` rewrites and `luria lint` checks for staleness. Derived, not hand-written: rung 1 of [DP-3](../design-principles.md#dp-3). `luria pending` was generalized to every scheme in the process, since a `Proposed` principle is an open question exactly as a decision is. Rejected: a shields endpoint reading a committed JSON file (it always reports the default branch, so the count can't move in a reviewer's diff), and a live query (nothing outside this repo can compute either number). | Active |
 | [ADR-019](ADR-019.md) | Two ways a decision record can be wrong, and only one of them is a supersession. If the **choice** changes, add a new decision and retire the old one — the rule [ADR-001](ADR-001.md) has always stated. If the choice stands but a **reason** for it turns out to be wrong, correct the body in place, bump `version`, and say what changed in `history:`. Superseding over a bad argument is theatre: it retires a decision still in force, and every citation of it has to be repointed at an identical claim. Leaving the argument standing is worse, because a wrong reason is exactly what gets quoted at the next person. The version field makes the correction visible, which is the whole reason "never rewrite a body" exists — the objection is to *silent* revision, not to being wrong out loud. Rejected: superseding for any change (churn, and it makes the status vocabulary lie), and correcting silently (indistinguishable from rewriting history). | Active |
 | [ADR-020](ADR-020.md) | The devlog stops being a collected view and becomes a **journal**: entries live at `devlog.d/yyyy/mm/dd/hhmmss.md`, persist, and are rendered into one generated book per period plus an index. Identity is the authoring timestamp, so there is no number to assign and no name to collide on; ordering is a pure function of the tree rather than of commit order, which a rebase can change. Entries carry the standard frontmatter — `title:` is what each book's contents list shows — and `luria lint` checks the path agrees with `created:`. Rejected: a dated file per period appended to directly (two branches in the same month still conflict, which is most of them), a single growing `docs/devlog.md` (8,281 lines in 40 days at the pilot's rate), and slugs in the filename (a second name for the thing `title:` already names, [DP-3](../design-principles.md#dp-3)). | Active |
+| [ADR-021](ADR-021.md) | Luria's own project memory — decisions, principles, devlog — moves from `docs/` to `meta/`, leaving `docs/` as what the *package* documents and `template/` as what it ships. The repo has two audiences and was serving them from one directory: an adopter wants the doctrine and the scaffold, a contributor wants the evidence. `paths.docs` accepts a list of roots, each indexed by its own README, so the separation is enforced rather than merely intended. Rejected: moving the record to a separate repo or submodule (it would void [ADR-009](ADR-009.md)'s dogfooding claim and leave the corpus-dependent tests without a corpus, while `--recursive` clones pull it anyway), and inverting the layout to hoist `template/` to the root (a much larger diff for the same result). `CHANGELOG.md` deliberately stays at the root: it is about the package, not about how the package was built. | Active |
 

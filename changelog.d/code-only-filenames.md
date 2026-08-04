@@ -2,7 +2,7 @@
 
 - **A document's filename is its code and nothing else** — `ADR-013.md`, not
   `adr-013-a-documents-filename-is-its-code.md`
-  ([ADR-013](docs/decisions/ADR-013.md)). A slug in the filename is a third copy
+  ([ADR-013](meta/decisions/ADR-013.md)). A slug in the filename is a third copy
   of the title that no tool reads and that a rename plus every inbound link is
   needed to correct, so it never gets corrected.
 - **The title moves into a `title:` frontmatter field**, which the generated
@@ -19,6 +19,6 @@
 - **`luria lint` reports a `title:` that disagrees with its body heading**, and
   a missing `title:`. The heading has to stay — someone opening the file alone
   needs one — so the two copies get a guard rather than a merge: rung 2 of
-  [DP-3](docs/design-principles.md#dp-3), since rung 1 isn't available.
+  [DP-3](meta/design-principles.md#dp-3), since rung 1 isn't available.
 - **`tests/test_lint.py`**, covering the new check in both directions and
   across both schemes.

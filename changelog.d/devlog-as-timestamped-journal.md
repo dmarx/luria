@@ -1,7 +1,7 @@
 ### Added
 
 - **Journals** — dated entries that persist, rendered into one generated book
-  per period plus an index ([ADR-020](docs/decisions/ADR-020.md)). Configure one
+  per period plus an index ([ADR-020](meta/decisions/ADR-020.md)). Configure one
   with `[luria.journals.<name>]` (`dir`, `output`, `granularity` of
   `year | month | day`, `title`, `blurb`); entries live at
   `<dir>/yyyy/mm/dd/hhmmss.md`, so identity is the authoring timestamp and
@@ -12,7 +12,7 @@
 - Two lint checks: a journal entry's path must agree with its `created:` and it
   must carry a `title:`; and `version:` must agree with `history:` — a bumped
   version with nothing saying what changed is a silent revision wearing a
-  version number ([ADR-019](docs/decisions/ADR-019.md)).
+  version number ([ADR-019](meta/decisions/ADR-019.md)).
 
 ### Changed
 
@@ -31,11 +31,11 @@
 
 ### Documentation
 
-- [ADR-002](docs/decisions/ADR-002.md) and
-  [ADR-012](docs/decisions/ADR-012.md) corrected in place (v2, with `history:`):
+- [ADR-002](meta/decisions/ADR-002.md) and
+  [ADR-012](meta/decisions/ADR-012.md) corrected in place (v2, with `history:`):
   both cited the devlog as an example of a *collected* view. Neither choice
-  changed — [ADR-012](docs/decisions/ADR-012.md)'s distinction is precisely what
-  [ADR-020](docs/decisions/ADR-020.md) applied.
+  changed — [ADR-012](meta/decisions/ADR-012.md)'s distinction is precisely what
+  [ADR-020](meta/decisions/ADR-020.md) applied.
 - `docs/adopting.md` gains a section on adopting into a project that already has
   a devlog, including how to recover fragments' real authoring times and the two
   traps in doing so (committer time zones, and links written for the old

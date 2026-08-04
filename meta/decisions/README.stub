@@ -18,7 +18,7 @@ but whose *reasoning* was wrong is corrected in place, with a `version` bump and
 a `history:` entry saying what the previous version claimed
 ([ADR-019](ADR-019.md)). Nothing here is frozen; it is only
 un-silently revisable, and this record has worked examples of both
-([project memory §2](../project-memory.md)).
+([project memory §2](../../docs/project-memory.md)).
 
 <!-- GENERATED below this line by `luria index` — edit README.stub instead. -->
 

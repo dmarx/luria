@@ -4,7 +4,7 @@
 A single long file that every substantial contribution appends to is a reliable
 merge-conflict generator: two branches that touch nothing else in common still
 collide at the bottom of it, and so does every rebase onto a main that has
-collected since. That is [DP-2](../docs/design-principles.md#dp-2), and the fix
+collected since. That is [DP-2](../meta/design-principles.md#dp-2), and the fix
 is structural — each contribution owns a fragment nobody else writes, and the
 shared file becomes a VIEW assembled on a cadence.
 

@@ -1,7 +1,7 @@
 # Comment directives
 
 Three checks take instructions from the prose they check. They share one parser,
-one shape, and one scope rule ([ADR-008](decisions/ADR-008.md)).
+one shape, and one scope rule ([ADR-008](../meta/decisions/ADR-008.md)).
 
 ```
 <name>[-block|-file]: <args> — <reason>
@@ -34,7 +34,7 @@ block even when it contains blank lines.
 ## `inactive-ok` — this reference is deliberate
 
 Silences one reference to a retired (non-`Active`) document in the
-[reference-status report](decisions/ADR-007.md).
+[reference-status report](../meta/decisions/ADR-007.md).
 
 ```
 <!-- inactive-ok: ADR-012 — the decision this one replaced -->
@@ -46,7 +46,7 @@ Silences one reference to a retired (non-`Active`) document in the
 Write the **full prefixed code**. A bare number is reported as a malformed
 annotation rather than assumed to be a decision, which is what lets one
 vocabulary serve more than one reference scheme
-([ADR-006](decisions/ADR-006.md)).
+([ADR-006](../meta/decisions/ADR-006.md)).
 
 Acknowledgements are **counted** in the report, not hidden — and one that stops
 applying (the document went `Active`, the reference moved) is reported in its
@@ -77,7 +77,7 @@ per block, rather than being settled once for a whole corpus.
 ## `unresolved-ok` — this code names nothing on purpose
 
 A cited code that resolves to no document is reported
-([ADR-014](decisions/ADR-014.md)): it is a typo, another project's decision, or
+([ADR-014](../meta/decisions/ADR-014.md)): it is a typo, another project's decision, or
 an illustrative code in an example, and only a human can tell which. This
 retires the third kind.
 

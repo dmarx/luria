@@ -1,7 +1,7 @@
 ### Changed
 
 - **`ADR-018` is at `v2`.** Its rejection of the endpoint-badge alternative
-  cited [ADR-002](docs/decisions/ADR-002.md)'s per-merge bot commit, which
+  cited [ADR-002](meta/decisions/ADR-002.md)'s per-merge bot commit, which
   over-applied it — that hazard depends on a file being appended to at a marker
   and carrying assigned numbers, and a derived badge file has neither. The
   decision is unchanged; the reason it gives is now the real one (a baked-in
@@ -12,7 +12,7 @@
 
 ### Added
 
-- **[ADR-019](docs/decisions/ADR-019.md): a wrong *reason* is corrected in
+- **[ADR-019](meta/decisions/ADR-019.md): a wrong *reason* is corrected in
   place and versioned; a changed *choice* is superseded.** Superseding over a
   bad argument retires a decision still in force and points every citation at
   an identical claim. "Never rewrite a body" objects to *silent* revision — a
@@ -27,7 +27,7 @@
   value reworded, consequence falsified — and **a live example of each from this
   repository**, because a rule a project has never applied to itself is a rule
   nobody has tested.
-- **[ADR-001](docs/decisions/ADR-001.md) is at `v2`.** Its traffic rule said a
+- **[ADR-001](meta/decisions/ADR-001.md) is at `v2`.** Its traffic rule said a
   decision is "superseded but never rewritten", which reads as immutability and
   leaves no way to fix a wrong argument short of retiring a decision still in
   force. Narrowed to the case it governs — supersede when the *choice* changes —

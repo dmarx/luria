@@ -4,10 +4,16 @@
 [luria]
 issue_url = "https://github.com/dmarx/luria/issues/{n}"
 
+# Two documentation roots, and the split is the point (ADR-021). `docs/` is what
+# this package documents — the doctrine a downstream reader wants. `meta/` is
+# Luria's own project memory, kept because this repo runs its own machinery on
+# its own record (ADR-009), and kept OUT of the way because a project vendoring
+# the scaffold does not want our development history. Each root's README indexes
+# its own directory.
 [luria.paths]
-docs = "docs"
-decisions = "docs/decisions"
-design_principles = "docs/design-principles.md"
+docs = ["docs", "meta"]
+decisions = "meta/decisions"
+design_principles = "meta/design-principles.md"
 reports = "build/doc-reports"
 
 [luria.fragments]
@@ -18,13 +24,13 @@ reports = "build/doc-reports"
 # them (ADR-020). A month is the right book size for this repo's rate; measure
 # yours before copying the number.
 [luria.journals.devlog]
-dir = "devlog.d"
-output = "docs/devlog"
+dir = "meta/devlog.d"
+output = "meta/devlog"
 granularity = "month"
 title = "Development log"
 blurb = """The narrative that doesn't fit a changelog entry: root-cause \
 archaeology, failed approaches, verification details, and the traps the next \
-person would otherwise rediscover. Generated from the entries in `devlog.d/` \
+person would otherwise rediscover. Generated from the entries in `meta/devlog.d/` \
 — file one with `luria journal new "A title"`."""
 
 [luria.code]
@@ -33,17 +39,17 @@ globs = ["luria/*.py", "tests/*.py", "Makefile", ".github/workflows/*.yml",
 historical = ["CHANGELOG.md"]
 
 [luria.schemes.ADR]
-dir = "docs/decisions"
+dir = "meta/decisions"
 active = "Active"
 render = "index"
 
 # Principles are read as a whole, not browsed one at a time, so their view is a
 # document rather than a table (ADR-012). Same fragment convention either way.
 [luria.schemes.DP]
-dir = "docs/principles"
+dir = "meta/principles"
 active = "Active"
 render = "document"
-output = "docs/design-principles.md"
+output = "meta/design-principles.md"
 
 # Other projects' records, cited from this one. A reference composes the prefix
 # with that project's own code — `SG-ADR-032`, `LU-ADR-013` — so the namespace

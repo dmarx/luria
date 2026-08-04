@@ -7,10 +7,10 @@ is to guard that the two agree.
 
 `title:` is the source of truth and the body's H1 repeats it, because someone
 reading the file on its own needs a heading. Two copies of one string is the
-drifting projection [DP-3](../docs/design-principles.md#dp-3) names, and the
+drifting projection [DP-3](../meta/design-principles.md#dp-3) names, and the
 remedy available here is rung 2 — keep the copy, guard the property that they
 agree. So the guard needs firing, not just provisioning
-([DP-6](../docs/design-principles.md#dp-6)).
+([DP-6](../meta/design-principles.md#dp-6)).
 """
 import sys
 from pathlib import Path
@@ -186,3 +186,70 @@ def test_history_that_lags_the_version_is_reported(project):
     versioned(project, 3, "history:\n- version: 2\n  changed: 'Reworded.'\n")
     errors = version_errors(project)
     assert len(errors) == 1 and "ends at version 2" in errors[0]
+
+
+# ── Documentation roots (ADR-021) ────────────────────────────────────────
+
+
+def two_roots(project) -> None:
+    """A project shaped like this repo: prose in `docs/`, the record in
+    `meta/`, each root indexed by its own README."""
+    (project / "luria.toml").write_text(
+        '[luria]\nissue_url = "https://example.test/issues/{n}"\n'
+        '[luria.paths]\ndocs = ["docs", "meta"]\ndecisions = "meta/decisions"\n'
+        '[luria.schemes.ADR]\ndir = "meta/decisions"\n')
+    from luria import config
+    config.reset()
+    (project / "meta").mkdir(exist_ok=True)
+    (project / "docs" / "README.md").write_text(
+        "# Docs\n\n- [Doctrine](doctrine.md)\n- [Values](design-principles.md)\n")
+    (project / "docs" / "doctrine.md").write_text("# Doctrine\n")
+    (project / "meta" / "README.md").write_text("# Record\n")
+
+
+def index_errors(project) -> list[str]:
+    found: list[str] = []
+    lint.check_docs_index(found)
+    return found
+
+
+def test_each_root_is_checked_against_its_own_index(project):
+    two_roots(project)
+    assert index_errors(project) == []
+
+
+def test_an_unindexed_page_in_the_second_root_is_reported(project):
+    """The failure the second root would otherwise be exempt from: before
+    `paths.docs` took a list, only the first root was checked at all."""
+    two_roots(project)
+    (project / "meta" / "notes.md").write_text("# Notes\n")
+    errors = index_errors(project)
+    assert len(errors) == 1
+    assert "meta/README.md" in errors[0] and "notes.md" in errors[0]
+
+
+def test_an_index_does_not_satisfy_the_other_root(project):
+    """Coverage is per root. Listing `meta/`'s page from `docs/README.md` is
+    not the same claim and must not silence the check."""
+    two_roots(project)
+    (project / "meta" / "notes.md").write_text("# Notes\n")
+    (project / "docs" / "README.md").write_text(
+        "# Docs\n\n- [Doctrine](doctrine.md)\n- [Values](design-principles.md)\n"
+        "- [Notes](notes.md)\n")
+    assert any("meta/README.md" in e for e in index_errors(project))
+
+
+def test_a_journals_entry_directory_is_not_a_page_to_index(project):
+    """`meta/devlog.d/` holds sources, like a scheme directory — and once the
+    record moved into a documentation root, the index check could see it."""
+    (project / "luria.toml").write_text(
+        '[luria]\nissue_url = "https://example.test/issues/{n}"\n'
+        '[luria.paths]\ndocs = ["docs", "meta"]\n'
+        '[luria.journals.devlog]\ndir = "meta/devlog.d"\noutput = "meta/devlog"\n')
+    from luria import config
+    config.reset()
+    entries = project / "meta" / "devlog.d"
+    entries.mkdir(parents=True)
+    (entries / "_template.md").write_text("---\ntitle: 'Shape'\n---\n\nShape.\n")
+    (project / "meta" / "README.md").write_text("# Record\n")
+    assert index_errors(project) == []
