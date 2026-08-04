@@ -225,15 +225,21 @@ def check_bare_refs(errors: list[str]) -> None:
     — everywhere the same rules the fixer uses say they can be (ADR-005)."""
     cfg = current()
     adrs, anchors = doc_refs.adr_paths(), doc_refs.dp_anchors()
-    for path in doc_refs.doc_files():
+
+    def scan_one(path) -> list[str]:
         text = path.read_text()
         # `rewritable_refs` is what the fixer would write — unresolvable codes,
         # self-references and rewrites the frontmatter wouldn't survive are
         # already excluded, so lint never demands something `--fix` won't do.
-        for ref in doc_refs.rewritable_refs(text, path, adrs, anchors):
-            errors.append(
-                f"{cfg.rel(path)}:{ref.line}: {ref.describe()} is not a link — "
-                "run `luria link --fix`")
+        return [f"{cfg.rel(path)}:{ref.line}: {ref.describe()} is not a link — "
+                "run `luria link --fix`"
+                for ref in doc_refs.rewritable_refs(text, path, adrs, anchors)]
+
+    # One file, one unit, scanned wide (ADR-026); `pmap` keeps input order,
+    # so the report reads the same at any width.
+    from .parallel import pmap
+    for found in pmap(scan_one, doc_refs.doc_files()):
+        errors.extend(found)
 
 
 def report_warnings() -> None:

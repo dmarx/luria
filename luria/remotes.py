@@ -484,8 +484,10 @@ def main() -> int:
             visible, why = readable(remote)
             print(f"\nchecking {remote.prefix} ({remote.label})"
                   + ("" if visible else f" — {why}"))
-            for code in codes:
-                result = probe(remote, code, visible)
+            # Probed wide (ADR-026): each URL is an independent HEAD, and the
+            # wall-clock of a serial sweep is the sum of every round-trip.
+            from .parallel import pmap
+            for result in pmap(lambda c: probe(remote, c, visible), codes):
                 if result.ok:
                     continue
                 bucket = (unverifiable if result.status.startswith("unverifiable")
