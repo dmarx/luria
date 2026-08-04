@@ -4,28 +4,32 @@
 [luria]
 issue_url = "https://github.com/dmarx/luria/issues/{n}"
 
+# The read/write boundary (ADR-021): `docs/` is where a reader browses —
+# prose plus every generated view — and `record/` is where a contributor
+# files — every source, each container carrying the `.d` suffix that marks
+# "fragments live here". Nothing under a view directory is hand-written.
 [luria.paths]
 docs = "docs"
-decisions = "docs/decisions"
+decisions = "record/decisions.d"
 design_principles = "docs/design-principles.md"
 reports = "build/doc-reports"
 
 [luria.fragments]
-"changelog.d" = "CHANGELOG.md"
+"record/changelog.d" = "CHANGELOG.md"
 
 # The devlog is a journal, not a fragment directory: its entries are dated
 # observations that stay true, so they persist and the books are generated from
 # them (ADR-020). A month is the right book size for this repo's rate; measure
 # yours before copying the number.
 [luria.journals.devlog]
-dir = "devlog.d"
+dir = "record/devlog.d"
 output = "docs/devlog"
 granularity = "month"
 title = "Development log"
 blurb = """The narrative that doesn't fit a changelog entry: root-cause \
 archaeology, failed approaches, verification details, and the traps the next \
-person would otherwise rediscover. Generated from the entries in `devlog.d/` \
-— file one with `luria journal new "A title"`."""
+person would otherwise rediscover. Generated from the entries in \
+`record/devlog.d/` — file one with `luria journal new "A title"`."""
 
 [luria.code]
 globs = ["luria/*.py", "tests/*.py", "Makefile", ".github/workflows/*.yml",
@@ -33,14 +37,15 @@ globs = ["luria/*.py", "tests/*.py", "Makefile", ".github/workflows/*.yml",
 historical = ["CHANGELOG.md"]
 
 [luria.schemes.ADR]
-dir = "docs/decisions"
+dir = "record/decisions.d"
+output = "docs/decisions"
 active = "Active"
 render = "index"
 
 # Principles are read as a whole, not browsed one at a time, so their view is a
 # document rather than a table (ADR-012). Same fragment convention either way.
 [luria.schemes.DP]
-dir = "docs/principles"
+dir = "record/principles.d"
 active = "Active"
 render = "document"
 output = "docs/design-principles.md"
@@ -69,4 +74,4 @@ dir  = "docs/decisions"
 name = "luria"
 repo = "dmarx/luria"
 ref  = "main"
-dir  = "docs/decisions"
+dir  = "record/decisions.d"

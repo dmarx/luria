@@ -11,22 +11,27 @@ This project keeps its memory in four layers. Which one you want:
 
 | layer | holds | test |
 |---|---|---|
-| [`docs/principles/`](docs/design-principles.md) | standing **values**, numbered, cited as "DP-2" | *have we re-derived this more than once?* |
-| [`docs/decisions/`](docs/decisions/README.md) | a **choice among alternatives** at a point in time | *did I reject an alternative or set a constraint?* |
-| `changelog.d/` | **what changed**, operator-facing, terse | *would someone running this notice?* |
-| `devlog.d/` | **how it went**, including the wrong theories | *will a future debugger want the narrative?* |
+| [`record/principles.d/`](docs/design-principles.md) | standing **values**, numbered, cited as "DP-2" | *have we re-derived this more than once?* |
+| [`record/decisions.d/`](docs/decisions/README.md) | a **choice among alternatives** at a point in time | *did I reject an alternative or set a constraint?* |
+| `record/changelog.d/` | **what changed**, operator-facing, terse | *would someone running this notice?* |
+| `record/devlog.d/` | **how it went**, including the wrong theories | *will a future debugger want the narrative?* |
 
-**Write a fragment, never edit the assembled file.** `CHANGELOG.md`,
-`docs/devlog/`, the decision index and `docs/design-principles.md` are all
-*views*. The lint fails on hand edits to generated files.
+**You read in `docs/`, you file in `record/`.** That is the whole layout rule
+([LU-ADR-021](https://github.com/dmarx/luria/blob/main/record/decisions.d/ADR-021.md)): everything a reader browses — the doctrine and every generated
+view — lives under `docs/`; everything a contributor files lives under
+`record/`, each container wearing the `.d` suffix that says *fragments live
+here*. Nothing under a view directory is hand-written, and the lint fails
+anything that is. If you are editing a file whose directory doesn't end in
+`.d` and isn't prose you were asked to change, stop — you are probably editing
+a view.
 
 The two fragment kinds differ in whether the source survives, and it decides how
-you file one ([LU-ADR-012](https://github.com/dmarx/luria/blob/main/docs/decisions/ADR-012.md)):
+you file one ([LU-ADR-012](https://github.com/dmarx/luria/blob/main/record/decisions.d/ADR-012.md)):
 
-- **Collected** — `changelog.d/<branch-slug>.md`. Assembled into `CHANGELOG.md`
-  and the fragment is *consumed*. One file per contribution.
-- **A journal** — `devlog.d/`, filed with `luria journal new "What you did"`,
-  which puts it at `yyyy/mm/dd/hhmmss.md`. Entries **persist**: a dated
+- **Collected** — `record/changelog.d/<branch-slug>.md`. Assembled into
+  `CHANGELOG.md` and the fragment is *consumed*. One file per contribution.
+- **A journal** — `record/devlog.d/`, filed with `luria journal new "What you
+  did"`, which puts it at `yyyy/mm/dd/hhmmss.md`. Entries **persist**: a dated
   observation was true when you wrote it and stays true, so `docs/devlog/` is
   regenerated from them and each month's book carries a contents list built from
   the titles. Don't name journal files yourself — the path is the timestamp, and
@@ -63,6 +68,7 @@ report. The suffix decides the scope, uniformly, and a directive is one line:
 <!-- inactive-ok-block: ADR-012 — this whole paragraph -->     the block it sits in
 <!-- inactive-ok-file: ADR-012 — this page is that history --> the whole document
 <!-- unresolved-ok: ADR-777 — a fixture code, not a real one --> names nothing on purpose
+<!-- url-ok: SG-DP-18 — no file for the construction to point at --> a hand-written remote URL
 ```
 
 `unresolved-ok` is for a code that resolves to **no document here**: a fixture
@@ -79,7 +85,7 @@ nothing.
 
 ## Adding a decision
 
-Copy [`docs/decisions/_template.md`](docs/decisions/_template.md) to
+Copy [`record/decisions.d/_template.md`](record/decisions.d/_template.md) to
 `ADR-<NNN>.md` with the next free number — the filename is the code and nothing
 else, and the title goes in `title:`. Repeat the title as the body's
 `# ADR-NNN:` heading; the lint checks that the two agree. Then run
@@ -101,12 +107,12 @@ a version bump with a history note is the opposite of silent. The test for the
 ambiguous case: *would a reader who acted on the old version have done something
 different?* If yes, supersede; if they'd have done the same thing for a worse
 reason, correct in place. Luria's own record carries a worked example of each:
-[LU-ADR-019](https://github.com/dmarx/luria/blob/main/docs/decisions/ADR-019.md).
+[LU-ADR-019](https://github.com/dmarx/luria/blob/main/record/decisions.d/ADR-019.md).
 
 ## Adding or revising a principle
 
 Same shape, one directory over: copy
-[`docs/principles/_template.md`](docs/principles/_template.md) to
+[`record/principles.d/_template.md`](record/principles.d/_template.md) to
 `DP-<NNN>.md` with the next free number, run `luria index`. Add one only on the
 **second** re-derivation of the same reasoning — one instance is a decision, a pattern is a principle.
 

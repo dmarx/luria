@@ -1,7 +1,7 @@
 # Comment directives
 
 Three checks take instructions from the prose they check. They share one parser,
-one shape, and one scope rule ([ADR-008](decisions/ADR-008.md)).
+one shape, and one scope rule ([ADR-008](../record/decisions.d/ADR-008.md)).
 
 ```
 <name>[-block|-file]: <args> — <reason>
@@ -34,7 +34,7 @@ block even when it contains blank lines.
 ## `inactive-ok` — this reference is deliberate
 
 Silences one reference to a retired (non-`Active`) document in the
-[reference-status report](decisions/ADR-007.md).
+[reference-status report](../record/decisions.d/ADR-007.md).
 
 ```
 <!-- inactive-ok: ADR-012 — the decision this one replaced -->
@@ -46,7 +46,7 @@ Silences one reference to a retired (non-`Active`) document in the
 Write the **full prefixed code**. A bare number is reported as a malformed
 annotation rather than assumed to be a decision, which is what lets one
 vocabulary serve more than one reference scheme
-([ADR-006](decisions/ADR-006.md)).
+([ADR-006](../record/decisions.d/ADR-006.md)).
 
 Acknowledgements are **counted** in the report, not hidden — and one that stops
 applying (the document went `Active`, the reference moved) is reported in its
@@ -77,7 +77,7 @@ per block, rather than being settled once for a whole corpus.
 ## `unresolved-ok` — this code names nothing on purpose
 
 A cited code that resolves to no document is reported
-([ADR-014](decisions/ADR-014.md)): it is a typo, another project's decision, or
+([ADR-014](../record/decisions.d/ADR-014.md)): it is a typo, another project's decision, or
 an illustrative code in an example, and only a human can tell which. This
 retires the third kind.
 
@@ -97,9 +97,40 @@ A code inside a URL is never a citation, so linking out to another project's
 decision needs no annotation at all — and that, rather than a bare code, is
 how a foreign document should be named.
 
-## Adding a fourth directive
+## `url-ok` — this URL is deliberately hand-written
+
+A link whose label is a composed foreign code normally gets its URL
+*constructed* — from the remote's config, the lockfile, or the code-only
+convention ([ADR-016](../record/decisions.d/ADR-016.md)). When the
+construction cannot be right — the remote's principles are sections of one
+document, say, so there is no file to point at — the URL is written by hand,
+and the hand-written target is a projection frozen at writing time
+([DP-3](design-principles.md#dp-3)): if the remote later adopts a convention
+or the lockfile learns the real filename, nothing updates it. So each one is
+reported until acknowledged:
+
+```
+<!-- url-ok-block: SG-DP-18 — strata-g's principles are sections of one document -->
+
+[SG-DP-18](https://github.com/dmarx/strata-g/blob/main/docs/design-principles.md#18-the-affordance-is-the-contract)
+```
+
+Same inverted validity as `unresolved-ok`: the annotation is stale when the
+link it covers *matches* the construction (or is gone), so a suppression
+reports itself the day it stops applying. A quoted link in backticks is a
+specimen, not a citation, and needs no annotation.
+
+Foreign codes only, deliberately ([ADR-022](../record/decisions.d/ADR-022.md)):
+a foreign code has exactly one constructed URL, so "differs" means something,
+while a local code has a family of legitimate targets and the same check would
+flag correct links until acknowledging became reflex. A project that wants
+stable absolute citations to its own record registers itself as a remote — as
+Luria does with `LU` — and gets the check instead of an exemption from it.
+
+## Adding a fifth directive
 
 A name, not a new syntax: parse it out of `luria.directives.find(...)`, validate
 its arguments with `directives.problems(...)`, and report the ones that no
 longer apply. The scope rules and the comment handling come free —
-`unresolved-ok` needed one inverted predicate and nothing else.
+`unresolved-ok` needed one inverted predicate, `url-ok` one comparison, and
+nothing else.

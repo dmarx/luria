@@ -7,6 +7,7 @@ only a link where the surrounding syntax lets it be one: markdown inside a raw
 HTML block renders as literal brackets, and a fragment's links resolve from the
 file it's collected into, not from where it sits.
 """
+import os
 import sys
 from pathlib import Path
 
@@ -18,8 +19,13 @@ from luria import doc_refs  # noqa: E402
 DOCS = REPO / "docs"
 ANY_MD = DOCS / "project-memory.md"       # a plain page; links resolve from docs/
 
-# Read from config rather than hardcoded: the URL is per-project (ADR-006).
+# Read from config rather than hardcoded: the URL is per-project (ADR-006),
+# and so is where the sources live — the conventional location moved once
+# already (`docs/decisions` → `record/decisions.d`, ADR-021), so these assert
+# the resolution rule rather than the current address.
 ISSUE_551 = doc_refs.current().issue_url.format(n=551)
+DECISIONS = os.path.relpath(doc_refs.current().schemes["ADR"].dir, DOCS)
+ROOT_DECISIONS = os.path.relpath(doc_refs.current().schemes["ADR"].dir, REPO)
 
 
 def kinds(text):
@@ -213,7 +219,7 @@ def test_urls_and_comments_are_ignored():
 def test_linkify_uses_repo_conventions():
     out, n = doc_refs.linkify("See ADR-004 and #551.", ANY_MD)
     assert n == 2
-    assert "[ADR-004](decisions/ADR-004.md)" in out
+    assert f"[ADR-004]({DECISIONS}/ADR-004.md)" in out
     assert f"[#551]({ISSUE_551})" in out
 
 
@@ -235,7 +241,7 @@ def test_html_block_gets_an_html_anchor():
 
 def test_undefined_shortcut_brackets_are_absorbed():
     out, _ = doc_refs.linkify("as in [ADR-004] above", ANY_MD)
-    assert out == "as in [ADR-004](decisions/ADR-004.md) above"
+    assert out == f"as in [ADR-004]({DECISIONS}/ADR-004.md) above"
 
 
 def test_self_reference_is_not_linked():
@@ -245,19 +251,22 @@ def test_self_reference_is_not_linked():
 
 
 def test_fragment_links_resolve_from_the_collected_file():
-    """changelog.d/* is assembled into /CHANGELOG.md — links must be written
-    for where the text lands, not for where the fragment sits."""
-    out, _ = doc_refs.linkify("See ADR-004.", REPO / "changelog.d" / "x.md")
-    assert "(docs/decisions/ADR-004.md)" in out
+    """A changelog fragment is assembled into /CHANGELOG.md — links must be
+    written for where the text lands, not for where the fragment sits."""
+    fragment_dir = next(iter(doc_refs.current().fragments))
+    out, _ = doc_refs.linkify("See ADR-004.", REPO / fragment_dir / "x.md")
+    assert f"({ROOT_DECISIONS}/ADR-004.md)" in out
 
 
 def test_journal_entry_links_resolve_from_its_book():
-    """A journal entry is nested (`devlog.d/2026/08/03/`) and renders into
-    `docs/devlog/<book>.md`, so its links resolve from the *output* directory
-    however deep the entry is (ADR-020)."""
-    entry = REPO / "devlog.d" / "2026" / "08" / "03" / "211926.md"
+    """A journal entry is nested (`.../2026/08/03/`) and renders into the
+    journal's output directory, so its links resolve from *there* however deep
+    the entry is (ADR-020)."""
+    journal = next(iter(doc_refs.current().journals.values()))
+    entry = journal.dir / "2026" / "08" / "03" / "211926.md"
     out, _ = doc_refs.linkify("See ADR-004.", entry)
-    assert "(../decisions/ADR-004.md)" in out
+    want = os.path.relpath(doc_refs.current().schemes["ADR"].dir, journal.output)
+    assert f"({want}/ADR-004.md)" in out
 
 
 def test_design_principle_links_to_its_anchor():

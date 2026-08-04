@@ -1,5 +1,5 @@
 """Undecided decisions, aged
-([ADR-007](../docs/decisions/ADR-007.md)).
+([ADR-007](../record/decisions.d/ADR-007.md)).
 
 Age is the whole point of this report, so the clock is injected: `--as-of` (and
 the `today` argument these tests pass) keeps it from being a test that fails on
@@ -112,12 +112,6 @@ def test_every_scheme_is_covered(project):
     a report covering one scheme goes blind the day a second is configured
     (ADR-018)."""
     from _scheme import decision
-    decision(project, 1, "Proposed", "An open decision")
-    principles = project / "docs" / "principles"
-    principles.mkdir(parents=True, exist_ok=True)
-    (principles / "DP-002.md").write_text(
-        "---\nstatus: Deferred\ntitle: 'An open value'\ntags:\n- record\n"
-        "date: '2026-01-01'\n---\n\n# DP-002: An open value\n")
     (project / "luria.toml").write_text(
         '[luria]\nissue_url = "https://example.test/issues/{n}"\n'
         '[luria.schemes.ADR]\ndir = "docs/decisions"\n'
@@ -125,5 +119,11 @@ def test_every_scheme_is_covered(project):
         'render = "document"\noutput = "docs/design-principles.md"\n')
     from luria import config
     config.reset()
+    decision(project, 1, "Proposed", "An open decision")
+    principles = project / "docs" / "principles"
+    principles.mkdir(parents=True, exist_ok=True)
+    (principles / "DP-002.md").write_text(
+        "---\nstatus: Deferred\ntitle: 'An open value'\ntags:\n- record\n"
+        "date: '2026-01-01'\n---\n\n# DP-002: An open value\n")
 
     assert {r.code for r in pending.pending()} == {"ADR-001", "DP-002"}

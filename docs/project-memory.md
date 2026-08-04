@@ -17,20 +17,27 @@ place on its first try.
 
 | layer | holds | one-line test |
 |---|---|---|
-| [`principles/`](design-principles.md) | standing **values**, numbered, cited as "DP-2" instead of re-argued | *have we re-derived this reasoning more than once?* |
-| [`decisions/`](decisions/README.md) | a **choice among alternatives** at a point in time, one file each | *did we reject an alternative, or set a constraint a future edit could violate?* |
-| `changelog.d/` fragments | **what changed**, operator-facing, terse | *would someone running or using this notice?* |
-| `devlog.d/` entries | **how it went** — including failed approaches and wrong theories, which are the reusable part | *will a future debugger want the narrative?* |
+| [`record/principles.d/`](design-principles.md) | standing **values**, numbered, cited as "DP-2" instead of re-argued | *have we re-derived this reasoning more than once?* |
+| [`record/decisions.d/`](decisions/README.md) | a **choice among alternatives** at a point in time, one file each | *did we reject an alternative, or set a constraint a future edit could violate?* |
+| `record/changelog.d/` fragments | **what changed**, operator-facing, terse | *would someone running or using this notice?* |
+| `record/devlog.d/` entries | **how it went** — including failed approaches and wrong theories, which are the reusable part | *will a future debugger want the narrative?* |
 
-The traffic rules between them are [ADR-001](decisions/ADR-001.md): principles
+The links go to the *views* — the generated index, the assembled document —
+because that is where reading starts; the paths name the *sources*, because
+that is where filing happens. The split is the layout's one rule
+([DP-9](design-principles.md#dp-9), [ADR-021](../record/decisions.d/ADR-021.md)):
+`docs/` is the read surface, `record/` is the write surface, and the `.d`
+suffix marks each container you file into.
+
+The traffic rules between them are [ADR-001](../record/decisions.d/ADR-001.md): principles
 are durable but **not sacred**; a decision whose *choice* changes is superseded
 by adding a decision rather than by rewriting its body; a principle is added on
 the *second* re-derivation of the same reasoning.
 
-The top two layers are one file each, in `docs/principles/` and
-`docs/decisions/`, with YAML frontmatter — `docs/design-principles.md` and the
+The top two layers are one file each, in `record/principles.d/` and
+`record/decisions.d/`, with YAML frontmatter — `docs/design-principles.md` and the
 decision index are both **generated** from them
-([ADR-012](decisions/ADR-012.md)). A principle's
+([ADR-012](../record/decisions.d/ADR-012.md)). A principle's
 frontmatter carries a `version`, because principles are living documents: a
 value first stated about one artifact is a value nobody applies to the next one,
 so the honest move is to widen the wording and bump the version rather than
@@ -66,7 +73,7 @@ layer is revisable, and each has a shape for saying so:
 The rule of thumb for the ambiguous case: *would a reader who acted on the old
 version have done something different?* If yes, the choice changed — supersede.
 If they would have done the same thing for a worse reason, correct in place.
-That split is [ADR-019](decisions/ADR-019.md).
+That split is [ADR-019](../record/decisions.d/ADR-019.md).
 
 <!-- inactive-ok-file: ADR-010, ADR-015 — this page names them as the supersession examples -->
 
@@ -74,15 +81,15 @@ That split is [ADR-019](decisions/ADR-019.md).
 
 None of this is hypothetical here. Every row above has already happened in this
 repository, which is the point of the dogfooding clause in
-[ADR-009](decisions/ADR-009.md) — a rule the project has never had to apply to
+[ADR-009](../record/decisions.d/ADR-009.md) — a rule the project has never had to apply to
 itself is a rule nobody has tested:
 
-- **Choice changed.** [ADR-010](decisions/ADR-010.md) named the project
-  `chester`; [ADR-011](decisions/ADR-011.md) replaced it. Later,
-  [ADR-015](decisions/ADR-015.md) was superseded by
-  [ADR-016](decisions/ADR-016.md) *within hours* — a decision that lasted an
+- **Choice changed.** [ADR-010](../record/decisions.d/ADR-010.md) named the project
+  `chester`; [ADR-011](../record/decisions.d/ADR-011.md) replaced it. Later,
+  [ADR-015](../record/decisions.d/ADR-015.md) was superseded by
+  [ADR-016](../record/decisions.d/ADR-016.md) *within hours* — a decision that lasted an
   afternoon is exactly the kind whose reversal is worth being able to see.
-- **Reason wrong, choice stands.** [ADR-018](decisions/ADR-018.md) is at `v2`.
+- **Reason wrong, choice stands.** [ADR-018](../record/decisions.d/ADR-018.md) is at `v2`.
   It rejected an alternative by citing a decision that didn't apply; the
   rejection survives on a better argument, and `history:` records both.
 - **Value reworded.** [DP-2](design-principles.md#dp-2) and
@@ -90,10 +97,10 @@ itself is a rule nobody has tested:
   about a single artifact and failed to generalize until a second instance
   forced it — which is the most useful thing either of them teaches, and it
   only survives because the version is on the document.
-- **Consequence falsified.** [ADR-016](decisions/ADR-016.md) states as a
+- **Consequence falsified.** [ADR-016](../record/decisions.d/ADR-016.md) states as a
   consequence that a certain project's decisions are no longer cited anywhere.
-  [ADR-017](decisions/ADR-017.md) made that false. [ADR-016](decisions/ADR-016.md)'s body stands as
-  written and [ADR-017](decisions/ADR-017.md) is where a reader learns the state changed back —
+  [ADR-017](../record/decisions.d/ADR-017.md) made that false. [ADR-016](../record/decisions.d/ADR-016.md)'s body stands as
+  written and [ADR-017](../record/decisions.d/ADR-017.md) is where a reader learns the state changed back —
   a consequence is an observation, and observations expire.
 
 The failure mode to avoid is not editing. It is editing **without leaving a
@@ -109,7 +116,7 @@ assembled pages are **views**, built from fragments — never hand-edited, and t
 lint refuses hand edits.
 
 Two kinds, and the difference is *whether the sources survive*
-([ADR-012](decisions/ADR-012.md)). A **collected**
+([ADR-012](../record/decisions.d/ADR-012.md)). A **collected**
 view — the changelog — consumes its fragments: they are deleted, the view
 accumulates, and it can only ever be appended to. A **generated** view — the
 decision index, the principles document, the devlog — is a pure function of
@@ -118,12 +125,12 @@ a stale one can be *detected*. Prefer generation where the data is derivable;
 there is then no collection step to forget.
 
 The devlog is the case where that choice was got wrong first and corrected
-([ADR-020](decisions/ADR-020.md)). It looked like a changelog and was collected
+([ADR-020](../record/decisions.d/ADR-020.md)). It looked like a changelog and was collected
 like one, but a changelog entry is a claim about a release and a devlog entry is
 a **dated observation** — true when written, and still true. Consuming it throws
 away the only copy of something that never expires. So the devlog is a
 **journal**: entries are filed at their authoring timestamp
-(`devlog.d/2026/08/03/211926.md`) with `luria journal new "A title"`, they
+(`record/devlog.d/2026/08/03/211926.md`) with `luria journal new "A title"`, they
 persist, and `docs/devlog/` is one generated book per month with a contents
 list built from the titles. The timestamp is also the ordering, so what the log
 says happened first is a property of the record rather than of the order the
@@ -133,7 +140,7 @@ The reasoning is [DP-2](design-principles.md#dp-2): a file every contribution mu
 append to is a *lock*. Concurrent branches collide in it contentlessly, and
 every hand-merge is a chance to drop someone's work. The fix is structural —
 each contribution owns a file nobody else writes, and the shared artifact is
-assembled on a cadence ([ADR-002](decisions/ADR-002.md)).
+assembled on a cadence ([ADR-002](../record/decisions.d/ADR-002.md)).
 
 Practical consequences: the answer to "which file do I edit?" is always *a
 fragment*; and generated pages can be linted against their sources, so drift is
@@ -180,7 +187,7 @@ it. This page is what the bootloader points at.
 
 ## 6. Leaving knowledge behind: the checklist
 
-- [ ] `changelog.d/` fragment for anything an operator or user would notice.
+- [ ] `record/changelog.d/` fragment for anything an operator or user would notice.
 - [ ] `luria journal new "…"` if the work *taught* something — and record wrong
       theories with why they were wrong; the dead ends are what the next
       debugger needs most.
@@ -200,5 +207,5 @@ it. This page is what the bootloader points at.
   references are followable.
 - Deterministic assembly — same inputs, same view, so drift between record and
   view is mechanically checkable.
-- The reports ([ADR-007](decisions/ADR-007.md)):
+- The reports ([ADR-007](../record/decisions.d/ADR-007.md)):
   what cites a retired decision, and what has been undecided for how long.

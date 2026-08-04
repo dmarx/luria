@@ -4,9 +4,13 @@
 [luria]
 issue_url = ""
 
+# The read/write boundary (LU-ADR-021): `docs/` is where a reader browses —
+# prose plus every generated view — and `record/` is where a contributor files.
+# The `.d` suffix on each container inside is the visual affordance that you
+# have crossed into the write domain: fragments live here, views render there.
 [luria.paths]
 docs = "docs"
-decisions = "docs/decisions"
+decisions = "record/decisions.d"
 design_principles = "docs/design-principles.md"
 reports = "build/doc-reports"
 
@@ -14,7 +18,7 @@ reports = "build/doc-reports"
 # fragment resolve from the collected file's directory, not the fragment's
 # (ADR-005), so this mapping is load-bearing, not just bookkeeping.
 [luria.fragments]
-"changelog.d" = "CHANGELOG.md"
+"record/changelog.d" = "CHANGELOG.md"
 
 # A journal is the other half of the split: its entries are dated observations
 # that stay true, so they PERSIST and the books are generated from them, rather
@@ -22,7 +26,7 @@ reports = "build/doc-reports"
 # `<dir>/yyyy/mm/dd/hhmmss.md` — file one with `luria journal new "A title"`.
 # `granularity` is year | month | day; pick it from how fast you actually write.
 [luria.journals.devlog]
-dir = "devlog.d"
+dir = "record/devlog.d"
 output = "docs/devlog"
 granularity = "month"
 title = "Development log"
@@ -41,12 +45,13 @@ historical = ["CHANGELOG.md"]
 # and read one at a time, `document` when the set is read as a whole (ADR-012).
 # Add another (RFC, SPEC) as a third entry; nothing else needs to change.
 [luria.schemes.ADR]
-dir = "docs/decisions"
+dir = "record/decisions.d"
+output = "docs/decisions"
 active = "Active"
 render = "index"
 
 [luria.schemes.DP]
-dir = "docs/principles"
+dir = "record/principles.d"
 active = "Active"
 render = "document"
 output = "docs/design-principles.md"
@@ -62,7 +67,7 @@ output = "docs/design-principles.md"
 name = "luria"
 repo = "dmarx/luria"
 ref  = "main"
-dir  = "docs/decisions"
+dir  = "record/decisions.d"
 
 # Add your own the same way. A remote whose filenames carry title slugs needs
 # `luria remotes --refresh` once, to discover them into remotes.lock.json; one

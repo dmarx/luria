@@ -186,3 +186,36 @@ def test_history_that_lags_the_version_is_reported(project):
     versioned(project, 3, "history:\n- version: 2\n  changed: 'Reworded.'\n")
     errors = version_errors(project)
     assert len(errors) == 1 and "ends at version 2" in errors[0]
+
+
+# ── A view directory holds only generated files (ADR-021) ────────────────
+
+
+def generated_errors(project) -> list[str]:
+    found: list[str] = []
+    lint.check_generated_index(found)
+    return found
+
+
+def test_a_hand_written_file_in_a_view_dir_is_a_violation(project):
+    """The payoff of the read/write boundary: "don't hand-edit" is a checkable
+    property, and its failure polarity points the right way — the stray file
+    fails the build rather than quietly surviving beside the views."""
+    from luria import config
+    (project / "luria.toml").write_text(
+        '[luria]\nissue_url = "https://example.test/issues/{n}"\n'
+        '[luria.schemes.ADR]\ndir = "record/decisions.d"\n'
+        'output = "docs/decisions"\n')
+    config.reset()
+    from tests import _scheme
+    _scheme.decision(project, 1, "Active")
+    from luria import adr_index as builder
+    for path, text in builder.outputs().items():
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text)
+    assert generated_errors(project) == []
+
+    (project / "docs" / "decisions" / "notes.md").write_text("# Stray\n")
+    errors = generated_errors(project)
+    assert len(errors) == 1
+    assert "notes.md" in errors[0] and "generator" in errors[0]

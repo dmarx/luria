@@ -1,5 +1,5 @@
 """The markdown reports that CI uploads
-([ADR-007](../docs/decisions/ADR-007.md)).
+([ADR-007](../record/decisions.d/ADR-007.md)).
 
 These are the only place the status warnings are read in full, and nothing
 consumes them programmatically — so what is worth pinning is that the numbers in

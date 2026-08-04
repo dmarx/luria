@@ -8,22 +8,28 @@ particular project. It reads `luria.toml` from the project root:
 
     [luria.paths]
     docs = "docs"
-    decisions = "docs/decisions"
+    decisions = "record/decisions.d"
     design_principles = "docs/design-principles.md"
 
     [luria.fragments]
-    "changelog.d" = "CHANGELOG.md"      # collected into…
+    "record/changelog.d" = "CHANGELOG.md"   # collected into…
 
     [luria.journals.devlog]
-    dir = "devlog.d"                    # …whereas a journal's entries persist
+    dir = "record/devlog.d"             # …whereas a journal's entries persist
     output = "docs/devlog"
 
     [luria.code]
     globs = ["src/**/*.py", "*.md"]
 
     [luria.schemes.ADR]
-    dir = "docs/decisions"
-    active = "Active"
+    dir = "record/decisions.d"          # ground truth, filed by hand
+    output = "docs/decisions"           # the browsable view, generated
+
+The layout this describes is the read/write boundary (ADR-021): everything a
+contributor *files* lives under `record/`, every view a reader *browses* lives
+under `docs/`. A scheme whose `output` is unset keeps the old collocated shape
+— view beside sources — so a project that arrived before the split never has
+to move anything.
 
 Every key has a default, so a project with the conventional layout needs a
 `luria.toml` containing only `issue_url` — and Luria still runs without one, on
@@ -50,12 +56,12 @@ DEFAULTS: dict = {
     "issue_url": "",
     "paths": {
         "docs": "docs",
-        "decisions": "docs/decisions",
+        "decisions": "record/decisions.d",
         "design_principles": "docs/design-principles.md",
         "reports": "build/doc-reports",
     },
     "fragments": {
-        "changelog.d": "CHANGELOG.md",
+        "record/changelog.d": "CHANGELOG.md",
     },
     "code": {
         "globs": [],
@@ -66,7 +72,8 @@ DEFAULTS: dict = {
         "historical": ["CHANGELOG.md"],
     },
     "schemes": {
-        "ADR": {"dir": "docs/decisions", "active": "Active", "render": "index"},
+        "ADR": {"dir": "record/decisions.d", "output": "docs/decisions",
+                "active": "Active", "render": "index"},
     },
     # Other projects whose records this one cites, keyed by a short prefix. A
     # reference then composes: `LU-ADR-013` is that remote's decision 13
@@ -77,7 +84,7 @@ DEFAULTS: dict = {
     # written — and unlike a fragment directory, its sources are never consumed.
     "journals": {
         "devlog": {
-            "dir": "devlog.d",
+            "dir": "record/devlog.d",
             "output": "docs/devlog",
             "granularity": "month",
             "title": "Development log",
@@ -128,7 +135,37 @@ class Scheme:
     # a time. "document" concatenates the bodies into one page — right when the
     # set is read as a whole, which is what a principles doc is (ADR-012).
     render: str = "index"
+    # Where the generated view lands. For `render = "document"` this is the
+    # assembled page itself; for `render = "index"` it is the directory the
+    # index and its tag pages render into. Unset means the view renders beside
+    # the sources — the collocated shape every project had before the
+    # read/write boundary existed (ADR-021), kept so adoption never starts
+    # with a move.
     output: Path | None = None
+
+    @property
+    def view(self) -> Path:
+        """The directory an index-rendered scheme's view lives in."""
+        return self.output or self.dir
+
+    @property
+    def index_path(self) -> Path:
+        return self.view / "README.md"
+
+    @property
+    def tag_dir(self) -> Path:
+        return self.view / "tags"
+
+    # The stub and the tag metadata are *authored*, so they live with the
+    # sources — the view directory holds only what the generator wrote, which
+    # is what lets the lint call anything else in it an error (ADR-021).
+    @property
+    def stub(self) -> Path:
+        return self.dir / "README.stub"
+
+    @property
+    def tags_yaml(self) -> Path:
+        return self.dir / "tags.yaml"
 
     @property
     def pattern(self):
@@ -264,21 +301,29 @@ class Config:
     stale_days: int
     _raw: dict = field(default_factory=dict, repr=False)
 
+    def _index_scheme(self):
+        return next((s for s in self.schemes.values() if s.render == "index"),
+                    None)
+
     @property
     def index(self) -> Path:
-        return self.decisions / "README.md"
+        s = self._index_scheme()
+        return s.index_path if s else self.decisions / "README.md"
 
     @property
     def stub(self) -> Path:
-        return self.decisions / "README.stub"
+        s = self._index_scheme()
+        return s.stub if s else self.decisions / "README.stub"
 
     @property
     def tags_yaml(self) -> Path:
-        return self.decisions / "tags.yaml"
+        s = self._index_scheme()
+        return s.tags_yaml if s else self.decisions / "tags.yaml"
 
     @property
     def tag_dir(self) -> Path:
-        return self.decisions / "tags"
+        s = self._index_scheme()
+        return s.tag_dir if s else self.decisions / "tags"
 
     @property
     def remotes_lock(self) -> Path:
@@ -292,11 +337,13 @@ class Config:
     def is_generated(self, path: Path) -> bool:
         """A view the generator owns. Rewriting one is pointless — the next
         build undoes it — so the reference fixer skips them."""
-        if path == self.index or path.parent == self.tag_dir:
-            return True
-        if any(path.parent == j.output for j in self.journals.values()):
-            return True
-        return any(s.output == path for s in self.schemes.values())
+        for s in self.schemes.values():
+            if s.render == "index" and (path == s.index_path
+                                        or path.parent == s.tag_dir):
+                return True
+            if s.output == path:
+                return True
+        return any(path.parent == j.output for j in self.journals.values())
 
     def is_historical(self, path: Path) -> bool:
         """A dated record: true about the day it was written, and never
@@ -324,13 +371,19 @@ class Config:
         breaks the moment it is collected (ADR-005). Two kinds of fragment
         qualify — a changelog/devlog fragment, and a document-rendered scheme's
         source, which is the same relationship wearing a different name."""
-        target = self.fragments.get(path.parent.name)
-        if target:
-            return (self.root / target).parent
+        for name, target in self.fragments.items():
+            if path.parent == self.root / name:
+                return (self.root / target).parent
         for scheme in self.schemes.values():
             if scheme.render == "document" and scheme.output \
                     and path.parent == scheme.dir:
                 return scheme.output.parent
+            # An index scheme's stub is authored beside the sources but IS the
+            # view's prose, so its links resolve from where the index renders.
+            # The documents themselves resolve from where they sit — they are
+            # read in place, arrived at by link (ADR-021).
+            if scheme.render == "index" and path == scheme.stub:
+                return scheme.view
         for journal in self.journals.values():
             if journal.dir in path.parents:
                 return journal.output

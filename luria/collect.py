@@ -15,7 +15,7 @@ categories can point that fragment directory at scriv instead; the two coexist
 because the fragment convention is the contract, not the collector (ADR-002).
 
     luria collect                    # collect every fragment directory
-    luria collect --dir changelog.d  # just one
+    luria collect --dir record/changelog.d   # just one
     luria collect --commit           # collect and commit (CI mode)
 
 Fragments are appended in the order they were COMMITTED (first commit that
