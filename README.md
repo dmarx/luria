@@ -46,18 +46,24 @@ luria index && luria lint
 | design principles | standing **values**, numbered, citable and **versioned** | *have we re-derived this more than once?* |
 | decisions | a **choice among alternatives** at a point in time | *did we reject an alternative, or set a constraint?* |
 | changelog fragments | **what changed**, operator-facing | *would someone running this notice?* |
-| devlog fragments | **how it went**, including the wrong theories | *will a future debugger want the narrative?* |
+| devlog entries | **how it went**, including the wrong theories | *will a future debugger want the narrative?* |
 
 Each contribution writes a *fragment* nobody else touches; the shared documents
 are **views**. A file every contribution appends to is a lock, and its conflicts
 carry no information ([DP-2](docs/design-principles.md#dp-2)).
 
 Views come in two kinds, and the difference is whether the sources survive
-([ADR-012](docs/decisions/ADR-012.md)). The
-changelog and devlog are **collected**: their fragments are consumed, so the
-view can only be appended to. The decision index and the principles document are
-**generated** — a pure function of sources that persist, which is the only
-reason `luria lint` can tell you one has gone stale.
+([ADR-012](docs/decisions/ADR-012.md)). The changelog is **collected**: its
+fragments are consumed, so the view can only be appended to. The decision index,
+the principles document and the devlog are **generated** — a pure function of
+sources that persist, which is the only reason `luria lint` can tell you one has
+gone stale.
+
+The devlog is a **journal**: entries are filed at their authoring timestamp
+(`devlog.d/2026/08/03/211926.md`), never deleted, and rendered into one book per
+month with a generated contents list ([ADR-020](docs/decisions/ADR-020.md)). A
+dated observation was true when it was written and stays true; consuming it
+throws away the only copy of something that never expires.
 
 ## Citing another project
 

@@ -14,15 +14,21 @@ bodies, oldest first, at the marker". A project whose changelog *does* want
 categories can point that fragment directory at scriv instead; the two coexist
 because the fragment convention is the contract, not the collector (ADR-002).
 
-    luria collect                 # collect every fragment directory
-    luria collect --dir devlog.d  # just one
-    luria collect --commit        # collect and commit (CI mode)
+    luria collect                    # collect every fragment directory
+    luria collect --dir changelog.d  # just one
+    luria collect --commit           # collect and commit (CI mode)
 
 Fragments are appended in the order they were COMMITTED (first commit that
-added the file), not filename order, because the devlog reads chronologically
-and branch-slug filenames sort arbitrarily. Uncommitted fragments sort last, by
+added the file), not filename order, because a log reads chronologically and
+branch-slug filenames sort arbitrarily. Uncommitted fragments sort last, by
 filename — which is what you want locally, where the fragment you just wrote is
 the newest thing.
+
+That ordering is the weak point, and it is why a *journal* is not collected:
+commit order is not authoring order, and a rebase can change it. A journal
+carries the timestamp in the entry itself, so nothing has to be reconstructed
+(ADR-020). This collector is right where the view is genuinely append-only —
+the changelog — and wrong where the entries are dated observations.
 """
 
 import argparse

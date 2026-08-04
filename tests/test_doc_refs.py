@@ -245,12 +245,19 @@ def test_self_reference_is_not_linked():
 
 
 def test_fragment_links_resolve_from_the_collected_file():
-    """changelog.d/* is assembled into /CHANGELOG.md and devlog.d/* into
-    docs/devlog.md — links must be written for where the text lands."""
-    changelog_out, _ = doc_refs.linkify("See ADR-004.", REPO / "changelog.d" / "x.md")
-    devlog_out, _ = doc_refs.linkify("See ADR-004.", REPO / "devlog.d" / "x.md")
-    assert "(docs/decisions/ADR-004.md)" in changelog_out
-    assert "(decisions/ADR-004.md)" in devlog_out
+    """changelog.d/* is assembled into /CHANGELOG.md — links must be written
+    for where the text lands, not for where the fragment sits."""
+    out, _ = doc_refs.linkify("See ADR-004.", REPO / "changelog.d" / "x.md")
+    assert "(docs/decisions/ADR-004.md)" in out
+
+
+def test_journal_entry_links_resolve_from_its_book():
+    """A journal entry is nested (`devlog.d/2026/08/03/`) and renders into
+    `docs/devlog/<book>.md`, so its links resolve from the *output* directory
+    however deep the entry is (ADR-020)."""
+    entry = REPO / "devlog.d" / "2026" / "08" / "03" / "211926.md"
+    out, _ = doc_refs.linkify("See ADR-004.", entry)
+    assert "(../decisions/ADR-004.md)" in out
 
 
 def test_design_principle_links_to_its_anchor():

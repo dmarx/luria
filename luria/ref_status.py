@@ -46,10 +46,11 @@ line is ADR-specific — the annotation vocabulary says `inactive-ok`, not
 spec index) is a `Scheme` entry rather than a fork of this file.
 
 Scope: the docs that state current guidance, plus the code. The dated records —
-`CHANGELOG.md`, `docs/devlog.md` and the fragment directories they are collected
-from — are excluded: "ADR-NNN landed" in a July entry is a true statement about
-July, and would be permanent, unactionable noise. A document citing itself is
-excluded for the same reason (every ADR's own title names it).
+`CHANGELOG.md`, the fragment directories it is collected from, and every journal
+(entries and books alike) — are excluded: "ADR-NNN landed" in a July entry is a
+true statement about July, and would be permanent, unactionable noise.
+`Config.is_historical` is the one place that decides this. A document citing
+itself is excluded for the same reason (every ADR's own title names it).
 """
 
 from __future__ import annotations
@@ -238,9 +239,7 @@ class Scan:
 def scanned_files() -> list[Path]:
     """Current-guidance docs + code. Order is stable so the report is."""
     cfg = current()
-    historical_dirs = {cfg.root / d for d in cfg.fragments}
-    docs = [p for p in doc_refs.doc_files()
-            if p not in cfg.historical and p.parent not in historical_dirs]
+    docs = [p for p in doc_refs.doc_files() if not cfg.is_historical(p)]
     code: list[Path] = []
     for pattern in cfg.code_globs:
         code += [p for p in cfg.root.glob(pattern) if p.is_file()]

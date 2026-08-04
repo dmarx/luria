@@ -7,7 +7,8 @@
 - [Decisions](decisions/README.md) — the choices, with their alternatives.
 - [Comment directives](directives.md) — the `inactive-ok` / `unexempt`
   vocabulary and its scope rules.
-- [Development log](devlog.md) — the narrative: failed approaches, root causes,
-  and the traps worth not rediscovering.
+- [Development log](devlog/README.md) — the narrative: failed approaches, root
+  causes, and the traps worth not rediscovering. One book per month, generated
+  from the dated entries in `devlog.d/`.
 - [Adopting Luria](adopting.md) — putting the record into a project that hasn't
   got one.

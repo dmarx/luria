@@ -39,8 +39,8 @@ docs/
     _template.md            copy this to make a principle
     README.stub             the document's prose; the rest is generated
     DP-00N.md               seeded with the ones that earn this machinery
-changelog.d/_template.md    one fragment per contribution
-devlog.d/_template.md       optional; significant work only
+changelog.d/_template.md    one fragment per contribution; collected, then consumed
+devlog.d/_template.md       the shape of a journal entry; optional, significant work only
 CLAUDE.md                   a bootloader section pointing at the above
 ```
 
@@ -83,6 +83,30 @@ had been letting through. Three are usual:
 
 Everything else is a warning and can wait
 ([ADR-007](decisions/ADR-007.md)).
+
+## Adopting into a project that already has a devlog
+
+A single hand-appended `docs/devlog.md` becomes a journal by *not* migrating it.
+Configure `[luria.journals.devlog]`, leave the old file where it is, and file
+new work with `luria journal new "…"`; the accumulated document is one dated
+record and re-cutting it into per-work entries would be guesswork about when
+each was written.
+
+If you already keep devlog *fragments*, they can be migrated — their real
+authoring times are in the history:
+
+```
+git log --diff-filter=A --format=%aI -1 -- devlog.d/<name>.md
+```
+
+That is how Luria's own seven entries got their timestamps
+([ADR-020](decisions/ADR-020.md)), and it is worth the trouble: a migration that
+stamps everything with the day it ran makes the log's first page a lie. Two
+things to watch. Timestamps come out in the *committer's* offset, so normalise
+to a single zone before deriving the paths, or an evening entry sorts into the
+following morning. And links written for the old collected file resolve from
+*its* directory — a book one level deeper needs them rebased, which `luria lint`
+will not catch, because a link is not a bare reference.
 
 ## Citing another project
 

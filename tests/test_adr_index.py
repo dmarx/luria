@@ -17,6 +17,7 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[1]
 
 from luria import adr_index as builder  # noqa: E402
+from luria import doc_refs  # noqa: E402
 from luria.config import Scheme  # noqa: E402
 
 rebase = builder.rebase_links
@@ -68,13 +69,21 @@ def test_row_rebases_summary_and_status_together(tmp_path, monkeypatch):
 
 def test_every_generated_relative_link_resolves():
     """The property the rebasing exists for, checked against the real corpus.
-    Covers both renders — every scheme's view goes through `outputs()`."""
+    Covers every render — scheme views and journal books both go through
+    `outputs()`.
+
+    Code spans are skipped for the same reason the hyperlink lint skips them:
+    a link inside backticks is a *quotation* of a link, and the devlog quotes
+    several broken ones on purpose."""
     broken = []
     for path, text in builder.outputs().items():
-        for target in builder.RELATIVE_LINK_RE.findall(text):
-            file = target.split("#")[0]
+        quoted = doc_refs.code_spans(text)
+        for m in builder.RELATIVE_LINK_RE.finditer(text):
+            if doc_refs.in_html_block(m.start(), quoted):
+                continue
+            file = m.group(1).split("#")[0]
             if file and not (path.parent / file).resolve().exists():
-                broken.append(f"{path.name} -> {target}")
+                broken.append(f"{path.name} -> {m.group(1)}")
     assert broken == []
 
 

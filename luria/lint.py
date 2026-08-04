@@ -6,6 +6,8 @@ Checks (each one fails the build):
 
 1. **Docs index** — every markdown page under the docs directory is linked from
    its `README.md`, so the index can't silently drift from the directory.
+1b. **Journals** — every entry's path agrees with its `created:` timestamp and
+   carries a `title:` (ADR-020); `version:` agrees with `history:` (ADR-019).
 2. **Frontmatter** — every document in a reference scheme carries a `status:`
    from the canonical vocabulary, at least one `tags:` entry (ADR-003), and a
    `title:` that agrees with its body heading (ADR-013).
@@ -35,7 +37,7 @@ import re
 import sys
 
 from . import adr_index as builder
-from . import adr_pending, badges, doc_refs, ref_status
+from . import adr_pending, badges, doc_refs, journal, ref_status
 from .config import current
 
 # The closed status vocabulary (ADR-003). `Active` is the in-force state; the
@@ -57,7 +59,8 @@ def check_docs_index(errors: list[str]) -> None:
     text = index.read_text()
     # A scheme's directory holds *sources*, not pages to browse — the thing a
     # reader opens is the generated view, and that is what the index lists.
-    scheme_dirs = {s.dir for s in cfg.schemes.values()} | {cfg.tag_dir}
+    scheme_dirs = ({s.dir for s in cfg.schemes.values()} | {cfg.tag_dir}
+                   | {j.output for j in cfg.journals.values()})
     pages = sorted(cfg.docs.glob("*.md"))
     for sub in sorted(p for p in cfg.docs.iterdir() if p.is_dir()):
         if sub not in scheme_dirs:
@@ -110,6 +113,59 @@ def check_title(errors: list[str], rel: str, meta: dict, body: str) -> None:
         errors.append(
             f"{rel}: `title:` and the body heading disagree — "
             f"{title!r} vs {heading!r}")
+
+
+def check_journals(errors: list[str]) -> None:
+    """A journal entry's path is derived from its `created:` timestamp, and the
+    two have to agree — otherwise the ordering the whole scheme rests on says
+    one thing and the frontmatter says another (ADR-020). Also: an entry needs
+    a title, because the title is what the book's contents list shows."""
+    cfg = current()
+    for name, jrnl in cfg.journals.items():
+        for path in sorted(jrnl.dir.rglob("*.md")):
+            if path.name == "_template.md":
+                continue
+            rel = cfg.rel(path)
+            meta, _ = builder.parse_frontmatter(path.read_text())
+            created = journal.parse_created(meta.get("created"))
+            if created is None:
+                errors.append(f"{rel}: no `created:` timestamp (see _template.md)")
+                continue
+            want = journal.path_for(jrnl, created)
+            if path != want:
+                errors.append(f"{rel}: `created:` says it belongs at "
+                              f"{cfg.rel(want)} — run `luria journal new` to "
+                              "file entries, or move it")
+            if not str(meta.get("title") or "").strip():
+                errors.append(f"{rel}: no `title:` — it is what the {name} "
+                              "book's contents list shows")
+
+
+def check_version_history(errors: list[str]) -> None:
+    """`version:` and `history:` have to agree.
+
+    Correcting a document in place is only honest because the correction is
+    visible ([ADR-019](../docs/decisions/ADR-019.md)), and nothing was checking
+    that the visible part exists. A bumped version with no history entry is a
+    silent revision wearing a version number."""
+    cfg = current()
+    for scheme in cfg.schemes.values():
+        for path in scheme.documents().values():
+            meta, _ = builder.parse_frontmatter(path.read_text())
+            version = int(meta.get("version", 1) or 1)
+            history = meta.get("history") or []
+            rel = cfg.rel(path)
+            if version > 1 and not history:
+                errors.append(
+                    f"{rel}: version {version} with no `history:` — a "
+                    "correction is only honest if it says what changed "
+                    "(see ADR-019)")
+            elif history:
+                last = history[-1].get("version") if isinstance(history[-1], dict) else None
+                if last != version:
+                    errors.append(
+                        f"{rel}: `history:` ends at version {last!r} but the "
+                        f"document says {version}")
 
 
 def check_generated_index(errors: list[str]) -> None:
@@ -194,6 +250,8 @@ def main() -> int:
     check_docs_index(errors)
     check_frontmatter(errors)
     check_generated_index(errors)
+    check_journals(errors)
+    check_version_history(errors)
     check_bare_refs(errors)
     report_warnings()
     if errors:

@@ -1,0 +1,263 @@
+#!/usr/bin/env python3
+"""A journal: dated entries that persist, rendered into books.
+
+    luria journal new "A title"    # create today's entry, print its path
+    luria journal                  # what is filed, and which books it renders to
+
+The changelog and the devlog look alike and are not. A changelog entry is a
+*claim about a release*, collected and consumed. A journal entry is a **dated
+observation** — it was true when written and stays true, so it should no more be
+deleted than a decision should (ADR-020).
+
+So a journal is fragments that persist, plus a generated view — the same
+collected-vs-generated split [ADR-012](../docs/decisions/ADR-012.md) draws, and
+the reason it matters here is that nothing is ever *appended to*. Two branches
+each add a file nobody else writes; there is no shared insertion point to
+conflict at, and no collection step whose absence would go unnoticed.
+
+Identity is a timestamp
+-----------------------
+An entry has no number to assign, so its identity is when it was written:
+
+    devlog.d/2026/08/03/141530.md      created: '2026-08-03T14:15:30'
+
+The path is derived from `created` and the lint checks they agree. Ordering is
+then a pure function of the tree — no `git log` call, and nothing a rebase can
+change, which is what the commit-time ordering this replaces could not promise.
+
+Books
+-----
+One file per period, because a single chronological document grows without
+bound and the partition is already sitting there in the path. Granularity is
+configured, not assumed: the right book size depends on how fast a project
+writes, and that is a measurement rather than a guess.
+
+Each book carries a generated table of contents, which is what the entry titles
+buy — a listing of what happened, in the file where it happened, that cannot go
+stale.
+"""
+
+from __future__ import annotations
+
+import argparse
+import datetime as dt
+import re
+import sys
+from dataclasses import dataclass
+from pathlib import Path
+
+from .adr_index import parse_frontmatter
+from .config import Journal, current
+
+# `2026/08/03/141530.md` — the path a `created` timestamp implies.
+PATH_RE = re.compile(r"(\d{4})/(\d{2})/(\d{2})/(\d{2})(\d{2})(\d{2})\.md$")
+SLUG_RE = re.compile(r"[^a-z0-9]+")
+
+
+def parse_created(raw) -> dt.datetime | None:
+    """`created:` as a datetime. YAML may hand back a date, a datetime or a
+    string depending on quoting, so all three are accepted rather than making
+    the author remember which one the parser prefers."""
+    if isinstance(raw, dt.datetime):
+        return raw
+    if isinstance(raw, dt.date):
+        return dt.datetime(raw.year, raw.month, raw.day)
+    try:
+        return dt.datetime.fromisoformat(str(raw))
+    except (TypeError, ValueError):
+        return None
+
+
+def path_for(journal: Journal, created: dt.datetime) -> Path:
+    return journal.dir / created.strftime("%Y/%m/%d/%H%M%S.md")
+
+
+def created_from_path(path: Path) -> dt.datetime | None:
+    m = PATH_RE.search(path.as_posix())
+    return dt.datetime(*(int(g) for g in m.groups())) if m else None
+
+
+@dataclass(frozen=True)
+class Entry:
+    created: dt.datetime
+    title: str
+    tags: tuple[str, ...]
+    body: str
+    path: Path
+
+    @property
+    def anchor(self) -> str:
+        """Keyed to the timestamp, not the title — a title can be corrected,
+        and a heading-derived anchor would break every link to it silently."""
+        return self.created.strftime("%Y%m%d%H%M%S")
+
+
+def read(path: Path) -> Entry | None:
+    meta, body = parse_frontmatter(path.read_text())
+    created = parse_created(meta.get("created")) or created_from_path(path)
+    if created is None:
+        return None
+    return Entry(created, str(meta.get("title") or "").strip(),
+                 tuple(str(t).strip() for t in (meta.get("tags") or [])),
+                 body.strip(), path)
+
+
+def entries(journal: Journal) -> list[Entry]:
+    """Every filed entry, oldest first. Sorted by the timestamp, so the order
+    is a property of the record rather than of how the branches landed."""
+    found = [e for p in sorted(journal.dir.rglob("*.md"))
+             if p.name != "_template.md" and (e := read(p)) is not None]
+    return sorted(found, key=lambda e: (e.created, e.path.as_posix()))
+
+
+# ── Books ────────────────────────────────────────────────────────────────
+
+FORMATS = {"year": "%Y", "month": "%Y-%m", "day": "%Y-%m-%d"}
+LABELS = {"year": "%Y", "month": "%B %Y", "day": "%-d %B %Y"}
+
+
+def book_key(journal: Journal, created: dt.datetime) -> str:
+    return created.strftime(FORMATS[journal.granularity])
+
+
+def books(journal: Journal) -> dict[str, list[Entry]]:
+    out: dict[str, list[Entry]] = {}
+    for entry in entries(journal):
+        out.setdefault(book_key(journal, entry.created), []).append(entry)
+    return out
+
+
+def render_book(journal: Journal, key: str, filed: list[Entry]) -> str:
+    label = filed[0].created.strftime(LABELS[journal.granularity]).lstrip("0")
+    lines = [f"<!-- GENERATED by `luria index` from {journal.rel_dir}/ — "
+             "edit the entries, not this file. -->", "",
+             f"# {journal.title} — {label}", "",
+             f"{len(filed)} entr{'y' if len(filed) == 1 else 'ies'}. "
+             f"[All books](README.md).", "", "## Contents", ""]
+    for entry in filed:
+        stamp = entry.created.strftime("%d %b %H:%M").lstrip("0")
+        lines.append(f"- [{stamp} — {entry.title}](#{entry.anchor})")
+    lines.append("")
+    for entry in filed:
+        lines += ["---", "", f'<a name="{entry.anchor}"></a>', "",
+                  f"## {entry.title}", "",
+                  f"*{entry.created.strftime('%Y-%m-%d %H:%M:%S')}"
+                  + (" · " + " · ".join(entry.tags) if entry.tags else "")
+                  + "*", "", entry.body, ""]
+    return "\n".join(lines)
+
+
+def render_index(journal: Journal, grouped: dict[str, list[Entry]]) -> str:
+    lines = [f"<!-- GENERATED by `luria index` from {journal.rel_dir}/ — "
+             "edit the entries, not this file. -->", "",
+             f"# {journal.title}", ""]
+    if journal.blurb:
+        lines += [journal.blurb, ""]
+    if not grouped:
+        lines += ["Nothing filed yet.", ""]
+    else:
+        total = sum(len(v) for v in grouped.values())
+        lines += [f"{total} entr{'y' if total == 1 else 'ies'} across "
+                  f"{len(grouped)} book{'' if len(grouped) == 1 else 's'}, "
+                  "newest first.",
+                  "", "| Book | Entries | First | Last |", "|---|--:|---|---|"]
+        for key in sorted(grouped, reverse=True):
+            filed = grouped[key]
+            lines.append(
+                f"| [{key}]({key}.md) | {len(filed)} "
+                f"| {filed[0].created:%Y-%m-%d} | {filed[-1].created:%Y-%m-%d} |")
+        lines.append("")
+    return "\n".join(lines)
+
+
+def outputs() -> dict[Path, str]:
+    """Every book, plus each journal's index. One place, so the staleness
+    check covers a journal the moment it is configured."""
+    out: dict[Path, str] = {}
+    for journal in current().journals.values():
+        # A configured-but-unused journal renders nothing. The default config
+        # names one, so emitting an empty index would put a `docs/devlog/`
+        # into every project that never files an entry.
+        if not journal.dir.exists():
+            continue
+        grouped = books(journal)
+        out[journal.output / "README.md"] = render_index(journal, grouped)
+        for key, filed in grouped.items():
+            out[journal.output / f"{key}.md"] = render_book(journal, key, filed)
+    return out
+
+
+# ── Filing an entry ──────────────────────────────────────────────────────
+
+
+def new(journal: Journal, title: str, now: dt.datetime) -> Path:
+    """Create an entry, stepping a second forward on collision.
+
+    Not a probability argument — the filesystem already knows. A same-second
+    collision is possible when a tool files several at once, and "unlikely" is
+    a worse guarantee than "checked" when checking is a `path.exists()`."""
+    while (path := path_for(journal, now)).exists():
+        now += dt.timedelta(seconds=1)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        "---\n"
+        f"title: {title!r}\n"
+        f"created: '{now.isoformat(timespec='seconds')}'\n"
+        "tags: []\n"
+        "---\n\n"
+        "Write the entry here: what problem was solved, what the fix was, and\n"
+        "what was found along the way — the failed approaches and the traps the\n"
+        "next person would otherwise rediscover.\n")
+    return path
+
+
+# ── CLI ──────────────────────────────────────────────────────────────────
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument("action", nargs="?", choices=["new"],
+                    help="`new` files an entry; omit to report what is filed")
+    ap.add_argument("title", nargs="?", help="the entry's title")
+    ap.add_argument("--journal", default=None, help="which journal (default: the only one)")
+    args = ap.parse_args()
+
+    cfg = current()
+    if not cfg.journals:
+        # No silent refusal: say what would make this command do something.
+        print("luria journal: none configured. Add one to luria.toml:\n\n"
+              "  [luria.journals.devlog]\n  dir = \"devlog.d\"\n"
+              "  output = \"docs/devlog\"\n", file=sys.stderr)
+        return 0
+
+    name = args.journal or next(iter(cfg.journals))
+    if name not in cfg.journals:
+        print(f"luria journal: unknown journal {name!r}; configured: "
+              f"{', '.join(cfg.journals)}", file=sys.stderr)
+        return 2
+    journal = cfg.journals[name]
+
+    if args.action == "new":
+        if not args.title:
+            print("luria journal new: needs a title — it is what the book's "
+                  "table of contents shows.", file=sys.stderr)
+            return 2
+        path = new(journal, args.title, dt.datetime.now())
+        print(cfg.rel(path))
+        return 0
+
+    grouped = books(journal)
+    total = sum(len(v) for v in grouped.values())
+    period = {"year": "yearly", "month": "monthly", "day": "daily"}[
+        journal.granularity]
+    print(f"{name}: {total} entr{'y' if total == 1 else 'ies'} in "
+          f"{len(grouped)} {period} book{'' if len(grouped) == 1 else 's'} → "
+          f"{cfg.rel(journal.output)}/")
+    for key in sorted(grouped, reverse=True):
+        filed = grouped[key]
+        print(f"  {key}.md  {len(filed):>3} entr{'y' if len(filed) == 1 else 'ies'}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

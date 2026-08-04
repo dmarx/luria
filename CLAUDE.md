@@ -22,10 +22,21 @@ This project keeps its memory in four layers. Which one you want:
 | `changelog.d/` | **what changed**, operator-facing, terse | *would someone running this notice?* |
 | `devlog.d/` | **how it went**, including the wrong theories | *will a future debugger want the narrative?* |
 
-**Write a fragment, never edit the assembled file.** `CHANGELOG.md`, the devlog,
-the decision index and `docs/design-principles.md` are all *views*, generated or
-collected from fragments. One file per contribution, named after your branch.
-The lint fails on hand edits to generated files.
+**Write a fragment, never edit the assembled file.** `CHANGELOG.md`,
+`docs/devlog/`, the decision index and `docs/design-principles.md` are all
+*views*. The lint fails on hand edits to generated files.
+
+The two fragment kinds differ in whether the source survives, and that decides
+how you file one ([ADR-012](docs/decisions/ADR-012.md)):
+
+- **Collected** — `changelog.d/<branch-slug>.md`, assembled into `CHANGELOG.md`
+  and then *consumed*. One file per contribution, named after your branch.
+- **A journal** — file it with `luria journal new "What you did"`, which puts it
+  at `devlog.d/yyyy/mm/dd/hhmmss.md`. Entries **persist**, so `docs/devlog/` is
+  regenerated from them and each month's book gets a contents list built from
+  the titles ([ADR-020](docs/decisions/ADR-020.md)). Don't name the file
+  yourself: the path is the timestamp, and the lint checks it against
+  `created:`.
 
 **File it in the same contribution as the work.** A fact filed while its context
 is loaded costs a paragraph; re-derived cold, it costs a session.
@@ -41,6 +52,7 @@ most, and they are the part that never appears in a commit message.
 luria lint            # the only one that can fail
 luria link --fix      # rewrite bare references as hyperlinks
 luria index           # regenerate every generated view (+ the README's counts)
+luria journal new "…" # file a dated devlog entry at its timestamp
 luria ref-status      # what still cites a retired decision
 luria pending         # what has been undecided, and for how long
 luria remotes         # other projects' records, and how they resolve
@@ -152,5 +164,5 @@ what the previous version claimed is the only thing this rule forbids.
 - New checks go behind `luria lint` only if the violation is always wrong and
   mechanically fixable. If a human has to judge it, it is a report
   ([ADR-007](docs/decisions/ADR-007.md)).
-- Fire any new guard once before trusting it, and say so in the devlog fragment
+- Fire any new guard once before trusting it, and say so in the devlog entry
   ([DP-6](docs/design-principles.md#dp-6)).

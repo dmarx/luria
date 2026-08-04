@@ -12,8 +12,9 @@ from pathlib import Path
 from _scheme import decision
 
 from luria import ref_status
+from luria.config import current
 
-# unresolved-ok-file: ADR-020 ADR-777 — fixture codes, deliberately not real
+# unresolved-ok-file: ADR-920 ADR-777 — fixture codes, deliberately not real
 REPO = Path(__file__).resolve().parents[1]
 
 
@@ -64,9 +65,21 @@ def test_historical_records_are_out_of_scope():
     it produces permanent, unactionable rows."""
     scanned = set(ref_status.scanned_files())
     assert REPO / "CHANGELOG.md" not in scanned
-    assert REPO / "docs" / "devlog.md" not in scanned
     assert REPO / "docs" / "project-memory.md" in scanned
     assert REPO / "README.md" in scanned
+
+
+def test_journals_are_out_of_scope_entries_and_books_alike():
+    """A journal is a dated record too (ADR-020), and its entries are *nested*
+    — which is why the check is `is_historical` rather than a membership test
+    on `path.parent`."""
+    cfg = current()
+    scanned = set(ref_status.scanned_files())
+    for journal in cfg.journals.values():
+        entries = [p for p in journal.dir.rglob("*.md") if p.name != "_template.md"]
+        assert entries, "fixture-free test needs a filed entry to be meaningful"
+        assert not (scanned & set(entries))
+        assert not (scanned & set(journal.output.glob("*.md")))
 
 
 def test_configured_code_globs_are_in_scope():
@@ -135,10 +148,10 @@ def test_annotation_works_in_a_code_comment(project):
 
 
 def test_annotation_only_excuses_the_codes_it_names(project):
-    decision(project, 20, "Rejected", "Another retired one")
+    decision(project, 920, "Rejected", "Another retired one")
     docs, result = scan(
-        project, "<!-- inactive-ok: ADR-012 -->\nADR-012 and ADR-020\n")
-    assert [d.code for d, _, _ in ref_status.flagged(result, docs)] == ["ADR-020"]
+        project, "<!-- inactive-ok: ADR-012 -->\nADR-012 and ADR-920\n")
+    assert [d.code for d, _, _ in ref_status.flagged(result, docs)] == ["ADR-920"]
 
 
 def test_bare_numbers_are_rejected(project):
