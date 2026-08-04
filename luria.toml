@@ -14,8 +14,13 @@ decisions = "record/decisions.d"
 design_principles = "docs/design-principles.md"
 reports = "build/doc-reports"
 
-[luria.fragments]
-"record/changelog.d" = "CHANGELOG.md"
+# The changelog assembles in the release shape (ADR-028): each collection is a
+# dated batch inserted right after the marker, newest first — the reading
+# order a changelog owes its reader, where the narrative append style would
+# bury the latest release at the bottom.
+[luria.fragments."record/changelog.d"]
+file = "CHANGELOG.md"
+style = "changelog"
 
 # The devlog is a journal, not a fragment directory: its entries are dated
 # observations that stay true, so they persist and the books are generated from

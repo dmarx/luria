@@ -685,7 +685,7 @@ def doc_files() -> list[Path]:
     at once. `link_base` already knows where a stub renders (ADR-016)."""
     cfg = current()
     paths = [cfg.root / name for name in ("README.md", "CLAUDE.md", "AGENTS.md")]
-    paths += [cfg.root / target for target in cfg.fragments.values()]
+    paths += [cfg.root / f.target for f in cfg.fragments.values()]
     paths += sorted(cfg.docs.rglob("*.md")) + sorted(cfg.docs.rglob("*.stub"))
     # A scheme's directory need not sit under docs/ — the record layout puts
     # sources in `record/` (ADR-021) — so it is scanned on its own account

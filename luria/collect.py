@@ -8,21 +8,30 @@ collected since. That is [DP-2](../docs/design-principles.md#dp-2), and the fix
 is structural — each contribution owns a fragment nobody else writes, and the
 shared file becomes a VIEW assembled on a cadence.
 
-This collector is deliberately not scriv-shaped: a narrative log has no
-categories, no versions and no release cadence, so collection is "append these
-bodies, oldest first, at the marker". A project whose changelog *does* want
-categories can point that fragment directory at scriv instead; the two coexist
-because the fragment convention is the contract, not the collector (ADR-002).
+A fragment directory assembles in one of two shapes (ADR-028), declared in
+`[luria.fragments]`:
+
+- **append** (the default) — the narrative shape: bodies oldest-first,
+  inserted before the marker, so the marker stays at the end and the log reads
+  top-down.
+- **changelog** — the release shape: each collection is one batch under a
+  `## <date>` heading, inserted right after the marker so the newest batch
+  reads first, fragments newest-first within it. A batch of only stubs emits
+  nothing — no empty date heading to accumulate.
+
+Neither shape has categories or versions; a fragment that wants `### Added` /
+`### Fixed` sections simply carries them in its body, and the batch keeps them
+per-contribution rather than merging across fragments the way scriv did.
 
     luria collect                    # collect every fragment directory
     luria collect --dir record/changelog.d   # just one
     luria collect --commit           # collect and commit (CI mode)
 
-Fragments are appended in the order they were COMMITTED (first commit that
-added the file), not filename order, because a log reads chronologically and
-branch-slug filenames sort arbitrarily. Uncommitted fragments sort last, by
-filename — which is what you want locally, where the fragment you just wrote is
-the newest thing.
+Fragments are ordered by when they were COMMITTED (first commit that added the
+file), not filename order, because a log reads chronologically and branch-slug
+filenames sort arbitrarily. Uncommitted fragments sort last, by filename —
+which is what you want locally, where the fragment you just wrote is the
+newest thing.
 
 That ordering is the weak point, and it is why a *journal* is not collected:
 commit order is not authoring order, and a rebase can change it. A journal
@@ -65,12 +74,16 @@ def find_marker(text: str) -> str | None:
     return next((m for m in MARKERS if m in text), None)
 
 
-def collect(view_text: str, bodies: list[str]) -> str:
-    """Insert `bodies` (in order) immediately before the insert marker.
+def collect(view_text: str, bodies: list[str], style: str = "append",
+            date: str = "") -> str:
+    """Assemble `bodies` (oldest first) into `view_text` at the insert marker,
+    in the declared `style` (ADR-028).
 
     Pure — the CLI does the I/O. Raises if the marker is missing rather than
     guessing where the entries belong: silently appending to the wrong place in
-    a long narrative is worse than failing (DP-1).
+    a long narrative is worse than failing (DP-1). A batch of only stubs
+    changes nothing — in the changelog style that is what keeps an empty
+    `## <date>` heading from accumulating per quiet collection.
     """
     marker = find_marker(view_text)
     if marker is None:
@@ -79,8 +92,12 @@ def collect(view_text: str, bodies: list[str]) -> str:
     real = [b.strip() for b in bodies if not is_stub(b)]
     if not real:
         return view_text
-    block = "\n\n".join(real)
     head, _, tail = view_text.partition(marker)
+    if style == "changelog":
+        block = f"## {date}\n\n" + "\n\n".join(reversed(real))
+        tail = tail.lstrip("\n")
+        return f"{head}{marker}\n\n{block}" + ("\n\n" + tail if tail else "\n")
+    block = "\n\n".join(real)
     return f"{head.rstrip()}\n\n{block}\n\n{marker}{tail}"
 
 
@@ -111,17 +128,21 @@ def fragment_paths(fragment_dir: Path) -> list[Path]:
     )
 
 
-def collect_dir(name: str, target: Path) -> int:
+def collect_dir(name: str, fragment) -> int:
     """Collect one fragment directory into its view. Returns the count."""
+    import datetime as dt
     cfg = current()
     paths = fragment_paths(cfg.root / name)
     if not paths:
         return 0
-    view = cfg.root / target
-    view.write_text(collect(view.read_text(), [p.read_text() for p in paths]))
+    view = cfg.root / fragment.target
+    view.write_text(collect(view.read_text(), [p.read_text() for p in paths],
+                            style=fragment.style,
+                            date=dt.date.today().isoformat()))
     for p in paths:
         p.unlink()
-    print(f"Collected {len(paths)} fragment(s) from {name} into {target}.")
+    print(f"Collected {len(paths)} fragment(s) from {name} "
+          f"into {fragment.target}.")
     return len(paths)
 
 
@@ -133,7 +154,7 @@ def main() -> int:
 
     cfg = current()
     wanted = {args.dir: cfg.fragments[args.dir]} if args.dir else cfg.fragments
-    total = sum(collect_dir(name, target) for name, target in wanted.items())
+    total = sum(collect_dir(name, frag) for name, frag in wanted.items())
     if not total:
         print("No fragments to collect.")
         return 0

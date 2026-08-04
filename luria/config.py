@@ -340,6 +340,34 @@ class Remote:
 
 
 @dataclass(frozen=True)
+class Fragment:
+    """One fragment directory: where its pieces assemble to, and in what shape.
+
+        [luria.fragments]
+        "record/changelog.d" = "CHANGELOG.md"       # the append style
+        [luria.fragments."record/changelog.d"]      # or, spelled as a table:
+        file  = "CHANGELOG.md"
+        style = "changelog"
+
+    `append` is the narrative shape: bodies oldest-first, inserted before the
+    marker, so the marker stays at the end and the log reads top-down.
+    `changelog` is the release shape: each collection is one dated batch,
+    inserted right after the marker so the newest batch reads first, fragments
+    newest-first within it. The shape is configuration because the fragment
+    convention is the contract, not the collector (ADR-028) — the same
+    directory-of-fragments serves either reading order."""
+    target: Path
+    style: str = "append"
+
+
+def _fragment(spec) -> Fragment:
+    if isinstance(spec, dict):
+        return Fragment(Path(spec.get("file") or spec.get("target") or ""),
+                        spec.get("style", "append"))
+    return Fragment(Path(spec))
+
+
+@dataclass(frozen=True)
 class Journal:
     """Dated entries that persist, rendered into books (ADR-020).
 
@@ -377,7 +405,7 @@ class Config:
     decisions: Path
     design_principles: Path
     reports: Path
-    fragments: dict[str, Path]          # fragment dir name → assembled file
+    fragments: dict[str, Fragment]      # fragment dir name → how it assembles
     code_globs: tuple[str, ...]
     historical: frozenset[Path]
     schemes: dict[str, Scheme]
@@ -456,9 +484,9 @@ class Config:
         breaks the moment it is collected (ADR-005). Two kinds of fragment
         qualify — a changelog/devlog fragment, and a document-rendered scheme's
         source, which is the same relationship wearing a different name."""
-        for name, target in self.fragments.items():
+        for name, fragment in self.fragments.items():
             if path.parent == self.root / name:
-                return (self.root / target).parent
+                return (self.root / fragment.target).parent
         for scheme in self.schemes.values():
             if scheme.render == "document" and scheme.output \
                     and path.parent == scheme.dir:
@@ -497,7 +525,7 @@ def load(root: Path | None = None) -> Config:
         decisions=root / paths["decisions"],
         design_principles=root / paths["design_principles"],
         reports=root / paths["reports"],
-        fragments={k: Path(v) for k, v in raw["fragments"].items()},
+        fragments={k: _fragment(v) for k, v in raw["fragments"].items()},
         code_globs=tuple(raw["code"]["globs"]),
         historical=frozenset(root / p for p in raw["code"]["historical"]),
         schemes={
