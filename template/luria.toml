@@ -16,7 +16,13 @@ reports = "build/doc-reports"
 
 # Fragment directory → the file it is collected into. Links written in a
 # fragment resolve from the collected file's directory, not the fragment's
-# (ADR-005), so this mapping is load-bearing, not just bookkeeping.
+# (ADR-005), so this mapping is load-bearing, not just bookkeeping. The
+# release shape — dated batches, newest first, right after the marker — is
+# `style = "changelog"` (ADR-028); spelled as a table:
+#
+#   [luria.fragments."record/changelog.d"]
+#   file  = "CHANGELOG.md"
+#   style = "changelog"
 [luria.fragments]
 "record/changelog.d" = "CHANGELOG.md"
 

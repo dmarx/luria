@@ -6,6 +6,7 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 
 ## Currently — [August 2026](2026-08.md)
 
+- [4 Aug 20:05 — The collector grew the changelog shape, for strata-g's scriv retirement](2026-08.md#20260804200509)
 - [4 Aug 18:44 — Shipping: the wheel that worked was working by accident](2026-08.md#20260804184404)
 - [4 Aug 18:18 — Parallelism measured first: the probes were the win, the rest is seams](2026-08.md#20260804181814)
 - [4 Aug 18:12 — Wikilinks: the brackets are consent, and typing them flips the rules](2026-08.md#20260804181244)
@@ -23,8 +24,8 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 
 ## All books
 
-14 entries across 1 book, newest first.
+15 entries across 1 book, newest first.
 
 | Book | Entries | First | Last |
 |---|--:|---|---|
-| [2026-08](2026-08.md) | 14 | 2026-08-03 | 2026-08-04 |
+| [2026-08](2026-08.md) | 15 | 2026-08-03 | 2026-08-04 |
