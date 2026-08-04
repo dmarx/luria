@@ -184,20 +184,26 @@ def render_index(journal: Journal, grouped: dict[str, list[Entry]]) -> str:
     return "\n".join(lines)
 
 
+def outputs_for(journal: Journal) -> dict[Path, str]:
+    """One journal's books plus its index — the unit the parallel renderer
+    runs (ADR-026). A configured-but-unused journal renders nothing: the
+    default config names one, so emitting an empty index would put a
+    `docs/devlog/` into every project that never files an entry."""
+    if not journal.dir.exists():
+        return {}
+    grouped = books(journal)
+    out = {journal.output / "README.md": render_index(journal, grouped)}
+    for key, filed in grouped.items():
+        out[journal.output / f"{key}.md"] = render_book(journal, key, filed)
+    return out
+
+
 def outputs() -> dict[Path, str]:
     """Every book, plus each journal's index. One place, so the staleness
     check covers a journal the moment it is configured."""
     out: dict[Path, str] = {}
     for journal in current().journals.values():
-        # A configured-but-unused journal renders nothing. The default config
-        # names one, so emitting an empty index would put a `docs/devlog/`
-        # into every project that never files an entry.
-        if not journal.dir.exists():
-            continue
-        grouped = books(journal)
-        out[journal.output / "README.md"] = render_index(journal, grouped)
-        for key, filed in grouped.items():
-            out[journal.output / f"{key}.md"] = render_book(journal, key, filed)
+        out.update(outputs_for(journal))
     return out
 
 

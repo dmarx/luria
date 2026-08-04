@@ -316,23 +316,33 @@ def orphans(rendered: dict[Path, str]) -> list[Path]:
             for p in sorted(d.glob("*.md")) if p not in rendered]
 
 
+def _render_scheme(scheme) -> dict[Path, str]:
+    docs = load_scheme(scheme)
+    if scheme.render == "document":
+        return {scheme.output: render_document(scheme, docs)} if scheme.output else {}
+    tags = tag_order(docs, scheme)
+    out = {scheme.index_path: render_index(docs, tags, scheme)}
+    for tag, meta in tags:
+        out[scheme.tag_dir / f"{tag}.md"] = render_tag_page(tag, meta, docs, scheme)
+    return out
+
+
 def outputs() -> dict[Path, str]:
     """Every generated view, across every scheme — one place, so the lint's
-    staleness check covers a new scheme the moment it is configured."""
-    cfg = current()
-    out: dict[Path, str] = {}
-    for scheme in cfg.schemes.values():
-        docs = load_scheme(scheme)
-        if scheme.render == "document":
-            if scheme.output:
-                out[scheme.output] = render_document(scheme, docs)
-            continue
-        tags = tag_order(docs, scheme)
-        out[scheme.index_path] = render_index(docs, tags, scheme)
-        for tag, meta in tags:
-            out[scheme.tag_dir / f"{tag}.md"] = render_tag_page(tag, meta, docs, scheme)
+    staleness check covers a new scheme the moment it is configured.
+
+    Rendered wide (ADR-026): each scheme and each journal is an independent
+    pure function of the tree, so they run as parallel units. `pmap` returns
+    in input order, which is what keeps the merged dict — and therefore the
+    staleness diff — deterministic."""
     from . import journal
-    out.update(journal.outputs())
+    from .parallel import pmap
+    cfg = current()
+    units = [lambda s=s: _render_scheme(s) for s in cfg.schemes.values()]
+    units += [lambda j=j: journal.outputs_for(j) for j in cfg.journals.values()]
+    out: dict[Path, str] = {}
+    for rendered in pmap(lambda u: u(), units):
+        out.update(rendered)
     return out
 
 
