@@ -313,3 +313,21 @@ def test_repo_docs_have_no_bare_references():
             for r in doc_refs.rewritable_refs(text, path, adrs, anchors)
         ]
     assert bare == []
+
+
+def test_fixer_links_a_uid_remote_reference(tmp_path, monkeypatch):
+    """A bare `ARXIV-2403.05530` becomes a link through the uid template —
+    the reference machinery is shape-agnostic end to end (ADR-024)."""
+    from luria import config
+    (tmp_path / "docs").mkdir(parents=True)
+    (tmp_path / "luria.toml").write_text(
+        '[luria]\nissue_url = ""\n'
+        '[luria.remotes.ARXIV]\nuid = "\\\\d{4}[.]\\\\d{4,5}"\n'
+        'url = "https://arxiv.org/abs/{uid}"\n')
+    monkeypatch.setenv("LURIA_ROOT", str(tmp_path))
+    config.reset()
+    out, n = doc_refs.linkify("see ARXIV-2403.05530 for the details",
+                              tmp_path / "docs" / "notes.md")
+    assert n == 1
+    assert "[ARXIV-2403.05530](https://arxiv.org/abs/2403.05530)" in out
+    config.reset()

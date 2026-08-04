@@ -103,7 +103,7 @@ class Ref:
 
     def describe(self) -> str:
         if self.kind == "remote":
-            return f"{self.remote}-{self.code}"
+            return self.text or f"{self.remote}-{self.code}"
         return {"adr": f"ADR-{self.num:03d}",
                 "dp": f"design principle #{self.num}",
                 "issue": f"#{self.num}"}[self.kind]
@@ -364,17 +364,19 @@ def find_refs(text: str, path: Path = ANY_MD) -> list[Ref]:
     # Remotes first: `LU-ADR-013` must claim its whole span before the local
     # ADR pattern reads the tail out of the middle of it and links a foreign
     # reference to a local file (ADR-016).
-    if (remote_re := remotes.pattern()) is not None:
-        for m in remote_re.finditer(text):
-            span = range(m.start(), m.end())
-            if any(mask[i] or claimed[i] for i in span):
-                continue
-            for i in span:
-                claimed[i] = True
-            code = remotes.normalise(m.group("code"))
-            refs.append(Ref("remote", int(code.rsplit("-", 1)[1]),
-                            m.start(), m.end(), m.group(0), line_of(m.start()),
-                            remote=m.group("remote"), code=code))
+    for rref in remotes.references(text):
+        span = range(rref.start, rref.end)
+        if any(mask[i] or claimed[i] for i in span):
+            continue
+        for i in span:
+            claimed[i] = True
+        # A scheme-shaped tail carries a number; a uid need not (ADR-024) —
+        # `num` is display-only for remote refs, so 0 is a placeholder, not
+        # a claim.
+        tail_num = rref.tail.rsplit("-", 1)[-1]
+        refs.append(Ref("remote", int(tail_num) if tail_num.isdigit() else 0,
+                        rref.start, rref.end, rref.text, line_of(rref.start),
+                        remote=rref.prefix, code=rref.tail))
 
     for kind, regex in (("dp", DP_RE), ("adr", ADR_RE), ("issue", ISSUE_RE)):
         for m in regex.finditer(text):

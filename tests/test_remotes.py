@@ -14,7 +14,7 @@ from _scheme import decision
 
 from luria import config, doc_refs, ref_status, remotes
 
-# unresolved-ok-file: ADR-032 ADR-999 UP-ADR-999 — fixture codes, not claims about this repo
+# unresolved-ok-file: ADR-032 ADR-999 UP-ADR-999 DP-018 — fixture codes, not claims about this repo
 REPO = Path(__file__).resolve().parents[1]
 
 REMOTE_TOML = (
@@ -42,7 +42,7 @@ def test_code_only_convention_is_the_default(project):
     convention — so a remote that uses it needs one config line."""
     with_remote(project)
     assert remotes.resolve("UP", "ADR-32") == (
-        "https://github.com/o/r/blob/main/docs/decisions/ADR-032.md")
+        "https://github.com/o/r/blob/main/record/decisions.d/ADR-032.md")
 
 
 def test_a_discovered_filename_wins(project):
@@ -106,7 +106,7 @@ def test_the_fixer_writes_a_url_not_a_relative_path(project):
     out, n = doc_refs.linkify("see UP-ADR-032", project / "docs" / "page.md")
     assert n == 1
     assert out == ("see [UP-ADR-032]"
-                   "(https://github.com/o/r/blob/main/docs/decisions/adr-032-x.md)")
+                   "(https://github.com/o/r/blob/main/record/decisions.d/adr-032-x.md)")
 
 
 def test_an_unresolvable_foreign_code_is_not_linked(project):
@@ -207,14 +207,14 @@ def test_hand_written_url_is_reported(project):
     assert len(flagged) == 1
     # Names the code, the fact, and what construction would have said (DP-1).
     assert "UP-ADR-032" in flagged[0] and "hand-written" in flagged[0]
-    assert "docs/decisions/ADR-032.md" in flagged[0]
+    assert "record/decisions.d/ADR-032.md" in flagged[0]
     assert stale == []
 
 
 def test_constructed_url_is_not_reported(project):
     with_remote(project)
     flagged, _ = hand(project,
-        "[UP-ADR-032](https://github.com/o/r/blob/main/docs/decisions/ADR-032.md)\n")
+        "[UP-ADR-032](https://github.com/o/r/blob/main/record/decisions.d/ADR-032.md)\n")
     assert flagged == []
 
 
@@ -249,7 +249,7 @@ def test_url_ok_on_a_constructed_link_is_stale(project):
     with_remote(project)
     _, stale = hand(project,
         "<!-- url-ok: UP-ADR-032 — was hand-written once -->\n"
-        "[UP-ADR-032](https://github.com/o/r/blob/main/docs/decisions/ADR-032.md)\n")
+        "[UP-ADR-032](https://github.com/o/r/blob/main/record/decisions.d/ADR-032.md)\n")
     assert len(stale) == 1
 
 
@@ -257,3 +257,154 @@ def test_a_quoted_hand_link_is_a_specimen_not_a_citation(project):
     with_remote(project)
     flagged, _ = hand(project, "quoting `[UP-ADR-032](https://x.test/y.md)` here\n")
     assert flagged == []
+
+
+# ── Per-scheme construction (ADR-023) ────────────────────────────────────
+
+
+SCHEMED = (
+    '[luria.remotes.UP.schemes.DP]\ndocument = "docs/design-principles.md"\n'
+    '[luria.remotes.UP.schemes.RFC]\ndir = "docs/rfcs"\n'
+)
+
+
+def test_document_scheme_constructs_a_file_anchor(project):
+    """A document-rendered scheme's documents are sections, not files — the
+    construction is the assembled page plus an anchor."""
+    with_remote(project, SCHEMED)
+    assert remotes.resolve("UP", "DP-18") == (
+        "https://github.com/o/r/blob/main/docs/design-principles.md#dp-18")
+
+
+def test_anchor_defaults_to_the_stable_anchor_shape(project):
+    """`dp-{number}` unpadded — the shape Luria's own document render emits,
+    so a remote on current conventions needs only the `document` line."""
+    with_remote(project, SCHEMED)
+    assert remotes.resolve("UP", "DP-9").endswith("#dp-9")
+
+
+def test_anchor_template_is_configurable(project):
+    with_remote(project,
+        '[luria.remotes.UP.schemes.DP]\ndocument = "PRINCIPLES.md"\n'
+        'anchor = "principle-{number}"\n')
+    assert remotes.resolve("UP", "DP-4").endswith("PRINCIPLES.md#principle-4")
+
+
+def test_scheme_dir_scopes_the_file_convention(project):
+    """Different code families in one namespace construct into different
+    places; the remote-level `dir` keeps serving the rest."""
+    with_remote(project, SCHEMED + '\n')
+    assert remotes.resolve("UP", "RFC-7") == (
+        "https://github.com/o/r/blob/main/docs/rfcs/RFC-007.md")
+    assert "record/decisions.d/ADR-001.md" in remotes.resolve("UP", "ADR-1")
+
+
+def test_scheme_url_template_wins(project):
+    with_remote(project,
+        '[luria.remotes.UP.schemes.DP]\n'
+        'url = "https://up.example/values/{number}"\n')
+    assert remotes.resolve("UP", "DP-3") == "https://up.example/values/3"
+
+
+def test_lockfile_authority_does_not_cover_document_schemes(project):
+    """The lockfile maps *files*, which is all discovery can see. A section of
+    a document never appears in a directory listing, so its absence from the
+    lockfile is not evidence — the anchor construction must survive it."""
+    with_remote(project, SCHEMED)
+    lockfile(project, {"ADR-032": "adr-032-changelog-ci-collection.md"})
+    assert remotes.resolve("UP", "DP-18").endswith("#dp-18")
+    # …while file-per-code codes stay under its authority (ADR-016).
+    assert remotes.resolve("UP", "ADR-999") == ""
+
+
+def test_url_ok_retires_when_the_construction_catches_up(project):
+    """The loop ADR-022 promised: configure the scheme, delete the hand URL,
+    and a leftover acknowledgement reports itself stale."""
+    with_remote(project, SCHEMED)
+    flagged, stale = hand(project,
+        "<!-- url-ok: UP-DP-18 — was unconstructible before ADR-023 -->\n"
+        "[UP-DP-18](https://github.com/o/r/blob/main/docs/design-principles.md#dp-18)\n")
+    assert flagged == []                      # the link now matches construction
+    assert len(stale) == 1                    # …so the annotation is done
+
+
+# ── uid remotes: not everything is a numbered scheme (ADR-024) ───────────
+
+
+ARXIV = (
+    '[luria.remotes.ARXIV]\n'
+    'uid = "(\\\\d{4})[.:](\\\\d{4,5})"\n'
+    'url = "https://arxiv.org/abs/{1}.{2}"\n'
+)
+
+
+def test_uid_remote_constructs_through_the_template(project):
+    with_remote(project, ARXIV)
+    assert remotes.resolve("ARXIV", "2403.05530") == "https://arxiv.org/abs/2403.05530"
+
+
+def test_uid_capture_groups_index_the_template_by_position(project):
+    """{1}, {2}… are the uid pattern's capture groups; {0}/{uid} is the whole
+    tail — so one template can restructure the identifier."""
+    with_remote(project, ARXIV)
+    assert remotes.resolve("ARXIV", "1234:5678") == "https://arxiv.org/abs/1234.5678"
+
+
+def test_uid_is_exact_never_normalised(project):
+    """`ADR-32` and `ADR-032` are one document; `2403.05530` is itself. A uid
+    must survive canonicalisation untouched — zero-padding an arxiv id would
+    quietly cite a different paper."""
+    with_remote(project, ARXIV)
+    remote = config.current().remotes["ARXIV"]
+    assert remote.canon("2403.05530") == "2403.05530"
+
+
+def test_the_delimiter_is_configurable(project):
+    with_remote(project,
+        '[luria.remotes.JIRA]\ndelim = ":"\nuid = "[A-Z]+-\\\\d+"\n'
+        'url = "https://example.atlassian.net/browse/{uid}"\n')
+    text = "tracked as JIRA:PROJ-42 upstream"
+    refs = remotes.references(text)
+    assert [r.composed for r in refs] == ["JIRA:PROJ-42"]
+    assert remotes.link(refs[0].remote, refs[0].tail).endswith("/browse/PROJ-42")
+
+
+def test_unconfigured_prefixes_do_not_match(project):
+    """The pattern is built from config: `FAKE-1234.5678` must not be read as
+    a namespace just because it is shaped like one."""
+    with_remote(project, ARXIV)
+    assert remotes.references("see FAKE-1234.5678 here") == []
+
+
+def test_uid_remote_without_a_template_constructs_nothing(project):
+    """One rung only — with no template there is nothing to guess with, and
+    "" is what makes ref-status report the citation as dangling (DP-1)."""
+    with_remote(project, '[luria.remotes.ARXIV]\nuid = "\\\\d{4}[.]\\\\d{4,5}"\n')
+    assert remotes.resolve("ARXIV", "2403.05530") == ""
+
+
+def test_lockfile_never_vetoes_a_uid_remote(project):
+    with_remote(project, ARXIV)
+    lockfile(project, {"ADR-032": "x.md"})
+    assert remotes.resolve("ARXIV", "2403.05530").endswith("/abs/2403.05530")
+
+
+def test_scheme_shaped_references_still_scan_beside_uid_remotes(project):
+    with_remote(project, ARXIV)
+    text = "per UP-ADR-032 and ARXIV-2403.05530"
+    assert [r.composed for r in remotes.references(text)] == [
+        "UP-ADR-032", "ARXIV-2403.05530"]
+
+
+def test_url_ok_covers_uid_remotes_too(project):
+    """A hand URL for a uid code is the same acknowledged state — the check
+    and the directive are shape-agnostic because both go through the remote's
+    own parser."""
+    with_remote(project, ARXIV)
+    flagged, stale = hand(project,
+        "[ARXIV-2403.05530](https://arxiv.org/pdf/2403.05530v2)\n")
+    assert len(flagged) == 1 and "ARXIV-2403.05530" in flagged[0]
+    flagged, stale = hand(project,
+        "<!-- url-ok: ARXIV-2403.05530 — the v2 PDF specifically -->\n"
+        "[ARXIV-2403.05530](https://arxiv.org/pdf/2403.05530v2)\n")
+    assert flagged == [] and stale == []

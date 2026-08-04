@@ -50,21 +50,80 @@ from pathlib import Path
 
 from .config import Remote, current
 
-# `LU-ADR-013`: a remote prefix, then a code in that remote's own namespace.
-# Built from config, because an unconfigured prefix must NOT match — otherwise
-# a hyphenated word before a code would be read as a namespace.
-CODE_TAIL = r"(?P<code>[A-Z]{2,10}-\d{1,4})\b"
+# `LU-ADR-013`: a remote prefix, a delimiter, then a tail in that remote's own
+# namespace. Built from config, because an unconfigured prefix must NOT match —
+# otherwise a hyphenated word before a code would be read as a namespace. The
+# tail defaults to the Luria scheme shape; a `uid` remote supplies its own
+# pattern, so a reference need not be a number at all (ADR-024).
+DEFAULT_TAIL = r"[A-Z]{2,10}-\d{1,4}"
 
 
-def pattern() -> re.Pattern | None:
-    prefixes = sorted(current().remotes, key=len, reverse=True)
-    if not prefixes:
-        return None
-    return re.compile(rf"\b(?P<remote>{'|'.join(prefixes)})-{CODE_TAIL}")
+def tail_re(remote: Remote) -> str:
+    return remote.uid or DEFAULT_TAIL
+
+
+def remote_pattern(remote: Remote) -> re.Pattern:
+    # The default tail ends at a word boundary; a uid regex bounds itself —
+    # imposing \b on it would truncate uids ending in punctuation.
+    end = "" if remote.uid else r"\b"
+    return re.compile(rf"\b{re.escape(remote.prefix)}{re.escape(remote.delim)}"
+                      rf"(?P<code>{tail_re(remote)}){end}")
+
+
+@dataclass(frozen=True)
+class RemoteRef:
+    """One foreign reference found in text, already canonical."""
+    remote: Remote
+    tail: str
+    start: int
+    end: int
+    text: str
+
+    @property
+    def prefix(self) -> str:
+        return self.remote.prefix
+
+    @property
+    def composed(self) -> str:
+        return f"{self.prefix}{self.remote.delim}{self.tail}"
+
+
+def references(text: str) -> list[RemoteRef]:
+    """Every configured remote's references in `text`, in source order.
+
+    Scanned per remote rather than by one combined regex, because each remote
+    brings its own delimiter and tail shape. Longer prefixes scan first and
+    claim their spans, so `SGX-…` is never read as `SG` plus a strange tail."""
+    found: list[RemoteRef] = []
+    for remote in sorted(current().remotes.values(),
+                         key=lambda r: len(r.prefix), reverse=True):
+        for m in remote_pattern(remote).finditer(text):
+            if any(r.start < m.end() and m.start() < r.end for r in found):
+                continue
+            found.append(RemoteRef(remote, remote.canon(m.group("code")),
+                                   m.start(), m.end(), m.group(0)))
+    return sorted(found, key=lambda r: r.start)
+
+
+# unresolved-ok-block: DP-018 — the parsed-tail spelling in the example below
+def parse_code(text: str) -> tuple[Remote, str] | None:
+    """`SG-DP-18` → (the SG remote, "DP-018"); None when no remote matches the
+    whole string. The one reader of a composed code's anatomy — annotation
+    arguments, link labels and report keys all come through here, so the
+    delimiter is spelled in exactly one place (DP-4)."""
+    for remote in sorted(current().remotes.values(),
+                         key=lambda r: len(r.prefix), reverse=True):
+        m = re.fullmatch(
+            rf"{re.escape(remote.prefix)}{re.escape(remote.delim)}"
+            rf"({tail_re(remote)})", text)
+        if m:
+            return remote, remote.canon(m.group(1))
+    return None
 
 
 def normalise(code: str) -> str:
-    """A code with and without leading zeros is one document — one lock key."""
+    """A scheme code with and without leading zeros is one document — one lock
+    key. Only scheme-shaped tails come here; a uid is exact already."""
     prefix, number = code.rsplit("-", 1)
     return f"{prefix.upper()}-{int(number):03d}"
 
@@ -100,8 +159,20 @@ def link(remote: Remote, code: str) -> str:
     entry and the code isn't in it, the answer is "" rather than a guessed
     filename — the map was read from the remote itself, so a code missing from
     it names no document there. Guessing anyway once produced a confident link
-    to a file that has never existed (ADR-016)."""
-    code = normalise(code)
+    to a file that has never existed (ADR-016).
+
+    The lockfile's authority covers exactly what discovery can see: *files*.
+    A scheme configured to construct a document anchor or a URL template
+    (ADR-023) never consults it — its documents are sections, which no
+    directory listing contains, so an absence there is not evidence."""
+    code = remote.canon(code)
+    if remote.uid:
+        # One rung: the template. The lockfile maps filenames, and a uid
+        # remote has none to map (ADR-024).
+        return remote.link(code)
+    scheme = remote.scheme_for(code)
+    if scheme is not None and (scheme.url or scheme.document):
+        return remote.link(code)
     if remote.url:
         return remote.link(code)
     known = lock().get(remote.prefix)
@@ -137,10 +208,9 @@ def hand_links(files: list[Path] | None = None
     Returns (flagged, stale): unacknowledged hand links, and `url-ok`
     directives that no longer acknowledge anything."""
     from . import directives, doc_refs, ref_status
-    regex = pattern()
-    if regex is None:
+    if not current().remotes:
         return [], []
-    link_re = re.compile(rf"\[({regex.pattern})\]\(([^)\s]+)\)")
+    link_re = re.compile(r"\[([^\]\s]+)\]\(([^)\s]+)\)")
     cfg = current()
     flagged: list[str] = []
     stale: list[str] = []
@@ -155,9 +225,13 @@ def hand_links(files: list[Path] | None = None
         for m in link_re.finditer(text):
             if any(a <= m.start() < b for a, b in quoted):
                 continue                      # a quotation, not a citation
-            code = f"{m.group('remote')}-{normalise(m.group('code'))}"
-            target = m.group(m.re.groups)     # last group: the link target
-            constructed = resolve(m.group("remote"), m.group("code"))
+            parsed = parse_code(m.group(1))
+            if parsed is None:
+                continue                      # a link, but not a foreign code
+            remote, tail = parsed
+            code = f"{remote.prefix}{remote.delim}{tail}"
+            target = m.group(2)
+            constructed = link(remote, tail)
             if target == constructed:
                 continue
             line = text.count("\n", 0, m.start()) + 1
@@ -183,11 +257,9 @@ def hand_links(files: list[Path] | None = None
 
 
 def _same_code(arg: str, code: str) -> bool:
-    try:
-        prefix, tail = arg.split("-", 1)
-        return f"{prefix.upper()}-{normalise(tail)}" == code
-    except ValueError:
-        return False
+    a, b = parse_code(arg), parse_code(code)
+    return (a is not None and b is not None
+            and (a[0].prefix, a[1]) == (b[0].prefix, b[1]))
 
 
 # ── Discovery ────────────────────────────────────────────────────────────
@@ -278,17 +350,15 @@ def cited() -> dict[str, set[str]]:
     """Every foreign code this project actually cites, by remote prefix."""
     from . import ref_status
     found: dict[str, set[str]] = {}
-    regex = pattern()
-    if regex is None:
+    if not current().remotes:
         return found
     for path in ref_status.scanned_files():
         try:
             text = path.read_text()
         except (OSError, UnicodeDecodeError):
             continue
-        for m in regex.finditer(text):
-            found.setdefault(m.group("remote"), set()).add(
-                normalise(m.group("code")))
+        for ref in references(text):
+            found.setdefault(ref.prefix, set()).add(ref.tail)
     return found
 
 
@@ -312,6 +382,11 @@ def readable(remote: Remote) -> tuple[bool, str]:
     without asking this first reports a shelf of perfectly good links as
     broken — a guard that cries wolf, which is a guard nobody reads
     (ADR-016)."""
+    if remote.uid and remote.url:
+        # The template is the whole story — no repository stands behind the
+        # construction, so there is nothing to gate on; each URL is probed on
+        # its own (ADR-024).
+        return True, ""
     if not remote.repo:
         return False, "no `repo` configured"
     ok, why = _head(f"https://github.com/{remote.repo}")
@@ -358,6 +433,13 @@ def main() -> int:
     if args.refresh:
         found: dict[str, dict[str, str]] = {}
         for remote in cfg.remotes.values():
+            if remote.uid:
+                # No directory of files to list — the uid template is the
+                # whole construction, so there is nothing to discover, and
+                # saying so beats a silent skip (DP-1).
+                print(f"{remote.prefix} ({remote.label}): a uid remote — "
+                      "nothing to discover")
+                continue
             entries, how = discover(remote)
             found[remote.prefix] = entries
             print(f"{remote.prefix} ({remote.label}): {len(entries)} document(s) "
@@ -370,17 +452,27 @@ def main() -> int:
     for remote in cfg.remotes.values():
         codes = sorted(references.get(remote.prefix, ()))
         known = locked.get(remote.prefix, {})
-        rung = ("an explicit url template" if remote.url
+        rung = ("a url template over the uid" if remote.uid
+                else "an explicit url template" if remote.url
                 else f"{len(known)} discovered filename(s)" if known
                 else "the code-only filename convention")
         print(f"\n{remote.prefix} → {remote.label}: {len(codes)} reference(s), "
               f"resolved by {rung}")
         for code in codes:
             target = link(remote, code)
+            scheme = remote.scheme_for(code)
             # Not "assumed": the code-only convention (ADR-013) is exact for
             # any remote that follows it, and `--check` says whether it does.
-            note = ("" if code in known or remote.url else
-                    "  (by the code-only convention)")
+            # A per-scheme construction says which shape it used (ADR-023).
+            if remote.uid:
+                note = ""
+            elif scheme is not None and (scheme.url or scheme.document):
+                note = ("  (by the scheme's url template)" if scheme.url
+                        else "  (a document anchor, per the scheme)")
+            elif code in known or remote.url:
+                note = ""
+            else:
+                note = "  (by the code-only convention)"
             print(f"  {code}  {target or 'NO SUCH DOCUMENT'}{note if target else ''}")
 
     if args.check:

@@ -208,6 +208,35 @@ class Scheme:
 
 
 @dataclass(frozen=True)
+class RemoteScheme:
+    """How one of a remote's code families constructs (ADR-023).
+
+    A remote is not one directory of files — it is a project, and different
+    schemes in it have different shapes. Each entry names one construction:
+
+        [luria.remotes.SG.schemes.ADR]
+        dir = "docs/decisions"                 # file per code
+
+        [luria.remotes.SG.schemes.DP]
+        document = "docs/design-principles.md" # sections of one file…
+        anchor = "dp-{number}"                 # …at Luria's stable anchors
+
+    `anchor` defaults to the prefix lowercased plus the number — `dp-18` —
+    which is the anchor shape Luria's own document render emits, so a remote
+    on current conventions needs only the `document` line. A `url` template
+    overrides both and takes {code}, {number} and {prefix}."""
+    prefix: str
+    dir: str = ""
+    document: str = ""
+    anchor: str = ""
+    url: str = ""
+
+    def anchor_for(self, number: int) -> str:
+        template = self.anchor or f"{self.prefix.lower()}-{{number}}"
+        return template.format(number=number, prefix=self.prefix)
+
+
+@dataclass(frozen=True)
 class Remote:
     """Another project's record, cited from this one.
 
@@ -219,36 +248,92 @@ class Remote:
         name = "luria"
         repo = "dmarx/luria"             # GitHub owner/name
         ref  = "main"                    # branch or tag the links point at
-        dir  = "docs/decisions"          # where its documents live
+        dir  = "record/decisions.d"      # where its decisions live
         url  = "https://…/{code}.md"     # optional: overrides construction
 
     Everything but `repo` (or `url`) has a default, because the defaults are
-    Luria's own conventions — a remote that uses them needs one line."""
+    Luria's own conventions — a remote that uses them needs one line. A code
+    family with a different shape gets a `schemes` entry (`RemoteScheme`),
+    which wins over these remote-level settings for its own prefix.
+
+    A remote need not hold a Luria-shaped record at all (ADR-024). Give it a
+    `uid` pattern and its references are the prefix, the delimiter and
+    whatever the pattern matches — an arxiv id, a ticket key — constructed
+    through the `url` template, which can index the uid's capture groups by
+    position:
+
+        [luria.remotes.ARXIV]
+        uid = "(\\d{4})[.:](\\d{4,5})"
+        url = "https://arxiv.org/abs/{1}.{2}"   # {0} or {uid} is the whole tail
+    """
     prefix: str
     repo: str = ""
     ref: str = "main"
-    dir: str = "docs/decisions"
+    dir: str = "record/decisions.d"
     name: str = ""
     url: str = ""
+    # The delimiter between the prefix and the rest of the reference. "-" is
+    # the convention; a project whose uids themselves contain hyphens can move
+    # it out of the way.
+    delim: str = "-"
+    # unresolved-ok-block: ADR-032 — an illustrative code, not a citation
+    # A regex for the reference's tail. Unset means the Luria shape — a scheme
+    # code like `ADR-032`, normalised and constructed through the machinery
+    # below. Set, the tail is an opaque identifier: matched exactly, never
+    # normalised, constructed only through the `url` template.
+    uid: str = ""
+    schemes: dict[str, RemoteScheme] = field(default_factory=dict)
 
     @property
     def label(self) -> str:
         return self.name or self.repo or self.prefix
 
-    def base(self) -> str:
-        """The directory its documents live in, as a URL."""
-        return f"https://github.com/{self.repo}/blob/{self.ref}/{self.dir}".rstrip("/")
+    # unresolved-ok-block: ADR-032 — an illustrative spelling pair, not a citation
+    def canon(self, tail: str) -> str:
+        """The tail's one spelling. `ADR-32` and `ADR-032` name one document
+        in a scheme-shaped remote; a uid is already exact and stays put."""
+        if self.uid:
+            return tail
+        prefix, number = tail.rsplit("-", 1)
+        return f"{prefix.upper()}-{int(number):03d}"
+
+    def base(self, dir: str | None = None) -> str:
+        """A directory in the remote, as a URL."""
+        return (f"https://github.com/{self.repo}/blob/{self.ref}/"
+                f"{self.dir if dir is None else dir}").rstrip("/")
+
+    def scheme_for(self, code: str) -> RemoteScheme | None:
+        return self.schemes.get(code.rsplit("-", 1)[0].upper())
 
     def link(self, code: str, filename: str = "") -> str:
         """The URL for a foreign code, best available construction.
 
-        Three rungs, strongest first: an explicit `url` template; a filename
-        discovered from the remote (`luria remotes --refresh`), which is the
-        only thing that can resolve a title-slug name; and the code-only
-        convention (ADR-013), which is right whenever the remote follows it."""
+        A uid remote has exactly one rung — the `url` template, fed the whole
+        tail as {0}/{uid} and its capture groups by position (ADR-024).
+        Otherwise: per-scheme config wins (ADR-023); then an explicit
+        remote-level `url` template; a filename discovered from the remote
+        (`luria remotes --refresh`), which is the only thing that can resolve
+        a title-slug name; and the code-only convention (ADR-013), which is
+        right whenever the remote follows it."""
+        if self.uid:
+            if not self.url:
+                return ""
+            m = re.fullmatch(self.uid, code)
+            groups = m.groups() if m else ()
+            return self.url.format(code, *groups, uid=code, prefix=self.prefix)
+        prefix, number = code.rsplit("-", 1)
+        number = int(number)
+        scheme = self.scheme_for(code)
+        if scheme is not None:
+            if scheme.url:
+                return scheme.url.format(code=code, number=number, prefix=prefix)
+            if scheme.document and self.repo:
+                return (f"{self.base('')}/{scheme.document}"
+                        f"#{scheme.anchor_for(number)}")
+            if scheme.dir and self.repo:
+                return f"{self.base(scheme.dir)}/{filename or code + '.md'}"
         if self.url:
-            return self.url.format(code=code, number=int(code.rsplit("-", 1)[1]),
-                                   prefix=code.rsplit("-", 1)[0])
+            return self.url.format(code=code, number=number, prefix=prefix)
         if not self.repo:
             return ""
         return f"{self.base()}/{filename or code + '.md'}"
@@ -428,9 +513,21 @@ def load(root: Path | None = None) -> Config:
                 prefix.upper(),
                 repo=spec.get("repo", ""),
                 ref=spec.get("ref", "main"),
-                dir=spec.get("dir", "docs/decisions"),
+                dir=spec.get("dir", "record/decisions.d"),
                 name=spec.get("name", ""),
                 url=spec.get("url", ""),
+                delim=spec.get("delim", "-"),
+                uid=spec.get("uid", ""),
+                schemes={
+                    s.upper(): RemoteScheme(
+                        s.upper(),
+                        dir=sub.get("dir", ""),
+                        document=sub.get("document", ""),
+                        anchor=sub.get("anchor", ""),
+                        url=sub.get("url", ""),
+                    )
+                    for s, sub in spec.get("schemes", {}).items()
+                },
             )
             for prefix, spec in raw.get("remotes", {}).items()
         },
