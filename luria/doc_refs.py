@@ -333,6 +333,11 @@ def masked(text: str, path: Path = ANY_MD) -> list[bool]:
     # hyperlink's text, and the target is a URL/path.
     for m in LINK_RE.finditer(text):
         cover(m.start(), m.end())
+    # A wikilink is a typed reference with its own check and fixer pass
+    # (ADR-025) — the prose scanner reporting its inner code too would demand
+    # the same link twice.
+    for m in WIKILINK_RE.finditer(text):
+        cover(m.start(), m.end())
     # Shortcut reference links — `[ADR-919]` with an `[ADR-919]: …` definition
     # further down. Already a hyperlink; only the *undefined* ones are bare.
     labels = {m.group(1).strip().lower() for m in LINK_DEF_LABEL_RE.finditer(text)}
@@ -415,6 +420,101 @@ def _line_index(text: str):
 
 
 # ── Resolution ───────────────────────────────────────────────────────────
+
+
+# ── Wikilinks ────────────────────────────────────────────────────────────
+
+# `[[ADR-013]]`, `[[SG-DP-18]]`, `[[ARXIV-2403.05530|the Gemini report]]` —
+# the author asserting "this is a reference, link it" (ADR-025). No prose
+# heuristics apply inside the brackets, and one that resolves to nothing is a
+# lint violation rather than a silently-bare code: the request was explicit,
+# so the refusal must be too (DP-1).
+WIKILINK_RE = re.compile(r"\[\[([^\][|]+?)(?:\|([^\][]+))?\]\]")
+
+
+@dataclass(frozen=True)
+class Wikilink:
+    inner: str
+    label: str
+    start: int
+    end: int
+    line: int
+    target: str | None      # resolved URL/path, or None
+
+
+def wikilink_target(inner: str, source: Path) -> str | None:
+    """What `[[inner]]` links to, cited from `source`. Tries, in order: a
+    foreign code in any registered shape (ADR-016, ADR-024), a local scheme
+    code, and an issue number. The brackets are the cue, so the low-`#N`
+    ambiguity rule never applies here."""
+    cfg = current()
+    base = cfg.link_base(source)
+    parsed = remotes.parse_code(inner)
+    if parsed is not None:
+        return remotes.link(*parsed) or None
+    for scheme in cfg.schemes.values():
+        m = re.fullmatch(rf"{scheme.prefix}[- ]0*(\d+)", inner, re.IGNORECASE)
+        if not m:
+            continue
+        n = int(m.group(1))
+        if scheme.render == "document" and scheme.output:
+            anchor = f"{scheme.prefix.lower()}-{n}"
+            if scheme.output == cfg.design_principles:
+                anchor = dp_anchors().get(n) or anchor
+            if source == scheme.output:
+                return f"#{anchor}"
+            return f"{_relative(scheme.output, base)}#{anchor}"
+        target = scheme.documents().get(n)
+        if target is None or target == source:
+            return None
+        return _relative(target, base)
+    if m := re.fullmatch(r"#(\d+)", inner):
+        return cfg.issue_url.format(n=int(m.group(1))) if cfg.issue_url else None
+    return None
+
+
+def wikilinks(text: str, source: Path = ANY_MD) -> list[Wikilink]:
+    """Every `[[…]]` in prose, resolved where possible. Quoted regions are
+    specimens, comments are instructions, and frontmatter is data — except
+    the summary, which is prose here as everywhere (ADR-005)."""
+    skip = code_spans(text)
+    skip += [m.span() for m in COMMENT_RE.finditer(text)]
+    if fm := _frontmatter_span(text):
+        summary = summary_span(text)
+        if summary:
+            skip += [(fm[0], summary[0]), (summary[1], fm[1])]
+        else:
+            skip.append(fm)
+    out = []
+    for m in WIKILINK_RE.finditer(text):
+        if any(a <= m.start() < b for a, b in skip):
+            continue
+        inner = m.group(1).strip()
+        label = (m.group(2) or inner).strip()
+        out.append(Wikilink(inner, label, m.start(), m.end(),
+                            text.count("\n", 0, m.start()) + 1,
+                            wikilink_target(inner, source)))
+    return out
+
+
+def expand_wikilinks(text: str, source: Path) -> tuple[str, int]:
+    """Rewrite every resolvable wikilink as a markdown link (an `<a href>`
+    inside a raw-HTML block, where markdown wouldn't render). Unresolvable
+    ones are left in place for the lint to name."""
+    html = html_block_spans(text)
+    out, cursor, n = [], 0, 0
+    for w in wikilinks(text, source):
+        if w.target is None:
+            continue
+        out.append(text[cursor:w.start])
+        if in_html_block(w.start, html):
+            out.append(f'<a href="{w.target}">{w.label}</a>')
+        else:
+            out.append(f"[{w.label}]({w.target})")
+        cursor = w.end
+        n += 1
+    out.append(text[cursor:])
+    return "".join(out), n
 
 
 def adr_paths() -> dict[int, Path]:
@@ -552,8 +652,9 @@ def linkify(text: str, source: Path, adrs: dict[int, Path] | None = None,
     Returns the new text and the number of rewrites."""
     adrs = adr_paths() if adrs is None else adrs
     anchors = dp_anchors() if anchors is None else anchors
+    text, expanded = expand_wikilinks(text, source)
     refs = rewritable_refs(text, source, adrs, anchors)
-    return _apply(text, refs, source, adrs, anchors), len(refs)
+    return _apply(text, refs, source, adrs, anchors), len(refs) + expanded
 
 
 def _apply(text: str, refs: list[Ref], source: Path, adrs: dict[int, Path],
