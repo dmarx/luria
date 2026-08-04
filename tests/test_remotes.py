@@ -326,3 +326,85 @@ def test_url_ok_retires_when_the_construction_catches_up(project):
         "[UP-DP-18](https://github.com/o/r/blob/main/docs/design-principles.md#dp-18)\n")
     assert flagged == []                      # the link now matches construction
     assert len(stale) == 1                    # …so the annotation is done
+
+
+# ── uid remotes: not everything is a numbered scheme (ADR-024) ───────────
+
+
+ARXIV = (
+    '[luria.remotes.ARXIV]\n'
+    'uid = "(\\\\d{4})[.:](\\\\d{4,5})"\n'
+    'url = "https://arxiv.org/abs/{1}.{2}"\n'
+)
+
+
+def test_uid_remote_constructs_through_the_template(project):
+    with_remote(project, ARXIV)
+    assert remotes.resolve("ARXIV", "2403.05530") == "https://arxiv.org/abs/2403.05530"
+
+
+def test_uid_capture_groups_index_the_template_by_position(project):
+    """{1}, {2}… are the uid pattern's capture groups; {0}/{uid} is the whole
+    tail — so one template can restructure the identifier."""
+    with_remote(project, ARXIV)
+    assert remotes.resolve("ARXIV", "1234:5678") == "https://arxiv.org/abs/1234.5678"
+
+
+def test_uid_is_exact_never_normalised(project):
+    """`ADR-32` and `ADR-032` are one document; `2403.05530` is itself. A uid
+    must survive canonicalisation untouched — zero-padding an arxiv id would
+    quietly cite a different paper."""
+    with_remote(project, ARXIV)
+    remote = config.current().remotes["ARXIV"]
+    assert remote.canon("2403.05530") == "2403.05530"
+
+
+def test_the_delimiter_is_configurable(project):
+    with_remote(project,
+        '[luria.remotes.JIRA]\ndelim = ":"\nuid = "[A-Z]+-\\\\d+"\n'
+        'url = "https://example.atlassian.net/browse/{uid}"\n')
+    text = "tracked as JIRA:PROJ-42 upstream"
+    refs = remotes.references(text)
+    assert [r.composed for r in refs] == ["JIRA:PROJ-42"]
+    assert remotes.link(refs[0].remote, refs[0].tail).endswith("/browse/PROJ-42")
+
+
+def test_unconfigured_prefixes_do_not_match(project):
+    """The pattern is built from config: `FAKE-1234.5678` must not be read as
+    a namespace just because it is shaped like one."""
+    with_remote(project, ARXIV)
+    assert remotes.references("see FAKE-1234.5678 here") == []
+
+
+def test_uid_remote_without_a_template_constructs_nothing(project):
+    """One rung only — with no template there is nothing to guess with, and
+    "" is what makes ref-status report the citation as dangling (DP-1)."""
+    with_remote(project, '[luria.remotes.ARXIV]\nuid = "\\\\d{4}[.]\\\\d{4,5}"\n')
+    assert remotes.resolve("ARXIV", "2403.05530") == ""
+
+
+def test_lockfile_never_vetoes_a_uid_remote(project):
+    with_remote(project, ARXIV)
+    lockfile(project, {"ADR-032": "x.md"})
+    assert remotes.resolve("ARXIV", "2403.05530").endswith("/abs/2403.05530")
+
+
+def test_scheme_shaped_references_still_scan_beside_uid_remotes(project):
+    with_remote(project, ARXIV)
+    text = "per UP-ADR-032 and ARXIV-2403.05530"
+    assert [r.composed for r in remotes.references(text)] == [
+        "UP-ADR-032", "ARXIV-2403.05530"]
+
+
+def test_url_ok_covers_uid_remotes_too(project):
+    """A hand URL for a uid code is the same acknowledged state — the check
+    and the directive are shape-agnostic because both go through the remote's
+    own parser."""
+    with_remote(project, ARXIV)
+    flagged, stale = hand(project,
+        "[ARXIV-2403.05530](https://arxiv.org/pdf/2403.05530v2)\n")
+    assert len(flagged) == 1 and "ARXIV-2403.05530" in flagged[0]
+    flagged, stale = hand(project,
+        "<!-- url-ok: ARXIV-2403.05530 — the v2 PDF specifically -->\n"
+        "[ARXIV-2403.05530](https://arxiv.org/pdf/2403.05530v2)\n")
+    assert flagged == [] and stale == []

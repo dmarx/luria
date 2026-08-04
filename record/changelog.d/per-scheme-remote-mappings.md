@@ -13,6 +13,13 @@
   existed.
 - `luria remotes` labels which construction answered per code — "a document
   anchor, per the scheme" — alongside the existing rung labels.
+- **uid remotes** ([ADR-024](record/decisions.d/ADR-024.md)): a remote can
+  declare its references' shape outright — a `uid` regex, a configurable
+  `delim`, and a `url` template that indexes the uid's capture groups by
+  position — so `ARXIV-2403.05530` linkifies, lints and `url-ok`s like any
+  foreign code. A uid is exact (never zero-padded), has exactly one
+  resolution rung (the template; no lockfile, no convention), and an
+  unconfigured prefix still never matches.
 
 ### Changed
 

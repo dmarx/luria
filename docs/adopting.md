@@ -159,6 +159,21 @@ Three things worth knowing before you rely on it:
   The anchor template covers remotes on current conventions; a legacy remote
   whose anchors are heading-derived still needs a hand URL with a `url-ok`,
   now excusing only the anchor.
+- **A remote need not hold a Luria record at all.** Give it a `uid` pattern
+  and a `url` template, and its references are the prefix, a configurable
+  delimiter, and whatever the pattern matches
+  ([ADR-024](../record/decisions.d/ADR-024.md)) — the fixer, the lint and
+  `url-ok` treat them like any other foreign code:
+
+  ```toml
+  [luria.remotes.ARXIV]
+  uid = "(\\d{4})[.:](\\d{4,5})"
+  url = "https://arxiv.org/abs/{1}.{2}"   # capture groups by position
+  ```
+
+  A bare `ARXIV-2403.05530` in prose then linkifies through the template. A
+  uid is never normalised, and a uid remote without a template constructs
+  nothing rather than guessing.
 - **A citation can land before its URL does.** If the remote hasn't adopted
   the code-only filenames yet, register it anyway and cite it: naming the
   document is the durable half, and the links start working when the remote

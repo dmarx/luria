@@ -254,18 +254,48 @@ class Remote:
     Everything but `repo` (or `url`) has a default, because the defaults are
     Luria's own conventions — a remote that uses them needs one line. A code
     family with a different shape gets a `schemes` entry (`RemoteScheme`),
-    which wins over these remote-level settings for its own prefix."""
+    which wins over these remote-level settings for its own prefix.
+
+    A remote need not hold a Luria-shaped record at all (ADR-024). Give it a
+    `uid` pattern and its references are the prefix, the delimiter and
+    whatever the pattern matches — an arxiv id, a ticket key — constructed
+    through the `url` template, which can index the uid's capture groups by
+    position:
+
+        [luria.remotes.ARXIV]
+        uid = "(\\d{4})[.:](\\d{4,5})"
+        url = "https://arxiv.org/abs/{1}.{2}"   # {0} or {uid} is the whole tail
+    """
     prefix: str
     repo: str = ""
     ref: str = "main"
     dir: str = "record/decisions.d"
     name: str = ""
     url: str = ""
+    # The delimiter between the prefix and the rest of the reference. "-" is
+    # the convention; a project whose uids themselves contain hyphens can move
+    # it out of the way.
+    delim: str = "-"
+    # unresolved-ok-block: ADR-032 — an illustrative code, not a citation
+    # A regex for the reference's tail. Unset means the Luria shape — a scheme
+    # code like `ADR-032`, normalised and constructed through the machinery
+    # below. Set, the tail is an opaque identifier: matched exactly, never
+    # normalised, constructed only through the `url` template.
+    uid: str = ""
     schemes: dict[str, RemoteScheme] = field(default_factory=dict)
 
     @property
     def label(self) -> str:
         return self.name or self.repo or self.prefix
+
+    # unresolved-ok-block: ADR-032 — an illustrative spelling pair, not a citation
+    def canon(self, tail: str) -> str:
+        """The tail's one spelling. `ADR-32` and `ADR-032` name one document
+        in a scheme-shaped remote; a uid is already exact and stays put."""
+        if self.uid:
+            return tail
+        prefix, number = tail.rsplit("-", 1)
+        return f"{prefix.upper()}-{int(number):03d}"
 
     def base(self, dir: str | None = None) -> str:
         """A directory in the remote, as a URL."""
@@ -278,11 +308,19 @@ class Remote:
     def link(self, code: str, filename: str = "") -> str:
         """The URL for a foreign code, best available construction.
 
-        Per-scheme config wins (ADR-023); then an explicit remote-level `url`
-        template; a filename discovered from the remote (`luria remotes
-        --refresh`), which is the only thing that can resolve a title-slug
-        name; and the code-only convention (ADR-013), which is right whenever
-        the remote follows it."""
+        A uid remote has exactly one rung — the `url` template, fed the whole
+        tail as {0}/{uid} and its capture groups by position (ADR-024).
+        Otherwise: per-scheme config wins (ADR-023); then an explicit
+        remote-level `url` template; a filename discovered from the remote
+        (`luria remotes --refresh`), which is the only thing that can resolve
+        a title-slug name; and the code-only convention (ADR-013), which is
+        right whenever the remote follows it."""
+        if self.uid:
+            if not self.url:
+                return ""
+            m = re.fullmatch(self.uid, code)
+            groups = m.groups() if m else ()
+            return self.url.format(code, *groups, uid=code, prefix=self.prefix)
         prefix, number = code.rsplit("-", 1)
         number = int(number)
         scheme = self.scheme_for(code)
@@ -478,6 +516,8 @@ def load(root: Path | None = None) -> Config:
                 dir=spec.get("dir", "record/decisions.d"),
                 name=spec.get("name", ""),
                 url=spec.get("url", ""),
+                delim=spec.get("delim", "-"),
+                uid=spec.get("uid", ""),
                 schemes={
                     s.upper(): RemoteScheme(
                         s.upper(),

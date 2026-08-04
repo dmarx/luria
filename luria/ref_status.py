@@ -143,19 +143,23 @@ def _codes(spec: str) -> tuple[set[str], str]:
     remote's principle, and reading the tail out of the middle of the composed
     code would have the validator check the wrong project (ADR-016)."""
     codes: set[str] = set()
-    if (remote_re := remotes.pattern()) is not None:
-        for m in remote_re.finditer(spec):
-            codes.add(f"{m.group('remote')}-{remotes.normalise(m.group('code'))}")
-        spec = remote_re.sub(" ", spec)
+    refs = remotes.references(spec)
+    for ref in refs:
+        codes.add(ref.composed)
+    for ref in sorted(refs, key=lambda r: r.start, reverse=True):
+        spec = spec[:ref.start] + " " * (ref.end - ref.start) + spec[ref.end:]
     codes |= {f"{p.upper()}-{int(n):03d}" for p, n in CODE_RE.findall(spec)}
     return codes, spec
 
 
 def _exists(code: str, known: set[str]) -> bool:
-    """Whether a code names something. A composed one asks the remote."""
-    prefix, _, tail = code.partition("-")
-    if prefix.upper() in current().remotes:
-        return bool(remotes.resolve(prefix, tail))
+    """Whether a code names something. A composed one asks the remote —
+    parsed by the remote's own delimiter and tail shape, not by assuming a
+    hyphen (ADR-024)."""
+    parsed = remotes.parse_code(code)
+    if parsed is not None:
+        remote, tail = parsed
+        return bool(remotes.link(remote, tail))
     return code in known
 
 
@@ -285,13 +289,13 @@ def scan(files: list[Path] | None = None, docs: dict[str, Doc] | None = None) ->
         # reading a foreign code out of the middle of it (ADR-016) — but a
         # foreign code that resolves to nothing is still a dangling reference,
         # so it is recorded on the way past rather than dropped.
-        if (remote_re := remotes.pattern()) is not None:
+        if current().remotes:
             spans = []
-            for m in remote_re.finditer(text):
-                spans.append(m.span())
-                if not remotes.resolve(m.group("remote"), m.group("code")):
-                    code = f"{m.group('remote')}-{remotes.normalise(m.group('code'))}"
-                    where = text.count("\n", 0, m.start()) + 1
+            for ref in remotes.references(text):
+                spans.append((ref.start, ref.end))
+                if not remotes.link(ref.remote, ref.tail):
+                    code = ref.composed
+                    where = text.count("\n", 0, ref.start) + 1
                     excuse = next((a for a in usable_dangling
                                    if code in a.codes and a.covers(where)), None)
                     result.dangling.setdefault(code, []).append(
