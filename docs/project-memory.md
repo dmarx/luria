@@ -20,7 +20,7 @@ place on its first try.
 | [`principles/`](design-principles.md) | standing **values**, numbered, cited as "DP-2" instead of re-argued | *have we re-derived this reasoning more than once?* |
 | [`decisions/`](decisions/README.md) | a **choice among alternatives** at a point in time, one file each | *did we reject an alternative, or set a constraint a future edit could violate?* |
 | `changelog.d/` fragments | **what changed**, operator-facing, terse | *would someone running or using this notice?* |
-| `devlog.d/` fragments | **how it went** — including failed approaches and wrong theories, which are the reusable part | *will a future debugger want the narrative?* |
+| `devlog.d/` entries | **how it went** — including failed approaches and wrong theories, which are the reusable part | *will a future debugger want the narrative?* |
 
 The traffic rules between them are [ADR-001](decisions/ADR-001.md): principles
 are durable but **not sacred**; a decision whose *choice* changes is superseded
@@ -110,12 +110,24 @@ lint refuses hand edits.
 
 Two kinds, and the difference is *whether the sources survive*
 ([ADR-012](decisions/ADR-012.md)). A **collected**
-view — the changelog, the devlog — consumes its fragments: they are deleted, the
-view accumulates, and it can only ever be appended to. A **generated** view —
-the decision index, the principles document — is a pure function of sources that
-persist, rebuilt from scratch every time, which is the only reason a stale one
-can be *detected*. Prefer generation where the data is derivable; there is then
-no collection step to forget.
+view — the changelog — consumes its fragments: they are deleted, the view
+accumulates, and it can only ever be appended to. A **generated** view — the
+decision index, the principles document, the devlog — is a pure function of
+sources that persist, rebuilt from scratch every time, which is the only reason
+a stale one can be *detected*. Prefer generation where the data is derivable;
+there is then no collection step to forget.
+
+The devlog is the case where that choice was got wrong first and corrected
+([ADR-020](decisions/ADR-020.md)). It looked like a changelog and was collected
+like one, but a changelog entry is a claim about a release and a devlog entry is
+a **dated observation** — true when written, and still true. Consuming it throws
+away the only copy of something that never expires. So the devlog is a
+**journal**: entries are filed at their authoring timestamp
+(`devlog.d/2026/08/03/211926.md`) with `luria journal new "A title"`, they
+persist, and `docs/devlog/` is one generated book per month with a contents
+list built from the titles. The timestamp is also the ordering, so what the log
+says happened first is a property of the record rather than of the order the
+branches landed.
 
 The reasoning is [DP-2](design-principles.md#dp-2): a file every contribution must
 append to is a *lock*. Concurrent branches collide in it contentlessly, and
@@ -169,7 +181,7 @@ it. This page is what the bootloader points at.
 ## 6. Leaving knowledge behind: the checklist
 
 - [ ] `changelog.d/` fragment for anything an operator or user would notice.
-- [ ] `devlog.d/` fragment if the work *taught* something — and record wrong
+- [ ] `luria journal new "…"` if the work *taught* something — and record wrong
       theories with why they were wrong; the dead ends are what the next
       debugger needs most.
 - [ ] A decision if you rejected an alternative, chose a constraint, or made

@@ -290,6 +290,8 @@ def outputs() -> dict[Path, str]:
         out[cfg.index] = render_index(docs, tags)
         for tag, meta in tags:
             out[cfg.tag_dir / f"{tag}.md"] = render_tag_page(tag, meta, docs)
+    from . import journal
+    out.update(journal.outputs())
     return out
 
 
@@ -328,8 +330,11 @@ def main() -> int:
     # Name every scheme, not just the decisions: a project that adds one wants
     # to see it counted, and a scheme silently rendering nothing is the failure
     # this line exists to make visible (DP-1).
-    counted = ", ".join(f"{len(load_scheme(s))} {p}s"
-                        for p, s in sorted(cfg.schemes.items()))
+    from . import journal
+    filed = {n: len(journal.entries(j)) for n, j in sorted(cfg.journals.items())}
+    counted = ", ".join(
+        [f"{len(load_scheme(s))} {p}s" for p, s in sorted(cfg.schemes.items())]
+        + [f"{c} {n} entr{'y' if c == 1 else 'ies'}" for n, c in filed.items()])
     print(f"Wrote {len(rendered)} file(s) from {counted}.")
     # The README's badge counts are derived from the same frontmatter, so they
     # are regenerated here rather than by a command someone has to remember

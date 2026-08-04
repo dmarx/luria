@@ -13,7 +13,10 @@ particular project. It reads `luria.toml` from the project root:
 
     [luria.fragments]
     "changelog.d" = "CHANGELOG.md"      # collected into…
-    "devlog.d" = "docs/devlog.md"
+
+    [luria.journals.devlog]
+    dir = "devlog.d"                    # …whereas a journal's entries persist
+    output = "docs/devlog"
 
     [luria.code]
     globs = ["src/**/*.py", "*.md"]
@@ -53,13 +56,14 @@ DEFAULTS: dict = {
     },
     "fragments": {
         "changelog.d": "CHANGELOG.md",
-        "devlog.d": "docs/devlog.md",
     },
     "code": {
         "globs": [],
         # Dated records: true about the day they were written, forever. Scanning
-        # them for stale references produces permanent, unactionable noise.
-        "historical": ["CHANGELOG.md", "docs/devlog.md"],
+        # them for stale references produces permanent, unactionable noise. A
+        # journal is one too, and is covered without being listed here — see
+        # `Config.is_historical`.
+        "historical": ["CHANGELOG.md"],
     },
     "schemes": {
         "ADR": {"dir": "docs/decisions", "active": "Active", "render": "index"},
@@ -68,6 +72,17 @@ DEFAULTS: dict = {
     # reference then composes: `LU-ADR-013` is that remote's decision 13
     # (ADR-016).
     "remotes": {},
+    # Dated entries that persist and render into books (ADR-020). Unlike a
+    # scheme, a journal entry has no number — its identity is when it was
+    # written — and unlike a fragment directory, its sources are never consumed.
+    "journals": {
+        "devlog": {
+            "dir": "devlog.d",
+            "output": "docs/devlog",
+            "granularity": "month",
+            "title": "Development log",
+        },
+    },
     "stale_days": 90,
 }
 
@@ -203,6 +218,36 @@ class Remote:
 
 
 @dataclass(frozen=True)
+class Journal:
+    """Dated entries that persist, rendered into books (ADR-020).
+
+        [luria.journals.devlog]
+        dir         = "devlog.d"        # entries, partitioned yyyy/mm/dd/
+        output      = "docs/devlog"     # a directory of books plus an index
+        granularity = "month"           # year | month | day
+        title       = "Development log"
+        blurb       = "…"               # optional prose for the index
+
+    The difference from a fragment directory is that nothing is consumed: an
+    entry was true when written and stays true, so the view is *generated* from
+    sources that persist rather than collected from sources that are deleted."""
+    name: str
+    dir: Path
+    output: Path
+    granularity: str = "month"
+    title: str = "Journal"
+    blurb: str = ""
+    _root: Path = Path(".")
+
+    @property
+    def rel_dir(self) -> str:
+        try:
+            return str(self.dir.relative_to(self._root))
+        except ValueError:
+            return self.dir.name
+
+
+@dataclass(frozen=True)
 class Config:
     root: Path
     issue_url: str
@@ -215,6 +260,7 @@ class Config:
     historical: frozenset[Path]
     schemes: dict[str, Scheme]
     remotes: dict[str, Remote]
+    journals: dict[str, Journal]
     stale_days: int
     _raw: dict = field(default_factory=dict, repr=False)
 
@@ -248,7 +294,27 @@ class Config:
         build undoes it — so the reference fixer skips them."""
         if path == self.index or path.parent == self.tag_dir:
             return True
+        if any(path.parent == j.output for j in self.journals.values()):
+            return True
         return any(s.output == path for s in self.schemes.values())
+
+    def is_historical(self, path: Path) -> bool:
+        """A dated record: true about the day it was written, and never
+        updated to stay true. Scanning one for stale references produces
+        permanent, unactionable rows, so the status report skips it.
+
+        Three shapes qualify: a file listed in `[luria.code] historical`, an
+        uncollected fragment (it is about to *become* one), and anything in a
+        journal — its entries and the books they render into alike. The last
+        one is why this is a method rather than the set-membership test it used
+        to be: a journal's entries are nested, so `path.parent` is not the
+        journal directory."""
+        if path in self.historical:
+            return True
+        if path.parent in {self.root / d for d in self.fragments}:
+            return True
+        return any(j.dir in path.parents or j.output in path.parents
+                   for j in self.journals.values())
 
     def link_base(self, path: Path) -> Path:
         """The directory a link written in `path` resolves against.
@@ -265,6 +331,9 @@ class Config:
             if scheme.render == "document" and scheme.output \
                     and path.parent == scheme.dir:
                 return scheme.output.parent
+        for journal in self.journals.values():
+            if journal.dir in path.parents:
+                return journal.output
         return path.parent
 
     def rel(self, path: Path) -> str:
@@ -311,6 +380,18 @@ def load(root: Path | None = None) -> Config:
                 url=spec.get("url", ""),
             )
             for prefix, spec in raw.get("remotes", {}).items()
+        },
+        journals={
+            name: Journal(
+                name,
+                dir=root / spec["dir"],
+                output=root / spec["output"],
+                granularity=spec.get("granularity", "month"),
+                title=spec.get("title", name.title()),
+                blurb=spec.get("blurb", ""),
+                _root=root,
+            )
+            for name, spec in raw.get("journals", {}).items()
         },
         stale_days=int(raw.get("stale_days", 90)),
         _raw=raw,

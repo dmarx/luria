@@ -29,9 +29,10 @@ rewrite is verified against the YAML rather than assumed safe.
 Link bases
 ----------
 Links are written relative to where the text is *rendered*, which is not always
-where the file lives: `changelog.d/*.md` is assembled into `/CHANGELOG.md` and
-`devlog.d/*.md` into `docs/devlog.md` (ADR-002). `link_base()` maps a
-path to the directory its links must resolve from.
+where the file lives: `changelog.d/*.md` is assembled into `/CHANGELOG.md`
+(ADR-002), and a journal entry — however deep in `devlog.d/2026/08/03/` —
+renders into `docs/devlog/` (ADR-020). `link_base()` maps a path to the
+directory its links must resolve from.
 """
 
 # unresolved-ok-file: ADR-919, ADR-157 — illustrative codes in this module's prose
@@ -585,6 +586,9 @@ def doc_files() -> list[Path]:
     paths += sorted(cfg.docs.rglob("*.md")) + sorted(cfg.docs.rglob("*.stub"))
     for fragment_dir in cfg.fragments:
         paths += sorted((cfg.root / fragment_dir).glob("*.md"))
+    # A journal's entries are nested (`yyyy/mm/dd/`), so rglob rather than glob.
+    for journal in cfg.journals.values():
+        paths += sorted(journal.dir.rglob("*.md"))
     seen, out = set(), []
     for path in paths:
         if path.exists() and path not in seen and not cfg.is_generated(path):

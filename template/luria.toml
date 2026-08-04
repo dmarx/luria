@@ -15,7 +15,17 @@ reports = "build/doc-reports"
 # (ADR-005), so this mapping is load-bearing, not just bookkeeping.
 [luria.fragments]
 "changelog.d" = "CHANGELOG.md"
-"devlog.d" = "docs/devlog.md"
+
+# A journal is the other half of the split: its entries are dated observations
+# that stay true, so they PERSIST and the books are generated from them, rather
+# than being consumed the way a changelog fragment is (ADR-020). Entries live at
+# `<dir>/yyyy/mm/dd/hhmmss.md` — file one with `luria journal new "A title"`.
+# `granularity` is year | month | day; pick it from how fast you actually write.
+[luria.journals.devlog]
+dir = "devlog.d"
+output = "docs/devlog"
+granularity = "month"
+title = "Development log"
 
 # Source files to scan for references to retired decisions. A decision number in
 # a code comment is the strongest form of the claim being checked — it is the
@@ -23,8 +33,8 @@ reports = "build/doc-reports"
 [luria.code]
 globs = []
 # Dated records: true about the day they were written, forever. Scanning them
-# produces permanent, unactionable noise.
-historical = ["CHANGELOG.md", "docs/devlog.md"]
+# produces permanent, unactionable noise. Journals are covered automatically.
+historical = ["CHANGELOG.md"]
 
 # A referable document family: a prefix, a directory, the status that means "in
 # force", and how its view is rendered — `index` when the documents are browsed
