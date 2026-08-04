@@ -115,6 +115,81 @@ def resolve(remote_prefix: str, code: str) -> str:
     return link(remote, code) if remote else ""
 
 
+# ── Hand-written URLs ────────────────────────────────────────────────────
+
+URL_OK = "url-ok"
+
+
+def hand_links(files: list[Path] | None = None
+               ) -> tuple[list[str], list[str]]:
+    """Links whose label is a composed foreign code but whose target is not
+    the URL Luria would construct — with the `url-ok:` annotations that
+    acknowledge the deliberate ones.
+
+    Construction has real limits: a remote's principles may be sections of one
+    document, which no filename convention can address, so a hand-written URL
+    is sometimes the only correct citation. It is also a hand-maintained
+    projection ([DP-3](../docs/design-principles.md#dp-3)) frozen at writing
+    time — if the remote later adopts a convention or the lockfile learns the
+    real filename, nothing updates it. So each one is either acknowledged or
+    reported (ADR-007): never an error, never silent.
+
+    Returns (flagged, stale): unacknowledged hand links, and `url-ok`
+    directives that no longer acknowledge anything."""
+    from . import directives, doc_refs, ref_status
+    regex = pattern()
+    if regex is None:
+        return [], []
+    link_re = re.compile(rf"\[({regex.pattern})\]\(([^)\s]+)\)")
+    cfg = current()
+    flagged: list[str] = []
+    stale: list[str] = []
+    for path in files if files is not None else ref_status.scanned_files():
+        try:
+            text = path.read_text()
+        except (OSError, UnicodeDecodeError):
+            continue
+        quoted = doc_refs.code_spans(text) if path.suffix == ".md" else []
+        found = directives.find(path, text, {URL_OK})
+        used: set[tuple[int, str]] = set()
+        for m in link_re.finditer(text):
+            if any(a <= m.start() < b for a, b in quoted):
+                continue                      # a quotation, not a citation
+            code = f"{m.group('remote')}-{normalise(m.group('code'))}"
+            target = m.group(m.re.groups)     # last group: the link target
+            constructed = resolve(m.group("remote"), m.group("code"))
+            if target == constructed:
+                continue
+            line = text.count("\n", 0, m.start()) + 1
+            ack = next(
+                (d for d in found if d.covers(line)
+                 and any(_same_code(a, code) for a in d.args)), None)
+            if ack is not None:
+                for a in ack.args:
+                    if _same_code(a, code):
+                        used.add((ack.line, a))
+                continue
+            flagged.append(
+                f"{cfg.rel(path)}:{line}: {code} links to a hand-written URL "
+                f"(construction would say: {constructed or 'nothing — not in the lockfile'})")
+        for d in found:
+            problem = directives.problems(d)
+            for arg in d.args:
+                if problem or (d.line, arg) not in used:
+                    stale.append(
+                        f"{cfg.rel(path)}:{d.line}: `url-ok` names {arg}, "
+                        "which acknowledges no hand-written link here")
+    return flagged, stale
+
+
+def _same_code(arg: str, code: str) -> bool:
+    try:
+        prefix, tail = arg.split("-", 1)
+        return f"{prefix.upper()}-{normalise(tail)}" == code
+    except ValueError:
+        return False
+
+
 # ── Discovery ────────────────────────────────────────────────────────────
 
 FILENAME_RE = re.compile(r"^([A-Za-z]{2,10})-0*(\d{1,4})(?:-[^/]*)?\.md$")

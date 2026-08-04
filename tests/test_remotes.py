@@ -188,3 +188,72 @@ def test_discovery_says_why_it_found_nothing(project):
     config.reset()
     found, how = remotes.discover(config.current().remotes["UP"])
     assert found == {} and "no `repo` configured" in how
+
+
+# ── Hand-written URLs (url-ok) ───────────────────────────────────────────
+
+
+def hand(project, body: str, name: str = "notes.md"):
+    page = project / name
+    page.write_text(body)
+    return remotes.hand_links([page])
+
+
+def test_hand_written_url_is_reported(project):
+    """A hand URL is sometimes the only correct citation — and it is frozen at
+    writing time, so it is reported until acknowledged, never silently kept."""
+    with_remote(project)
+    flagged, stale = hand(project, "[UP-ADR-032](https://example.test/elsewhere.md)\n")
+    assert len(flagged) == 1
+    # Names the code, the fact, and what construction would have said (DP-1).
+    assert "UP-ADR-032" in flagged[0] and "hand-written" in flagged[0]
+    assert "docs/decisions/ADR-032.md" in flagged[0]
+    assert stale == []
+
+
+def test_constructed_url_is_not_reported(project):
+    with_remote(project)
+    flagged, _ = hand(project,
+        "[UP-ADR-032](https://github.com/o/r/blob/main/docs/decisions/ADR-032.md)\n")
+    assert flagged == []
+
+
+def test_url_ok_acknowledges_the_link(project):
+    with_remote(project)
+    flagged, stale = hand(project,
+        "<!-- url-ok-block: UP-ADR-032 — their principles are one document -->\n"
+        "\n"
+        "[UP-ADR-032](https://example.test/elsewhere.md#anchor)\n")
+    assert flagged == [] and stale == []
+
+
+def test_url_ok_matches_unpadded_codes(project):
+    """`UP-ADR-32` and `UP-ADR-032` are one document — the annotation should
+    not care which spelling either side used."""
+    with_remote(project)
+    flagged, stale = hand(project,
+        "[UP-ADR-32](https://example.test/x.md) <!-- url-ok: UP-ADR-032 — deliberate -->\n")
+    assert flagged == [] and stale == []
+
+
+def test_unused_url_ok_is_stale(project):
+    """A directive that silently does nothing is worse than no directive."""
+    with_remote(project)
+    _, stale = hand(project, "<!-- url-ok: UP-ADR-032 — nothing here -->\n")
+    assert len(stale) == 1 and "acknowledges no hand-written link" in stale[0]
+
+
+def test_url_ok_on_a_constructed_link_is_stale(project):
+    """The inverted validity check, same as `unresolved-ok`: acknowledging a
+    link that matches the construction excuses nothing."""
+    with_remote(project)
+    _, stale = hand(project,
+        "<!-- url-ok: UP-ADR-032 — was hand-written once -->\n"
+        "[UP-ADR-032](https://github.com/o/r/blob/main/docs/decisions/ADR-032.md)\n")
+    assert len(stale) == 1
+
+
+def test_a_quoted_hand_link_is_a_specimen_not_a_citation(project):
+    with_remote(project)
+    flagged, _ = hand(project, "quoting `[UP-ADR-032](https://x.test/y.md)` here\n")
+    assert flagged == []

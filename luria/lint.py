@@ -19,13 +19,14 @@ Checks (each one fails the build):
    writes exactly the links this check demands.
 
 It also prints WARNINGS, which never affect the exit code (ADR-007): references
-to retired documents, codes that resolve to no document at all, directives that
-no longer apply, and a count of undecided decisions. Citing a `Rejected`
+to retired documents, codes that resolve to no document at all, remote links
+whose URL is hand-written rather than constructed, directives that no longer
+apply, and a count of undecided decisions. Citing a `Rejected`
 decision — or leaving one `Proposed`, or naming another project's LU-ADR-013 — is
 often right, so none can be an error; all should be visible. `luria ref-status`
-and `luria pending` give the detail, and an `inactive-ok:` / `unresolved-ok:`
-comment acknowledges a deliberate one so only the unconsidered ones stay
-listed.
+and `luria pending` give the detail, and an `inactive-ok:` / `unresolved-ok:` /
+`url-ok:` comment acknowledges a deliberate one so only the unconsidered ones
+stay listed.
 
 Exit 0 when clean; exit 1 with one line per violation.
 """
@@ -37,7 +38,7 @@ import re
 import sys
 
 from . import adr_index as builder
-from . import adr_pending, badges, doc_refs, journal, ref_status
+from . import adr_pending, badges, doc_refs, journal, ref_status, remotes
 from .config import current
 
 # The closed status vocabulary (ADR-003). `Active` is the in-force state; the
@@ -234,8 +235,19 @@ def report_warnings() -> None:
         for line in loose:
             print(f"  {line}", file=sys.stderr)
 
+    # A hand-written URL where one would be constructed is legitimate — and
+    # frozen at writing time, so the deliberate ones are acknowledged
+    # (`url-ok:`) and the rest are listed.
+    hand, stale_urls = remotes.hand_links()
+    if hand:
+        print(f"luria: {len(hand)} link(s) hand-written where a URL would be "
+              "constructed (`url-ok:` acknowledges a deliberate one)",
+              file=sys.stderr)
+        for line in hand:
+            print(f"  {line}", file=sys.stderr)
+
     # A directive that silently does nothing is worse than no directive.
-    stale = ref_status.stale_annotations()
+    stale = ref_status.stale_annotations() + stale_urls
     for path in doc_refs.doc_files():
         stale += doc_refs.directive_problems(path, path.read_text())
     if stale:

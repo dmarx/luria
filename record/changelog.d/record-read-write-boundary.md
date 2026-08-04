@@ -34,6 +34,12 @@
   A structural signal beats a documentary one; the read/write boundary is the
   worked application.
 
+- A new comment directive, `url-ok` — a link whose label is a composed
+  foreign code (`SG-DP-18`) but whose URL is hand-written rather than
+  constructed is reported as a warning until acknowledged, because a hand URL
+  is frozen at writing time. Same shape and scope rules as every other
+  directive; stale acknowledgements report themselves.
+
 ### Fixed
 
 - The README badges' link target is derived from configuration instead of a

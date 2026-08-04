@@ -258,11 +258,14 @@ application, and its payoff rung is a lint: a view directory holds only what
 the generator wrote, so a hand edit there fails with the polarity
 [DP-3](design-principles.md#dp-3) demands.
 
-The sibling claim, from the pilot: [SG-DP-18, "the affordance is the
-contract"](https://github.com/dmarx/strata-g/blob/main/docs/design-principles.md#18-the-affordance-is-the-contract)
-— an affordance must not *lie*; what a control suggests is what the action
-does, verified from the same inputs. That principle binds affordances to the
-truth. This one is its complement about *reach*: affordances are the widest
-channel an artifact has — spend them, don't merely avoid falsifying them.
+<!-- url-ok-block: SG-DP-18 — strata-g's principles are sections of one document, so there is no file for a constructed URL to point at -->
+
+The sibling claim, from the pilot:
+[SG-DP-18](https://github.com/dmarx/strata-g/blob/main/docs/design-principles.md#18-the-affordance-is-the-contract),
+"the affordance is the contract" — an affordance must not *lie*; what a
+control suggests is what the action does, verified from the same inputs. That
+principle binds affordances to the truth. This one is its complement about
+*reach*: affordances are the widest channel an artifact has — spend them,
+don't merely avoid falsifying them.
 
 *v1 · shaped by [ADR-012](../record/decisions.d/ADR-012.md), [ADR-013](../record/decisions.d/ADR-013.md), [ADR-021](../record/decisions.d/ADR-021.md) · origin: An inventory of one repository's layout found the same rules expressed structurally in some places and not at all in others — two source containers marked `.d` and two unmarked, a generated document beside its own sources, an index buried under the things it indexes, and `README.md` meaning "edit me" in one directory and "never edit me" in the next. The layout had been shaping attention the whole time; nobody had been steering it*

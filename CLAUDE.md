@@ -77,6 +77,7 @@ report. The suffix decides the scope, uniformly, and a directive is one line:
 <!-- inactive-ok-block: ADR-012 — this whole paragraph -->     the block it sits in
 <!-- inactive-ok-file: ADR-012 — this page is that history --> the whole document
 <!-- unresolved-ok: ADR-777 — a fixture code, not a real one --> names nothing on purpose
+<!-- url-ok: SG-DP-18 — no file for the construction to point at --> a hand-written remote URL
 ```
 
 `unresolved-ok` is for a code that resolves to **no document here**: a fixture
