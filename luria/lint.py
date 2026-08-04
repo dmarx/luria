@@ -17,6 +17,9 @@ Checks (each one fails the build):
 4. **Bare references** — a document code, a design principle or an issue number
    cited in prose without being a hyperlink (ADR-005). `luria link --fix`
    writes exactly the links this check demands.
+5. **Wikilinks** — a `[[CODE]]` is the author asserting a reference (ADR-025):
+   resolvable ones await `luria link --fix`; unresolvable ones are an error
+   the fixer cannot clear, because the request was explicit.
 
 It also prints WARNINGS, which never affect the exit code (ADR-007): references
 to retired documents, codes that resolve to no document at all, remote links
@@ -196,6 +199,26 @@ def check_generated_index(errors: list[str]) -> None:
                       "run `luria index`")
 
 
+def check_wikilinks(errors: list[str]) -> None:
+    """A wikilink is the author asserting "this is a reference" (ADR-025), so
+    both failure modes are violations, with different remedies: a resolvable
+    one just hasn't been fixed yet, and an unresolvable one is a request the
+    machinery cannot honour — which must be said, not skipped (DP-1)."""
+    cfg = current()
+    for path in doc_refs.doc_files():
+        text = path.read_text()
+        for w in doc_refs.wikilinks(text, path):
+            rel = cfg.rel(path)
+            if w.target is None:
+                errors.append(
+                    f"{rel}:{w.line}: [[{w.inner}]] resolves to nothing this "
+                    "project can link — a typo, an unregistered prefix, or a "
+                    "self-link")
+            else:
+                errors.append(f"{rel}:{w.line}: [[{w.inner}]] is not yet a "
+                              "link — run `luria link --fix`")
+
+
 def check_bare_refs(errors: list[str]) -> None:
     """A reference the reader can't follow is a reference they have to grep for.
     Document codes, design principles and issue numbers are hyperlinks in prose
@@ -272,6 +295,7 @@ def main() -> int:
     check_journals(errors)
     check_version_history(errors)
     check_bare_refs(errors)
+    check_wikilinks(errors)
     report_warnings()
     if errors:
         print(f"luria: {len(errors)} violation(s)", file=sys.stderr)
