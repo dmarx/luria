@@ -29,7 +29,20 @@ from pathlib import Path
 
 from .config import CONFIG_NAME, find_root
 
-TEMPLATE = Path(__file__).resolve().parent.parent / "template"
+def _template_dir() -> Path:
+    """The scaffold's location, which depends on how Luria arrived.
+
+    Installed from a wheel, the template ships inside the package
+    (`luria/template/`, ADR-027); in a checkout it sits at the repository
+    top level, where a visitor browses it (ADR-021). Packaged wins when both
+    exist, because an installed Luria should scaffold what it shipped."""
+    packaged = Path(__file__).resolve().parent / "template"
+    if packaged.is_dir():
+        return packaged
+    return Path(__file__).resolve().parent.parent / "template"
+
+
+TEMPLATE = _template_dir()
 
 
 def plan(into: Path) -> list[tuple[Path, Path]]:
