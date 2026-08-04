@@ -272,8 +272,9 @@ def scan(files: list[Path] | None = None, docs: dict[str, Doc] | None = None) ->
         # the *shape* rather than the parsed directives. Without it an
         # annotation excuses itself and could never go stale, and documenting
         # the syntax would inflate the report.
+        from . import remotes as _remotes
         text = _blank(text, directives.shaped_spans(
-            text, {DIRECTIVE, DANGLING_DIRECTIVE}))
+            text, {DIRECTIVE, DANGLING_DIRECTIVE, _remotes.URL_OK}))
         # A code inside a URL is part of an address, not a citation. Linking
         # out to another project's ADR-013 is the *correct* way to name a
         # foreign document (ADR-009), and counting it as a local reference

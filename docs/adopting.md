@@ -146,6 +146,19 @@ Three things worth knowing before you rely on it:
   remote Luria can't read is told so and left on the code-only convention. If
   that is wrong for your remote, give it a `url` template — the answer to an
   unreadable remote is configuration, not a credential path CI can't reproduce.
+- **A remote's code families can construct differently.** One `dir` covers
+  file-per-code schemes; a document-rendered scheme — principles are the
+  usual case — gets its own entry
+  ([ADR-023](../record/decisions.d/ADR-023.md)):
+
+  ```toml
+  [luria.remotes.SG.schemes.DP]
+  document = "docs/design-principles.md"    # anchor defaults to dp-{number}
+  ```
+
+  The anchor template covers remotes on current conventions; a legacy remote
+  whose anchors are heading-derived still needs a hand URL with a `url-ok`,
+  now excusing only the anchor.
 - **A citation can land before its URL does.** If the remote hasn't adopted
   the code-only filenames yet, register it anyway and cite it: naming the
   document is the durable half, and the links start working when the remote

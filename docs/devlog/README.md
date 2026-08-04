@@ -6,6 +6,7 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 
 ## Currently — [August 2026](2026-08.md)
 
+- [4 Aug 17:09 — A remote learns its schemes, and the url-ok loop closes on schedule](2026-08.md#20260804170921)
 - [4 Aug 15:37 — The read/write boundary: record/ for filing, docs/ for reading](2026-08.md#20260804153748)
 - [4 Aug 03:44 — The devlog becomes a journal, and the migration's timestamps came from the commits](2026-08.md#20260804034408)
 - [4 Aug 03:27 — A decision cited as a principle](2026-08.md#20260804032711)
@@ -18,8 +19,8 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 
 ## All books
 
-9 entries across 1 book, newest first.
+10 entries across 1 book, newest first.
 
 | Book | Entries | First | Last |
 |---|--:|---|---|
-| [2026-08](2026-08.md) | 9 | 2026-08-03 | 2026-08-04 |
+| [2026-08](2026-08.md) | 10 | 2026-08-03 | 2026-08-04 |

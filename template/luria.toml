@@ -69,6 +69,13 @@ repo = "dmarx/luria"
 ref  = "main"
 dir  = "record/decisions.d"
 
+# A remote's code families can construct differently (LU-ADR-023): `dir` for
+# file-per-code schemes, `document` (+ optional `anchor`) for schemes whose
+# documents are sections of one page. The anchor defaults to `dp-{number}`,
+# the stable shape Luria's document render emits.
+[luria.remotes.LU.schemes.DP]
+document = "docs/design-principles.md"
+
 # Add your own the same way. A remote whose filenames carry title slugs needs
 # `luria remotes --refresh` once, to discover them into remotes.lock.json; one
 # that names files after their codes needs nothing.

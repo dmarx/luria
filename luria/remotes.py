@@ -100,8 +100,16 @@ def link(remote: Remote, code: str) -> str:
     entry and the code isn't in it, the answer is "" rather than a guessed
     filename — the map was read from the remote itself, so a code missing from
     it names no document there. Guessing anyway once produced a confident link
-    to a file that has never existed (ADR-016)."""
+    to a file that has never existed (ADR-016).
+
+    The lockfile's authority covers exactly what discovery can see: *files*.
+    A scheme configured to construct a document anchor or a URL template
+    (ADR-023) never consults it — its documents are sections, which no
+    directory listing contains, so an absence there is not evidence."""
     code = normalise(code)
+    scheme = remote.scheme_for(code)
+    if scheme is not None and (scheme.url or scheme.document):
+        return remote.link(code)
     if remote.url:
         return remote.link(code)
     known = lock().get(remote.prefix)
@@ -377,10 +385,17 @@ def main() -> int:
               f"resolved by {rung}")
         for code in codes:
             target = link(remote, code)
+            scheme = remote.scheme_for(code)
             # Not "assumed": the code-only convention (ADR-013) is exact for
             # any remote that follows it, and `--check` says whether it does.
-            note = ("" if code in known or remote.url else
-                    "  (by the code-only convention)")
+            # A per-scheme construction says which shape it used (ADR-023).
+            if scheme is not None and (scheme.url or scheme.document):
+                note = ("  (by the scheme's url template)" if scheme.url
+                        else "  (a document anchor, per the scheme)")
+            elif code in known or remote.url:
+                note = ""
+            else:
+                note = "  (by the code-only convention)"
             print(f"  {code}  {target or 'NO SUCH DOCUMENT'}{note if target else ''}")
 
     if args.check:

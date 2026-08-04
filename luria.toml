@@ -66,6 +66,15 @@ repo = "dmarx/strata-g"
 ref  = "main"
 dir  = "docs/decisions"
 
+# Its principles are a document-rendered scheme — sections of one file, not
+# files — so DP codes construct a document anchor rather than a filename
+# (ADR-023). The anchor template stays on the default (`dp-{number}`), which
+# is right for current conventions and wrong for strata-g's legacy
+# heading-derived anchors: the one DP citation in this record therefore keeps
+# its `url-ok`, now excusing only the anchor.
+[luria.remotes.SG.schemes.DP]
+document = "docs/design-principles.md"
+
 # Luria itself, registered on purpose: it is what the `template/` scaffold
 # cites, so the remote machinery is exercised by this repo rather than only by
 # its tests. Public and already on the code-only convention, so `luria remotes
@@ -75,3 +84,8 @@ name = "luria"
 repo = "dmarx/luria"
 ref  = "main"
 dir  = "record/decisions.d"
+
+# Dogfood for the document construction against a repository `luria remotes
+# --check` can actually verify: LU-DP-9 → …/docs/design-principles.md#dp-9.
+[luria.remotes.LU.schemes.DP]
+document = "docs/design-principles.md"
