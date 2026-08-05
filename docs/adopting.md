@@ -269,20 +269,36 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event_name == 'pull_request' && github.head_ref || github.ref_name }}
+          # Same-repo PR: the head branch, so there is something to commit
+          # onto. Fork PR: that branch only exists in the fork, so naming it
+          # FAILS THE CHECKOUT before any push guard runs — fall back to the
+          # default merge-commit checkout (empty ref) instead; the generator
+          # still runs, nothing is pushed, and the staleness check downstream
+          # fires as intended.
+          ref: ${{ github.event_name != 'pull_request' && github.ref_name || (github.event.pull_request.head.repo.full_name == github.repository && github.head_ref || '') }}
       - run: pip install luria
       - run: luria link --fix
       - run: luria index
       - id: commit
+        env:
+          # A fork PR's token is read-only; pushing would 403. Skipping the
+          # commit leaves HEAD at the un-regenerated merge SHA, which is what
+          # makes the staleness check downstream fire for forks.
+          CAN_PUSH: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add -A
-          git diff --staged --quiet || {
+          if git diff --staged --quiet; then
+            echo "views already current"
+          elif [ "$CAN_PUSH" != "true" ]; then
+            echo "::warning::views are stale and this is a fork PR — run 'luria index' and commit"
+            git reset -q   # leave HEAD clean at the un-regenerated SHA
+          else
             git commit -m "docs: regenerate views [skip ci]"
             git pull --rebase origin "$(git rev-parse --abbrev-ref HEAD)"
             git push
-          }
+          fi
           echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
       - run: luria index --check     # the generator itself can break
 
@@ -309,8 +325,15 @@ Three details that are load-bearing, all of which cost somebody an afternoon:
   so a commit message *documenting* this workflow suppresses its own run —
   silently, with zero check runs on the SHA, which reads like a slow queue
   rather than a skip. Name the marker in prose; file contents are unaffected.
-- **Fork PRs get a read-only token.** Guard the push on the head repository
-  being your own, or the job dies on a 403 that isn't the contributor's fault.
+- **Fork PRs break the job in two places, and the checkout is the one people
+  miss.** `github.head_ref` on a fork names a branch that only exists in the
+  fork, so a checkout naming it fails *before* any push guard runs — which is
+  why the example's `ref:` expression falls back to the default merge-commit
+  checkout for forks. The push then needs its own guard (`CAN_PUSH` above), or
+  the job dies on a 403 that isn't the contributor's fault. Both halves ship
+  in the example because the checkout half was found broken in the first real
+  deployment of this recipe — a hand-trace of the fork case is cheaper than
+  waiting for the fork PR you can't send yourself.
 
 **Keep the staleness check either way.** Automating regeneration renders
 staleness *moot*, not unreachable — the generation job can fail, be disabled,
