@@ -1,19 +1,22 @@
 #!/usr/bin/env python3
 """Whether this is a build, and what that changes about what luria says.
 
-A generated view is a **committed artifact**: the author runs `luria index`
-and commits what it wrote, and CI's only job is to verify. That split is
-invisible from inside a single command, and one message straddles it badly —
-"run `luria index`" is the correct remedy in a working copy and the *worst*
-available action inside a checking job, where the generator rewrites the very
-files the check is about to compare and the gate stops being able to fail
-(ADR-029).
+A generated view is a **committed artifact**. Who commits it is open: the
+author can regenerate and commit, or a generation job can run the generator
+and push what it wrote — the second is usually better, since a view a human
+has to rebuild by hand is still a hand-maintained projection (ADR-029).
 
-Since a staleness failure is usually seen first in a CI log, the remedy has to
-know which side of that split it is being read on. Detection is deliberately
-crude — every CI sets `CI` — and it only ever changes what is *said*, never
-what is done: a false positive costs a sentence of advice, a false negative
-leaves today's behaviour. Nothing here gates a write or an exit code.
+What is *not* open is dropping the generator into a checking job and
+committing nothing. That discards the output and, if a `luria lint` follows in
+the same job, leaves the lint comparing the generator's output against itself
+so it can no longer fail. The message that has to carry this is the staleness
+remedy, because a staleness failure is usually read first in a CI log — where
+the bare "run `luria index`" omits exactly the half that matters.
+
+Detection is deliberately crude — every CI sets `CI` — and it only ever
+changes what is *said*, never what is done: a false positive costs a sentence
+of advice, a false negative leaves today's behaviour. Nothing here gates a
+write or an exit code.
 """
 
 from __future__ import annotations
@@ -39,32 +42,38 @@ def running_in_ci(env: dict[str, str] | None = None) -> bool:
 def regenerate_remedy(command: str = "luria index") -> str:
     """"How do I clear this?" — answered for where the reader is standing.
 
-    In a terminal the bare command is the whole answer. In a build it is a
-    trap, so the CI form says the two things the short version leaves the
-    reader to guess: that the fix belongs in a working copy and is committed,
-    and that adding the generator *here* would make this check inert rather
-    than fix it."""
+    In a terminal the bare command is the whole answer. In a build the reader
+    needs the half that is easy to miss: the output has to be **committed**.
+    Both ways of doing that are legitimate — regenerate locally, or let a
+    generation job commit and push — and the CI form names both rather than
+    steering people away from automating it (ADR-029). What it warns against
+    is the specific broken shape: dropping the generator into the checking job
+    and committing nothing, which discards the output *and* leaves the check
+    comparing the generator against itself."""
     if not running_in_ci():
         return f"run `{command}`"
-    return (f"run `{command}` locally and commit what it wrote — generated "
-            f"views are committed artifacts. Do not add `{command}` to this "
-            f"job: it would rewrite the files this check compares, and the "
-            f"check would stop being able to fail")
+    return (f"regenerate and commit the result — run `{command}` locally, or "
+            f"give CI a generation job that runs it and pushes what it wrote. "
+            f"Adding `{command}` to this checking job is not enough on its "
+            f"own: nothing would commit its output, and this check would be "
+            f"comparing that output against itself")
 
 
 def wasted_write_warning(command: str) -> str | None:
     """The note a writing command prints when it is writing inside a build.
 
-    Returns None outside CI. Not an error, and not a refusal — a scheduled job
-    that commits its own output (`luria collect --commit`) writes in CI
-    legitimately. But a write whose result is discarded at job end looks
-    exactly like one that landed, and the whole subject of this package is
-    machinery that quietly stops being true (DP-1)."""
+    Returns None outside CI, and never refuses: writing in CI is how a
+    generation job works (`luria collect --commit`, a `luria index` step that
+    pushes). This is the alarm for the case that *looks* identical from the
+    log — a write whose result is discarded at job end — because the whole
+    subject of this package is machinery that quietly stops being true
+    (DP-1)."""
     if not running_in_ci():
         return None
-    return (f"{command}: writing generated views inside CI. Unless this job "
-            f"commits and pushes them, the result is discarded when the job "
-            f"ends — the files this wrote will not reach the repository. If "
-            f"this is a checking job, run `luria lint` instead and let the "
-            f"author regenerate: a generator ahead of the check rewrites what "
-            f"the check compares, so the check can no longer fail (ADR-029).")
+    return (f"{command}: writing generated views inside CI. If this job "
+            f"commits and pushes them, all is well and this note is noise. If "
+            f"it does not, the result is discarded when the job ends — the "
+            f"files this wrote will never reach the repository, and if a "
+            f"`luria lint` runs after it in the same job, that lint is now "
+            f"comparing the generator's output against itself and can no "
+            f"longer fail (ADR-029).")

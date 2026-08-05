@@ -58,12 +58,32 @@ def test_a_terminal_gets_the_bare_command():
     assert ci.regenerate_remedy() == "run `luria index`"
 
 
-def test_ci_is_told_not_to_add_the_generator(monkeypatch):
+def test_ci_is_offered_both_ways_to_commit(monkeypatch):
+    """The remedy must not steer people away from automating regeneration —
+    that was this decision's rejected first draft, and it outlaws generation
+    jobs. Both legitimate routes get named (ADR-029)."""
     monkeypatch.setenv("CI", "true")
     remedy = ci.regenerate_remedy()
     assert "locally" in remedy
-    assert "Do not add `luria index` to this job" in remedy
-    assert "stop being able to fail" in remedy
+    assert "generation job" in remedy and "pushes" in remedy
+
+
+def test_ci_warns_against_the_shape_that_commits_nothing(monkeypatch):
+    """The broken shape is specifically 'generator in the checking job, output
+    committed by nobody' — not 'a generator ran in CI'."""
+    monkeypatch.setenv("CI", "true")
+    remedy = ci.regenerate_remedy()
+    assert "not enough on its own" in remedy
+    assert "comparing that output against itself" in remedy
+
+
+def test_the_remedy_never_forbids_generating_in_ci(monkeypatch):
+    """A guard on the correction, since the wrong version reads perfectly well
+    and would sail through review a second time."""
+    monkeypatch.setenv("CI", "true")
+    remedy = ci.regenerate_remedy().lower()
+    for forbidding in ("do not add", "never", "must not", "nothing that writes"):
+        assert forbidding not in remedy, f"remedy forbids generation: {remedy!r}"
 
 
 def test_the_remedy_names_the_command_it_was_given(monkeypatch):
@@ -78,11 +98,14 @@ def test_no_warning_outside_a_build():
     assert ci.wasted_write_warning("luria index") is None
 
 
-def test_a_write_in_ci_says_the_result_is_discarded(monkeypatch):
+def test_a_write_in_ci_says_the_result_may_be_discarded(monkeypatch):
+    """Says what is lost if nothing commits — while allowing that a generation
+    job writing here is exactly right, in which case the note is noise."""
     monkeypatch.setenv("GITHUB_ACTIONS", "true")
     warning = ci.wasted_write_warning("luria index")
     assert "discarded" in warning
-    assert "luria lint" in warning
+    assert "commits and pushes" in warning
+    assert "no longer fail" in warning
 
 
 # ── Reaching the messages people actually read ───────────────────────────
@@ -100,7 +123,8 @@ def test_the_lint_carries_the_ci_remedy(monkeypatch, project):
     lint.check_generated_index(errors)
 
     assert errors, "a hand-written index should be stale"
-    assert any("Do not add `luria index` to this job" in e for e in errors)
+    assert any("regenerate and commit the result" in e for e in errors)
+    assert any("generation job" in e for e in errors)
 
 
 def test_bare_badges_says_it_only_printed(capsys, monkeypatch, project):
