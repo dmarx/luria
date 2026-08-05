@@ -1,0 +1,83 @@
+# The generation half of the recommended docs workflow (ADR-029): regenerate
+# luria's views, commit and push them as the bot, and hand the checking job the
+# SHA it must read. This action is the single authoritative implementation of
+# the commit/push/handoff logic — the template workflow and luria's own CI both
+# use it rather than restating it, because a restated copy of tricky logic is
+# the drift this package exists to prevent.
+#
+# Caller contract:
+#   - Check out the repository FIRST, with a fork-safe ref (see the template
+#     workflow: a fork PR's head branch does not exist in the base repository,
+#     so name it only for same-repo PRs and fall back to the default
+#     merge-commit checkout otherwise).
+#   - Grant the job `permissions: contents: write`; a fork PR's read-only
+#     token is detected and the push is skipped with a warning instead.
+#   - Set up Python before this action (actions/setup-python).
+#   - Give the DOWNSTREAM checking job `needs:` on this job and have it check
+#     out this action's `sha` output. A push made with GITHUB_TOKEN does not
+#     retrigger workflows, so a lint in a separate workflow would keep a red
+#     it can never clear.
+name: luria docs generate
+description: >-
+  Regenerate luria's derived views (luria link --fix + luria index), commit and
+  push any diff as github-actions[bot], and output the SHA a downstream
+  checking job must read. On a fork PR nothing is pushed and the output SHA is
+  the un-regenerated commit, so the staleness lint downstream fails
+  informatively instead of this job dying on a 403.
+inputs:
+  pip-spec:
+    description: >-
+      pip requirement spec used to install luria (e.g. "luria==0.1.2", or
+      "-e ." inside luria's own repository). Empty string skips the install
+      for callers that installed it already.
+    default: luria
+  commit-message:
+    description: >-
+      Commit message for the regenerated views. The default carries GitHub's
+      skip marker so the bot's push does not trigger a fresh workflow run;
+      keep that property if you override it.
+    default: "docs: regenerate views [skip ci]"
+outputs:
+  sha:
+    description: The commit the checking job must check out.
+    value: ${{ steps.commit.outputs.sha }}
+runs:
+  using: composite
+  steps:
+    - if: ${{ inputs.pip-spec != '' }}
+      shell: bash
+      run: pip install ${{ inputs.pip-spec }}
+    - shell: bash
+      run: luria link --fix
+    - shell: bash
+      run: luria index
+    - id: commit
+      shell: bash
+      env:
+        # A fork PR's GITHUB_TOKEN is read-only; pushing would 403 on
+        # something that is not the contributor's fault. Skipping the commit
+        # leaves HEAD at the un-regenerated SHA, which is exactly what makes
+        # the staleness check downstream fire for forks.
+        CAN_PUSH: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+        MSG: ${{ inputs.commit-message }}
+      run: |
+        git config user.name  "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        git add -A
+        if git diff --staged --quiet; then
+          echo "luria views already current — nothing to commit."
+        elif [ "$CAN_PUSH" != "true" ]; then
+          echo "::warning::luria views are stale and this is a fork PR — run 'luria index' and commit the result"
+          git reset -q
+        else
+          git commit -m "$MSG"
+          # The branch may have moved since checkout; rebase this single
+          # generated commit on top rather than failing at the push.
+          git pull --rebase origin "$(git rev-parse --abbrev-ref HEAD)"
+          git push
+        fi
+        echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+    # The generator itself is the thing that can still fail: stale immediately
+    # after regenerating means luria is broken or non-idempotent.
+    - shell: bash
+      run: luria index --check

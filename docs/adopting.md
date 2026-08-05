@@ -211,25 +211,28 @@ A project with no region is left alone.
 
 ## Wiring it into CI
 
+The short version: `luria init` scaffolds
+[a complete workflow](../template/.github/workflows/docs.yml) — copy it into
+`.github/workflows/` if your project predates the scaffold — built from two
+composite actions you can also drop into a workflow you already have:
+
 ```yaml
-- run: pip install luria
-- run: luria lint
-- run: luria reports
-  if: always()
-- uses: actions/upload-artifact@v4
-  if: always()
-  with:
-    name: doc-reports
-    path: build/doc-reports/
+- uses: dmarx/luria/actions/generate@main   # regenerate views, commit + push, output the SHA
+- uses: dmarx/luria/actions/lint@main       # luria lint + status reports as an artifact
 ```
 
-`if: always()` on the reports is the point: they are most wanted when the lint
-failed.
+Both assume a checkout and `actions/setup-python` first; `generate` needs
+`permissions: contents: write` and takes `pip-spec` if you pin luria. Luria's
+own [`ci.yml`](../.github/workflows/ci.yml) runs the same two actions by local
+path, so the workflow you scaffold is the one this repository lives on
+([ADR-009](../record/decisions.d/ADR-009.md)). The rest of this section is
+what those pieces do and why their wiring is load-bearing — read it before
+rearranging them.
 
 ### Who regenerates?
 
-The recipe above verifies. Something still has to *run* the generator, and
-there are two working answers ([ADR-029](../record/decisions.d/ADR-029.md)):
+Something has to *run* the generator, and there are two working answers
+([ADR-029](../record/decisions.d/ADR-029.md)):
 
 - **The author does.** Run `luria index`, commit what it wrote. Nothing extra
   in CI, no write permissions, and every contributor carries a build step.
@@ -260,47 +263,32 @@ half when it is read in a build.
 
 ### Wiring the generation job
 
+The commit/push/handoff logic lives in
+[`actions/generate`](../actions/generate/action.yml) — one authoritative
+implementation rather than a snippet every adopter restates and drifts. What
+stays in *your* workflow is the wiring around it, and two pieces of that
+wiring are load-bearing:
+
 ```yaml
 jobs:
   docs-generate:
     permissions: {contents: write}
     outputs:
-      sha: ${{ steps.commit.outputs.sha }}
+      sha: ${{ steps.generate.outputs.sha }}
     steps:
       - uses: actions/checkout@v4
         with:
           # Same-repo PR: the head branch, so there is something to commit
           # onto. Fork PR: that branch only exists in the fork, so naming it
           # FAILS THE CHECKOUT before any push guard runs — fall back to the
-          # default merge-commit checkout (empty ref) instead; the generator
-          # still runs, nothing is pushed, and the staleness check downstream
-          # fires as intended.
+          # default merge-commit checkout (empty ref); the generator still
+          # runs, nothing is pushed, and the staleness check downstream fires
+          # as intended.
           ref: ${{ github.event_name != 'pull_request' && github.ref_name || (github.event.pull_request.head.repo.full_name == github.repository && github.head_ref || '') }}
-      - run: pip install luria
-      - run: luria link --fix
-      - run: luria index
-      - id: commit
-        env:
-          # A fork PR's token is read-only; pushing would 403. Skipping the
-          # commit leaves HEAD at the un-regenerated merge SHA, which is what
-          # makes the staleness check downstream fire for forks.
-          CAN_PUSH: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
-        run: |
-          git config user.name  "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add -A
-          if git diff --staged --quiet; then
-            echo "views already current"
-          elif [ "$CAN_PUSH" != "true" ]; then
-            echo "::warning::views are stale and this is a fork PR — run 'luria index' and commit"
-            git reset -q   # leave HEAD clean at the un-regenerated SHA
-          else
-            git commit -m "docs: regenerate views [skip ci]"
-            git pull --rebase origin "$(git rev-parse --abbrev-ref HEAD)"
-            git push
-          fi
-          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
-      - run: luria index --check     # the generator itself can break
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12"}
+      - id: generate
+        uses: dmarx/luria/actions/generate@main
 
   docs-lint:
     needs: docs-generate
@@ -308,7 +296,9 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ needs.docs-generate.outputs.sha }}
-      - run: luria lint
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12"}
+      - uses: dmarx/luria/actions/lint@main
 ```
 
 Three details that are load-bearing, all of which cost somebody an afternoon:
@@ -328,12 +318,12 @@ Three details that are load-bearing, all of which cost somebody an afternoon:
 - **Fork PRs break the job in two places, and the checkout is the one people
   miss.** `github.head_ref` on a fork names a branch that only exists in the
   fork, so a checkout naming it fails *before* any push guard runs — which is
-  why the example's `ref:` expression falls back to the default merge-commit
-  checkout for forks. The push then needs its own guard (`CAN_PUSH` above), or
-  the job dies on a 403 that isn't the contributor's fault. Both halves ship
-  in the example because the checkout half was found broken in the first real
-  deployment of this recipe — a hand-trace of the fork case is cheaper than
-  waiting for the fork PR you can't send yourself.
+  why the `ref:` expression above falls back to the default merge-commit
+  checkout for forks. The push guard is the generate action's job (a fork's
+  read-only token gets a warning annotation, not a 403), but the checkout is
+  *yours*: it happens before any action can help. The checkout half was found
+  broken in the first real deployment of this recipe — a hand-trace of the
+  fork case is cheaper than waiting for the fork PR you can't send yourself.
 
 **Keep the staleness check either way.** Automating regeneration renders
 staleness *moot*, not unreachable — the generation job can fail, be disabled,

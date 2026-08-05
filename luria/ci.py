@@ -59,21 +59,9 @@ def regenerate_remedy(command: str = "luria index") -> str:
             f"comparing that output against itself")
 
 
-def wasted_write_warning(command: str) -> str | None:
-    """The note a writing command prints when it is writing inside a build.
-
-    Returns None outside CI, and never refuses: writing in CI is how a
-    generation job works (`luria collect --commit`, a `luria index` step that
-    pushes). This is the alarm for the case that *looks* identical from the
-    log — a write whose result is discarded at job end — because the whole
-    subject of this package is machinery that quietly stops being true
-    (DP-1)."""
-    if not running_in_ci():
-        return None
-    return (f"{command}: writing generated views inside CI. If this job "
-            f"commits and pushes them, all is well and this note is noise. If "
-            f"it does not, the result is discarded when the job ends — the "
-            f"files this wrote will never reach the repository, and if a "
-            f"`luria lint` runs after it in the same job, that lint is now "
-            f"comparing the generator's output against itself and can no "
-            f"longer fail (ADR-029).")
+# A third helper was built here and removed before merge: a warning printed
+# whenever a generator wrote inside CI. It fired on every run of a *correct*
+# generation job and had to describe itself as noise in that case — and a
+# warning that is usually noise trains readers to skip warnings, the flaky-
+# guard dynamic this record already documents. The remedy above is the whole
+# surface: it fires only when a check has actually failed (ADR-029).

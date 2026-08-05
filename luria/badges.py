@@ -128,8 +128,6 @@ def main() -> int:
             return 1
         print("luria badges: current")
         return 0
-    if (warning := ci.wasted_write_warning("luria badges --write")):
-        print(warning, file=sys.stderr)
     path.write_text(fresh)
     undecided, retired = counts()
     print(f"badges: needs decision {undecided}, cited but retired {retired}")

@@ -1,0 +1,47 @@
+# The checking half of the recommended docs workflow (ADR-029): the lint that
+# gates what a generator cannot decide, plus the status reports uploaded where
+# they can be read — which matters most when the lint failed.
+#
+# Caller contract: check out the SHA the generate action output (via `needs:`
+# on the generation job), and set up Python first. Without that handoff this
+# lint reads the pre-regeneration commit and fails on staleness the bot just
+# repaired — a push made with GITHUB_TOKEN does not retrigger workflows, so
+# that red never clears on its own.
+name: luria docs lint
+description: >-
+  Run luria lint — unresolved references, wikilinks that resolve to nothing, a
+  title disagreeing with its heading, stray files in a view directory, and
+  stale generated views — then write and upload the status reports whether or
+  not the lint passed.
+inputs:
+  pip-spec:
+    description: >-
+      pip requirement spec used to install luria. Empty string skips the
+      install for callers that installed it already.
+    default: luria
+  reports-artifact:
+    description: Artifact name for the status reports; empty string skips the upload.
+    default: doc-reports
+  reports-path:
+    description: Where `luria reports` writes — your luria.toml's `reports` path.
+    default: build/doc-reports
+runs:
+  using: composite
+  steps:
+    - if: ${{ inputs.pip-spec != '' }}
+      shell: bash
+      run: pip install ${{ inputs.pip-spec }}
+    - shell: bash
+      run: luria lint
+    # Warnings never fail the lint, which is exactly why they need somewhere
+    # to be read; always() keeps them available when the lint failed, when
+    # they are most wanted.
+    - if: ${{ always() }}
+      shell: bash
+      run: luria reports
+    - if: ${{ always() && inputs.reports-artifact != '' }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ inputs.reports-artifact }}
+        path: ${{ inputs.reports-path }}/
+        if-no-files-found: warn

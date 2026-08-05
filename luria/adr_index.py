@@ -386,10 +386,6 @@ def main() -> int:
         print("luria index: current")
         return 0
 
-    from . import ci
-    if (warning := ci.wasted_write_warning("luria index")):
-        print(warning, file=sys.stderr)
-
     cfg = current()
     for stale_file in orphans(rendered):
         stale_file.unlink()

@@ -105,7 +105,9 @@ Copy [`docs/decisions/_template.md`](record/decisions.d/_template.md) to
 else, and the title goes in `title:`
 ([ADR-013](record/decisions.d/ADR-013.md)). Repeat the title as the body's
 `# ADR-NNN:` heading; the lint checks that the two agree. Then run
-`luria index`. Write the `summary:` — it is what the index shows, and the
+`luria index` — or just push: CI's docs-generate job regenerates the views and
+commits them to your branch ([ADR-029](record/decisions.d/ADR-029.md)), so running it locally only makes the
+bot's diff empty. Write the `summary:` — it is what the index shows, and the
 index is read far more often than the decision. Say what was decided **and what
 was rejected**; a decision with an empty "alternatives considered" usually
 wasn't a decision.

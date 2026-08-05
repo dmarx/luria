@@ -91,23 +91,6 @@ def test_the_remedy_names_the_command_it_was_given(monkeypatch):
     assert "`luria collect`" in ci.regenerate_remedy("luria collect")
 
 
-# ── The wasted-write warning ─────────────────────────────────────────────
-
-
-def test_no_warning_outside_a_build():
-    assert ci.wasted_write_warning("luria index") is None
-
-
-def test_a_write_in_ci_says_the_result_may_be_discarded(monkeypatch):
-    """Says what is lost if nothing commits — while allowing that a generation
-    job writing here is exactly right, in which case the note is noise."""
-    monkeypatch.setenv("GITHUB_ACTIONS", "true")
-    warning = ci.wasted_write_warning("luria index")
-    assert "discarded" in warning
-    assert "commits and pushes" in warning
-    assert "no longer fail" in warning
-
-
 # ── Reaching the messages people actually read ───────────────────────────
 
 
