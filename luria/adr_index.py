@@ -378,12 +378,17 @@ def main() -> int:
                 and badges.rewrite(text) != text:
             stale.append(readme)
         if stale:
-            print("stale (run `luria index`):", file=sys.stderr)
+            from . import ci
+            print(f"stale ({ci.regenerate_remedy()}):", file=sys.stderr)
             for p in sorted(stale):
                 print(f"  {current().rel(p)}", file=sys.stderr)
             return 1
         print("luria index: current")
         return 0
+
+    from . import ci
+    if (warning := ci.wasted_write_warning("luria index")):
+        print(warning, file=sys.stderr)
 
     cfg = current()
     for stale_file in orphans(rendered):

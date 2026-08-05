@@ -194,12 +194,18 @@ can't get any other way and both can turn amber
 <!-- /luria:badges -->
 ```
 
-Add that region anywhere in `README.md` and `luria index` fills it with
-**needs decision** (`Proposed` + `Deferred`, every scheme) and **cited but
-retired** (retired documents still cited without an acknowledgement). The
-counts are baked into the URLs, so there is no service to configure and no
-committed JSON to keep current — and `luria lint` fails when the region
-disagrees with the record.
+Add that region anywhere in `README.md`, then **run `luria index` and commit
+what it wrote**. It fills the region with **needs decision** (`Proposed` +
+`Deferred`, every scheme) and **cited but retired** (retired documents still
+cited without an acknowledgement). The counts are baked into the URLs, so there
+is no service to configure and no committed JSON to keep current — and
+`luria lint` fails when the region disagrees with the record.
+
+The region does not fill itself, and nothing fills it for you: like the
+decision index and the devlog books, the badges are a **generated artifact that
+its author commits** ([ADR-029](../record/decisions.d/ADR-029.md)). The badge
+counts are the first generated view most projects add *after* adoption, so this
+is usually the first time that matters.
 
 A project with no region is left alone.
 
@@ -219,6 +225,29 @@ A project with no region is left alone.
 
 `if: always()` on the reports is the point: they are most wanted when the lint
 failed.
+
+**Nothing that writes belongs in that job**, and this is the one invariant here
+worth stating as a rule rather than an example
+([ADR-029](../record/decisions.d/ADR-029.md)). `luria lint` verifies generated
+views by re-rendering them and diffing against what is on disk, so a
+`luria index` step ahead of it makes the comparison vacuous — the check
+compares the generator's output against the generator's output, and **stops
+being able to fail**, for the index and the books as much as the badges.
+
+The trap is that the failure it produces is a *green check*, and that the
+tempting moment to add the step is exactly when the lint has gone red saying
+`stale — run luria index`. That instruction is for your working copy. Luria now
+says as much when the message is being read in a build, and warns when a
+generator writes inside CI at all — but the rule is the durable half:
+
+```yaml
+- run: luria index   # ← never here. It disables the check below.
+- run: luria lint
+```
+
+An adopter shipped exactly that, cleared a red build with it, and ran for three
+green builds with the badge region still empty and the staleness gate dead.
+Regenerating is an author's job; CI's job is to disagree.
 
 Collection runs on a cadence, **not on every merge** — a per-merge bot commit
 races in-flight rebases, reintroducing the conflict fragments exist to remove

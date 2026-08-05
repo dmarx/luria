@@ -36,7 +36,7 @@ import re
 import sys
 from pathlib import Path
 
-from . import adr_pending, ref_status
+from . import adr_pending, ci, ref_status
 from .config import current
 
 OPEN = "<!-- luria:badges -->"
@@ -103,6 +103,14 @@ def main() -> int:
     path = readme()
     if not args.write and not args.check:
         print(region())
+        # Printing is the whole job here, but as a CI `- run:` step it is
+        # indistinguishable from a write that landed — which is how an
+        # adopter came to have `luria badges` in a workflow doing nothing
+        # (ADR-029). Said on stderr so `luria badges > file` stays clean.
+        print("luria badges: printed only — `--write` rewrites the region in "
+              f"{current().rel(readme())}, `--check` fails when it is stale. "
+              "In normal use `luria index` writes it with everything else.",
+              file=sys.stderr)
         return 0
 
     if not path.exists() or OPEN not in path.read_text():
@@ -116,10 +124,12 @@ def main() -> int:
     if args.check:
         if fresh != text:
             print(f"{current().rel(path)}: badge counts are stale — "
-                  "run `luria index`", file=sys.stderr)
+                  f"{ci.regenerate_remedy()}", file=sys.stderr)
             return 1
         print("luria badges: current")
         return 0
+    if (warning := ci.wasted_write_warning("luria badges --write")):
+        print(warning, file=sys.stderr)
     path.write_text(fresh)
     undecided, retired = counts()
     print(f"badges: needs decision {undecided}, cited but retired {retired}")
