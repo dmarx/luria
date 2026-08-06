@@ -1,4 +1,6 @@
-# Luria
+<div align="center">
+
+<img src="assets/branding/02-lockups/luria-a3-lockup-stacked-theme.svg" alt="StrataG" height="240">
 
 [![CI](https://github.com/dmarx/luria/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/dmarx/luria/actions/workflows/ci.yml)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue)](https://www.python.org/downloads/)
@@ -7,6 +9,8 @@
 [![needs decision: 0](https://img.shields.io/badge/needs%20decision-0-brightgreen)](docs/decisions/README.md)
 [![cited but retired: 0](https://img.shields.io/badge/cited%20but%20retired-0-brightgreen)](docs/decisions/README.md)
 <!-- /luria:badges -->
+
+</div>
 
 A project's memory: the decisions, the principles, the changelog and the
 narrative log — kept where the next collaborator will find them, and kept honest
