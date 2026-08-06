@@ -15,3 +15,5 @@ To set a custom color when embedding the SVG inline, override --luria-ink:
 
 For an external SVG loaded through <img>, its internal light/dark media query
 runs independently according to the viewer's color-scheme preference.
+
+Font: comfortaa
