@@ -1,5 +1,10 @@
 # Luria runs its own machinery on its own record (ADR-009), so this workflow is
-# both the package's CI and the worked example the docs point at.
+# both the package's CI and the worked example the docs point at — including
+# the docs jobs, which use the SAME composite actions adopters get
+# (actions/generate, actions/lint), referenced by local path so a change to an
+# action is exercised by the pull request that makes it (ADR-029). The
+# template workflow `luria init` scaffolds is this shape with the actions
+# pinned remotely.
 name: CI
 
 on:
@@ -13,6 +18,29 @@ on:
   workflow_dispatch:
 
 jobs:
+  docs-generate:
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      sha: ${{ steps.generate.outputs.sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Same-repo PR: the head branch, so there is something to commit
+          # onto. Fork PR: that branch only exists in the fork — naming it
+          # fails the checkout before any push guard runs — so fall back to
+          # the default merge-commit checkout (empty ref).
+          ref: ${{ github.event_name != 'pull_request' && github.ref_name || (github.event.pull_request.head.repo.full_name == github.repository && github.head_ref || '') }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - id: generate
+        uses: ./actions/generate
+        with:
+          pip-spec: -e .
+
   test:
     if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
@@ -23,19 +51,25 @@ jobs:
           python-version: "3.12"
       - run: pip install -e ".[dev]"
       - run: make test
-      - run: make lint
-      # The status reports are warnings, so they never fail this job — which is
-      # exactly why they need somewhere to be read. `if: always()` keeps them
-      # available when the lint failed, which is when they are most wanted.
-      - name: Status reports
-        if: always()
-        run: make reports
-      - uses: actions/upload-artifact@v4
-        if: always()
+
+  # `needs:` + the sha output is the load-bearing handoff: a push made with
+  # GITHUB_TOKEN does not retrigger workflows, so a lint reading any other
+  # commit would fail on staleness the bot just repaired — or, worse, never
+  # re-run to clear it.
+  docs-lint:
+    if: github.event_name != 'schedule'
+    needs: docs-generate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
         with:
-          name: doc-reports
-          path: build/doc-reports/
-          if-no-files-found: warn
+          ref: ${{ needs.docs-generate.outputs.sha }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: ./actions/lint
+        with:
+          pip-spec: -e .
 
   collect:
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'

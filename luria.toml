@@ -38,6 +38,7 @@ person would otherwise rediscover. Generated from the entries in \
 
 [luria.code]
 globs = ["luria/*.py", "tests/*.py", "Makefile", ".github/workflows/*.yml",
+         "actions/**/*.yml", "template/**/*.yml",
          "template/**/*.md", "template/**/*.stub"]
 historical = ["CHANGELOG.md"]
 

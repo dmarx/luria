@@ -194,31 +194,143 @@ can't get any other way and both can turn amber
 <!-- /luria:badges -->
 ```
 
-Add that region anywhere in `README.md` and `luria index` fills it with
-**needs decision** (`Proposed` + `Deferred`, every scheme) and **cited but
-retired** (retired documents still cited without an acknowledgement). The
-counts are baked into the URLs, so there is no service to configure and no
-committed JSON to keep current — and `luria lint` fails when the region
-disagrees with the record.
+Add that region anywhere in `README.md`, then **run `luria index` and commit
+what it wrote**. It fills the region with **needs decision** (`Proposed` +
+`Deferred`, every scheme) and **cited but retired** (retired documents still
+cited without an acknowledgement). The counts are baked into the URLs, so there
+is no service to configure and no committed JSON to keep current — and
+`luria lint` fails when the region disagrees with the record.
+
+The region does not fill itself, and nothing fills it for you: like the
+decision index and the devlog books, the badges are a **generated artifact that
+its author commits** ([ADR-029](../record/decisions.d/ADR-029.md)). The badge
+counts are the first generated view most projects add *after* adoption, so this
+is usually the first time that matters.
 
 A project with no region is left alone.
 
 ## Wiring it into CI
 
+The short version: `luria init` scaffolds
+[a complete workflow](../template/.github/workflows/docs.yml) — copy it into
+`.github/workflows/` if your project predates the scaffold — built from two
+composite actions you can also drop into a workflow you already have:
+
 ```yaml
-- run: pip install luria
-- run: luria lint
-- run: luria reports
-  if: always()
-- uses: actions/upload-artifact@v4
-  if: always()
-  with:
-    name: doc-reports
-    path: build/doc-reports/
+- uses: dmarx/luria/actions/generate@main   # regenerate views, commit + push, output the SHA
+- uses: dmarx/luria/actions/lint@main       # luria lint + status reports as an artifact
 ```
 
-`if: always()` on the reports is the point: they are most wanted when the lint
-failed.
+Both assume a checkout and `actions/setup-python` first; `generate` needs
+`permissions: contents: write` and takes `pip-spec` if you pin luria. Luria's
+own [`ci.yml`](../.github/workflows/ci.yml) runs the same two actions by local
+path, so the workflow you scaffold is the one this repository lives on
+([ADR-009](../record/decisions.d/ADR-009.md)). The rest of this section is
+what those pieces do and why their wiring is load-bearing — read it before
+rearranging them.
+
+### Who regenerates?
+
+Something has to *run* the generator, and there are two working answers
+([ADR-029](../record/decisions.d/ADR-029.md)):
+
+- **The author does.** Run `luria index`, commit what it wrote. Nothing extra
+  in CI, no write permissions, and every contributor carries a build step.
+- **A generation job does.** CI runs `luria link --fix` and `luria index`,
+  commits the diff as a bot and pushes. Hands-off, and the better default:
+  a view a human has to rebuild by hand is still a hand-maintained projection,
+  and those drift at a rate rather than a risk.
+
+What does **not** work is the shape in between — the generator in the checking
+job, committing nothing:
+
+```yaml
+- run: luria index   # ← output discarded, AND the lint below stops working
+- run: luria lint
+```
+
+Two failures at once. The regenerated files die with the runner, so they never
+reach the repository; and `luria lint` verifies views by re-rendering and
+diffing against disk, so a generator immediately ahead of it makes the
+comparison vacuous — it compares the generator's output against itself and
+**stops being able to fail**, for the index and the books as much as the
+badges. An adopter shipped exactly that, cleared a red build with it, and ran
+three green builds with an empty badge region and a dead gate.
+
+The tempting moment to write it is when the lint has gone red saying
+`stale — run luria index`, which is why that message now names the committing
+half when it is read in a build.
+
+### Wiring the generation job
+
+The commit/push/handoff logic lives in
+[`actions/generate`](../actions/generate/action.yml) — one authoritative
+implementation rather than a snippet every adopter restates and drifts. What
+stays in *your* workflow is the wiring around it, and two pieces of that
+wiring are load-bearing:
+
+```yaml
+jobs:
+  docs-generate:
+    permissions: {contents: write}
+    outputs:
+      sha: ${{ steps.generate.outputs.sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Same-repo PR: the head branch, so there is something to commit
+          # onto. Fork PR: that branch only exists in the fork, so naming it
+          # FAILS THE CHECKOUT before any push guard runs — fall back to the
+          # default merge-commit checkout (empty ref); the generator still
+          # runs, nothing is pushed, and the staleness check downstream fires
+          # as intended.
+          ref: ${{ github.event_name != 'pull_request' && github.ref_name || (github.event.pull_request.head.repo.full_name == github.repository && github.head_ref || '') }}
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12"}
+      - id: generate
+        uses: dmarx/luria/actions/generate@main
+
+  docs-lint:
+    needs: docs-generate
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.docs-generate.outputs.sha }}
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12"}
+      - uses: dmarx/luria/actions/lint@main
+```
+
+Three details that are load-bearing, all of which cost somebody an afternoon:
+
+- **The SHA handoff, and both jobs in one workflow.** A push made with
+  `GITHUB_TOKEN` deliberately does not retrigger workflows. Put generation in
+  a *separate* workflow and the lint keeps the red it earned from the
+  pre-generation commit, with nothing to clear it. `needs:` plus a `sha`
+  output is what makes the lint read what the generator just produced.
+- **Never write the skip marker into a commit message you author.** GitHub
+  matches `[skip ci]`, `[ci skip]`, `[no ci]`, `[skip actions]` and
+  `[actions skip]` in the *first or last line* of a message
+  ([docs](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/skip-workflow-runs)),
+  so a commit message *documenting* this workflow suppresses its own run —
+  silently, with zero check runs on the SHA, which reads like a slow queue
+  rather than a skip. Name the marker in prose; file contents are unaffected.
+- **Fork PRs break the job in two places, and the checkout is the one people
+  miss.** `github.head_ref` on a fork names a branch that only exists in the
+  fork, so a checkout naming it fails *before* any push guard runs — which is
+  why the `ref:` expression above falls back to the default merge-commit
+  checkout for forks. The push guard is the generate action's job (a fork's
+  read-only token gets a warning annotation, not a 403), but the checkout is
+  *yours*: it happens before any action can help. The checkout half was found
+  broken in the first real deployment of this recipe — a hand-trace of the
+  fork case is cheaper than waiting for the fork PR you can't send yourself.
+
+**Keep the staleness check either way.** Automating regeneration renders
+staleness *moot*, not unreachable — the generation job can fail, be disabled,
+lose its write permission, or be that fork PR. The check simply changes what it
+watches: it used to catch a forgetful author, and now catches a generator that
+didn't run or couldn't push. In the fork case it fires on an ordinary Tuesday,
+because the `sha` output is then the un-regenerated commit the lint reads.
 
 Collection runs on a cadence, **not on every merge** — a per-merge bot commit
 races in-flight rebases, reintroducing the conflict fragments exist to remove

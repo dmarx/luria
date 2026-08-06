@@ -41,7 +41,7 @@ import re
 import sys
 
 from . import adr_index as builder
-from . import adr_pending, badges, doc_refs, journal, ref_status, remotes
+from . import adr_pending, badges, ci, doc_refs, journal, ref_status, remotes
 from .config import current
 
 # The closed status vocabulary (ADR-003). `Active` is the in-force state; the
@@ -183,20 +183,25 @@ def check_generated_index(errors: list[str]) -> None:
     checking each document is mentioned, which a generated file can't fail."""
     cfg = current()
     rendered = builder.outputs()
+    # This lint is usually read in a build log, where "run `luria index`" names
+    # the one action that must not be taken here — putting the generator ahead
+    # of this check makes it compare the generator's output against itself, and
+    # it stops being able to fail (ADR-029). The remedy says so when it is
+    # being read in CI.
+    remedy = ci.regenerate_remedy()
     for path, text in rendered.items():
         if not path.exists() or path.read_text() != text:
-            errors.append(f"{cfg.rel(path)}: stale — run `luria index`")
+            errors.append(f"{cfg.rel(path)}: stale — {remedy}")
     for path in builder.orphans(rendered):
         errors.append(f"{cfg.rel(path)}: not something the generator wrote — "
                       "a view directory holds only generated files (ADR-021); "
-                      "run `luria index`, or file the content as a source")
+                      f"{remedy}, or file the content as a source")
     # The README's badge counts are derived from the same frontmatter, so a
     # stale one is the same class of failure as a stale index (ADR-018).
     readme = badges.readme()
     if readme.exists() and badges.OPEN in (text := readme.read_text()) \
             and badges.rewrite(text) != text:
-        errors.append(f"{cfg.rel(readme)}: badge counts are stale — "
-                      "run `luria index`")
+        errors.append(f"{cfg.rel(readme)}: badge counts are stale — {remedy}")
 
 
 def check_wikilinks(errors: list[str]) -> None:
