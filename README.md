@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="assets/branding/02-lockups/luria-a3-lockup-stacked-theme.svg" alt="StrataG" height="240">
+<img src="assets/branding/luria_project_memory_theme_aware_svg_assets/luria_project_memory_lockup_horizontal.svg" alt="luria"  height="240">
 
 [![CI](https://github.com/dmarx/luria/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/dmarx/luria/actions/workflows/ci.yml)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue)](https://www.python.org/downloads/)
