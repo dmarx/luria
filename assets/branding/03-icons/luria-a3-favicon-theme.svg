@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title desc" width="64" height="64">
+<title id="title">Luria A3 favicon</title>
+<desc id="desc">Slate rounded-square favicon containing the optical micro mark.</desc>
+  <style>
+    .tile { fill: #111111; }
+    .mark { fill: #f0ede8; }
+    @media (prefers-color-scheme: dark) {
+      .tile { fill: #f0ede8; }
+      .mark { fill: #111111; }
+    }
+  </style>
+
+<rect width="64" height="64" rx="14" class="tile"/><g transform="translate(15.42 5) scale(0.109)" class="mark"><path d="M99 15 C55 21 25 76 25 149 C25 224 58 279 107 289 C132 294 154 284 168 269 C174 262 173 252 165 247 C158 243 150 245 142 251 C133 257 123 260 114 257 C100 252 94 239 94 220 L96 28 C96 21 97 17 99 15 Z"/><path d="M124 15 C166 21 198 77 201 146 C203 194 194 228 180 251 C169 240 158 233 146 233 C132 233 123 226 122 213 L120 28 C120 21 122 17 124 15 Z"/></g>
+</svg>
