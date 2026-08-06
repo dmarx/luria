@@ -139,4 +139,15 @@ consumer to hit a bug is this repo.
 - [Comment directives](docs/directives.md) — `inactive-ok`, `unexempt`
 - [Adopting Luria](docs/adopting.md)
 
-MIT.
+
+## Citation
+
+```latex
+@software{marx2026luria,
+  author    = {Marx, David},
+  title     = {{Luria}: Project Memory as Change Management},
+  year      = {2026},
+  url       = {https://github.com/dmarx/luria},
+  note      = {Open-source software}
+}
+```
