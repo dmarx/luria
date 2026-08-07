@@ -18,7 +18,7 @@ Nothing unacknowledged. ✅
 
 A reference nobody can follow. Three things look identical from here and read very differently — a typo, a number carried in from another project, and an illustrative code in an example — so this is a report, not an error. `unresolved-ok:` retires the deliberate ones, at the same three scopes.
 
-**0 code(s) name no document.** 46 reference(s) carry an `unresolved-ok` annotation and are not listed below.
+**0 code(s) name no document.** 45 reference(s) carry an `unresolved-ok` annotation and are not listed below.
 
 Every code resolves. ✅
 

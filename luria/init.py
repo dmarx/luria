@@ -53,12 +53,15 @@ def plan(into: Path) -> list[tuple[Path, Path]]:
             for src in sorted(TEMPLATE.rglob("*")) if src.is_file()]
 
 
-def write(into: Path, issue_url: str = "", dry_run: bool = False) -> tuple[int, int]:
+def write(into: Path, issue_url: str = "",
+          dry_run: bool = False) -> tuple[int, int, list[Path]]:
     written = skipped = 0
+    kept: list[Path] = []
     for src, dest in plan(into):
         if dest.exists():
             print(f"  skip   {dest.relative_to(into)} (exists)")
             skipped += 1
+            kept.append(dest)
             continue
         print(f"  write  {dest.relative_to(into)}")
         written += 1
@@ -73,7 +76,7 @@ def write(into: Path, issue_url: str = "", dry_run: bool = False) -> tuple[int, 
                 if "{n}" not in issue_url else f'issue_url = "{issue_url}"')
         dest.write_text(text)
         shutil.copystat(src, dest)
-    return written, skipped
+    return written, skipped, kept
 
 
 def main() -> int:
@@ -88,12 +91,21 @@ def main() -> int:
 
     into = (args.into or find_root()).resolve()
     print(f"luria init → {into}")
-    written, skipped = write(into, args.issue_url, args.dry_run)
+    written, skipped, kept = write(into, args.issue_url, args.dry_run)
     if not written and not skipped:
         print("  nothing to write — is the template directory installed?")
         return 1
     verb = "would write" if args.dry_run else "wrote"
     print(f"{verb} {written} file(s), skipped {skipped} existing.")
+    # A file the project already owns is never touched — but the one an
+    # agent reads first deserves more than a silent skip (DP-1): say what
+    # the scaffolded shape would have been, and leave the merge to a human
+    # or their agent.
+    if any(p.name == "CLAUDE.md" for p in kept):
+        print("\nYour CLAUDE.md was left alone. The scaffolded shape is a "
+              "short map — links to the record's docs plus an invitation to "
+              "run `luria --help` (LU-ADR-037). Worth borrowing: ask your "
+              "agent to fold that shape into your existing file.")
     if written and not args.dry_run:
         print("\nNext: `luria index` to build the decision index, then "
               "`luria lint`.")
