@@ -41,6 +41,49 @@ which manifests as references in documentation as well as in code. Luria's linte
 that all referenced decisions are in an "active" state. If the linter discovers (unacknowledged) references to non-active decisions, it can raise 
 warnings, generate reports, and/or fail CI until the unendorsed decisions are dealt with (or the references to them are annotated for the linter). 
 
+
+### The four layers
+
+| layer | holds | test |
+|---|---|---|
+| design principles | standing **values**, numbered, citable and **versioned** | *have we re-derived this more than once?* |
+| decisions | a **choice among alternatives** at a point in time | *did we reject an alternative, or set a constraint?* |
+| changelog fragments | **what changed**, operator-facing | *would someone running this notice?* |
+| devlog entries | **how it went**, including the wrong theories | *will a future debugger want the narrative?* |
+
+Each contribution writes a *fragment* nobody else touches; the shared documents
+are **views**. A file every contribution appends to is a lock, and its conflicts
+carry no information ([DP-2](docs/design-principles.md#dp-2)).
+
+The tree says which is which ([DP-9](docs/design-principles.md#dp-9),
+[ADR-021](record/decisions.d/ADR-021.md)): **you read in `docs/`, you file in
+`record/`**. Browsing lands on prose and generated views; the sources sit in
+`record/`'s `.d`-suffixed containers, arrived at by link or on purpose. A view
+directory holds only what the generator wrote — a hand edit there is a lint
+failure, not a plea in a comment.
+
+```
+docs/                     READ  — doctrine + every generated view
+record/decisions.d/       WRITE — one file per decision
+record/principles.d/      WRITE — one file per principle
+record/changelog.d/       WRITE — fragments, collected into /CHANGELOG.md
+record/devlog.d/          WRITE — journal entries, yyyy/mm/dd/hhmmss.md
+```
+
+Views come in two kinds, and the difference is whether the sources survive
+([ADR-012](record/decisions.d/ADR-012.md)). The changelog is **collected**: its
+fragments are consumed, so the view can only be appended to. The decision index,
+the principles document and the devlog are **generated** — a pure function of
+sources that persist, which is the only reason `luria lint` can tell you one has
+gone stale.
+
+The devlog is a **journal**: entries are filed at their authoring timestamp
+(`record/devlog.d/2026/08/03/211926.md`), never deleted, and rendered into one book per
+month with a generated contents list ([ADR-020](record/decisions.d/ADR-020.md)). A
+dated observation was true when it was written and stays true; consuming it
+throws away the only copy of something that never expires.
+
+
 ## Motivation
 
 Are you using any form of "agentic AI"? You are probably doing it wrong. Luria's position is that most of the standard 
@@ -135,47 +178,6 @@ luria index && luria lint
 | `luria collect` | assembles fragment directories into their views |
 | `luria remotes` | another project's record: how each foreign reference resolves, and whether it is reachable |
 | `luria init` | scaffolds the record into a project that has none |
-
-## The four layers
-
-| layer | holds | test |
-|---|---|---|
-| design principles | standing **values**, numbered, citable and **versioned** | *have we re-derived this more than once?* |
-| decisions | a **choice among alternatives** at a point in time | *did we reject an alternative, or set a constraint?* |
-| changelog fragments | **what changed**, operator-facing | *would someone running this notice?* |
-| devlog entries | **how it went**, including the wrong theories | *will a future debugger want the narrative?* |
-
-Each contribution writes a *fragment* nobody else touches; the shared documents
-are **views**. A file every contribution appends to is a lock, and its conflicts
-carry no information ([DP-2](docs/design-principles.md#dp-2)).
-
-The tree says which is which ([DP-9](docs/design-principles.md#dp-9),
-[ADR-021](record/decisions.d/ADR-021.md)): **you read in `docs/`, you file in
-`record/`**. Browsing lands on prose and generated views; the sources sit in
-`record/`'s `.d`-suffixed containers, arrived at by link or on purpose. A view
-directory holds only what the generator wrote — a hand edit there is a lint
-failure, not a plea in a comment.
-
-```
-docs/                     READ  — doctrine + every generated view
-record/decisions.d/       WRITE — one file per decision
-record/principles.d/      WRITE — one file per principle
-record/changelog.d/       WRITE — fragments, collected into /CHANGELOG.md
-record/devlog.d/          WRITE — journal entries, yyyy/mm/dd/hhmmss.md
-```
-
-Views come in two kinds, and the difference is whether the sources survive
-([ADR-012](record/decisions.d/ADR-012.md)). The changelog is **collected**: its
-fragments are consumed, so the view can only be appended to. The decision index,
-the principles document and the devlog are **generated** — a pure function of
-sources that persist, which is the only reason `luria lint` can tell you one has
-gone stale.
-
-The devlog is a **journal**: entries are filed at their authoring timestamp
-(`record/devlog.d/2026/08/03/211926.md`), never deleted, and rendered into one book per
-month with a generated contents list ([ADR-020](record/decisions.d/ADR-020.md)). A
-dated observation was true when it was written and stays true; consuming it
-throws away the only copy of something that never expires.
 
 ## Citing another project
 
