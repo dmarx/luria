@@ -203,7 +203,7 @@ def hand_links(files: list[Path] | None = None
     projection ([DP-3](../docs/design-principles.md#dp-3)) frozen at writing
     time — if the remote later adopts a convention or the lockfile learns the
     real filename, nothing updates it. So each one is either acknowledged or
-    reported (ADR-007): never an error, never silent.
+    reported (ADR-035): never an error, never silent.
 
     Returns (flagged, stale): unacknowledged hand links, and `url-ok`
     directives that no longer acknowledge anything."""
@@ -520,7 +520,7 @@ def main() -> int:
         print(f"remotes: {len(broken)} reference(s) did not answer 200"
               if broken else "remotes: nothing verifiable is broken",
               file=sys.stderr if broken else sys.stdout)
-    return 0            # a report, never a failure (ADR-007)
+    return 0            # a report, never a failure (ADR-035)
 
 
 if __name__ == "__main__":

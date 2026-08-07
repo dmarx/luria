@@ -1,5 +1,5 @@
 """References to retired documents, and the annotations that excuse them
-([ADR-007](../record/decisions.d/ADR-007.md)).
+([ADR-035](../record/decisions.d/ADR-035.md)).
 
 The report is a warning, so nothing fails when it is wrong — which is exactly
 why its scoping and its acknowledgement syntax need tests. Every rule here

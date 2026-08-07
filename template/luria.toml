@@ -94,3 +94,9 @@ document = "docs/design-principles.md"
 [luria.remotes.FX]
 name = "fixtures"
 url  = "https://github.com/dmarx/luria/blob/main/docs/directives.md#fixture-codes"
+
+# The enforcement dial (LU-ADR-035): status findings are warnings by default,
+# and a class named here fails `luria lint` instead. The acknowledgement
+# directives keep working under enforcement — only unacknowledged rows fail.
+# [luria.lint]
+# fail_on = ["retired-citations", "pending-documents"]

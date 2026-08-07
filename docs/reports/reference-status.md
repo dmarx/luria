@@ -5,7 +5,7 @@
 
 A reference reads as "this is why things are the way they are", and that claim holds only while the referenced document is in force. None of this is a failure — citing a `Rejected` decision is often exactly right — so nothing here fails a build. What is worth knowing is which of these nobody has looked at.
 
-**0 retired document(s) cited without acknowledgement.** 13 reference(s) carry an `inactive-ok` annotation and are not listed below.
+**1 retired document(s) cited without acknowledgement.** 36 reference(s) carry an `inactive-ok` annotation and are not listed below.
 
 To acknowledge one, put the reason where the reference is — `inactive-ok:` covers its line and the line below, `-block` the paragraph, `-file` the page:
 
@@ -13,7 +13,14 @@ To acknowledge one, put the reason where the reference is — `inactive-ok:` cov
 <!-- inactive-ok: ADR-012 — why this citation is right -->
 ```
 
-Nothing unacknowledged. ✅
+## [ADR-007](../../record/decisions.d/ADR-007.md) — Superseded
+
+Document status is reported, not enforced
+
+1 unacknowledged reference(s) in 1 file(s) · 23 acknowledged elsewhere.
+
+- [`luria/lint.py:307`](../../luria/lint.py)
+
 ## Codes that resolve to no document
 
 A reference nobody can follow. Three things look identical from here and read very differently — a typo, a number carried in from another project, and an illustrative code in an example — so this is a report, not an error. `unresolved-ok:` retires the deliberate ones, at the same three scopes.

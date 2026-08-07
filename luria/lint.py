@@ -21,15 +21,16 @@ Checks (each one fails the build):
    resolvable ones await `luria link --fix`; unresolvable ones are an error
    the fixer cannot clear, because the request was explicit.
 
-It also prints WARNINGS, which never affect the exit code (ADR-007): references
-to retired documents, codes that resolve to no document at all, remote links
-whose URL is hand-written rather than constructed, directives that no longer
-apply, and a count of undecided decisions. Citing a `Rejected`
-decision — or leaving one `Proposed`, or naming another project's LU-ADR-013 — is
-often right, so none can be an error; all should be visible. `luria reports`
-writes the full detail as markdown, and an `inactive-ok:` / `unresolved-ok:` /
-`url-ok:` comment acknowledges a deliberate one so only the unconsidered ones
-stay listed.
+It also prints WARNINGS, which by default never affect the exit code
+(ADR-035): references to retired documents, codes that resolve to no document
+at all, remote links whose URL is hand-written rather than constructed,
+directives that no longer apply, and a count of undecided decisions. Citing a
+`Rejected` decision — or leaving one `Proposed`, or naming another project's
+LU-ADR-013 — is often right, so none is an error unless the project says so:
+a class named in `[luria.lint] fail_on` is promoted to a failure. Either way
+`luria reports` writes the full detail as markdown, and an `inactive-ok:` /
+`unresolved-ok:` / `url-ok:` comment acknowledges a deliberate one so only
+the unconsidered ones stay listed — acknowledged rows never fail.
 
 Exit 0 when clean; exit 1 with one line per violation.
 """
@@ -255,27 +256,50 @@ def check_bare_refs(errors: list[str]) -> None:
         errors.extend(found)
 
 
-def report_warnings() -> None:
-    """Things worth seeing that can't be violations. Citing a retired document
-    is often correct — a `Rejected` decision exists to be pointed at — so it is
-    reported, never failed (ADR-007)."""
-    lines = ref_status.summary_lines()
+# The enforcement dial's vocabulary (ADR-035): a class named in
+# `[luria.lint] fail_on` fails the build instead of printing. Only
+# UNACKNOWLEDGED rows ever reach a class, so the directives stay the escape
+# hatch under enforcement — the dial changes the consequence, not the
+# accounting.
+FAILABLE = ("retired-citations", "unresolved-codes", "hand-written-urls",
+            "stale-directives", "pending-documents", "unlinted-files")
+
+
+def status_sections() -> list[tuple[str, str, list[str]]]:
+    """Every status finding, as (class, headline, detail lines) — computed
+    once, so the warning path and the `fail_on` path cannot disagree."""
+    docs = ref_status.load_docs()
+    result = ref_status.scan(docs=docs)
+    sections: list[tuple[str, str, list[str]]] = []
+
+    lines = ref_status.summary_lines(result, docs)
     if lines:
-        print(f"luria: {len(lines)} warning(s) — retired documents cited "
-              "unacknowledged from current docs/code (`luria reports` for "
-              "the sites, `inactive-ok:` to acknowledge one)", file=sys.stderr)
-        for line in lines:
-            print(f"  {line}", file=sys.stderr)
+        sections.append((
+            "retired-citations",
+            f"{len(lines)} warning(s) — retired documents cited "
+            "unacknowledged from current docs/code (`luria reports` for "
+            "the sites, `inactive-ok:` to acknowledge one)", lines))
 
     # A code that resolves to nothing is a reference the reader can't follow
     # and the fixer can't link — until this existed it was silently dropped.
-    loose = ref_status.dangling_lines()
+    loose = ref_status.dangling_lines(result, docs)
     if loose:
-        print(f"luria: {len(loose)} code(s) resolve to no document "
-              "(`luria reports` for the sites, `unresolved-ok:` for the "
-              "deliberate ones)", file=sys.stderr)
-        for line in loose:
-            print(f"  {line}", file=sys.stderr)
+        sections.append((
+            "unresolved-codes",
+            f"{len(loose)} code(s) resolve to no document "
+            "(`luria reports` for the sites, `unresolved-ok:` for the "
+            "deliberate ones)", loose))
+
+    # A whole file opting out of reference checking is legitimate and blunt
+    # (#37) — blunt enough that the count surfaces even though nothing here
+    # can act on it: an exemption nobody sees is how a report stops being a
+    # complete account.
+    if result.unlinted:
+        sections.append((
+            "unlinted-files",
+            f"{len(result.unlinted)} file(s) opt out of reference checking "
+            "(`unlinted-file:` — listed in the reference report)",
+            [str(current().rel(p)) for p in sorted(result.unlinted)]))
 
     # A whole file opting out of reference checking is legitimate and blunt
     # (#37) — blunt enough that the count prints even though nothing here can
@@ -292,28 +316,55 @@ def report_warnings() -> None:
     # (`url-ok:`) and the rest are listed.
     hand, stale_urls = remotes.hand_links()
     if hand:
-        print(f"luria: {len(hand)} link(s) hand-written where a URL would be "
-              "constructed (`url-ok:` acknowledges a deliberate one)",
-              file=sys.stderr)
-        for line in hand:
-            print(f"  {line}", file=sys.stderr)
+        sections.append((
+            "hand-written-urls",
+            f"{len(hand)} link(s) hand-written where a URL would be "
+            "constructed (`url-ok:` acknowledges a deliberate one)", hand))
 
     # A directive that silently does nothing is worse than no directive.
-    stale = ref_status.stale_annotations() + stale_urls
+    stale = ref_status.stale_annotations(result, docs) + stale_urls
     for path in doc_refs.doc_files():
         stale += doc_refs.directive_problems(path, path.read_text())
     if stale:
-        print(f"luria: {len(stale)} directive(s) no longer apply", file=sys.stderr)
-        for line in sorted(stale):
-            print(f"  {line}", file=sys.stderr)
+        sections.append((
+            "stale-directives",
+            f"{len(stale)} directive(s) no longer apply", sorted(stale)))
 
     # One line, not the table: the point is that the number is never zero
     # silently. `luria reports` ranks them by age and citation count.
     rows = adr_pending.pending()
     if rows:
-        print("luria: " + adr_pending.headline(
-            rows, dt.date.today(), current().stale_days)
-            + " (`luria reports` for the table)", file=sys.stderr)
+        sections.append((
+            "pending-documents",
+            adr_pending.headline(rows, dt.date.today(), current().stale_days)
+            + " (`luria reports` for the table)", []))
+    return sections
+
+
+def report_warnings(errors: list[str]) -> None:
+    """Status findings: warnings by default, failures on request (ADR-035).
+
+    Citing a retired document is often correct — a `Rejected` decision exists
+    to be pointed at — so by default every class here is reported and none
+    fails the build. A project that wants a class *enforced* names it in
+    `[luria.lint] fail_on`, and its unacknowledged rows become violations;
+    the acknowledgement directives keep working either way."""
+    fail = set(current().fail_on)
+    for name in sorted(fail - set(FAILABLE)):
+        # A dial set to a notch that doesn't exist must not silently enforce
+        # nothing (DP-1).
+        errors.append(f"luria.toml: `fail_on` names {name!r}, which is no "
+                      f"warning class (known: {', '.join(FAILABLE)})")
+
+    for name, headline, lines in status_sections():
+        if name in fail:
+            errors.append(f"{headline} — failing: `fail_on` names "
+                          f"{name!r} in luria.toml")
+            errors.extend(lines)
+        else:
+            print(f"luria: {headline}", file=sys.stderr)
+            for line in lines:
+                print(f"  {line}", file=sys.stderr)
 
 
 def main() -> int:
@@ -325,7 +376,7 @@ def main() -> int:
     check_version_history(errors)
     check_bare_refs(errors)
     check_wikilinks(errors)
-    report_warnings()
+    report_warnings(errors)
     if errors:
         print(f"luria: {len(errors)} violation(s)", file=sys.stderr)
         for e in errors:

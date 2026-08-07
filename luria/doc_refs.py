@@ -270,7 +270,7 @@ ANY_MD = Path("prose.md")           # suffix is all the directive parser needs
 # one is deliberately blunt: the tool for a fixture-heavy or vendored page,
 # where a directive per code is maintenance without information. The price of
 # bluntness is visibility — the reference report counts the files that carry
-# it rather than hiding them (ADR-007).
+# it rather than hiding them (ADR-035).
 UNLINTED = "unlinted"
 
 

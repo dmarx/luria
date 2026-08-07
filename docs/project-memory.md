@@ -207,5 +207,5 @@ it. This page is what the bootloader points at.
   references are followable.
 - Deterministic assembly — same inputs, same view, so drift between record and
   view is mechanically checkable.
-- The reports ([ADR-007](../record/decisions.d/ADR-007.md)):
+- The reports ([ADR-035](../record/decisions.d/ADR-035.md)):
   what cites a retired decision, and what has been undecided for how long.

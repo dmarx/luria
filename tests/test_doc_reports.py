@@ -1,5 +1,5 @@
 """The status reports, rendered as committed views
-([ADR-007](../record/decisions.d/ADR-007.md), #35).
+([ADR-035](../record/decisions.d/ADR-035.md), #35).
 
 These are the only place the status warnings are read in full, and nothing
 consumes them programmatically — so what is worth pinning is that the numbers

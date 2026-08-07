@@ -181,6 +181,6 @@ what the previous version claimed is the only thing this rule forbids.
   record are the dogfooding ones and are meant to be corpus-dependent.
 - New checks go behind `luria lint` only if the violation is always wrong and
   mechanically fixable. If a human has to judge it, it is a report
-  ([ADR-007](record/decisions.d/ADR-007.md)).
+  ([ADR-035](record/decisions.d/ADR-035.md)).
 - Fire any new guard once before trusting it, and say so in the devlog entry
   ([DP-6](docs/design-principles.md#dp-6)).

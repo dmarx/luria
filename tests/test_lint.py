@@ -234,3 +234,75 @@ def test_a_hand_written_file_in_a_view_dir_is_a_violation(project):
     errors = generated_errors(project)
     assert len(errors) == 1
     assert "notes.md" in errors[0] and "generator" in errors[0]
+
+
+# ── The enforcement dial (ADR-035) ───────────────────────────────────────
+
+
+def dial_project(project, fail_on: str = "") -> None:
+    """A project with a retired decision cited from a docs page, and the
+    dial set to `fail_on` (a TOML list body, e.g. '"retired-citations"')."""
+    _scheme.decision(project, 12, "Superseded")
+    page = project / "docs" / "notes.md"
+    page.parent.mkdir(parents=True, exist_ok=True)
+    page.write_text("Still leaning on ADR-012 here.\n")
+    (project / "luria.toml").write_text(
+        '[luria]\nissue_url = "https://example.test/issues/{n}"\n'
+        f'[luria.lint]\nfail_on = [{fail_on}]\n')
+    from luria import config
+    config.reset()
+
+
+def dial_errors(capsys) -> tuple[list[str], str]:
+    found: list[str] = []
+    lint.report_warnings(found)
+    return found, capsys.readouterr().err
+
+
+def test_the_default_posture_is_warn_only(project, capsys):
+    """Nothing configured, nothing fails — every argument for warn-first
+    survives as the argument for warn-by-default (ADR-035)."""
+    dial_project(project)
+    errors, err = dial_errors(capsys)
+    assert errors == []
+    assert "retired documents cited unacknowledged" in err
+
+
+def test_a_promoted_class_fails_instead_of_printing(project, capsys):
+    dial_project(project, '"retired-citations"')
+    errors, err = dial_errors(capsys)
+    assert any("failing: `fail_on`" in e for e in errors)
+    assert any("ADR-012" in e for e in errors), "the detail rows come along"
+    assert "retired documents cited unacknowledged" not in err, \
+        "promoted, not duplicated"
+
+
+def test_an_acknowledged_row_never_fails(project, capsys):
+    """The dial changes the consequence, not the accounting — `inactive-ok:`
+    is the escape hatch under enforcement too."""
+    dial_project(project, '"retired-citations"')
+    page = project / "docs" / "notes.md"
+    page.write_text("<!-- inactive-ok: ADR-012 — quoted deliberately -->\n"
+                    "Still leaning on ADR-012 here.\n")
+    errors, _ = dial_errors(capsys)
+    assert errors == []
+
+
+def test_a_wrong_notch_is_an_error(project, capsys):
+    """A dial set to a notch that doesn't exist must not silently enforce
+    nothing (DP-1)."""
+    dial_project(project, '"retired-refs"')
+    errors, _ = dial_errors(capsys)
+    assert any("no warning class" in e and "retired-citations" in e
+               for e in errors)
+
+
+def test_pending_documents_can_be_promoted(project, capsys):
+    _scheme.decision(project, 2, "Proposed")
+    (project / "luria.toml").write_text(
+        '[luria]\nissue_url = "https://example.test/issues/{n}"\n'
+        '[luria.lint]\nfail_on = ["pending-documents"]\n')
+    from luria import config
+    config.reset()
+    errors, _ = dial_errors(capsys)
+    assert any("undecided document(s)" in e and "failing" in e for e in errors)

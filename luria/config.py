@@ -93,6 +93,13 @@ DEFAULTS: dict = {
         },
     },
     "stale_days": 90,
+    # The enforcement dial (ADR-035): warning classes named here fail the
+    # lint instead of printing. Empty is the default posture — reported,
+    # not enforced — and the acknowledgement directives keep working under
+    # promotion, because only unacknowledged rows ever reach a class.
+    "lint": {
+        "fail_on": [],
+    },
 }
 
 
@@ -412,6 +419,7 @@ class Config:
     remotes: dict[str, Remote]
     journals: dict[str, Journal]
     stale_days: int
+    fail_on: tuple[str, ...]            # warning classes promoted to failures
     _raw: dict = field(default_factory=dict, repr=False)
 
     def _index_scheme(self):
@@ -579,6 +587,7 @@ def load(root: Path | None = None) -> Config:
             for name, spec in raw.get("journals", {}).items()
         },
         stale_days=int(raw.get("stale_days", 90)),
+        fail_on=tuple(raw["lint"]["fail_on"]),
         _raw=raw,
     )
 
