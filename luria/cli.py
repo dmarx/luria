@@ -1,4 +1,3 @@
-# inactive-ok-file: ADR-039 — this is the draft implementation of that proposal; the citation is the point
 """`luria` — one entry point for the whole record, driven by Fire (ADR-039).
 
     luria lint          check the record; the only command that can fail

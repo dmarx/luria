@@ -1,4 +1,3 @@
-# inactive-ok-file: ADR-039 — tests for the draft implementation of that proposal
 """The entry point under Fire (ADR-039): typed functions, derived help,
 exit codes by SystemExit only.
 
