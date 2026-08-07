@@ -53,7 +53,7 @@ also checks that all referenced decisions are in an "active" state ([ADR-007](re
 | changelog fragments | **what changed**, operator-facing | *would someone running this notice?* |
 | devlog entries | **how it went**, including the wrong theories | *will a future debugger want the narrative?* |
 
-Each contribution writes a *fragment* nobody else touches; the shared documents are **views** ([[ADR-002]], [[ADR-020]], [[ADR-021]]). 
+Each contribution writes a *fragment* nobody else touches; the shared documents are **views** ([ADR-002](record/decisions.d/ADR-002.md), [ADR-020](record/decisions.d/ADR-020.md), [ADR-021](record/decisions.d/ADR-021.md)). 
 A file every contribution appends to is a lock, and its conflicts carry no information ([DP-2](docs/design-principles.md#dp-2)).
 
 The tree says which is which ([DP-9](docs/design-principles.md#dp-9),
