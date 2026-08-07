@@ -301,6 +301,16 @@ def status_sections() -> list[tuple[str, str, list[str]]]:
             "(`unlinted-file:` — listed in the reference report)",
             [str(current().rel(p)) for p in sorted(result.unlinted)]))
 
+    # A whole file opting out of reference checking is legitimate and blunt
+    # (#37) — blunt enough that the count prints even though nothing here can
+    # act on it: an exemption nobody sees is how a report stops being a
+    # complete account (ADR-007).
+    skipped = ref_status.scan().unlinted
+    if skipped:
+        print(f"luria: {len(skipped)} file(s) opt out of reference checking "
+              "(`unlinted-file:` — listed in the reference report)",
+              file=sys.stderr)
+
     # A hand-written URL where one would be constructed is legitimate — and
     # frozen at writing time, so the deliberate ones are acknowledged
     # (`url-ok:`) and the rest are listed.
