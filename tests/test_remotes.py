@@ -14,7 +14,9 @@ from _scheme import decision
 
 from luria import config, doc_refs, ref_status, remotes
 
-# unresolved-ok-file: ADR-032 ADR-999 UP-ADR-999 DP-018 — fixture codes, not claims about this repo
+# unresolved-ok-file: ADR-999 UP-ADR-999 DP-018 — fixture codes, not claims about
+# this repo. ADR-032 left the list when a real thirty-second decision arrived and
+# the fixture number started resolving.
 REPO = Path(__file__).resolve().parents[1]
 
 REMOTE_TOML = (

@@ -8,7 +8,8 @@ silently-bare code — the request was explicit, so the refusal must be too.
 import sys
 from pathlib import Path
 
-# unresolved-ok-file: ADR-032 — UP is a fixture remote; its tail is not a local code
+# UP is a fixture remote; its tail (ADR-032) resolves locally these days, so no
+# unresolved-ok is needed — the mention just cites an Active decision.
 REPO = Path(__file__).resolve().parents[1]
 
 from _scheme import decision

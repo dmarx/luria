@@ -12,7 +12,9 @@ issue_url = ""
 docs = "docs"
 decisions = "record/decisions.d"
 design_principles = "docs/design-principles.md"
-reports = "build/doc-reports"
+# Committed views, not build artifacts, so the README badges land on
+# the report that explains their numbers.
+reports = "docs/reports"
 
 # Fragment directory → the file it is collected into. Links written in a
 # fragment resolve from the collected file's directory, not the fragment's

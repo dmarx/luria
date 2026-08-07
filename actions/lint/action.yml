@@ -24,7 +24,7 @@ inputs:
     default: doc-reports
   reports-path:
     description: Where `luria reports` writes — your luria.toml's `reports` path.
-    default: build/doc-reports
+    default: docs/reports
 runs:
   using: composite
   steps:
@@ -33,9 +33,10 @@ runs:
       run: pip install ${{ inputs.pip-spec }}
     - shell: bash
       run: luria lint
-    # Warnings never fail the lint, which is exactly why they need somewhere
-    # to be read; always() keeps them available when the lint failed, when
-    # they are most wanted.
+    # The reports are committed views written by `luria index` (#35), but the
+    # artifact regenerates them fresh: when the lint failed on staleness, the
+    # committed copies are exactly what can't be trusted. always() keeps them
+    # available when the lint failed, when they are most wanted.
     - if: ${{ always() }}
       shell: bash
       run: luria reports

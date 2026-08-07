@@ -10,10 +10,14 @@
 - [Development log](devlog/README.md) — the narrative: failed approaches, root
   causes, and the traps worth not rediscovering. One book per month, generated
   from the dated entries in `record/devlog.d/`.
+- Status reports — what the README's badges count, one page each:
+  [documents awaiting a decision](reports/pending-decisions.md) and
+  [retired documents still cited](reports/reference-status.md).
 - [Adopting Luria](adopting.md) — putting the record into a project that hasn't
   got one.
 
 Everything in this directory is for *reading* — the prose pages are authored,
-and the decisions index, principles document and devlog books are generated.
+and the decisions index, principles document, devlog books and status reports
+are generated.
 Filing happens in [`record/`](../record/), whose `.d`-suffixed containers hold
 the sources ([ADR-021](../record/decisions.d/ADR-021.md)).

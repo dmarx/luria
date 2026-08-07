@@ -12,7 +12,9 @@ issue_url = "https://github.com/dmarx/luria/issues/{n}"
 docs = "docs"
 decisions = "record/decisions.d"
 design_principles = "docs/design-principles.md"
-reports = "build/doc-reports"
+# Committed views, not build artifacts, so the README badges land on the
+# report that explains their numbers (#35).
+reports = "docs/reports"
 
 # The changelog assembles in the release shape (ADR-028): each collection is a
 # dated batch inserted right after the marker, newest first — the reading
