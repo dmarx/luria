@@ -6,6 +6,7 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 
 ## Currently — [August 2026](2026-08.md)
 
+- [7 Aug 15:55 — Reports become views a badge can land on, and created: fills itself in](2026-08.md#20260807155534)
 - [7 Aug 04:59 — The CLI sheds the commands that were only the module layout showing through](2026-08.md#20260807045929)
 - [6 Aug 20:48 — Branding and copyediting](2026-08.md#20260806204800)
 - [5 Aug 13:34 — A checking job runs nothing that writes](2026-08.md#20260805133445)
@@ -27,8 +28,8 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 
 ## All books
 
-18 entries across 1 book, newest first.
+19 entries across 1 book, newest first.
 
 | Book | Entries | First | Last |
 |---|--:|---|---|
-| [2026-08](2026-08.md) | 18 | 2026-08-03 | 2026-08-07 |
+| [2026-08](2026-08.md) | 19 | 2026-08-03 | 2026-08-07 |

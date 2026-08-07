@@ -322,6 +322,10 @@ def view_dirs() -> list[Path]:
         if s.view != s.dir:
             dirs.append(s.view)
     dirs += [j.output for j in cfg.journals.values()]
+    # The status reports are views like any other (#35) — a hand-written file
+    # in their directory would read as generated, and a report from a retired
+    # filename would linger as truth.
+    dirs.append(cfg.reports)
     return dirs
 
 
@@ -349,11 +353,14 @@ def outputs() -> dict[Path, str]:
     pure function of the tree, so they run as parallel units. `pmap` returns
     in input order, which is what keeps the merged dict — and therefore the
     staleness diff — deterministic."""
-    from . import journal
+    from . import journal, reports
     from .parallel import pmap
     cfg = current()
     units = [lambda s=s: _render_scheme(s) for s in cfg.schemes.values()]
     units += [lambda j=j: journal.outputs_for(j) for j in cfg.journals.values()]
+    # The status reports render with everything else (#35), so the badges have
+    # a committed page to land on and a stale report is a lint failure.
+    units += [reports.outputs]
     out: dict[Path, str] = {}
     for rendered in pmap(lambda u: u(), units):
         out.update(rendered)
@@ -364,6 +371,15 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--check", action="store_true", help="exit 1 if anything is stale")
     args = ap.parse_args()
+
+    if not args.check:
+        # A journal entry filed without `created:` gets the field written from
+        # its path before anything renders (#33) — a source repair, so it
+        # belongs to write mode; `--check` must keep reading, not writing.
+        from . import journal
+        for j in current().journals.values():
+            for p in journal.populate_created(j):
+                print(f"populated `created:` from the path in {current().rel(p)}")
 
     rendered = outputs()
     if args.check:

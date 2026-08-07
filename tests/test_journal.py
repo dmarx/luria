@@ -217,3 +217,66 @@ def test_index_inlines_the_current_book(tmp_path):
     assert index.index("Newest") < index.index("Recent")
     # …and the old book appears only on the shelf.
     assert "Old month" not in index and "[2026-07](2026-07.md)" in index
+
+# ── Populating `created:` from the path (#33) ────────────────────────────
+
+
+def test_populate_created_fills_a_missing_field(tmp_path):
+    j = jrnl(tmp_path)
+    path = j.dir / "2026/08/03/211926.md"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("---\ntitle: 'Hand-filed'\ntags: []\n---\n\nBody.\n")
+
+    assert journal.populate_created(j) == [path]
+    assert "created: '2026-08-03T21:19:26'" in path.read_text()
+    assert journal.read(path).title == "Hand-filed", "the rest is untouched"
+    assert journal.populate_created(j) == [], "populating twice is a no-op"
+
+
+def test_populate_created_refills_an_empty_field(tmp_path):
+    j = jrnl(tmp_path)
+    path = j.dir / "2026/08/03/211926.md"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("---\ntitle: 'Hand-filed'\ncreated:\ntags: []\n---\n\nBody.\n")
+
+    assert journal.populate_created(j) == [path]
+    text = path.read_text()
+    assert "created: '2026-08-03T21:19:26'" in text
+    assert text.count("created:") == 1, "refilled, not duplicated"
+
+
+def test_populate_created_respects_a_filed_value(tmp_path):
+    """A field that *disagrees* with the path is two witnesses in conflict —
+    a judgement for the lint to demand, never a mechanical overwrite."""
+    j = jrnl(tmp_path)
+    path = j.dir / "2026/08/03/211926.md"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    original = ("---\ntitle: 'Moved?'\ncreated: '2026-08-04T03:27:11'\n"
+                "tags: []\n---\n\nBody.\n")
+    path.write_text(original)
+
+    assert journal.populate_created(j) == []
+    assert path.read_text() == original
+
+
+def test_populate_created_skips_a_path_that_implies_nothing(tmp_path):
+    j = jrnl(tmp_path)
+    path = j.dir / "notes.md"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    original = "---\ntitle: 'Loose notes'\n---\n\nBody.\n"
+    path.write_text(original)
+
+    assert journal.populate_created(j) == []
+    assert path.read_text() == original
+
+
+def test_populate_created_writes_frontmatter_where_there_is_none(tmp_path):
+    j = jrnl(tmp_path)
+    path = j.dir / "2026/08/03/211926.md"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("Just a body, filed by hand.\n")
+
+    assert journal.populate_created(j) == [path]
+    entry = journal.read(path)
+    assert entry.created == dt.datetime(2026, 8, 3, 21, 19, 26)
+    assert entry.body == "Just a body, filed by hand."

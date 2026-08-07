@@ -110,6 +110,45 @@ def entries(journal: Journal) -> list[Entry]:
     return sorted(found, key=lambda e: (e.created, e.path.as_posix()))
 
 
+_CREATED_LINE_RE = re.compile(r"^created:.*$", re.MULTILINE)
+
+
+def populate_created(journal: Journal) -> list[Path]:
+    """Write a missing `created:` into entries whose path already says it (#33).
+
+    The path is derived from `created:` (ADR-020), so when the field is empty
+    the path is the one witness left — populating from it writes down what the
+    tree already asserts rather than inventing anything. An entry whose field
+    and path *disagree* is left alone: two witnesses in conflict is a
+    judgement for a human, not a mechanical fix.
+
+    Runs from `luria index`'s write mode, so the same generation job that
+    commits the views repairs the field (ADR-029)."""
+    fixed: list[Path] = []
+    for path in sorted(journal.dir.rglob("*.md")):
+        if path.name == "_template.md":
+            continue
+        text = path.read_text()
+        meta, _ = parse_frontmatter(text)
+        if parse_created(meta.get("created")) is not None:
+            continue
+        created = created_from_path(path)
+        if created is None:
+            continue
+        line = f"created: '{created.isoformat(timespec='seconds')}'"
+        if meta and "created" in meta:
+            # The key is there but holds nothing parseable — refill it.
+            new_text = _CREATED_LINE_RE.sub(line, text, count=1)
+        elif text.startswith("---\n"):
+            head, rest = text.split("\n", 1)
+            new_text = f"{head}\n{line}\n{rest}"
+        else:
+            new_text = f"---\n{line}\n---\n\n{text}"
+        path.write_text(new_text)
+        fixed.append(path)
+    return fixed
+
+
 # ── Books ────────────────────────────────────────────────────────────────
 
 FORMATS = {"year": "%Y", "month": "%Y-%m", "day": "%Y-%m-%d"}

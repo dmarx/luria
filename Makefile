@@ -26,7 +26,7 @@ index: ## regenerate the decision index from frontmatter
 journal: ## what the devlog has filed, and which books it renders to
 	luria journal
 
-reports: ## write both status reports to build/doc-reports/
+reports: ## write the status reports (luria index writes them too)
 	luria reports
 
 remotes: ## other projects' records: how each foreign reference resolves

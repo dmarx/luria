@@ -70,7 +70,8 @@ def check_docs_index(errors: list[str]) -> None:
               | {s.view for s in cfg.schemes.values() if s.render == "index"}
               | {s.tag_dir for s in cfg.schemes.values() if s.render == "index"}
               | {j.dir for j in cfg.journals.values()}
-              | {j.output for j in cfg.journals.values()})
+              | {j.output for j in cfg.journals.values()}
+              | {cfg.reports})
     pages = sorted(cfg.docs.glob("*.md"))
     for sub in sorted(p for p in cfg.docs.iterdir() if p.is_dir()):
         if sub not in exempt:
@@ -139,7 +140,14 @@ def check_journals(errors: list[str]) -> None:
             meta, _ = builder.parse_frontmatter(path.read_text())
             created = journal.parse_created(meta.get("created"))
             if created is None:
-                errors.append(f"{rel}: no `created:` timestamp (see _template.md)")
+                # An inferrable field names its own remedy (#33); one with no
+                # witness left is a question only the author can answer.
+                if journal.created_from_path(path) is not None:
+                    errors.append(f"{rel}: no `created:` timestamp — "
+                                  "`luria index` populates it from the path")
+                else:
+                    errors.append(f"{rel}: no `created:` timestamp, and the "
+                                  "path doesn't imply one (see _template.md)")
                 continue
             want = journal.path_for(jrnl, created)
             if path != want:

@@ -66,33 +66,34 @@ def badge(label: str, value: int, target: str) -> str:
     return f"[![{label}: {value}](https://img.shields.io/badge/{text})]({target})"
 
 
-def index_link() -> str:
-    """Where a badge points, read from config rather than restated.
+def report_link(filename: str) -> str:
+    """Where a badge points: the report that explains its number (#35).
 
-    A default that spells out a configured path is a projection, and
-    projections drift ([DP-3](../docs/design-principles.md#dp-3)) — this one
-    did, the moment the index moved."""
-    return current().rel(current().index)
+    Read from config rather than restated — a default that spells out a
+    configured path is a projection, and projections drift
+    ([DP-3](../docs/design-principles.md#dp-3)); the predecessor of this
+    function proved it, the moment the index moved."""
+    return current().rel(current().reports / filename)
 
 
-def region(link: str | None = None) -> str:
-    link = link or index_link()
+def region() -> str:
     undecided, retired = counts()
     return "\n".join([
         OPEN,
-        badge("needs decision", undecided, link),
-        badge("cited but retired", retired, link),
+        badge("needs decision", undecided, report_link("pending-decisions.md")),
+        badge("cited but retired", retired,
+              report_link("reference-status.md")),
         CLOSE,
     ])
 
 
-def rewrite(text: str, link: str | None = None) -> str:
+def rewrite(text: str) -> str:
     """The README with its badge region refreshed.
 
     Returns the text unchanged when there is no region — a project that hasn\'t
     opted in isn\'t nagged, and `--write` says so rather than silently doing
     nothing (DP-1)."""
-    return REGION_RE.sub(lambda _: region(link), text, count=1)
+    return REGION_RE.sub(lambda _: region(), text, count=1)
 
 
 def readme() -> Path:

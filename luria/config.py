@@ -58,7 +58,9 @@ DEFAULTS: dict = {
         "docs": "docs",
         "decisions": "record/decisions.d",
         "design_principles": "docs/design-principles.md",
-        "reports": "build/doc-reports",
+        # Committed with the other views rather than left in a build dir, so a
+        # README badge has somewhere real to point (#35).
+        "reports": "docs/reports",
     },
     "fragments": {
         "record/changelog.d": "CHANGELOG.md",
@@ -276,7 +278,6 @@ class Remote:
     # the convention; a project whose uids themselves contain hyphens can move
     # it out of the way.
     delim: str = "-"
-    # unresolved-ok-block: ADR-032 — an illustrative code, not a citation
     # A regex for the reference's tail. Unset means the Luria shape — a scheme
     # code like `ADR-032`, normalised and constructed through the machinery
     # below. Set, the tail is an opaque identifier: matched exactly, never
@@ -288,7 +289,6 @@ class Remote:
     def label(self) -> str:
         return self.name or self.repo or self.prefix
 
-    # unresolved-ok-block: ADR-032 — an illustrative spelling pair, not a citation
     def canon(self, tail: str) -> str:
         """The tail's one spelling. `ADR-32` and `ADR-032` name one document
         in a scheme-shaped remote; a uid is already exact and stays put."""
@@ -449,7 +449,14 @@ class Config:
 
     def is_generated(self, path: Path) -> bool:
         """A view the generator owns. Rewriting one is pointless — the next
-        build undoes it — so the reference fixer skips them."""
+        build undoes it — so the reference fixer skips them.
+
+        The status reports count too (#35): they *list* retired and dangling
+        codes, so scanning them would report the report — every flagged code
+        would gain a citation site inside the page that flags it, and the
+        view could never converge."""
+        if path.parent == self.reports:
+            return True
         for s in self.schemes.values():
             if s.render == "index" and (path == s.index_path
                                         or path.parent == s.tag_dir):
