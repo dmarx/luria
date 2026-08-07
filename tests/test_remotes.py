@@ -410,3 +410,12 @@ def test_url_ok_covers_uid_remotes_too(project):
         "<!-- url-ok: ARXIV-2403.05530 — the v2 PDF specifically -->\n"
         "[ARXIV-2403.05530](https://arxiv.org/pdf/2403.05530v2)\n")
     assert flagged == [] and stale == []
+
+
+def test_fixture_prefix_resolves_to_the_convention_note():
+    """Dogfood, corpus-dependent: this repo registers `FX` (#38) so a fixture
+    code is resolvable by construction — it points at the note that explains
+    it, and can never collide with the real sequence."""
+    url = remotes.resolve("FX", "ADR-032")
+    assert url.endswith("docs/directives.md#fixture-codes")
+    assert remotes.resolve("FX", "DP-9").endswith("#fixture-codes")

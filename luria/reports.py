@@ -106,6 +106,19 @@ def reference_status(base: Path | None = None) -> str:
                 for c in sorted(sites, key=lambda c: (str(c.path), c.line))]
     out.append("")
 
+    out += ["## Files that opt out of reference checking", "",
+            "`unlinted-file:` exempts a whole document from the reference "
+            "machinery — the blunt tool for a fixture-heavy or vendored page. "
+            "It is counted here rather than hidden, the same bargain as an "
+            "acknowledgement: the report stays a complete account of what "
+            "nobody is checking.", ""]
+    if result.unlinted:
+        out += [f"- [`{current().rel(p)}`]({_link(p, base)})"
+                for p in sorted(result.unlinted)]
+    else:
+        out.append("None. Every scanned file is checked. ✅")
+    out.append("")
+
     stale = ref_status.stale_annotations(result, docs)
     for path in doc_refs.doc_files():
         stale += doc_refs.directive_problems(path, path.read_text())

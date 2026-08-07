@@ -238,6 +238,10 @@ class Scan:
     # refuses without saying so teaches nobody (DP-1).
     dangling: dict[str, list[Citation]] = field(default_factory=dict)
     annotations: list[Annotation] = field(default_factory=list)
+    # Files that opt out of reference checking wholesale (`unlinted-file:`,
+    # #37). Counted, never hidden: the blanket exemption is the one
+    # suppression a report can't converge past, so it has to stay visible.
+    unlinted: list[Path] = field(default_factory=list)
 
     def used(self, ann: Annotation) -> bool:
         pool = self.dangling if ann.kind == DANGLING_DIRECTIVE else self.cited
@@ -269,6 +273,9 @@ def scan(files: list[Path] | None = None, docs: dict[str, Doc] | None = None) ->
         try:
             text = path.read_text()
         except (OSError, UnicodeDecodeError):
+            continue
+        if doc_refs.unlinted(path, text):
+            result.unlinted.append(path)
             continue
         anns = annotations(path, text, known)
         dangling_anns = annotations(path, text, known, DANGLING_DIRECTIVE)

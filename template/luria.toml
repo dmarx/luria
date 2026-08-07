@@ -87,3 +87,10 @@ document = "docs/design-principles.md"
 # Add your own the same way. A remote whose filenames carry title slugs needs
 # `luria remotes --refresh` once, to discover them into remotes.lock.json; one
 # that names files after their codes needs nothing.
+
+# Fixture codes (LU-ADR-034): write FX-ADR-032 in an example or a test and it
+# resolves to the note explaining the convention — never a claim about your
+# record, and never able to collide with it, because it is not in the sequence.
+[luria.remotes.FX]
+name = "fixtures"
+url  = "https://github.com/dmarx/luria/blob/main/docs/directives.md#fixture-codes"
