@@ -74,7 +74,10 @@ from that, like you would for any other collaborator.
 These are solved problems. "Memory" is one of them: we just need to shift our thinking from "agent memory" to "institutional memory".
 The tools for accumulating and curating institutional memory are **Change Management Processes**. Humans often consider processes to be
 an imposition because they take up time. LLMs move through processes and procedures extremely quickly, so they are unhampered by
-bureaucracy the way we are. LLMs aren't burdened by time constraints, they're burdened by being a perpetual newcomer with a limited 
+bureaucracy the way we are. The myriad processes in luria may seem like a big ask for a human collaborator. Well, yeah, they are. You (human)
+don't need to engage with them directly if you don't want to. If the LLM engages with the processes, that's probably good enough for both of you.
+
+LLMs aren't burdened by time constraints, they're burdened by being a perpetual newcomer with a limited 
 context length. The LLM is a collaborator who must be onboarded every time you interact with them. Front-load discoverability of
 relevant information in your project like you were expecting to onboard a bunch of inexperienced juniors who you don't want to bother you,
 and you've automatically rigged your project to make that information easily discoverable for an LLM as well. Conversely, if you force
