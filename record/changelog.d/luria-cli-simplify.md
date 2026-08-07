@@ -14,8 +14,8 @@
   subsumed: `luria index` writes the badges and `luria lint` checks them
   ([ADR-029](record/decisions.d/ADR-029.md)); both status reports print as
   lint warnings and land in full in the `luria reports` artifact
-  ([ADR-007](record/decisions.d/ADR-007.md), corrected to v2). A retired name
-  exits 2 naming its successor rather than "unknown command"
-  ([DP-1](docs/design-principles.md#dp-1)), and the modules keep their entry
-  points — `python -m luria.ref_status --all` is still the interactive dig.
-  The `ref-status` and `pending` make targets are gone with them.
+  ([ADR-007](record/decisions.d/ADR-007.md), corrected to v2). Removed
+  outright, not deprecated — a name that answers is a name that still
+  exists, and there is no workflow to migrate. The modules keep their entry
+  points (`python -m luria.ref_status --all` is still the interactive dig),
+  and the `ref-status` and `pending` make targets are gone.
