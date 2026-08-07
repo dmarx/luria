@@ -6,6 +6,7 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 
 ## Currently — [August 2026](2026-08.md)
 
+- [7 Aug 23:48 — The rename that refused to stay small: DP→GP becomes a migrations doctrine](2026-08.md#20260807234804)
 - [7 Aug 19:05 — Idiomatic Fire, drafted: what the rewrite cost and bought](2026-08.md#20260807190509)
 - [7 Aug 18:35 — The agent file becomes a map](2026-08.md#20260807183530)
 - [7 Aug 18:26 — One scaffold for every entry kind, fired on its own record](2026-08.md#20260807182641)
@@ -33,8 +34,8 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 
 ## All books
 
-24 entries across 1 book, newest first.
+25 entries across 1 book, newest first.
 
 | Book | Entries | First | Last |
 |---|--:|---|---|
-| [2026-08](2026-08.md) | 24 | 2026-08-03 | 2026-08-07 |
+| [2026-08](2026-08.md) | 25 | 2026-08-03 | 2026-08-07 |
