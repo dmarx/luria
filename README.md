@@ -43,7 +43,7 @@ In Luria, decisions carry a state. Decisions can be Active, Proposed, Deferred, 
 In addition to making decisions and authoring fragments, the user participates by promoting daily choices from the devlog into formally documented
 decisions, superseding old decisions with new ones, and promoting insights that repeatedly inform decisions into guiding principles.
 
-The norms that matter get walked up the ladder — prose → convention → mechanism → guarantee ([[DP-5]]), and Luria instruments the rungs.
+The norms that matter get walked up the ladder — prose → convention → mechanism → guarantee ([DP-5](docs/design-principles.md#dp-5)), and Luria instruments the rungs.
 
 ### The four layers
 
