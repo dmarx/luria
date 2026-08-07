@@ -22,11 +22,12 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 - [3 Aug 21:19 — The filename is the code, and the rename removed a copy rather than adding one](2026-08.md#20260803211926)
 - [3 Aug 21:02 — Principles become fragments, and collected turns out not to mean generated](2026-08.md#20260803210211)
 - [3 Aug 20:35 — Extracting the project-memory framework out of strata-g](2026-08.md#20260803203505)
+- [2 Aug 20:48 — Branding and copyediting](2026-08.md#20260802204800)
 
 ## All books
 
-16 entries across 1 book, newest first.
+17 entries across 1 book, newest first.
 
 | Book | Entries | First | Last |
 |---|--:|---|---|
-| [2026-08](2026-08.md) | 16 | 2026-08-03 | 2026-08-05 |
+| [2026-08](2026-08.md) | 17 | 2026-08-02 | 2026-08-05 |
