@@ -127,7 +127,57 @@ flag correct links until acknowledging became reflex. A project that wants
 stable absolute citations to its own record registers itself as a remote — as
 Luria does with `LU` — and gets the check instead of an exemption from it.
 
-## Adding a fifth directive
+## `unlinted` — this document opts out of reference checking
+
+Every directive above is code-scoped: it excuses **one code**, and the
+`-file` suffix only widens where the excuse applies. This one is deliberately
+blunt — the whole document leaves the reference machinery (the bare-reference
+lint, wikilink handling, and the reference-status scan):
+
+```
+<!-- unlinted-file: — vendored page; its references are quotes, not claims -->
+```
+
+It is **file-scoped only**, because a narrower "don't read references here"
+already exists — that is what quoting a code in backticks does. A bare
+`unlinted:` or `unlinted-block:` governs nothing and is reported as such.
+
+The price of bluntness is visibility: files carrying this directive are
+**counted and listed** in the
+[reference-status report](reports/reference-status.md), the same bargain an
+acknowledgement makes. The reports exist to converge on what nobody has
+considered, and a whole-file exemption is the one suppression they cannot
+converge past — so it must never be invisible.
+
+Everything that isn't reference checking still applies: frontmatter, titles,
+the generated-view staleness gate, a journal's path-vs-`created:` agreement.
+
+## Fixture codes
+
+A document code used **as an example** should never come from the real
+sequence: the sequence eventually arrives, and the day it does, every
+specimen starts resolving and every `unresolved-ok` that excused one goes
+stale at once (this repository learned that when [ADR-032](../record/decisions.d/ADR-032.md) landed).
+
+So the `FX` prefix is registered as a remote whose every code resolves to
+this section:
+
+```toml
+[luria.remotes.FX]
+name = "fixtures"
+url  = "https://github.com/dmarx/luria/blob/main/docs/directives.md#fixture-codes"
+```
+
+Write `FX-ADR-032` or `FX-DP-9` in prose, tests or examples and it is a
+first-class reference — `luria link --fix` links it here, nothing reports it
+as dangling, and it can never collide with a real decision because it is not
+in the sequence. No directive needed, ever.
+
+One boundary: **directive arguments name local codes**, so `inactive-ok:`
+and `unresolved-ok:` still take `ADR-…`, never `FX-ADR-…` — the prefix is
+for *references*, not for the vocabulary that governs them.
+
+## Adding a sixth directive
 
 A name, not a new syntax: parse it out of `luria.directives.find(...)`, validate
 its arguments with `directives.problems(...)`, and report the ones that no

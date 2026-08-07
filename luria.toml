@@ -97,3 +97,10 @@ dir  = "record/decisions.d"
 # --check` can actually verify: LU-DP-9 → …/docs/design-principles.md#dp-9.
 [luria.remotes.LU.schemes.DP]
 document = "docs/design-principles.md"
+
+# Fixture codes (#38): FX-ADR-032 is an example, resolvable by construction
+# to the note that says so — never a claim about this record, and never able
+# to collide with it, because it is not in the sequence.
+[luria.remotes.FX]
+name = "fixtures"
+url  = "https://github.com/dmarx/luria/blob/main/docs/directives.md#fixture-codes"

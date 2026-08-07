@@ -265,6 +265,26 @@ UNEXEMPT_REGIONS = {
 }
 ANY_MD = Path("prose.md")           # suffix is all the directive parser needs
 
+# The whole-document opt-out (#37). Every other directive is code-scoped —
+# it excuses ONE code, and `-file` only widens where the excuse applies. This
+# one is deliberately blunt: the tool for a fixture-heavy or vendored page,
+# where a directive per code is maintenance without information. The price of
+# bluntness is visibility — the reference report counts the files that carry
+# it rather than hiding them (ADR-007).
+UNLINTED = "unlinted"
+
+
+def unlinted(path: Path, text: str) -> bool:
+    """True when `path` opts out of reference checking wholesale:
+
+        <!-- unlinted-file: — why this page is exempt -->
+
+    Covers the bare-reference lint, wikilink handling and the
+    reference-status scan. Everything else — frontmatter, titles, journal
+    checks — still applies; this exempts the *references*, not the document."""
+    return any(d.scope == directives.FILE
+               for d in directives.find(path, text, {UNLINTED}))
+
 
 def link_base(path: Path) -> Path:
     """Back-compat shim: the rule lives on the config (`Config.link_base`)."""
@@ -295,14 +315,20 @@ def unexempt_spans(text: str, path: Path) -> list[tuple[int, int]]:
 
 
 def directive_problems(path: Path, text: str) -> list[str]:
-    """Unexempt directives that name a region that doesn't exist — a directive
-    that silently does nothing is worse than no directive."""
+    """Directives that silently do nothing — worse than no directive."""
     out = []
     for d in directives.find(path, text, {"unexempt"}):
         problem = directives.problems(d, set(UNEXEMPT_REGIONS))
         if problem:
             out.append(f"{path.name}:{d.line}: {problem} "
                        f"(known: {', '.join(sorted(UNEXEMPT_REGIONS))})")
+    # A narrower-than-file `unlinted` governs nothing: the opt-out is
+    # whole-document by design, and a directive that looks armed but isn't
+    # is the failure this report exists for (DP-1).
+    for d in directives.find(path, text, {UNLINTED}):
+        if d.scope != directives.FILE:
+            out.append(f"{path.name}:{d.line}: `unlinted` is file-scoped by "
+                       "design — write `unlinted-file:`")
     return out
 
 
@@ -477,6 +503,8 @@ def wikilinks(text: str, source: Path = ANY_MD) -> list[Wikilink]:
     """Every `[[…]]` in prose, resolved where possible. Quoted regions are
     specimens, comments are instructions, and frontmatter is data — except
     the summary, which is prose here as everywhere (ADR-005)."""
+    if unlinted(source, text):
+        return []
     skip = code_spans(text)
     skip += [m.span() for m in COMMENT_RE.finditer(text)]
     if fm := _frontmatter_span(text):
@@ -636,6 +664,8 @@ def rewritable_refs(text: str, source: Path, adrs: dict[int, Path],
                     anchors: dict[int, str]) -> list[Ref]:
     """The references `linkify` will actually turn into links — what the linter
     reports, so the two can never disagree."""
+    if unlinted(source, text):
+        return []
     refs = [r for r in find_refs(text, source)
             if resolve(r, source, adrs, anchors, text) is not None]
     span = summary_span(text)
