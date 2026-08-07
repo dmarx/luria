@@ -1,35 +1,60 @@
-"""The entry point's surface: what dispatches, and how a refusal reads.
+"""The entry point under Fire (ADR-039): typed functions, derived help,
+exit codes by SystemExit only.
 
-The dispatch itself is exercised end-to-end by every other test file; what
-needs its own tests is the shape of the surface (ADR-030) — two tiers in the
-help, and a clean "unknown command" for everything else, the retired names
-included: they are gone, not deprecated, so nothing here knows them.
+The dispatch itself is exercised end-to-end by every other test file and by
+the smoke run in publish.yml; what needs its own tests is the surface — the
+eight commands are registered, an unknown name refuses with the list, and a
+failing gate's exit code survives Fire.
 """
 
 from __future__ import annotations
 
-import pytest
+import subprocess
+import sys
 
-from luria import cli
+from luria import adr_index, cli, collect, init, link_refs, lint, new, remotes, reports
 
 
-def test_help_tiers_the_commands(capsys):
-    assert cli.main(["--help"]) == 0
-    out = capsys.readouterr().out
-    contributor = out.index("commands:")
-    ci_tier = out.index("run by CI")
-    assert contributor < ci_tier
+def test_the_eight_commands_are_registered():
+    assert cli.COMMANDS == {
+        "lint": lint.run, "link": link_refs.run, "index": adr_index.run,
+        "new": new.run, "remotes": remotes.run, "init": init.run,
+        "reports": reports.run, "collect": collect.run,
+    }
+
+
+def _luria(*args: str) -> subprocess.CompletedProcess:
+    return subprocess.run([sys.executable, "-m", "luria.cli", *args],
+                          capture_output=True, text=True)
+
+
+def test_an_unknown_command_refuses_with_the_list():
+    proc = _luria("frobnicate")
+    assert proc.returncode == 2
+    assert "Cannot find key" in proc.stderr
     for name in cli.COMMANDS:
-        assert f"\n  {name}" in out
-    for name in cli.CI_COMMANDS:
-        assert out.index(f"\n  {name}") > ci_tier
+        assert name in proc.stderr, "the refusal names what does exist"
 
 
-@pytest.mark.parametrize("name", ["frobnicate", "badges", "ref-status", "pending"])
-def test_unknown_commands_show_usage(capsys, name):
-    """One refusal for everything unregistered — a removed command is not a
-    special case, because keeping it special would be keeping it."""
-    assert cli.main([name]) == 2
-    err = capsys.readouterr().err
-    assert "unknown command" in err
-    assert "usage:" in err
+def test_help_derives_from_the_functions():
+    proc = _luria("--", "--help")
+    out = proc.stdout + proc.stderr
+    for name in cli.COMMANDS:
+        assert name in out
+
+
+def test_a_failing_gate_exits_nonzero(tmp_path, monkeypatch):
+    """`luria lint` as a CI gate: SystemExit must survive Fire — Fire prints
+    return values, so an exit code can never be a return value."""
+    monkeypatch.setenv("LURIA_ROOT", str(tmp_path))
+    (tmp_path / "luria.toml").write_text('[luria]\nissue_url = ""\n')
+    docs = tmp_path / "docs"
+    docs.mkdir()
+    (docs / "README.md").write_text("# Docs\n")
+    (docs / "unindexed.md").write_text("# Orphan\n")
+    proc = subprocess.run([sys.executable, "-m", "luria.cli", "lint"],
+                          capture_output=True, text=True,
+                          env={**__import__("os").environ,
+                               "LURIA_ROOT": str(tmp_path)})
+    assert proc.returncode == 1
+    assert "missing index entry" in proc.stderr

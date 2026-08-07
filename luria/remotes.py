@@ -39,7 +39,6 @@ committed; nothing else in Luria opens a socket.
 
 from __future__ import annotations
 
-import argparse
 import json
 import re
 import sys
@@ -414,23 +413,19 @@ def probe(remote: Remote, code: str, visible: bool = True) -> Probe:
 # ── CLI ──────────────────────────────────────────────────────────────────
 
 
-def main() -> int:
-    ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--refresh", action="store_true",
-                    help="discover code→filename maps and write the lockfile")
-    ap.add_argument("--check", action="store_true",
-                    help="HEAD every cited foreign reference (needs network)")
-    args = ap.parse_args()
-
+def run(refresh: bool = False, check: bool = False) -> None:
+    """How each configured remote's cited references resolve. --refresh
+    discovers code→filename maps into the lockfile; --check HEADs every
+    construction (needs network — a report, never a failure)."""
     cfg = current()
     if not cfg.remotes:
         # No silent refusal: say what would make this command do something.
         print("luria remotes: none configured. Add one to luria.toml:\n\n"
               "  [luria.remotes.LU]\n  repo = \"owner/name\"\n\n"
               "then cite it as `LU-ADR-013`.", file=sys.stderr)
-        return 0
+        return
 
-    if args.refresh:
+    if refresh:
         found: dict[str, dict[str, str]] = {}
         for remote in cfg.remotes.values():
             if remote.uid:
@@ -475,7 +470,7 @@ def main() -> int:
                 note = "  (by the code-only convention)"
             print(f"  {code}  {target or 'NO SUCH DOCUMENT'}{note if target else ''}")
 
-    if args.check:
+    if check:
         broken, unverifiable, absent = [], [], []
         for remote in cfg.remotes.values():
             codes = sorted(references.get(remote.prefix, ()))
@@ -520,8 +515,9 @@ def main() -> int:
         print(f"remotes: {len(broken)} reference(s) did not answer 200"
               if broken else "remotes: nothing verifiable is broken",
               file=sys.stderr if broken else sys.stdout)
-    return 0            # a report, never a failure (ADR-035)
+    # A report, never a failure (ADR-035) — no exit code either way.
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    import fire
+    fire.Fire(run)

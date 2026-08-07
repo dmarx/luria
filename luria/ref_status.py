@@ -59,7 +59,6 @@ itself is excluded for the same reason (every ADR's own title names it).
 
 from __future__ import annotations
 
-import argparse
 import re
 import sys
 from dataclasses import dataclass, field
@@ -484,11 +483,8 @@ def warnings(sites: int = DEFAULT_SITES, result: Scan | None = None,
     return lines
 
 
-def main() -> int:
-    ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--all", action="store_true", help="list every citation")
-    args = ap.parse_args()
-
+def run(all: bool = False) -> None:
+    """The reference-status report on the console; --all lists every site."""
     docs = load_docs()
     result = scan(docs=docs)
     rows = flagged(result, docs)
@@ -498,7 +494,7 @@ def main() -> int:
         note = f", {excused} acknowledged reference(s)" if excused else ""
         print(f"reference status: {len(rows)} retired document(s) cited "
               f"unacknowledged from current docs/code{note}", file=sys.stderr)
-        for line in warnings(0 if args.all else DEFAULT_SITES, result, docs):
+        for line in warnings(0 if all else DEFAULT_SITES, result, docs):
             print(f"  {line}", file=sys.stderr)
     else:
         print(f"reference status: no unacknowledged references to retired "
@@ -516,7 +512,7 @@ def main() -> int:
         for code, sites, excused in loose:
             tail = f", {excused} acknowledged" if excused else ""
             print(f"  {code} — cited {len(sites)}×{tail}", file=sys.stderr)
-            shown = _spread(sites, 0 if args.all else DEFAULT_SITES)
+            shown = _spread(sites, 0 if all else DEFAULT_SITES)
             for c in sorted(shown, key=lambda c: (str(c.path), c.line)):
                 print(f"      {c}", file=sys.stderr)
             if len(sites) > len(shown):
@@ -528,8 +524,9 @@ def main() -> int:
               file=sys.stderr)
         for line in stale:
             print(f"  {line}", file=sys.stderr)
-    return 0            # warnings never fail the build
+            # warnings never fail the build
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    import fire
+    fire.Fire(run)

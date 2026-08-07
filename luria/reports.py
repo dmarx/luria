@@ -27,7 +27,6 @@ the shape changes.
 
 from __future__ import annotations
 
-import argparse
 import os.path
 from pathlib import Path
 
@@ -194,15 +193,13 @@ def write(out_dir: Path | None = None) -> list[Path]:
     return sorted(rendered)
 
 
-def main() -> int:
-    ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--out", type=Path, default=None,
-                    help="write somewhere other than the configured dir")
-    args = ap.parse_args()
-    for path in write(args.out):
+def run(out: str = None) -> None:
+    """Write the status reports — to the configured dir, or --out elsewhere
+    (e.g. a CI artifact staging dir)."""
+    for path in write(Path(out) if out else None):
         print(f"wrote {path}")
-    return 0
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    import fire
+    fire.Fire(run)

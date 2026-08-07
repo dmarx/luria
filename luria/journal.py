@@ -6,7 +6,6 @@ This is a library since `luria new` became the scaffold for every entry kind
 books. The standalone module still runs for the odd interactive look:
 
     python -m luria.journal                  # what is filed, which books
-    python -m luria.journal new "A title"    # file an entry directly
 
 The changelog and the devlog look alike and are not. A changelog entry is a
 *claim about a release*, collected and consumed. A journal entry is a **dated
@@ -43,7 +42,6 @@ stale.
 
 from __future__ import annotations
 
-import argparse
 import datetime as dt
 import re
 import sys
@@ -277,50 +275,36 @@ def new(journal: Journal, title: str, now: dt.datetime) -> Path:
 # ── CLI ──────────────────────────────────────────────────────────────────
 
 
-def main() -> int:
-    ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("action", nargs="?", choices=["new"],
-                    help="`new` files an entry; omit to report what is filed")
-    ap.add_argument("title", nargs="?", help="the entry's title")
-    ap.add_argument("--journal", default=None, help="which journal (default: the only one)")
-    args = ap.parse_args()
-
+def run(journal: str = None) -> None:
+    """What is filed, and which books it renders to (a status listing —
+    `luria new` files entries)."""
     cfg = current()
     if not cfg.journals:
         # No silent refusal: say what would make this command do something.
         print("luria journal: none configured. Add one to luria.toml:\n\n"
               "  [luria.journals.devlog]\n  dir = \"devlog.d\"\n"
               "  output = \"docs/devlog\"\n", file=sys.stderr)
-        return 0
+        return
 
-    name = args.journal or next(iter(cfg.journals))
+    name = journal or next(iter(cfg.journals))
     if name not in cfg.journals:
         print(f"luria journal: unknown journal {name!r}; configured: "
               f"{', '.join(cfg.journals)}", file=sys.stderr)
-        return 2
-    journal = cfg.journals[name]
+        raise SystemExit(2)
+    journal_cfg = cfg.journals[name]
 
-    if args.action == "new":
-        if not args.title:
-            print("luria journal new: needs a title — it is what the book's "
-                  "table of contents shows.", file=sys.stderr)
-            return 2
-        path = new(journal, args.title, dt.datetime.now())
-        print(cfg.rel(path))
-        return 0
-
-    grouped = books(journal)
+    grouped = books(journal_cfg)
     total = sum(len(v) for v in grouped.values())
     period = {"year": "yearly", "month": "monthly", "day": "daily"}[
-        journal.granularity]
+        journal_cfg.granularity]
     print(f"{name}: {total} entr{'y' if total == 1 else 'ies'} in "
           f"{len(grouped)} {period} book{'' if len(grouped) == 1 else 's'} → "
-          f"{cfg.rel(journal.output)}/")
+          f"{cfg.rel(journal_cfg.output)}/")
     for key in sorted(grouped, reverse=True):
         filed = grouped[key]
         print(f"  {key}.md  {len(filed):>3} entr{'y' if len(filed) == 1 else 'ies'}")
-    return 0
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    import fire
+    fire.Fire(run)

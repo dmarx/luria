@@ -20,7 +20,6 @@ free — nothing here spells "adr".
 
 from __future__ import annotations
 
-import argparse
 import datetime as dt
 import re
 import subprocess
@@ -169,24 +168,17 @@ def new_entry(kind: str | None, fields: dict[str, str],
     return journal_mod.new(target, title, dt.datetime.now())
 
 
-def main() -> int:
-    ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("kind", nargs="?",
-                    help="what to scaffold; omit for the journal. "
-                         "Kinds come from luria.toml")
-    ap.add_argument("--title", help="frontmatter title, where the kind has one")
-    ap.add_argument("--status", help="frontmatter status, for a scheme document")
-    ap.add_argument("--summary", help="frontmatter summary, for a scheme document")
-    ap.add_argument("--tags", help="comma-separated frontmatter tags")
-    ap.add_argument("--name", help="fragment filename, when not on a git branch")
-    args = ap.parse_args()
-
+def run(kind: str = None, title: str = None, status: str = None,
+        summary: str = None, tags: str = None, name: str = None) -> None:
+    """Scaffold an entry and print its path. KIND defaults to the journal;
+    the other kinds come from luria.toml (scheme prefixes, fragment dirs).
+    Field flags are optional — content belongs to your editor."""
     fields = {k: v for k, v in
-              [("title", args.title), ("status", args.status),
-               ("summary", args.summary), ("tags", args.tags)] if v}
-    print(current().rel(new_entry(args.kind, fields, args.name)))
-    return 0
+              [("title", title), ("status", status),
+               ("summary", summary), ("tags", tags)] if v}
+    print(current().rel(new_entry(kind, fields, name)))
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    import fire
+    fire.Fire(run)
