@@ -25,6 +25,22 @@ Luria encapsulates a collection of best practices you should probably be using a
 
 The consequence is that if you integrate luria into your project, the project itself will become its own living memory.
 
+
+## How It Works
+
+Luria is comprised of four documentation subsystems designed to reference one another, a linter for ensuring those references haven't gone stale,
+and some convenience tools for interfacing with the linter and documentation subsystems.
+
+The heart and soul of luria is the **decision record**. If you take away nothing else from reading this: ADD SOME KIND OF DECISION LOG TO
+YOUR PROJECT. It is the best possible guard against [Chesterton's Fence](https://en.wikipedia.org/wiki/G._K._Chesterton#Chesterton's_Fence)
+problems which otherwise can be a recurring theme when working with LLMs. They also make it easier to only explain yourself once, since if
+the LLM feels inclined to relitigate anything it will find itself directed towards the documented reason things are the way they are.
+
+In Luria, decisions carry a state. Decisions can be Active, Proposed, Deferred, Rejected, or Superseded. Decisions often influence each other,
+which manifests as references in documentation as well as in code. Luria's linter standardizes the form these references take, and also checks 
+that all referenced decisions are in an "active" state. If the linter discovers (unacknowledged) references to non-active decisions, it can raise 
+warnings, generate reports, and/or fail CI until the unendorsed decisions are dealt with (or the references to them are annotated for the linter). 
+
 ## Motivation
 
 Are you using any form of "agentic AI"? You are probably doing it wrong. Luria's position is that most of the standard 
@@ -85,6 +101,7 @@ your LLM make the information it needs discoverable through the project's common
 for free.
 
 Luria systematizes an opinionated collection of processes which implements a ratchet for accumulating empirical evidence and demonstrated solutions, shines a light on technical debt, and publishes lessons learned in a manner that facilitates their future influence on the project.
+
 
 ---
 
