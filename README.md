@@ -166,7 +166,7 @@ luria init --issue-url https://github.com/owner/repo/issues
 luria index && luria lint
 ```
 
-## What it does
+## CLI Commands
 
 | command | |
 |---|---|
