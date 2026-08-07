@@ -26,8 +26,8 @@ to retired documents, codes that resolve to no document at all, remote links
 whose URL is hand-written rather than constructed, directives that no longer
 apply, and a count of undecided decisions. Citing a `Rejected`
 decision — or leaving one `Proposed`, or naming another project's LU-ADR-013 — is
-often right, so none can be an error; all should be visible. `luria ref-status`
-and `luria pending` give the detail, and an `inactive-ok:` / `unresolved-ok:` /
+often right, so none can be an error; all should be visible. `luria reports`
+writes the full detail as markdown, and an `inactive-ok:` / `unresolved-ok:` /
 `url-ok:` comment acknowledges a deliberate one so only the unconsidered ones
 stay listed.
 
@@ -254,7 +254,7 @@ def report_warnings() -> None:
     lines = ref_status.summary_lines()
     if lines:
         print(f"luria: {len(lines)} warning(s) — retired documents cited "
-              "unacknowledged from current docs/code (`luria ref-status` for "
+              "unacknowledged from current docs/code (`luria reports` for "
               "the sites, `inactive-ok:` to acknowledge one)", file=sys.stderr)
         for line in lines:
             print(f"  {line}", file=sys.stderr)
@@ -264,7 +264,7 @@ def report_warnings() -> None:
     loose = ref_status.dangling_lines()
     if loose:
         print(f"luria: {len(loose)} code(s) resolve to no document "
-              "(`luria ref-status` for the sites, `unresolved-ok:` for the "
+              "(`luria reports` for the sites, `unresolved-ok:` for the "
               "deliberate ones)", file=sys.stderr)
         for line in loose:
             print(f"  {line}", file=sys.stderr)
@@ -290,12 +290,12 @@ def report_warnings() -> None:
             print(f"  {line}", file=sys.stderr)
 
     # One line, not the table: the point is that the number is never zero
-    # silently. `luria pending` ranks them by age and citation count.
+    # silently. `luria reports` ranks them by age and citation count.
     rows = adr_pending.pending()
     if rows:
         print("luria: " + adr_pending.headline(
             rows, dt.date.today(), current().stale_days)
-            + " (`luria pending` for the table)", file=sys.stderr)
+            + " (`luria reports` for the table)", file=sys.stderr)
 
 
 def main() -> int:

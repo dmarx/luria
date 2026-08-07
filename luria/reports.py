@@ -4,11 +4,11 @@
     luria reports               # → build/doc-reports/
     luria reports --out DIR
 
-`make lint-docs` prints one summary line per report, which is the right size for
+`luria lint` prints one summary line per report, which is the right size for
 a passing build's console. The *detail* — which file, which line, which
-acknowledgement — only existed behind `luria ref-status` and `luria pending`,
-which nobody runs, so a warning that fired on every PR was never actually read
-by anyone.
+acknowledgement — only existed behind the standalone `ref-status` and
+`pending` commands, which nobody ran (they were retired in ADR-030), so a
+warning that fired on every PR was never actually read by anyone.
 
 These files are what CI uploads as an artifact. A reviewer can open the report
 for the run, and diffing two runs' artifacts shows what a PR moved: whether it

@@ -50,10 +50,12 @@ luria lint            # the only one that can fail
 luria link --fix      # rewrite bare references as hyperlinks
 luria index           # regenerate every generated view (+ the README's counts)
 luria journal new "…" # file a dated devlog entry at its timestamp
-luria ref-status      # what still cites a retired decision
-luria pending         # what has been undecided, and for how long
 luria remotes         # other projects' records, and how they resolve
 ```
+
+The status reports — what still cites a retired decision, what has been
+undecided and for how long — print as warnings on every `luria lint`; CI
+writes them in full with `luria reports`, so there is nothing extra to run.
 
 **Every reference is a hyperlink.** A decision code, a design principle or an
 issue number written in prose is a link, never bare text — `luria lint` fails

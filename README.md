@@ -173,13 +173,16 @@ luria index && luria lint
 | `luria lint` | the only command that can fail: index completeness, frontmatter, a stale generated index, and references that should be links |
 | `luria link --fix` | rewrites bare references as hyperlinks — the same scanner the lint reads, so the failure names its own remedy |
 | `luria index` | regenerates every generated view from frontmatter — the decision index and its per-tag pages, the principles document |
-| `luria ref-status` | which retired decisions are still cited, and where |
-| `luria pending` | which documents are undecided, by age **and** citation count — every scheme |
-| `luria badges` | the README's two counts, derived from the record |
-| `luria reports` | both reports as markdown, for a CI artifact |
-| `luria collect` | assembles fragment directories into their views |
+| `luria journal new` | files a dated devlog entry at its timestamp |
 | `luria remotes` | another project's record: how each foreign reference resolves, and whether it is reachable |
 | `luria init` | scaffolds the record into a project that has none |
+
+Two more run in CI rather than by hand: `luria reports` writes the two status
+reports — retired documents still cited, decisions still undecided — as
+markdown for a build artifact, and `luria collect` assembles fragment
+directories into their views. The summary of both reports prints as warnings
+on every `luria lint`. (The surface used to be one command per module; the
+commands that only restated these reports on the console were retired.)
 
 ## Citing another project
 

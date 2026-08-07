@@ -513,10 +513,10 @@ def main() -> int:
                   f"repository is not readable anonymously, so {evidence}")
         if absent:
             # Not a network result: the lockfile was read from the remote, so
-            # its silence is a finding. `luria ref-status` lists these too, and
+            # its silence is a finding. `luria reports` lists these too, and
             # `unresolved-ok:` is where a deliberate one is acknowledged.
             print(f"remotes: {len(absent)} name no document in their remote "
-                  "(see `luria ref-status`)")
+                  "(see `luria reports`)")
         print(f"remotes: {len(broken)} reference(s) did not answer 200"
               if broken else "remotes: nothing verifiable is broken",
               file=sys.stderr if broken else sys.stdout)
