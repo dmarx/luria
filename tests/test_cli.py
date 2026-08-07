@@ -1,8 +1,9 @@
-"""The entry point's surface: what dispatches, what refuses, and how.
+"""The entry point's surface: what dispatches, and how a refusal reads.
 
 The dispatch itself is exercised end-to-end by every other test file; what
-needs its own tests is the refusal behavior — a retired command must name its
-successor rather than plead ignorance (ADR-030, DP-1).
+needs its own tests is the shape of the surface (ADR-030) — two tiers in the
+help, and a clean "unknown command" for everything else, the retired names
+included: they are gone, not deprecated, so nothing here knows them.
 """
 
 from __future__ import annotations
@@ -24,26 +25,11 @@ def test_help_tiers_the_commands(capsys):
         assert out.index(f"\n  {name}") > ci_tier
 
 
-@pytest.mark.parametrize("name,successor", [
-    ("badges", "luria index"),
-    ("ref-status", "luria reports"),
-    ("pending", "luria reports"),
-])
-def test_retired_commands_name_their_successor(capsys, name, successor):
+@pytest.mark.parametrize("name", ["frobnicate", "badges", "ref-status", "pending"])
+def test_unknown_commands_show_usage(capsys, name):
+    """One refusal for everything unregistered — a removed command is not a
+    special case, because keeping it special would be keeping it."""
     assert cli.main([name]) == 2
-    err = capsys.readouterr().err
-    assert "retired" in err
-    assert successor in err
-    assert "unknown" not in err, "a retirement is not ignorance"
-
-
-def test_unknown_command_shows_usage(capsys):
-    assert cli.main(["frobnicate"]) == 2
     err = capsys.readouterr().err
     assert "unknown command" in err
     assert "usage:" in err
-
-
-def test_no_retired_command_is_still_registered():
-    registered = set(cli.COMMANDS) | set(cli.CI_COMMANDS)
-    assert not registered & set(cli.RETIRED)

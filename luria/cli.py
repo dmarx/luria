@@ -13,16 +13,14 @@ Two more exist for CI, which is their only regular caller:
     luria collect       assemble fragment directories into their views
 
 The surface used to be wider — one command per module, eleven in all — which
-mirrored the package layout rather than anyone's workflow (ADR-030). A retired
-command answers with where its job went, not "unknown command".
+mirrored the package layout rather than anyone's workflow (ADR-030). The
+excess names are gone, not deprecated: a shim would be an affordance for a
+workflow nobody has.
 
 Subcommands delegate to modules that each keep their own `main()`, so any of
 them still runs standalone (`python -m luria.ref_status`) — useful when a
-project vendors one file instead of installing the package, and how the
-retired reports stay reachable in full detail.
+project vendors one file instead of installing the package.
 """
-
-from __future__ import annotations
 
 import sys
 
@@ -43,17 +41,6 @@ CI_COMMANDS = {
     "collect": ("luria.collect", "assemble fragments into their views"),
 }
 
-# Each of these was subsumed before it was retired (ADR-030); the refusal
-# names the successor rather than pleading ignorance (DP-1).
-RETIRED = {
-    "badges": "`luria index` writes the README's badges and `luria lint` "
-              "checks them; the markdown itself is `python -m luria.badges`",
-    "ref-status": "`luria lint` prints the summary and `luria reports` writes "
-                  "every site; interactively, `python -m luria.ref_status --all`",
-    "pending": "`luria lint` prints the headline and `luria reports` writes "
-               "the table; interactively, `python -m luria.adr_pending`",
-}
-
 
 def usage() -> str:
     names = {**COMMANDS, **CI_COMMANDS}
@@ -72,9 +59,6 @@ def main(argv: list[str] | None = None) -> int:
         print(usage())
         return 0
     name = argv[0]
-    if name in RETIRED:
-        print(f"luria: {name!r} was retired — {RETIRED[name]}", file=sys.stderr)
-        return 2
     commands = {**COMMANDS, **CI_COMMANDS}
     if name not in commands:
         # No silent refusal: say what was asked for and what exists (DP-1).
