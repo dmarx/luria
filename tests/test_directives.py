@@ -26,7 +26,7 @@ def find(text, path=MD, names=None):
 
 def test_parses_name_args_and_reason():
     """The codes here are a made-up scheme on purpose: the parser knows nothing
-    about ADRs, and real codes in fixtures would show up in `make ref-status`."""
+    about ADRs, and real codes in fixtures would show up in `luria reports`."""
     d, = find("<!-- inactive-ok: RFC-012, RFC-020 — the history -->\n")
     assert d.name == "inactive-ok"
     assert d.args == ("RFC-012", "RFC-020")

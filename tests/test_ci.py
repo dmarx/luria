@@ -111,10 +111,12 @@ def test_the_lint_carries_the_ci_remedy(monkeypatch, project):
 
 
 def test_bare_badges_says_it_only_printed(capsys, monkeypatch, project):
-    """A `- run: luria badges` step exits 0 having written nothing. Printing
-    the markdown is legitimate; looking like a write is not (DP-1)."""
+    """Bare `python -m luria.badges` exits 0 having written nothing. Printing
+    the markdown is legitimate; looking like a write is not (DP-1). The
+    `luria badges` command itself is retired (ADR-030), so only the module
+    entry point can reach this."""
     decision(project, 1, "Active")
-    monkeypatch.setattr("sys.argv", ["luria badges"])
+    monkeypatch.setattr("sys.argv", ["python -m luria.badges"])
     assert badges.main() == 0
 
     out, err = capsys.readouterr()

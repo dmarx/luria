@@ -1,9 +1,14 @@
 #!/usr/bin/env python3
 """Two numbers about the record, rendered as badges in the README.
 
-    luria badges            # print the markdown
-    luria badges --write    # rewrite the region in README.md
-    luria badges --check    # exit 1 if that region is stale
+This is a library: `luria index` rewrites the region with everything else and
+`luria lint` checks it. The `luria badges` command was retired (ADR-030) —
+its normal use had become printing a warning that `luria index` is what you
+meant (ADR-029). The module still runs standalone:
+
+    python -m luria.badges            # print the markdown
+    python -m luria.badges --write    # rewrite the region in README.md
+    python -m luria.badges --check    # exit 1 if that region is stale
 
 Both counts are questions a reader of the repository front page should be able
 to answer without cloning it:
@@ -105,8 +110,8 @@ def main() -> int:
         print(region())
         # Printing is the whole job here, but as a CI `- run:` step it is
         # indistinguishable from a write that landed — which is how an
-        # adopter came to have `luria badges` in a workflow doing nothing
-        # (ADR-029). Said on stderr so `luria badges > file` stays clean.
+        # adopter came to have a badges step in a workflow doing nothing
+        # (ADR-029). Said on stderr so a `> file` redirect stays clean.
         print("luria badges: printed only — `--write` rewrites the region in "
               f"{current().rel(readme())}, `--check` fails when it is stale. "
               "In normal use `luria index` writes it with everything else.",

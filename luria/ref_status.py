@@ -1,8 +1,12 @@
 #!/usr/bin/env python3
 """Report references that don't hold up, and the annotations that excuse them.
 
-    luria ref-status            # grouped report, 5 sites per document
-    luria ref-status --all      # every site
+This is a library: `luria lint` prints its summary as warnings and
+`luria reports` writes the full detail as markdown (ADR-030). The standalone
+console report survives for the odd interactive dig:
+
+    python -m luria.ref_status            # grouped report, 5 sites per document
+    python -m luria.ref_status --all      # every site
 
 Two ways a reference fails to mean what it says. It can point at a document
 that is no longer in force — the original subject of this module — or it can
@@ -444,8 +448,8 @@ def stale_annotations(result: Scan | None = None,
 
 def summary_lines(result: Scan | None = None,
                   docs: dict[str, Doc] | None = None) -> list[str]:
-    """One line per flagged document — what `make lint-docs` prints. Every count
-    is real; the sites are what's elided, and `make ref-status` has them."""
+    """One line per flagged document — what `luria lint` prints. Every count
+    is real; the sites are what's elided, and `luria reports` has them."""
     out = []
     for doc, loud, excused in flagged(result, docs):
         files = len({c.path for c in loud})
@@ -469,7 +473,7 @@ def warnings(sites: int = DEFAULT_SITES, result: Scan | None = None,
                   for c in sorted(shown, key=lambda c: (str(c.path), c.line))]
         if len(loud) > len(shown):
             lines.append(f"    … and {len(loud) - len(shown)} more"
-                         " (`luria ref-status --all` lists them)")
+                         " (`luria reports` lists them)")
     return lines
 
 

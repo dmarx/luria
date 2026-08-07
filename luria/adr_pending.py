@@ -1,9 +1,13 @@
 #!/usr/bin/env python3
 """Report ADRs still awaiting a decision, oldest first (ADR-007).
 
-    luria pending                     # the table
-    luria pending --stale-days 30     # a tighter "overdue" line
-    luria pending --as-of 2026-08-03  # fixed clock, for tests
+This is a library: `luria lint` prints its headline as a warning and
+`luria reports` writes the full table as markdown (ADR-030). The standalone
+console report survives for the odd interactive dig:
+
+    python -m luria.adr_pending                     # the table
+    python -m luria.adr_pending --stale-days 30     # a tighter "overdue" line
+    python -m luria.adr_pending --as-of 2026-08-03  # fixed clock, for tests
 
 `Proposed` and `Deferred` are the two statuses that describe an *open* question:
 "we haven't decided" and "we decided not to decide yet". Both are legitimate —
@@ -20,7 +24,7 @@ is a stalled idea; an old proposal 32 files cite is a decision the codebase has
 already made without saying so.
 
 The count here is every citation, acknowledged or not, because an acknowledged
-one still means the codebase depends on the answer. `make ref-status` lists only
+one still means the codebase depends on the answer. The reference-status report lists only
 the unacknowledged ones, so its total is smaller — the headline names both so
 the two reports visibly reconcile.
 
@@ -54,7 +58,7 @@ class Pending:
     title: str
     date: dt.date | None
     cites: int
-    unacknowledged: int      # of those, the ones `make ref-status` still lists
+    unacknowledged: int      # of those, the ones the reference report still lists
     path: Path
 
     def age(self, today: dt.date) -> int | None:
