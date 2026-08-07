@@ -37,8 +37,8 @@ how you file one ([ADR-012](record/decisions.d/ADR-012.md)):
 - **Collected** — `record/changelog.d/<branch-slug>.md`, assembled into
   `CHANGELOG.md` and then *consumed*. One file per contribution, named after
   your branch.
-- **A journal** — file it with `luria journal new "What you did"`, which puts it
-  at `record/devlog.d/yyyy/mm/dd/hhmmss.md`. Entries **persist**, so `docs/devlog/` is
+- **A journal** — file it with `luria new`, which puts an entry
+  at `record/devlog.d/yyyy/mm/dd/hhmmss.md` for you to fill out in your editor. Entries **persist**, so `docs/devlog/` is
   regenerated from them and each month's book gets a contents list built from
   the titles ([ADR-020](record/decisions.d/ADR-020.md)). Don't name the file
   yourself: the path is the timestamp, and the lint checks it against
@@ -58,7 +58,7 @@ most, and they are the part that never appears in a commit message.
 luria lint            # the only one that can fail
 luria link --fix      # rewrite bare references as hyperlinks
 luria index           # regenerate every generated view (+ the README's counts)
-luria journal new "…" # file a dated devlog entry at its timestamp
+luria new [kind]      # scaffold an entry: devlog (default), adr, dp, changelog
 luria remotes         # other projects' records, and how they resolve
 ```
 
@@ -102,9 +102,10 @@ nothing.
 
 ## Adding a decision
 
-Copy [`docs/decisions/_template.md`](record/decisions.d/_template.md) to
-`ADR-<NNN>.md` with the next free number — the filename is the code and nothing
-else, and the title goes in `title:`
+Run `luria new adr` — it copies
+[`docs/decisions/_template.md`](record/decisions.d/_template.md) to the next
+free number and stamps the date, and the filename is the code and nothing
+else; the title goes in `title:`
 ([ADR-013](record/decisions.d/ADR-013.md)). Repeat the title as the body's
 `# ADR-NNN:` heading; the lint checks that the two agree. Then run
 `luria index` — or just push: CI's docs-generate job regenerates the views and
@@ -122,9 +123,9 @@ and only a **reason** was wrong, correct the body and bump `version:` — see
 
 ## Adding or revising a principle
 
-Same shape, one directory over: copy
-[`docs/principles/_template.md`](record/principles.d/_template.md) to
-`DP-<NNN>.md` with the next free number, run `luria index`
+Same shape, one directory over: `luria new dp` copies
+[`docs/principles/_template.md`](record/principles.d/_template.md) to the next
+free number; run `luria index`
 ([ADR-012](record/decisions.d/ADR-012.md)). Add one
 only on the **second** re-derivation of the same reasoning — one instance is a
 decision, a pattern is a principle.

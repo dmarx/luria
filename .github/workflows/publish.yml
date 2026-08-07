@@ -36,7 +36,7 @@ jobs:
           export LURIA_ROOT=/tmp/proj
           /tmp/smoke/bin/luria init --issue-url https://example.test/issues
           /tmp/smoke/bin/luria index
-          /tmp/smoke/bin/luria journal new "Smoke test entry"
+          /tmp/smoke/bin/luria new --title "Smoke test entry"
           /tmp/smoke/bin/luria index
           /tmp/smoke/bin/luria lint
       - uses: actions/upload-artifact@v4

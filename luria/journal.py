@@ -1,8 +1,12 @@
 #!/usr/bin/env python3
 """A journal: dated entries that persist, rendered into books.
 
-    luria journal new "A title"    # create today's entry, print its path
-    luria journal                  # what is filed, and which books it renders to
+This is a library since `luria new` became the scaffold for every entry kind
+(ADR-036): `luria new` files a journal entry, `luria index` renders the
+books. The standalone module still runs for the odd interactive look:
+
+    python -m luria.journal                  # what is filed, which books
+    python -m luria.journal new "A title"    # file an entry directly
 
 The changelog and the devlog look alike and are not. A changelog entry is a
 *claim about a release*, collected and consumed. A journal entry is a **dated

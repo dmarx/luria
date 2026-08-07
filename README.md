@@ -7,7 +7,7 @@
 [![License: MIT](https://img.shields.io/github/license/dmarx/luria)](LICENSE)
 <!-- luria:badges -->
 [![needs decision: 0](https://img.shields.io/badge/needs%20decision-0-brightgreen)](docs/reports/pending-decisions.md)
-[![cited but retired: 1](https://img.shields.io/badge/cited%20but%20retired-1-orange)](docs/reports/reference-status.md)
+[![cited but retired: 0](https://img.shields.io/badge/cited%20but%20retired-0-brightgreen)](docs/reports/reference-status.md)
 <!-- /luria:badges -->
 
 </div>
@@ -173,7 +173,7 @@ luria index && luria lint
 | `luria lint` | the only command that can fail: index completeness, frontmatter, a stale generated index, and references that should be links |
 | `luria link --fix` | rewrites bare references as hyperlinks — the same scanner the lint reads, so the failure names its own remedy |
 | `luria index` | regenerates every generated view from frontmatter — the decision index and its per-tag pages, the principles document |
-| `luria journal new` | files a dated devlog entry at its timestamp |
+| `luria new [kind]` | scaffolds an entry and prints its path — the devlog by default, or any configured scheme or fragment dir (`adr`, `dp`, `changelog`) |
 | `luria remotes` | another project's record: how each foreign reference resolves, and whether it is reachable |
 | `luria init` | scaffolds the record into a project that has none |
 

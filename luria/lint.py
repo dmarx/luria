@@ -153,8 +153,8 @@ def check_journals(errors: list[str]) -> None:
             want = journal.path_for(jrnl, created)
             if path != want:
                 errors.append(f"{rel}: `created:` says it belongs at "
-                              f"{cfg.rel(want)} — run `luria journal new` to "
-                              "file entries, or move it")
+                              f"{cfg.rel(want)} — run `luria new` to file "
+                              "entries, or move it")
             if not str(meta.get("title") or "").strip():
                 errors.append(f"{rel}: no `title:` — it is what the {name} "
                               "book's contents list shows")
@@ -300,16 +300,6 @@ def status_sections() -> list[tuple[str, str, list[str]]]:
             f"{len(result.unlinted)} file(s) opt out of reference checking "
             "(`unlinted-file:` — listed in the reference report)",
             [str(current().rel(p)) for p in sorted(result.unlinted)]))
-
-    # A whole file opting out of reference checking is legitimate and blunt
-    # (#37) — blunt enough that the count prints even though nothing here can
-    # act on it: an exemption nobody sees is how a report stops being a
-    # complete account (ADR-007).
-    skipped = ref_status.scan().unlinted
-    if skipped:
-        print(f"luria: {len(skipped)} file(s) opt out of reference checking "
-              "(`unlinted-file:` — listed in the reference report)",
-              file=sys.stderr)
 
     # A hand-written URL where one would be constructed is legitimate — and
     # frozen at writing time, so the deliberate ones are acknowledged
