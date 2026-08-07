@@ -40,6 +40,14 @@ COMMANDS = {
     "collect": collect.run,
 }
 
+# Run by CI on every push; runnable by hand, but nothing in the contributor
+# workflow needs them — `collect` even mildly misfires locally, consuming
+# fragments a reviewer was meant to see on the branch.
+CI_COMMANDS = {
+    "reports": ("luria.reports", "write the status reports as markdown"),
+    "collect": ("luria.collect", "assemble fragments into their views"),
+}
+
 
 def main() -> int:
     fire.Fire(COMMANDS, name="luria")

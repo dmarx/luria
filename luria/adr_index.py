@@ -379,6 +379,15 @@ def run(check: bool = False) -> None:
             for p in journal.populate_created(j):
                 print(f"populated `created:` from the path in {current().rel(p)}")
 
+    if not args.check:
+        # A journal entry filed without `created:` gets the field written from
+        # its path before anything renders (#33) — a source repair, so it
+        # belongs to write mode; `--check` must keep reading, not writing.
+        from . import journal
+        for j in current().journals.values():
+            for p in journal.populate_created(j):
+                print(f"populated `created:` from the path in {current().rel(p)}")
+
     rendered = outputs()
     if check:
         stale = [p for p, text in rendered.items()
