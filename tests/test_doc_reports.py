@@ -11,8 +11,12 @@ report must be a **pure function of the record** (anything clock-derived goes
 stale at midnight and fails the staleness check with no record change behind
 it), and everything it names must be a **link** (the reader arrived from a
 badge, not from a grep prompt).
+
+Pure-function-of-the-record is pinned by what it *forbids* — the "N days"
+column — not by "today's date appears nowhere": a decision filed and still
+`Proposed` today legitimately puts today's date in the report, so that
+blunter assertion fails on a correct report exactly once per decision.
 """
-import datetime as dt
 from pathlib import Path
 
 from _scheme import decision
@@ -32,14 +36,6 @@ def test_writes_both_reports(tmp_path):
 def test_generated_stamp_says_not_to_edit(tmp_path):
     for path in reports.write(tmp_path):
         assert "built, not edited" in path.read_text()
-
-
-def test_reports_carry_no_clock(tmp_path):
-    """A committed view regenerates identically tomorrow, or the staleness
-    check fails every midnight (#35). Today's date appearing anywhere in the
-    output is the failure mode this pins."""
-    for path in reports.write(tmp_path):
-        assert dt.date.today().isoformat() not in path.read_text()
 
 
 def test_reference_report_links_every_site(project):
