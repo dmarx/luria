@@ -2,7 +2,7 @@
 
 # Development log
 
-The narrative that doesn't fit a changelog entry: root-cause archaeology, failed approaches, verification details, and the traps the next person would otherwise rediscover. Generated from the entries in `record/devlog.d/` — file one with `luria journal new "A title"`.
+The narrative that doesn't fit a changelog entry: root-cause archaeology, failed approaches, verification details, and the traps the next person would otherwise rediscover. Generated from the entries in `record/devlog.d/` — file one with `luria new`.
 
 ## Currently — [August 2026](2026-08.md)
 

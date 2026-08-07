@@ -50,7 +50,7 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install -e ".[dev]"
-      - run: make test
+      - run: python -m pytest tests -q
 
   # `needs:` + the sha output is the load-bearing handoff: a push made with
   # GITHUB_TOKEN does not retrigger workflows, so a lint reading any other

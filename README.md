@@ -166,23 +166,36 @@ luria init --issue-url https://github.com/owner/repo/issues
 luria index && luria lint
 ```
 
-## CLI Commands
+## The workflow
 
-| command | |
-|---|---|
-| `luria lint` | the only command that can fail: index completeness, frontmatter, a stale generated index, and references that should be links |
-| `luria link --fix` | rewrites bare references as hyperlinks — the same scanner the lint reads, so the failure names its own remedy |
-| `luria index` | regenerates every generated view from frontmatter — the decision index and its per-tag pages, the principles document |
-| `luria new [kind]` | scaffolds an entry and prints its path — the devlog by default, or any configured scheme or fragment dir (`adr`, `dp`, `changelog`) |
-| `luria remotes` | another project's record: how each foreign reference resolves, and whether it is reachable |
-| `luria init` | scaffolds the record into a project that has none |
+That three-line install above is the whole adoption story; after it, the
+commands map onto the life of a contribution:
 
-Two more run in CI rather than by hand: `luria reports` writes the two status
-reports — retired documents still cited, decisions still undecided — as
-markdown for a build artifact, and `luria collect` assembles fragment
-directories into their views. The summary of both reports prints as warnings
-on every `luria lint`. (The surface used to be one command per module; the
-commands that only restated these reports on the console were retired.)
+**Do the work, and file it while it's warm.** `luria new` drops a devlog
+entry at its timestamped path and prints it for your editor; `luria new adr`
+(or `dp`, `changelog`, or any scheme you configure) copies the template to
+the next free number with the date stamped. The CLI computes identity —
+numbers, timestamps, filenames — and content stays yours.
+
+**Let the machinery write the plumbing.** Reference a decision by typing
+`ADR-012` in prose and `luria link --fix` turns it into a hyperlink; `luria
+index` regenerates every view — the decision index and its tag pages, the
+principles document, the devlog books, the status reports, the README
+badges — from the frontmatter your fragments carry.
+
+**Check before you push.** `luria lint` is the only command that fails:
+structural drift, stale views, references nobody can follow. The status
+findings — retired decisions still cited, questions still undecided — print
+as warnings by default, and fail instead for any class your `fail_on`
+config promotes.
+
+The remainder is occasional or CI's: `luria remotes` shows how another
+project's cited record resolves (`--refresh` discovers its filenames into
+the lockfile), `luria reports` writes the status reports somewhere other
+than their committed home, and `luria collect` assembles changelog
+fragments on a release cadence.
+
+`luria --help` is the authoritative list, and every command takes `--help`.
 
 ## Citing another project
 

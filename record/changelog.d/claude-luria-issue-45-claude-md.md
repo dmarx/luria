@@ -11,3 +11,21 @@
   [DP-3](docs/design-principles.md#dp-3) predicts for hand-maintained
   copies. The scaffolded `template/CLAUDE.md` gets the same treatment,
   mapping an adopting project instead of this one.
+
+### Removed
+
+- **The Makefile** ([ADR-038](record/decisions.d/ADR-038.md)): its "run what
+  CI runs is `make <target>`" doctrine stopped being true when
+  [ADR-029](record/decisions.d/ADR-029.md) moved the docs jobs into composite
+  actions, leaving one `make test` line wrapping pytest and a set of targets
+  that restated CLI one-liners and drifted twice in a week. ci.yml runs
+  pytest directly; `luria --help` is the one list of what you can run.
+
+### Added
+
+- **`luria init` speaks up about a kept CLAUDE.md**: it never overwrote
+  existing files, but the one file an agent reads first deserved more than a
+  silent skip — when CLAUDE.md exists, init now prints a pointer at the
+  scaffolded map shape (links + `luria --help`) and suggests asking your
+  agent to fold it in. The recommendation goes to stdout, where permission
+  isn't needed; the file is never touched.
