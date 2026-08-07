@@ -1,5 +1,5 @@
 """Undecided decisions, aged
-([ADR-007](../record/decisions.d/ADR-007.md)).
+([ADR-035](../record/decisions.d/ADR-035.md)).
 
 Age is the whole point of this report, so the clock is injected: `--as-of` (and
 the `today` argument these tests pass) keeps it from being a test that fails on

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Comment directives — the shared vocabulary the docs tooling reads (ADR-006, ADR-007).
+"""Comment directives — the shared vocabulary the docs tooling reads (ADR-006, ADR-035).
 
 Two checks take instructions from the prose they check:
 `luria.ref_status` (acknowledge a deliberate reference to a retired

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""The status reports, rendered as committed views (ADR-007, #35).
+"""The status reports, rendered as committed views (ADR-035, #35).
 
     luria reports               # → the configured `reports` dir
     luria reports --out DIR     # somewhere else, e.g. a CI artifact staging dir

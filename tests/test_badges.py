@@ -77,7 +77,7 @@ def test_a_retired_document_counts_only_while_cited(project):
 
 def test_an_acknowledged_citation_does_not_count(project):
     """Citing a retired decision is often right, and the whole point of the
-    acknowledgement is that the considered ones stop being noise (ADR-007)."""
+    acknowledgement is that the considered ones stop being noise (ADR-035)."""
     with_schemes(project)
     decision(project, 1, "Superseded")
     (project / "docs" / "notes.md").write_text(

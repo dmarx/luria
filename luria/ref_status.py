@@ -12,7 +12,7 @@ Two ways a reference fails to mean what it says. It can point at a document
 that is no longer in force — the original subject of this module — or it can
 point at **no document at all**: a typo, a number carried over from another
 project, a decision that was renumbered. Both are reported here; neither fails
-a build (ADR-007).
+a build (ADR-035).
 
 A reference to another document reads as "this is why things are the way they
 are". That claim is only true while the referenced document is in force. A
@@ -387,7 +387,7 @@ def dangling(result: Scan | None = None,
     Three things look identical from here and read very differently: a typo, a
     number carried in from another project, and a fixture code in a test. Only
     a human can tell them apart, which is why this is a report and not an error
-    (ADR-007) — and why `unresolved-ok` exists to retire the ones that are
+    (ADR-035) — and why `unresolved-ok` exists to retire the ones that are
     deliberate."""
     result = scan(docs=docs) if result is None else result
     rows = []

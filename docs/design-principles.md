@@ -156,7 +156,8 @@ convention from the corpus and stops trying.
 
 <a name="dp-6"></a>
 
-## 6. Fire before trusting
+<!-- inactive-ok-file: ADR-007 — the evidence trail predates the supersession; ADR-035 carries the doctrine -->
+# DP-006: Fire before trusting
 
 Every guard, alert, and CI gate gets one deliberate sabotage run to prove it
 catches, before anyone relies on it. **Provisioned is not working.**

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Report ADRs still awaiting a decision, oldest first (ADR-007).
+"""Report ADRs still awaiting a decision, oldest first (ADR-035).
 
 This is a library: `luria lint` prints its headline as a warning and
 `luria reports` writes the full table as markdown (ADR-030). The standalone
@@ -28,9 +28,10 @@ one still means the codebase depends on the answer. The reference-status report 
 the unacknowledged ones, so its total is smaller — the headline names both so
 the two reports visibly reconcile.
 
-Like the non-Active reference report this ships beside, it warns and never
-fails. An ADR can be legitimately open for a long time; only a human can say
-which of these is overdue.
+Like the non-Active reference report this ships beside, it warns by default
+and fails only when `[luria.lint] fail_on` says so (ADR-035). An ADR can be
+legitimately open for a long time; only a human can say which of these is
+overdue.
 """
 
 from __future__ import annotations

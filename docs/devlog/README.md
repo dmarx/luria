@@ -6,6 +6,7 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 
 ## Currently — [August 2026](2026-08.md)
 
+- [7 Aug 18:17 — The 'never' comes out of ADR-007: enforcement becomes a dial](2026-08.md#20260807181733)
 - [7 Aug 16:48 — A blunt directive and a fixture prefix, both priced in visibility](2026-08.md#20260807164832)
 - [7 Aug 15:55 — Reports become views a badge can land on, and created: fills itself in](2026-08.md#20260807155534)
 - [7 Aug 04:59 — The CLI sheds the commands that were only the module layout showing through](2026-08.md#20260807045929)
@@ -29,8 +30,8 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 
 ## All books
 
-20 entries across 1 book, newest first.
+21 entries across 1 book, newest first.
 
 | Book | Entries | First | Last |
 |---|--:|---|---|
-| [2026-08](2026-08.md) | 20 | 2026-08-03 | 2026-08-07 |
+| [2026-08](2026-08.md) | 21 | 2026-08-03 | 2026-08-07 |

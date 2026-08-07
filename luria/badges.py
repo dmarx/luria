@@ -20,7 +20,7 @@ to answer without cloning it:
   **cited but retired** — documents no longer in force that current docs or
                         code still cite *without an acknowledgement*. Citing a
                         `Rejected` decision is often right, which is why this
-                        counts only the unconsidered ones (ADR-007).
+                        counts only the unconsidered ones (ADR-035).
 
 Derived, not hand-written (ADR-018). The numbers are computed from frontmatter
 and baked into static shields.io URLs, which `luria index` rewrites and

@@ -34,7 +34,7 @@ block even when it contains blank lines.
 ## `inactive-ok` — this reference is deliberate
 
 Silences one reference to a retired (non-`Active`) document in the
-[reference-status report](../record/decisions.d/ADR-007.md).
+reference-status report ([ADR-035](../record/decisions.d/ADR-035.md)).
 
 ```
 <!-- inactive-ok: ADR-012 — the decision this one replaced -->

@@ -88,7 +88,7 @@ had been letting through. Three are usual:
   keep resolving either way.
 
 Everything else is a warning and can wait
-([ADR-007](../record/decisions.d/ADR-007.md)).
+([ADR-035](../record/decisions.d/ADR-035.md)).
 
 ## Adopting into a project that already has a devlog
 

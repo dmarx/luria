@@ -46,7 +46,7 @@ def test_unlinted_file_keeps_wikilinks_quiet(project):
 def test_unlinted_file_is_skipped_by_the_scan_and_counted(project):
     """The visibility bargain: the file's citations vanish from the scan, and
     the file itself appears in the count — an exemption nobody sees is how a
-    report stops being a complete account (ADR-007)."""
+    report stops being a complete account (ADR-035)."""
     decision(project, 12, "Superseded")
     path = page(project, "Still leaning on ADR-012 here.\n")
 
