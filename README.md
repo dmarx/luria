@@ -28,17 +28,17 @@ The consequence is that if you integrate luria into your project, the project it
 
 ## How It Works
 
-Luria is comprised of four documentation subsystems ([[ADR-001]]) designed to reference one another, a linter for ensuring those references haven't gone stale, and some convenience tools ([[ADR-020]], [[ADR-025]]) for interfacing with the linter and documentation subsystems.
+Luria is comprised of four documentation subsystems ([ADR-001](record/decisions.d/ADR-001.md)) designed to reference one another, a linter for ensuring those references haven't gone stale, and some convenience tools ([ADR-020](record/decisions.d/ADR-020.md), [ADR-025](record/decisions.d/ADR-025.md)) for interfacing with the linter and documentation subsystems.
 
 The heart and soul of luria is the **decision record**. If you take away nothing else from reading this: ADD SOME KIND OF DECISION LOG TO
 YOUR PROJECT. It is the best possible guard against [Chesterton's Fence](https://en.wikipedia.org/wiki/G._K._Chesterton#Chesterton's_Fence)
 problems which otherwise can be a recurring theme when working with LLMs. They also make it easier to only explain yourself once, since if
 the LLM feels inclined to relitigate anything it will find itself directed towards the documented reason things are the way they are.
 
-In Luria, decisions carry a state. Decisions can be Active, Proposed, Deferred, Rejected, or Superseded ([[ADR-003]]). Decisions influence things
+In Luria, decisions carry a state. Decisions can be Active, Proposed, Deferred, Rejected, or Superseded ([ADR-003](record/decisions.d/ADR-003.md)). Decisions influence things
 like code, documentation, and other decisions. When a decision influences something and the decision has been formally documented somewhere,
-this naturally encourages directly referencing those documents. Luria's linter standardizes the form these references take ([[ADR-005]]), and 
-also checks that all referenced decisions are in an "active" state ([[ADR-007]]). If the linter discovers (unacknowledged) references to non-active decisions, it can raise warnings, generate reports, and/or fail CI until the unendorsed decisions are dealt with (or the references to them are annotated for the linter). 
+this naturally encourages directly referencing those documents. Luria's linter standardizes the form these references take ([ADR-005](record/decisions.d/ADR-005.md)), and 
+also checks that all referenced decisions are in an "active" state ([ADR-007](record/decisions.d/ADR-007.md)). If the linter discovers (unacknowledged) references to non-active decisions, it can raise warnings, generate reports, and/or fail CI until the unendorsed decisions are dealt with (or the references to them are annotated for the linter). 
 
 
 ### The four layers
