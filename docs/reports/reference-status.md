@@ -5,7 +5,7 @@
 
 A reference reads as "this is why things are the way they are", and that claim holds only while the referenced document is in force. None of this is a failure — citing a `Rejected` decision is often exactly right — so nothing here fails a build. What is worth knowing is which of these nobody has looked at.
 
-**0 retired document(s) cited without acknowledgement.** 36 reference(s) carry an `inactive-ok` annotation and are not listed below.
+**0 retired document(s) cited without acknowledgement.** 38 reference(s) carry an `inactive-ok` annotation and are not listed below.
 
 To acknowledge one, put the reason where the reference is — `inactive-ok:` covers its line and the line below, `-block` the paragraph, `-file` the page:
 

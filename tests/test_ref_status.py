@@ -221,8 +221,7 @@ def test_spread_prefers_distinct_files(tmp_path):
 def test_report_never_fails_the_build():
     """It is a warning. `luria lint` must not start failing on a citation that
     may be correct."""
-    sys.argv = ["luria ref-status"]
-    assert ref_status.main() == 0
+    assert ref_status.run() is None    # no SystemExit — a report, not a gate
 
 
 # ── Genericity ───────────────────────────────────────────────────────────

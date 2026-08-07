@@ -36,7 +36,6 @@ overdue.
 
 from __future__ import annotations
 
-import argparse
 import datetime as dt
 import re
 import sys
@@ -142,20 +141,18 @@ def headline(rows: list[Pending], today: dt.date, stale_days: int) -> str:
     return "pending decisions: " + ", ".join(parts)
 
 
-def main() -> int:
-    ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--stale-days", type=int, default=current().stale_days,
-                    help="flag rows at least this old")
-    ap.add_argument("--as-of", help="treat this ISO date as today")
-    args = ap.parse_args()
-
-    today = dt.date.fromisoformat(args.as_of) if args.as_of else dt.date.today()
+def run(stale_days: int = None, as_of: str = None) -> None:
+    """The pending-documents table on the console. --as-of fixes the clock
+    (for tests); --stale-days tightens the overdue marker."""
+    stale_days = current().stale_days if stale_days is None else stale_days
+    today = dt.date.fromisoformat(as_of) if as_of else dt.date.today()
     rows = pending()
-    print(headline(rows, today, args.stale_days), file=sys.stderr)
-    for line in table(rows, today, args.stale_days):
+    print(headline(rows, today, stale_days), file=sys.stderr)
+    for line in table(rows, today, stale_days):
         print(f"  {line}", file=sys.stderr)
-    return 0            # a report, not a gate
+    # A report, not a gate.
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    import fire
+    fire.Fire(run)

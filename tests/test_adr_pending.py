@@ -103,8 +103,7 @@ def test_headline_reconciles_with_the_reference_report(project):
 
 
 def test_report_never_fails_the_build():
-    sys.argv = ["luria pending", "--as-of", TODAY.isoformat()]
-    assert pending.main() == 0
+    assert pending.run(as_of=TODAY.isoformat()) is None
 
 
 def test_every_scheme_is_covered(project):

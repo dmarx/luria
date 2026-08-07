@@ -116,8 +116,7 @@ def test_bare_badges_says_it_only_printed(capsys, monkeypatch, project):
     `luria badges` command itself is retired (ADR-030), so only the module
     entry point can reach this."""
     decision(project, 1, "Active")
-    monkeypatch.setattr("sys.argv", ["python -m luria.badges"])
-    assert badges.main() == 0
+    assert badges.run() is None
 
     out, err = capsys.readouterr()
     assert badges.OPEN in out, "the markdown still goes to stdout"

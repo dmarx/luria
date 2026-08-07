@@ -9,7 +9,7 @@ description = "A project's memory: decisions, principles, changelog and devlog, 
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
-dependencies = ["PyYAML>=6"]
+dependencies = ["PyYAML>=6", "fire>=0.7"]
 keywords = ["adr", "architecture-decision-records", "documentation", "lint",
             "project-memory", "changelog", "devlog"]
 classifiers = [

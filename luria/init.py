@@ -23,7 +23,6 @@ is worse than an empty file.
 
 from __future__ import annotations
 
-import argparse
 import shutil
 from pathlib import Path
 
@@ -79,23 +78,18 @@ def write(into: Path, issue_url: str = "",
     return written, skipped, kept
 
 
-def main() -> int:
-    ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--into", type=Path, default=None,
-                    help="project root (default: the detected one)")
-    ap.add_argument("--issue-url", default="",
-                    help="e.g. https://github.com/owner/repo/issues — written "
-                         "into luria.toml so issue numbers become links")
-    ap.add_argument("--dry-run", action="store_true")
-    args = ap.parse_args()
-
-    into = (args.into or find_root()).resolve()
+def run(into: str = None, issue_url: str = "",
+        dry_run: bool = False) -> None:
+    """Scaffold the record into a project (default: the detected root).
+    Never overwrites; --dry-run lists what would be written; --issue-url
+    makes issue numbers linkable."""
+    into = (Path(into) if into else find_root()).resolve()
     print(f"luria init → {into}")
-    written, skipped, kept = write(into, args.issue_url, args.dry_run)
+    written, skipped, kept = write(into, issue_url, dry_run)
     if not written and not skipped:
         print("  nothing to write — is the template directory installed?")
-        return 1
-    verb = "would write" if args.dry_run else "wrote"
+        raise SystemExit(1)
+    verb = "would write" if dry_run else "wrote"
     print(f"{verb} {written} file(s), skipped {skipped} existing.")
     # A file the project already owns is never touched — but the one an
     # agent reads first deserves more than a silent skip (DP-1): say what
@@ -106,11 +100,11 @@ def main() -> int:
               "short map — links to the record's docs plus an invitation to "
               "run `luria --help` (LU-ADR-037). Worth borrowing: ask your "
               "agent to fold that shape into your existing file.")
-    if written and not args.dry_run:
+    if written and not dry_run:
         print("\nNext: `luria index` to build the decision index, then "
               "`luria lint`.")
-    return 0
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    import fire
+    fire.Fire(run)

@@ -1,4 +1,5 @@
-"""`luria <command>` — one entry point for the whole record.
+# inactive-ok-file: ADR-039 — this is the draft implementation of that proposal; the citation is the point
+"""`luria` — one entry point for the whole record, driven by Fire (ADR-039).
 
     luria lint          check the record; the only command that can fail
     luria link [--fix]  rewrite bare references as hyperlinks
@@ -13,66 +14,37 @@ Two more exist for CI, which is their only regular caller:
     luria reports       write the status reports as markdown, for an artifact
     luria collect       assemble fragment directories into their views
 
-The surface used to be wider — one command per module, eleven in all — which
-mirrored the package layout rather than anyone's workflow (ADR-030). The
-excess names are gone, not deprecated: a shim would be an affordance for a
-workflow nobody has.
+Each command is a plain typed function (`<module>.run`), and Fire derives the
+flags and help from the signatures and docstrings — there is no argparse
+layer left to drift from the functions it wrapped. A command signals failure
+by raising `SystemExit`, never by returning a value: Fire prints return
+values, and a CI gate's exit code is not output.
 
-Subcommands delegate to modules that each keep their own `main()`, so any of
-them still runs standalone (`python -m luria.ref_status`) — useful when a
-project vendors one file instead of installing the package.
+The modules still run standalone (`python -m luria.ref_status --all`) via the
+same functions — useful when a project vendors one file instead of installing
+the package.
 """
 
-import sys
+import fire
+
+from . import adr_index, collect, init, link_refs, lint, new, remotes, reports
 
 COMMANDS = {
-    "lint": ("luria.lint", "the docs lint — the only command that fails"),
-    "link": ("luria.link_refs", "rewrite bare references as hyperlinks"),
-    "index": ("luria.adr_index", "regenerate every generated view"),
-    "new": ("luria.new", "scaffold an entry: journal (default), adr, dp, changelog…"),
-    "remotes": ("luria.remotes", "other projects' records, and how they resolve"),
-    "init": ("luria.init", "scaffold the record into a project"),
-}
-
-# Run by CI on every push; runnable by hand, but nothing in the contributor
-# workflow needs them — `collect` even mildly misfires locally, consuming
-# fragments a reviewer was meant to see on the branch.
-CI_COMMANDS = {
-    "reports": ("luria.reports", "write the status reports as markdown"),
-    "collect": ("luria.collect", "assemble fragments into their views"),
+    "lint": lint.run,
+    "link": link_refs.run,
+    "index": adr_index.run,
+    "new": new.run,
+    "remotes": remotes.run,
+    "init": init.run,
+    "reports": reports.run,
+    "collect": collect.run,
 }
 
 
-def usage() -> str:
-    names = {**COMMANDS, **CI_COMMANDS}
-    width = max(len(name) for name in names)
-    lines = ["usage: luria <command> [options]", "", "commands:"]
-    lines += [f"  {name:<{width}}  {blurb}" for name, (_, blurb) in COMMANDS.items()]
-    lines += ["", "run by CI, rarely by hand:"]
-    lines += [f"  {name:<{width}}  {blurb}" for name, (_, blurb) in CI_COMMANDS.items()]
-    lines += ["", "Every command takes --help."]
-    return "\n".join(lines)
-
-
-def main(argv: list[str] | None = None) -> int:
-    argv = list(sys.argv[1:] if argv is None else argv)
-    if not argv or argv[0] in {"-h", "--help", "help"}:
-        print(usage())
-        return 0
-    name = argv[0]
-    commands = {**COMMANDS, **CI_COMMANDS}
-    if name not in commands:
-        # No silent refusal: say what was asked for and what exists (DP-1).
-        print(f"luria: unknown command {name!r}\n", file=sys.stderr)
-        print(usage(), file=sys.stderr)
-        return 2
-
-    module_name, _ = commands[name]
-    from importlib import import_module
-    module = import_module(module_name)
-    sys.argv = [f"luria {name}", *argv[1:]]
-    return module.main()
+def main() -> int:
+    fire.Fire(COMMANDS, name="luria")
+    return 0
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    raise SystemExit(main())

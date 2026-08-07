@@ -36,7 +36,6 @@ badge depend on someone else's uptime — the same argument that keeps
 
 from __future__ import annotations
 
-import argparse
 import re
 import sys
 from pathlib import Path
@@ -100,14 +99,11 @@ def readme() -> Path:
     return current().root / "README.md"
 
 
-def main() -> int:
-    ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--write", action="store_true", help="rewrite README.md")
-    ap.add_argument("--check", action="store_true", help="exit 1 if stale")
-    args = ap.parse_args()
-
+def run(write: bool = False, check: bool = False) -> None:
+    """Print the badge markdown; --write rewrites the README region,
+    --check exits 1 when it is stale. `luria index` does this in normal use."""
     path = readme()
-    if not args.write and not args.check:
+    if not write and not check:
         print(region())
         # Printing is the whole job here, but as a CI `- run:` step it is
         # indistinguishable from a write that landed — which is how an
@@ -117,28 +113,28 @@ def main() -> int:
               f"{current().rel(readme())}, `--check` fails when it is stale. "
               "In normal use `luria index` writes it with everything else.",
               file=sys.stderr)
-        return 0
+        return
 
     if not path.exists() or OPEN not in path.read_text():
         print(f"luria badges: no {OPEN} region in "
               f"{current().rel(path)} — add one where the badges belong:\n\n"
               f"  {OPEN}\n  {CLOSE}\n", file=sys.stderr)
-        return 0
+        return
 
     text = path.read_text()
     fresh = rewrite(text)
-    if args.check:
+    if check:
         if fresh != text:
             print(f"{current().rel(path)}: badge counts are stale — "
                   f"{ci.regenerate_remedy()}", file=sys.stderr)
-            return 1
+            raise SystemExit(1)
         print("luria badges: current")
-        return 0
+        return
     path.write_text(fresh)
     undecided, retired = counts()
     print(f"badges: needs decision {undecided}, cited but retired {retired}")
-    return 0
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    import fire
+    fire.Fire(run)

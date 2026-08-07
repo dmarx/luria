@@ -40,7 +40,6 @@ carries the timestamp in the entry itself, so nothing has to be reconstructed
 the changelog — and wrong where the entries are dated observations.
 """
 
-import argparse
 import re
 import subprocess
 import sys
@@ -146,30 +145,27 @@ def collect_dir(name: str, fragment) -> int:
     return len(paths)
 
 
-def main() -> int:
-    ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--dir", help="collect only this fragment directory")
-    ap.add_argument("--commit", action="store_true", help="commit the result (CI mode)")
-    args = ap.parse_args()
-
+def run(dir: str = None, commit: bool = False) -> None:
+    """Assemble fragment directories into their views — all of them, or just
+    --dir. --commit stages and commits the result (CI mode)."""
     cfg = current()
-    wanted = {args.dir: cfg.fragments[args.dir]} if args.dir else cfg.fragments
+    wanted = {dir: cfg.fragments[dir]} if dir else cfg.fragments
     total = sum(collect_dir(name, frag) for name, frag in wanted.items())
     if not total:
         print("No fragments to collect.")
-        return 0
+        return
 
-    if args.commit:
+    if commit:
         subprocess.run(["git", "add", "-A"], cwd=cfg.root, check=True)
         if subprocess.run(["git", "diff", "--staged", "--quiet"],
                           cwd=cfg.root).returncode == 0:
             print("Nothing to commit.")
-            return 0
+            return
         subprocess.run(["git", "commit", "-m",
                         "docs: collect fragments [skip ci]"],
                        cwd=cfg.root, check=True)
-    return 0
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    import fire
+    fire.Fire(run)

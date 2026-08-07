@@ -357,7 +357,8 @@ def report_warnings(errors: list[str]) -> None:
                 print(f"  {line}", file=sys.stderr)
 
 
-def main() -> int:
+def run() -> None:
+    """Check the record; exits 1 with one line per violation."""
     errors: list[str] = []
     check_docs_index(errors)
     check_frontmatter(errors)
@@ -371,10 +372,10 @@ def main() -> int:
         print(f"luria: {len(errors)} violation(s)", file=sys.stderr)
         for e in errors:
             print(f"  {e}", file=sys.stderr)
-        return 1
+        raise SystemExit(1)
     print("luria: docs lint clean")
-    return 0
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    import fire
+    fire.Fire(run)

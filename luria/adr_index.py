@@ -38,7 +38,6 @@ generator substitutes `{placeholders}`, and tags get their own generated pages.
 
 from __future__ import annotations
 
-import argparse
 import os.path
 import re
 import sys
@@ -367,12 +366,11 @@ def outputs() -> dict[Path, str]:
     return out
 
 
-def main() -> int:
-    ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--check", action="store_true", help="exit 1 if anything is stale")
-    args = ap.parse_args()
-
-    if not args.check:
+def run(check: bool = False) -> None:
+    """Regenerate every view — the decision index and tag pages, the
+    principles document, the devlog books, the status reports, the README
+    badges. --check exits 1 if any of them is stale instead of writing."""
+    if not check:
         # A journal entry filed without `created:` gets the field written from
         # its path before anything renders (#33) — a source repair, so it
         # belongs to write mode; `--check` must keep reading, not writing.
@@ -382,7 +380,7 @@ def main() -> int:
                 print(f"populated `created:` from the path in {current().rel(p)}")
 
     rendered = outputs()
-    if args.check:
+    if check:
         stale = [p for p, text in rendered.items()
                  if not p.exists() or p.read_text() != text]
         # Anything in a view directory the generator didn't render is stale
@@ -398,9 +396,9 @@ def main() -> int:
             print(f"stale ({ci.regenerate_remedy()}):", file=sys.stderr)
             for p in sorted(stale):
                 print(f"  {current().rel(p)}", file=sys.stderr)
-            return 1
+            raise SystemExit(1)
         print("luria index: current")
-        return 0
+        return
 
     cfg = current()
     for stale_file in orphans(rendered):
@@ -424,8 +422,8 @@ def main() -> int:
     readme = badges.readme()
     if readme.exists() and badges.OPEN in (text := readme.read_text()):
         readme.write_text(badges.rewrite(text))
-    return 0
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    import fire
+    fire.Fire(run)

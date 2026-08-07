@@ -12,20 +12,16 @@ reference": run it with `--fix` instead of hand-editing (ADR-005).
 
 from __future__ import annotations
 
-import argparse
 from pathlib import Path
 
 from . import doc_refs
 from .config import current
 
 
-def main() -> int:
-    ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--fix", action="store_true", help="write the rewrites")
-    ap.add_argument("paths", nargs="*", help="limit to these files")
-    args = ap.parse_args()
-
-    files = [Path(p).resolve() for p in args.paths] or doc_refs.doc_files()
+def run(*paths: str, fix: bool = False) -> None:
+    """Rewrite bare references as links — every doc, or just PATHS.
+    Reports what would change; --fix writes it."""
+    files = [Path(p).resolve() for p in paths] or doc_refs.doc_files()
     adrs, anchors = doc_refs.adr_paths(), doc_refs.dp_anchors()
 
     total = 0
@@ -36,13 +32,13 @@ def main() -> int:
             continue
         total += count
         print(f"{current().rel(path)}: {count} reference(s)")
-        if args.fix:
+        if fix:
             path.write_text(new)
 
-    verb = "linked" if args.fix else "would link"
+    verb = "linked" if fix else "would link"
     print(f"{verb} {total} reference(s) in {len(files)} file(s)")
-    return 0
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    import fire
+    fire.Fire(run)
