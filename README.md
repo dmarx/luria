@@ -17,13 +17,16 @@ A simple framework for accumulating domain knowledge by leveraging time tested c
 Luria encapsulates a collection of best practices you should probably be using anyway. Things like:
 
 * maintaining a journal to document your daily activities
-* documenting decisions along with their context, alternatives considered, and citations to other relevant decisions
+* documenting decisions along with their context, alternatives considered, and references to other relevant decisions
 * a mechanism for un-endorsing decisions
 * lineage tracking that facilitates identifying assumptions that are based on premises that are no longer endorsed
-* a self-reenforcing feedback loop to surface unwritten rules or principles which should be documented and formalized
+* a feedback loop to surface unwritten rules or principles which should be documented and formalized
 * tools that facilitate translating (inert) good intentions into (actively interventional) mechanisms
 
 The consequence is that if you integrate luria into your project, the project itself will become its own living memory.
+
+If you're collaborating with LLMs: you can retire whatever dedicated memory plane they may be integrated with in favor of 
+just pointing them to your project's documentation instead. Like you would with any other collaborator.
 
 
 ## How It Works
