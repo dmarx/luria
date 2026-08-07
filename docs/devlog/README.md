@@ -6,6 +6,7 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 
 ## Currently — [August 2026](2026-08.md)
 
+- [6 Aug 20:48 — Branding and copyediting](2026-08.md#20260806204800)
 - [5 Aug 13:34 — A checking job runs nothing that writes](2026-08.md#20260805133445)
 - [4 Aug 20:05 — The collector grew the changelog shape, for strata-g's scriv retirement](2026-08.md#20260804200509)
 - [4 Aug 18:44 — Shipping: the wheel that worked was working by accident](2026-08.md#20260804184404)
@@ -25,8 +26,8 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 
 ## All books
 
-16 entries across 1 book, newest first.
+17 entries across 1 book, newest first.
 
 | Book | Entries | First | Last |
 |---|--:|---|---|
-| [2026-08](2026-08.md) | 16 | 2026-08-03 | 2026-08-05 |
+| [2026-08](2026-08.md) | 17 | 2026-08-03 | 2026-08-06 |

@@ -12,38 +12,40 @@
 
 </div>
 
-A project's memory: the decisions, the principles, the changelog and the
-narrative log — kept where the next collaborator will find them, and kept honest
-by a lint.
+A simple framework for accumulating domain knowledge by leveraging time tested change management strategies.
 
-Half the collaborators on a modern codebase are stateless. They arrive with no
-memory, read some pages, work, and vanish. Unwritten knowledge is re-derived at
-cost, per session, forever. Luria is the machinery for a record that survives
-that: [project memory](docs/project-memory.md) is the doctrine, and this package
-is what stops it drifting.
+Luria encapsulates a collection of best practices you should probably be using anyway. Things like:
 
-```
-pip install luria
-luria init --issue-url https://github.com/owner/repo/issues
-luria index && luria lint
-```
+* maintaining a journal to document your daily activities
+* documenting decisions along with their context, alternatives considered, and references to other relevant decisions
+* a mechanism for un-endorsing decisions
+* lineage tracking that facilitates identifying assumptions that are based on premises that are no longer endorsed
+* a feedback loop to surface unwritten rules or principles which should be documented and formalized
+* tools that facilitate translating (inert) good intentions into (actively interventional) mechanisms
 
-## What it does
+The consequence is that if you integrate luria into your project, the project itself will become its own living memory.
 
-| command | |
-|---|---|
-| `luria lint` | the only command that can fail: index completeness, frontmatter, a stale generated index, and references that should be links |
-| `luria link --fix` | rewrites bare references as hyperlinks — the same scanner the lint reads, so the failure names its own remedy |
-| `luria index` | regenerates every generated view from frontmatter — the decision index and its per-tag pages, the principles document |
-| `luria ref-status` | which retired decisions are still cited, and where |
-| `luria pending` | which documents are undecided, by age **and** citation count — every scheme |
-| `luria badges` | the README's two counts, derived from the record |
-| `luria reports` | both reports as markdown, for a CI artifact |
-| `luria collect` | assembles fragment directories into their views |
-| `luria remotes` | another project's record: how each foreign reference resolves, and whether it is reachable |
-| `luria init` | scaffolds the record into a project that has none |
+If you're collaborating with LLMs: you can retire whatever dedicated memory plane they may be integrated with in favor of 
+just pointing them to your project's documentation instead. Like you would with any other collaborator.
 
-## The four layers
+
+## How It Works
+
+Luria is comprised of four documentation subsystems ([ADR-001](record/decisions.d/ADR-001.md)) designed to reference one another, a linter for ensuring those references haven't gone stale, and some convenience tools ([ADR-020](record/decisions.d/ADR-020.md), [ADR-025](record/decisions.d/ADR-025.md)) for interfacing with the linter and documentation subsystems.
+
+The heart and soul of luria is the **decision record**. If you take away nothing else from reading this: ADD SOME KIND OF DECISION LOG TO
+YOUR PROJECT. It is the best possible guard against [Chesterton's Fence](https://en.wikipedia.org/wiki/G._K._Chesterton#Chesterton's_Fence)
+problems which otherwise can be a recurring theme when working with LLMs. They also make it easier to only explain yourself once, since if
+the LLM feels inclined to relitigate anything it will find itself directed towards the documented reason things are the way they are.
+
+In Luria, decisions carry a state. Decisions can be Active, Proposed, Deferred, Rejected, or Superseded ([ADR-003](record/decisions.d/ADR-003.md)). Decisions influence things like code, documentation, and other decisions. When a decision influences something and the decision has been formally documented somewhere, this naturally encourages directly referencing those documents. Luria's linter standardizes the form these references take ([ADR-005](record/decisions.d/ADR-005.md)), and also checks that all referenced decisions are in an "active" state ([ADR-007](record/decisions.d/ADR-007.md)). If the linter discovers (unacknowledged) references to non-active decisions, it can raise warnings, generate reports, and/or fail CI until the unendorsed decisions are dealt with (or the references to them are annotated for the linter). 
+
+In addition to making decisions and authoring fragments, the user participates by promoting daily choices from the devlog into formally documented
+decisions, superseding old decisions with new ones, and promoting insights that repeatedly inform decisions into guiding principles.
+
+The norms that matter get walked up the ladder — prose → convention → mechanism → guarantee ([DP-5](docs/design-principles.md#dp-5)), and Luria instruments the rungs.
+
+### The four layers
 
 | layer | holds | test |
 |---|---|---|
@@ -52,9 +54,8 @@ luria index && luria lint
 | changelog fragments | **what changed**, operator-facing | *would someone running this notice?* |
 | devlog entries | **how it went**, including the wrong theories | *will a future debugger want the narrative?* |
 
-Each contribution writes a *fragment* nobody else touches; the shared documents
-are **views**. A file every contribution appends to is a lock, and its conflicts
-carry no information ([DP-2](docs/design-principles.md#dp-2)).
+Each contribution writes a *fragment* nobody else touches; the shared documents are **views** ([ADR-002](record/decisions.d/ADR-002.md), [ADR-020](record/decisions.d/ADR-020.md), [ADR-021](record/decisions.d/ADR-021.md)). 
+A file every contribution appends to is a lock, and its conflicts carry no information ([DP-2](docs/design-principles.md#dp-2)).
 
 The tree says which is which ([DP-9](docs/design-principles.md#dp-9),
 [ADR-021](record/decisions.d/ADR-021.md)): **you read in `docs/`, you file in
@@ -83,6 +84,102 @@ The devlog is a **journal**: entries are filed at their authoring timestamp
 month with a generated contents list ([ADR-020](record/decisions.d/ADR-020.md)). A
 dated observation was true when it was written and stays true; consuming it
 throws away the only copy of something that never expires.
+
+
+## Motivation
+
+Are you using any form of "agentic AI"? You are probably doing it wrong. Luria's position is that most of the standard 
+practices of contemporary agentic programming are actually anti-patterns and should be treated as code smells rather 
+than development strategies to aspire towards. This is obviously pretty big talk, so I'm going to back it up by pointing
+my finger at the leader of the pack: Claude Code.
+
+Don't get me wrong: I love CC and use it all the time. I've barely written any code by hand myself in months because CC
+is just so damn good. But there are few ways in which I use CC which run directly counter to how the system is designed
+and how Anthropic recommends it be used.
+
+* I discourage CC from documenting memories privately (both in `.claude/` as well as `CLAUDE.md`)
+* I rarely use MCPs/skills.
+
+When Karpathy coined the phrase "Vibe Coding", he was talking specifically about the frame where you say "yes" to 
+everything the LLM suggests. I feel like today, "Vibe Coding" has come to mean any LLM-assisted coding. When I use
+CC, I am not "vibing" with the model. I am *collaborating* with it. I often need to interrupt it, reverse its decisions,
+propose alternatives and solutions it hasn't considered, grab the wheel and perform outright course corrections... 
+The Software Engineering world already has language that describes the situation where one developer writes most of the code
+while another looks over their shoulder providing feedback and guidance: it's called **pair programming**.
+
+Adopting the perspective that an LLM is just a non-human collaborator that we pair with, let's revisit practices like 
+"storing memories" and building entire control planes (i.e. MCPs) just for LLMs.
+
+* Imagine you had a coworker who every time they learned about a new edge case in the code, they document it in their own
+  private notes instead of simply extending the project's normal documentation. This is exactly what "memories" and `CLAUDE.md`
+  are. They are the LLMs private notes to itself. It's increasingly becoming the case where the most up-to-date documentation
+  for a project aren't in the project's docs, they're in `.claude/`, where no one but the LLM will see them. That means no one
+  else from the team can learn from them. It also means no one will put eyes on those notes to make sure they were actually
+  correct. If your LLM documents an incorrect policy or procedure in a memory and doesn't immediately announce to you that they
+  did so, do you have any process for even realizing that happened? Or will you just rely on the LLM doing the thing wrong
+  enough times that you'll realize it documented the wrong way to do things in its notes to itself?
+* Imagine you had a coworker who wrote a bunch of scripts and tools that they found useful for their own work. Convenience
+  functions for chaining multiple steps that often go together, ways for listing frequently relevant information. You pair with
+  this person, so if it's useful to them, it's probably useful to you to. Why should these things live in your coworker's private
+  toolbox instead of just putting them somewhere they can benefit the whole team? 
+
+Instead of "the agent's memory" being siloed for no reason, all knowledge relevant to a project can and should accumulate alongside it,
+in a manner where all contributors to the project can benefit from it and validate its correctness.
+
+Instead of "the agent's tools" being a whole separate toolkit, the agent can and should interact through the exact same control plane as
+any other user. Why maintain an interface for people and a separate interface for machines? If your answer is "humans like a UI" then fine,
+give them a UI: it can sit on top of a backend that your LLM accesses directly. If your answer is "I want to be able to control what
+my LLM has access to": that's what access control is for. Create a user principal for your agents and manage the scope of their access
+from that, like you would for any other collaborator.
+
+These are solved problems. "Memory" is one of them: we just need to shift our thinking from "agent memory" to "institutional memory".
+The tools for accumulating and curating institutional memory are **Change Management Processes**. Humans often consider processes to be
+an imposition because they take up time. LLMs move through processes and procedures extremely quickly, so they are unhampered by
+bureaucracy the way we are. The myriad processes in luria may seem like a big ask for a human collaborator. Well, yeah, they are. You (human)
+don't need to engage with them directly if you don't want to. If the LLM engages with the processes, that's probably good enough for both of you.
+
+LLMs aren't burdened by time constraints, they're burdened by being a perpetual newcomer with a limited 
+context length. The LLM is a collaborator who must be onboarded every time you interact with them. Front-load discoverability of
+relevant information in your project like you were expecting to onboard a bunch of inexperienced juniors who you don't want to bother you,
+and you've automatically rigged your project to make that information easily discoverable for an LLM as well. Conversely, if you force
+your LLM make the information it needs discoverable through the project's common documentation, you end up with strong onboarding material
+for free.
+
+Luria systematizes an opinionated collection of processes which implements a ratchet for accumulating empirical evidence and demonstrated solutions, shines a light on technical debt, and publishes lessons learned in a manner that facilitates their future influence on the project.
+
+
+---
+
+A project's memory: the decisions, the principles, the changelog and the
+narrative log — kept where the next collaborator will find them, and kept honest
+by a lint.
+
+Half the collaborators on a modern codebase are stateless. They arrive with no
+memory, read some pages, work, and vanish. Unwritten knowledge is re-derived at
+cost, per session, forever. Luria is the machinery for a record that survives
+that: [project memory](docs/project-memory.md) is the doctrine, and this package
+is what stops it drifting.
+
+```
+pip install luria
+luria init --issue-url https://github.com/owner/repo/issues
+luria index && luria lint
+```
+
+## CLI Commands
+
+| command | |
+|---|---|
+| `luria lint` | the only command that can fail: index completeness, frontmatter, a stale generated index, and references that should be links |
+| `luria link --fix` | rewrites bare references as hyperlinks — the same scanner the lint reads, so the failure names its own remedy |
+| `luria index` | regenerates every generated view from frontmatter — the decision index and its per-tag pages, the principles document |
+| `luria ref-status` | which retired decisions are still cited, and where |
+| `luria pending` | which documents are undecided, by age **and** citation count — every scheme |
+| `luria badges` | the README's two counts, derived from the record |
+| `luria reports` | both reports as markdown, for a CI artifact |
+| `luria collect` | assembles fragment directories into their views |
+| `luria remotes` | another project's record: how each foreign reference resolves, and whether it is reachable |
+| `luria init` | scaffolds the record into a project that has none |
 
 ## Citing another project
 
