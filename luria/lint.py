@@ -153,8 +153,8 @@ def check_journals(errors: list[str]) -> None:
             want = journal.path_for(jrnl, created)
             if path != want:
                 errors.append(f"{rel}: `created:` says it belongs at "
-                              f"{cfg.rel(want)} — run `luria journal new` to "
-                              "file entries, or move it")
+                              f"{cfg.rel(want)} — run `luria new` to file "
+                              "entries, or move it")
             if not str(meta.get("title") or "").strip():
                 errors.append(f"{rel}: no `title:` — it is what the {name} "
                               "book's contents list shows")

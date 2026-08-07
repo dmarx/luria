@@ -3,7 +3,8 @@
     luria lint          check the record; the only command that can fail
     luria link [--fix]  rewrite bare references as hyperlinks
     luria index         regenerate every generated view, badges included
-    luria journal new   file a dated entry in a journal (the devlog)
+    luria new [kind]    scaffold an entry: the journal by default, or any
+                        configured scheme or fragment dir (adr, dp, changelog)
     luria remotes       other projects' records cited from this one
     luria init          scaffold the record into a project that has none
 
@@ -28,7 +29,7 @@ COMMANDS = {
     "lint": ("luria.lint", "the docs lint — the only command that fails"),
     "link": ("luria.link_refs", "rewrite bare references as hyperlinks"),
     "index": ("luria.adr_index", "regenerate every generated view"),
-    "journal": ("luria.journal", "dated entries that persist, rendered into books"),
+    "new": ("luria.new", "scaffold an entry: journal (default), adr, dp, changelog…"),
     "remotes": ("luria.remotes", "other projects' records, and how they resolve"),
     "init": ("luria.init", "scaffold the record into a project"),
 }

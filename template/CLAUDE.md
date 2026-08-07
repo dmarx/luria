@@ -30,8 +30,8 @@ you file one ([LU-ADR-012](https://github.com/dmarx/luria/blob/main/record/decis
 
 - **Collected** — `record/changelog.d/<branch-slug>.md`. Assembled into
   `CHANGELOG.md` and the fragment is *consumed*. One file per contribution.
-- **A journal** — `record/devlog.d/`, filed with `luria journal new "What you
-  did"`, which puts it at `yyyy/mm/dd/hhmmss.md`. Entries **persist**: a dated
+- **A journal** — `record/devlog.d/`, filed with `luria new`, which puts an
+  entry at `yyyy/mm/dd/hhmmss.md` for you to fill out in your editor. Entries **persist**: a dated
   observation was true when you wrote it and stays true, so `docs/devlog/` is
   regenerated from them and each month's book carries a contents list built from
   the titles. Don't name journal files yourself — the path is the timestamp, and
@@ -49,7 +49,7 @@ most, and they are the part that never appears in a commit message.
 luria lint            # the only one that can fail
 luria link --fix      # rewrite bare references as hyperlinks
 luria index           # regenerate every generated view (+ the README's counts)
-luria journal new "…" # file a dated devlog entry at its timestamp
+luria new [kind]      # scaffold an entry: devlog (default), adr, dp, changelog
 luria remotes         # other projects' records, and how they resolve
 ```
 
@@ -95,9 +95,10 @@ nothing.
 
 ## Adding a decision
 
-Copy [`record/decisions.d/_template.md`](record/decisions.d/_template.md) to
-`ADR-<NNN>.md` with the next free number — the filename is the code and nothing
-else, and the title goes in `title:`. Repeat the title as the body's
+Run `luria new adr` — it copies
+[`record/decisions.d/_template.md`](record/decisions.d/_template.md) to the
+next free number and stamps the date, and the filename is the code and nothing
+else; the title goes in `title:`. Repeat the title as the body's
 `# ADR-NNN:` heading; the lint checks that the two agree. Then run
 `luria index`. Write the `summary:` — it is what the index shows, and the
 index is read far more often than the decision. Say what was decided **and what
@@ -121,9 +122,9 @@ reason, correct in place. Luria's own record carries a worked example of each:
 
 ## Adding or revising a principle
 
-Same shape, one directory over: copy
-[`record/principles.d/_template.md`](record/principles.d/_template.md) to
-`DP-<NNN>.md` with the next free number, run `luria index`. Add one only on the
+Same shape, one directory over: `luria new dp` copies
+[`record/principles.d/_template.md`](record/principles.d/_template.md) to the
+next free number; run `luria index`. Add one only on the
 **second** re-derivation of the same reasoning — one instance is a decision, a pattern is a principle.
 
 Principles are **living documents**, and a revision is the opposite of a

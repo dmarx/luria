@@ -1,7 +1,7 @@
 # Job bodies live here, not in the workflow YAML, so "run what CI runs" is
 # always `make <target>` and the two can't drift apart.
 
-.PHONY: help ci install test lint link index journal reports collect
+.PHONY: help ci install test lint link index new reports collect
 
 help:
 	@grep -E '^[a-z][a-z0-9-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-12s %s\n", $$1, $$2}'
@@ -23,8 +23,8 @@ link: ## rewrite bare references as hyperlinks
 index: ## regenerate the decision index from frontmatter
 	luria index
 
-journal: ## what the devlog has filed, and which books it renders to
-	luria journal
+new: ## scaffold an entry (the devlog; `luria new adr` etc. by hand)
+	luria new
 
 reports: ## write the status reports (luria index writes them too)
 	luria reports

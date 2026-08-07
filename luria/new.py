@@ -1,0 +1,192 @@
+#!/usr/bin/env python3
+"""`luria new [kind]` — scaffold an entry anywhere the record takes one (#42).
+
+    luria new                  # a journal entry (the devlog), at its timestamp
+    luria new adr              # the next free decision number, from _template.md
+    luria new dp               # the next free principle number
+    luria new changelog        # a fragment named after the current branch
+
+Prints the created path and nothing else. The identity fields a machine can
+compute — filename, number, timestamp, `date:` — are computed; every other
+field stays the template's placeholder, because a fragment is authored in a
+markdown-aware editor, not assembled on a command line (ADR-036). A tool
+driving the CLI can still set fields inline (`--title`, `--status`,
+`--summary`, `--tags`); a human never has to.
+
+**The kinds are the config.** Every journal, scheme and fragment directory in
+`luria.toml` is a kind, so a project that adds a scheme gets its scaffold for
+free — nothing here spells "adr".
+"""
+
+from __future__ import annotations
+
+import argparse
+import datetime as dt
+import re
+import subprocess
+import sys
+from pathlib import Path
+
+from . import journal as journal_mod
+from .config import current
+
+TEMPLATE_NAME = "_template.md"
+
+# The shape written when a scheme has no _template.md of its own — enough to
+# pass the lint (status, title, tag, date, agreeing heading) and nothing else.
+FALLBACK = """---
+status: Proposed
+title: '{title}'
+tags:
+- record
+date: '{date}'
+---
+
+# {code}: {title}
+
+Why this needed deciding, what was decided, and what was rejected.
+"""
+
+
+def kinds() -> dict[str, tuple[str, object]]:
+    """Every place the record takes a new entry, keyed by the name `luria
+    new` accepts. Derived from config, so the help text and the dispatch
+    can't disagree about what this project scaffolds."""
+    cfg = current()
+    out: dict[str, tuple[str, object]] = {}
+    for prefix, scheme in cfg.schemes.items():
+        out[prefix.lower()] = ("scheme", scheme)
+    for name in cfg.fragments:
+        out[Path(name).name.removesuffix(".d")] = ("fragment", name)
+    for name, jrnl in cfg.journals.items():
+        out[name] = ("journal", jrnl)
+    return out
+
+
+def default_kind() -> str | None:
+    """The journal, when there is exactly one — `luria new` with no argument
+    files a devlog entry, the commonest scaffold by far."""
+    journals = list(current().journals)
+    return journals[0] if len(journals) == 1 else None
+
+
+def _sub_line(text: str, field: str, value: str) -> str:
+    """Replace a single-line frontmatter field, or a block one (`>-` /
+    list) through its indented continuation lines."""
+    pattern = re.compile(rf"^{field}:.*(?:\n(?:  |- ).*)*", re.MULTILINE)
+    if field == "tags":
+        replacement = "tags:\n" + "\n".join(
+            f"- {t.strip()}" for t in value.split(",") if t.strip())
+    elif field == "summary":
+        replacement = f"summary: >-\n  {value}"
+    else:
+        replacement = f"{field}: {value!r}"
+    return pattern.sub(replacement, text, count=1)
+
+
+def new_scheme_doc(scheme, fields: dict[str, str]) -> Path:
+    numbers = scheme.documents()
+    number = max(numbers, default=0) + 1
+    code = f"{scheme.prefix}-{number:03d}"
+    today = dt.date.today().isoformat()
+
+    template = scheme.dir / TEMPLATE_NAME
+    if template.exists():
+        text = template.read_text()
+        # The template speaks of itself as `<PREFIX>-NNN`; the copy is a real
+        # document, so the code is filled in everywhere the reader would see
+        # a placeholder — the body heading included.
+        text = text.replace(f"{scheme.prefix}-NNN", code)
+        text = re.sub(r"^date: .*$", f"date: '{today}'", text,
+                      count=1, flags=re.MULTILINE)
+    else:
+        text = FALLBACK.format(code=code, date=today,
+                               title="Stated as the thing you did")
+
+    title = fields.pop("title", None)
+    if title is not None:
+        old_title = None
+        m = re.search(r"^title: (.*)$", text, flags=re.MULTILINE)
+        if m:
+            old_title = m.group(1).strip().strip("'\"")
+        text = _sub_line(text, "title", title)
+        if old_title:
+            text = text.replace(f"# {code}: {old_title}", f"# {code}: {title}")
+    for field, value in fields.items():
+        text = _sub_line(text, field, value)
+
+    path = scheme.dir / f"{code}.md"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text)
+    return path
+
+
+def branch_slug() -> str | None:
+    """The current branch, as a fragment filename — the ADR-002 convention
+    of one fragment per contribution, named after its branch."""
+    try:
+        out = subprocess.run(
+            ["git", "rev-parse", "--abbrev-ref", "HEAD"], cwd=current().root,
+            capture_output=True, text=True, check=True).stdout.strip()
+    except (subprocess.CalledProcessError, OSError):
+        return None
+    slug = re.sub(r"[^a-z0-9]+", "-", out.lower()).strip("-")
+    return slug or None
+
+
+def new_fragment(dir_name: str, name: str | None) -> Path:
+    slug = name or branch_slug()
+    if not slug:
+        raise SystemExit(f"luria new: {Path(dir_name).name} needs a filename "
+                         "and no git branch answered — pass --name <slug>")
+    frag_dir = current().root / dir_name
+    path = frag_dir / f"{slug.removesuffix('.md')}.md"
+    if path.exists():
+        # One fragment per contribution (ADR-002): the second ask on a branch
+        # is the same fragment, so hand back where it already is.
+        return path
+    template = frag_dir / TEMPLATE_NAME
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(template.read_text() if template.exists()
+                    else "### Changed\n\n- \n")
+    return path
+
+
+def new_entry(kind: str | None, fields: dict[str, str],
+              name: str | None) -> Path:
+    available = kinds()
+    kind = kind or default_kind()
+    if kind is None or kind not in available:
+        raise SystemExit(
+            f"luria new: unknown kind {kind!r} — this project scaffolds: "
+            + ", ".join(sorted(available)))
+    what, target = available[kind]
+    if what == "scheme":
+        return new_scheme_doc(target, dict(fields))
+    if what == "fragment":
+        return new_fragment(target, name)
+    title = fields.get("title") or "A sentence-shaped title"
+    return journal_mod.new(target, title, dt.datetime.now())
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument("kind", nargs="?",
+                    help="what to scaffold; omit for the journal. "
+                         "Kinds come from luria.toml")
+    ap.add_argument("--title", help="frontmatter title, where the kind has one")
+    ap.add_argument("--status", help="frontmatter status, for a scheme document")
+    ap.add_argument("--summary", help="frontmatter summary, for a scheme document")
+    ap.add_argument("--tags", help="comma-separated frontmatter tags")
+    ap.add_argument("--name", help="fragment filename, when not on a git branch")
+    args = ap.parse_args()
+
+    fields = {k: v for k, v in
+              [("title", args.title), ("status", args.status),
+               ("summary", args.summary), ("tags", args.tags)] if v}
+    print(current().rel(new_entry(args.kind, fields, args.name)))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

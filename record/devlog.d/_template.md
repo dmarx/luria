@@ -1,8 +1,8 @@
 <!-- The shape of a journal entry. Don't copy this file by hand — run
 
-         luria journal new "What you did"
+         luria new
 
-     which files it at devlog.d/yyyy/mm/dd/hhmmss.md, the path derived from the
+     which files an entry at devlog.d/yyyy/mm/dd/hhmmss.md, the path derived from the
      timestamp so nothing has a number to assign and nothing has a name to
      collide on. `luria lint` checks the path and the `created:` field agree —
      and when the field is empty in an entry filed by hand, `luria index`
