@@ -197,6 +197,13 @@ fragments on a release cadence.
 
 `luria --help` is the authoritative list, and every command takes `--help`.
 
+Two more run in CI rather than by hand: `luria reports` writes the two status
+reports — retired documents still cited, decisions still undecided — as
+markdown for a build artifact, and `luria collect` assembles fragment
+directories into their views. The summary of both reports prints as warnings
+on every `luria lint`. (The surface used to be one command per module; the
+commands that only restated these reports on the console were retired.)
+
 ## Citing another project
 
 A record extracted from another project cites it constantly, and an unprefixed
