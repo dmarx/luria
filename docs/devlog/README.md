@@ -6,6 +6,7 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 
 ## Currently — [August 2026](2026-08.md)
 
+- [6 Aug 20:48 — Branding and copyediting](2026-08.md#20260806204800)
 - [5 Aug 13:34 — A checking job runs nothing that writes](2026-08.md#20260805133445)
 - [4 Aug 20:05 — The collector grew the changelog shape, for strata-g's scriv retirement](2026-08.md#20260804200509)
 - [4 Aug 18:44 — Shipping: the wheel that worked was working by accident](2026-08.md#20260804184404)
@@ -22,7 +23,6 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 - [3 Aug 21:19 — The filename is the code, and the rename removed a copy rather than adding one](2026-08.md#20260803211926)
 - [3 Aug 21:02 — Principles become fragments, and collected turns out not to mean generated](2026-08.md#20260803210211)
 - [3 Aug 20:35 — Extracting the project-memory framework out of strata-g](2026-08.md#20260803203505)
-- [2 Aug 20:48 — Branding and copyediting](2026-08.md#20260802204800)
 
 ## All books
 
@@ -30,4 +30,4 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 
 | Book | Entries | First | Last |
 |---|--:|---|---|
-| [2026-08](2026-08.md) | 17 | 2026-08-02 | 2026-08-05 |
+| [2026-08](2026-08.md) | 17 | 2026-08-03 | 2026-08-06 |
