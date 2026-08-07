@@ -12,6 +12,79 @@
 
 </div>
 
+A simple framework for accumulating domain knowledge by leveraging time tested change management strategies.
+
+Luria encapsulates a collection of best practices you should probably be using anyway. Things like:
+
+* maintaining a journal to document your daily activities
+* documenting decisions along with their context, alternatives considered, and citations to other relevant decisions
+* a mechanism for un-endorsing decisions
+* lineage tracking that facilitates identifying assumptions that are based on premises that are no longer endorsed
+* a self-reenforcing feedback loop to surface unwritten rules or principles which should be documented and formalized
+* tools that facilitate translating (inert) good intentions into (actively interventional) mechanisms
+
+The consequence is that if you integrate luria into your project, the project itself will become its own living memory.
+
+## Motivation
+
+Are you using any form of "agentic AI"? You are probably doing it wrong. Luria's position is that most of the standard 
+practices of contemporary agentic programming are actually anti-patterns and should be treated as code smells rather 
+than development strategies to aspire towards. This is obviously pretty big talk, so I'm going to back it up by pointing
+my finger at the leader of the pack: Claude Code.
+
+Don't get me wrong: I love CC and use it all the time. I've barely written any code by hand myself in months because CC
+is just so damn good. But there are few ways in which I use CC which run directly counter to how the system is designed
+and how Anthropic recommends it be used.
+
+* I discourage CC from documenting memories privately (both in `.claude/` as well as `CLAUDE.md`)
+* I rarely use MCPs/skills.
+
+When Karpathy coined the phrase "Vibe Coding", he was talking specifically about the frame where you say "yes" to 
+everything the LLM suggests. I feel like today, "Vibe Coding" has come to mean any LLM-assisted coding. When I use
+CC, I am not "vibing" with the model. I am *collaborating* with it. I often need to interrupt it, reverse its decisions,
+propose alternatives and solutions it hasn't considered, grab the wheel and perform outright course corrections... 
+The Software Engineering world already has language that describes the situation where one developer writes most of the code
+while another looks over their shoulder providing feedback and guidance: it's called **pair programming**.
+
+Adopting the perspective that an LLM is just a non-human collaborator that we pair with, let's revisit practices like 
+"storing memories" and building entire control planes (i.e. MCPs) just for LLMs.
+
+* Imagine you had a coworker who every time they learned about a new edge case in the code, they document it in their own
+  private notes instead of simply extending the project's normal documentation. This is exactly what "memories" and `CLAUDE.md`
+  are. They are the LLMs private notes to itself. It's increasingly becoming the case where the most up-to-date documentation
+  for a project aren't in the project's docs, they're in `.claude/`, where no one but the LLM will see them. That means no one
+  else from the team can learn from them. It also means no one will put eyes on those notes to make sure they were actually
+  correct. If your LLM documents an incorrect policy or procedure in a memory and doesn't immediately announce to you that they
+  did so, do you have any process for even realizing that happened? Or will you just rely on the LLM doing the thing wrong
+  enough times that you'll realize it documented the wrong way to do things in its notes to itself?
+* Imagine you had a coworker who wrote a bunch of scripts and tools that they found useful for their own work. Convenience
+  functions for chaining multiple steps that often go together, ways for listing frequently relevant information. You pair with
+  this person, so if it's useful to them, it's probably useful to you to. Why should these things live in your coworker's private
+  toolbox instead of just putting them somewhere they can benefit the whole team? 
+
+Instead of "the agent's memory" being siloed for no reason, all knowledge relevant to a project can and should accumulate alongside it,
+in a manner where all contributors to the project can benefit from it and validate its correctness.
+
+Instead of "the agent's tools" being a whole separate toolkit, the agent can and should interact through the exact same control plane as
+any other user. Why maintain an interface for people and a separate interface for machines? If your answer is "humans like a UI" then fine,
+give them a UI: it can sit on top of a backend that your LLM accesses directly. If your answer is "I want to be able to control what
+my LLM has access to": that's what access control is for. Create a user principal for your agents and manage the scope of their access
+from that, like you would for any other collaborator.
+
+These are solved problems. "Memory" is one of them: we just need to shift our thinking from "agent memory" to "institutional memory".
+The tools for accumulating and curating institutional memory are **Change Management Processes**. Humans often consider processes to be
+an imposition because they take up time. LLMs move through processes and procedures extremely quickly, so they are unhampered by
+bureaucracy the way we are. LLMs aren't burdened by time constraints, they're burdened by being a perpetual newcomer with a limited 
+context length. The LLM is a collaborator who must be onboarded every time you interact with them. Front-load discoverability of
+relevant information in your project like you were expecting to onboard a bunch of inexperienced juniors who you don't want to bother you,
+and you've automatically rigged your project to make that information easily discoverable for an LLM as well. Conversely, if you force
+your LLM make the information it needs discoverable through the project's common documentation, you end up with strong onboarding material
+for free.
+
+Luria systematizes an opinionated collection of processes which implements a ratchet for accumulating empirical evidence and demonstrated solutions, shines a light on technical debt, and publishes lessons learned in a manner that facilitates their future influence on the project.
+
+---
+
 A project's memory: the decisions, the principles, the changelog and the
 narrative log — kept where the next collaborator will find them, and kept honest
 by a lint.
