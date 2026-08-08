@@ -7,6 +7,9 @@ modernize pass. The guards here are fired on the failure they exist for
 (DP-6): a reference written in last year's spelling, a fixture code that must
 survive, a composed remote code that is another project's namespace.
 """
+# unlinted-file: — migration fixtures; every code spelling in this suite is a
+# deliberate specimen of a pre- or post-migration state, not a claim about
+# this repository's documents.
 from pathlib import Path
 
 from luria import aliases, config, doc_refs, lint, ref_status
@@ -143,3 +146,29 @@ def test_a_scheme_can_require_fields(tmp_path, monkeypatch):
     errors = []
     lint.check_frontmatter(errors)
     assert errors == []
+
+
+def test_modernize_never_touches_formerly_stamps(tmp_path, monkeypatch):
+    """Caught live: modernizing the `formerly:` value turns the alias into a
+    self-reference and erases the very map the pass runs on. Frontmatter is
+    data; only the summary is prose."""
+    root = _record_project(tmp_path, monkeypatch)
+    gp = root / "record" / "principles.d" / "GP-004.md"
+    new, count = doc_refs.modernize(gp.read_text(), gp)
+    assert "formerly:\n- DP-4\n" in new
+    assert count == 0
+
+
+def test_a_formerly_stamp_is_not_a_citation_of_itself(tmp_path, monkeypatch):
+    """Caught live: the stamp is the alias map's source data, so counting it
+    as a citation has every migrated document warn about itself forever.
+    Another document using the old spelling still warns — that is the class
+    working."""
+    root = _record_project(tmp_path, monkeypatch)
+    gp = root / "record" / "principles.d" / "GP-004.md"
+    other = root / "docs" / "notes.md"
+    other.write_text("# Notes\n\nStill spelled DP-4 here.\n")
+    result = ref_status.scan(files=[gp, other])
+    sites = result.legacy.get("DP-004", [])
+    assert [c.path for c in sites] == [other], \
+        "the stamp is exempt; the stale prose elsewhere is not"

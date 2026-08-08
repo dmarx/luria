@@ -29,7 +29,7 @@ A reference nobody can follow. Three things look identical from here and read ve
 
 `unlinted-file:` exempts a whole document from the reference machinery — the blunt tool for a fixture-heavy or vendored page. It is counted here rather than hidden, the same bargain as an acknowledgement: the report stays a complete account of what nobody is checking.
 
-None. Every scanned file is checked. ✅
+- [`tests/test_migrations.py`](../../tests/test_migrations.py)
 
 ## Directives that no longer apply
 
