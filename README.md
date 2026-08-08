@@ -26,7 +26,7 @@ An affordances linter.
 
 ---
 
-Luria tracks and lints references to decision records to catch justifications which reference evidence that the repository's record no longer endorses.
+Luria tracks and lints references to decision records to catch justifications (in e.g. documentation, code comments, decision records) which reference evidence that the repository's record no longer endorses.
 
 ---
 
