@@ -270,3 +270,42 @@ principle binds affordances to the truth. This one is its complement about
 don't merely avoid falsifying them.
 
 *v1 · shaped by [ADR-012](../record/decisions.d/ADR-012.md), [ADR-013](../record/decisions.d/ADR-013.md), [ADR-021](../record/decisions.d/ADR-021.md) · origin: An inventory of one repository's layout found the same rules expressed structurally in some places and not at all in others — two source containers marked `.d` and two unmarked, a generated document beside its own sources, an index buried under the things it indexes, and `README.md` meaning "edit me" in one directory and "never edit me" in the next. The layout had been shaping attention the whole time; nobody had been steering it*
+
+<a name="dp-10"></a>
+
+## 10. Defaults follow the failure mode: guards opt out, disclosures opt in
+
+Every switch has a silent position — the behavior a project gets when nobody
+reads the docs. The silent position should be the one whose failure is
+cheapest, and the two families of feature fail in opposite directions:
+
+**A guard that is off costs you what it would have caught.** Checks, lints,
+staleness detection, reference resolution: their failure mode is *missing
+something*, and the miss is silent by nature — nobody notices the warning
+that didn't fire. So guards default **on**, and disabling one is opt-out:
+sited, spelled out, and countable (`unresolved-ok:` on the line it excuses,
+`unlinted-file` in the file it exempts). The escalation dial works the same
+way — a new warning class arrives warning-by-default, and a project *opts
+into* failing on it ([ADR-035](../record/decisions.d/ADR-035.md)) — because the
+guard being visible is the default that costs nothing, while the guard
+failing CI on day one costs adoption.
+
+**A disclosure that is on costs you what it revealed.** Provenance
+identifiers, session URLs, anything that couples the record to a system
+beyond the repo or publishes more than the author reviewed: their failure
+mode is *exposing or imposing something*, and that failure is irreversible
+in a way a missed warning is not — a secret unshipped is recoverable, a
+secret shipped is not. So disclosures default **off**, and enabling one is
+opt-in: a config line that names what starts flowing.
+
+The shared requirement is that the deviation is **written down where it
+applies** — a directive comment at the site, a key in the config — never
+ambient state, never a flag someone passed once. A default you departed
+from silently is a trap for the next reader in either direction.
+
+The test, when a new switch appears: *what does the silent position cost,
+and who pays?* If the project pays in missed defects, on-by-default. If
+the author pays in unwanted exposure, off-by-default. A switch where both
+answers feel true is usually two switches wearing one name — split it.
+
+*v1 · shaped by [ADR-035](../record/decisions.d/ADR-035.md) · **Proposed***
