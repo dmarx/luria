@@ -1,7 +1,7 @@
 # CLAUDE.md
 
 **Before anything else, read
-[the design principles](docs/guiding-principles.md) in full.** They are the
+[the guiding principles](docs/guiding-principles.md) in full.** They are the
 standing values every choice in this repo is judged against; the rest of
 this file, and the record itself, assume you hold them. Read them
 immediately after finishing this file, before any other code or
@@ -17,7 +17,7 @@ disagrees with either, this file is the one that's wrong.
   `--help`.
 - [Project memory: how a repo thinks](docs/project-memory.md) — the doctrine:
   the four layers, what files where, how the record is revised. Start here.
-- [Design principles](docs/guiding-principles.md) — the standing values,
+- [Guiding principles](docs/guiding-principles.md) — the standing values,
   cited as "GP-2".
 - [The decision record](docs/decisions/README.md) — every choice, its
   alternatives, its status.

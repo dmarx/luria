@@ -69,7 +69,7 @@ The norms that matter get walked up the ladder — prose → convention → mech
 
 | layer | holds | test |
 |---|---|---|
-| design principles | standing **values**, numbered, citable and **versioned** | *have we re-derived this more than once?* |
+| guiding principles | standing **values**, numbered, citable and **versioned** | *have we re-derived this more than once?* |
 | decisions | a **choice among alternatives** at a point in time | *did we reject an alternative, or set a constraint?* |
 | changelog fragments | **what changed**, operator-facing | *would someone running this notice?* |
 | devlog entries | **how it went**, including the wrong theories | *will a future debugger want the narrative?* |

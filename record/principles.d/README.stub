@@ -1,4 +1,4 @@
-# Design principles
+# Guiding principles
 
 Standing values that guide Luria — the things a project keeps re-deriving in
 review, written down once so they can be cited by number ("per GP-2") instead of
