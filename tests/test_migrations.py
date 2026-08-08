@@ -166,8 +166,15 @@ def _premigration_project(tmp_path, monkeypatch):
         '[luria.schemes.DP]\ndir = "record/principles.d"\n'
         'render = "document"\noutput = "docs/design-principles.md"\n'
         '[luria.remotes.SG]\nrepo = "example/strata-g"\n'
+        '[luria.remotes.SG.schemes.DP]\n'
+        'document = "docs/design-principles.md"\n'
         '[luria.remotes.LU]\nrepo = "example/this-project"\n'
+        '[luria.remotes.LU.schemes.DP]\n'
+        'document = "docs/design-principles.md"\n'
     )
+    (tmp_path / "docs" / "design-principles.md").write_text(
+        "<!-- GENERATED -->\n\n# Principles\n\n"
+        '<a name="dp-4"></a>\n\n## 4. Fourth value\n')
     dp_dir = tmp_path / "record" / "principles.d"
     dp_dir.mkdir(parents=True)
     for n, title in ((1, "First value"), (4, "Fourth value")):
@@ -180,7 +187,8 @@ def _premigration_project(tmp_path, monkeypatch):
         "Bare DP-4 and a link [DP-4](design-principles.md#dp-4).\n"
         "Fixture DP-018 is nobody's document.\n"
         "Foreign SG-DP-4 belongs to strata-g.\n"
-        "Mirrored LU-DP-004 follows this project.\n")
+        "Mirrored LU-DP-004 follows this project.\n"
+        "[theirs](https://example.test/sg/docs/design-principles.md#x)\n")
     entry_dir = tmp_path / "record" / "devlog.d" / "2026" / "08" / "01"
     entry_dir.mkdir(parents=True)
     (entry_dir / "120000.md").write_text(
@@ -230,12 +238,22 @@ def test_rename_scheme_end_to_end(tmp_path, monkeypatch, capsys):
     assert "[luria.schemes.DP]" not in config_text
     assert 'design_principles = "docs/guiding-principles.md"' in config_text
     assert 'output = "docs/guiding-principles.md"' in config_text
+    assert "[luria.remotes.LU.schemes.GP]" in config_text, "mirror follows"
+    assert config_text.count('document = "docs/guiding-principles.md"') == 1
+    assert "[luria.remotes.SG.schemes.DP]" in config_text, "theirs stays"
+    assert 'document = "docs/design-principles.md"' in config_text, \
+        "SG's own path untouched by the section-aware pass"
+
+    assert not (root / "docs" / "design-principles.md").exists(), \
+        "a generated view is removed, not renamed — the next index rebuilds it"
 
     notes = (root / "docs" / "notes.md").read_text()
     assert "Bare GP-4 and a link [GP-4](guiding-principles.md#gp-4)." in notes
     assert "Fixture DP-018 is nobody's document." in notes, "not in the mapping"
     assert "Foreign SG-DP-4 belongs to strata-g." in notes, "their namespace"
     assert "Mirrored LU-GP-004 follows this project." in notes
+    assert "https://example.test/sg/docs/design-principles.md#x" in notes, \
+        "a foreign URL never follows a local path pair"
 
     entry = next((root / "record" / "devlog.d").rglob("1*.md")).read_text()
     assert "[GP-4](../../record/../docs/guiding-principles.md#gp-4)" in entry, \

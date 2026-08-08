@@ -90,8 +90,16 @@ class Plan:
     path_pairs: list[tuple[str, str]] = field(default_factory=list)
     moves: list[tuple[Path, Path]] = field(default_factory=list)
     stamps: dict[Path, str] = field(default_factory=dict)  # new path → old code
+    # Generated views whose address moves: the old file is removed and the
+    # next `luria index` writes the new one — a generated file is never
+    # renamed, it is re-derived.
+    removals: list[Path] = field(default_factory=list)
     # (file, old section header, new section header)
     section_renames: list[tuple[Path, str, str]] = field(default_factory=list)
+    # Config files that get the section-aware path pass instead of the
+    # blanket path sweep — a remote's `document =` line spells *its* path.
+    config_files: list[Path] = field(default_factory=list)
+    claimed_remotes: list[str] = field(default_factory=list)
     # Supersede mode: (source path, new status line) + fresh copies to write.
     tombstones: list[tuple[Path, str]] = field(default_factory=list)
     copies: list[tuple[Path, Path, str, str]] = field(default_factory=list)
@@ -155,9 +163,11 @@ def _plan_rename(plan: Plan, op: dict) -> None:
 
     configs = [cfg.root / "luria.toml"] + \
         [cfg.root / c for c in op.get("configs", [])]
+    plan.claimed_remotes += [r.upper() for r in op.get("remotes", [])]
     for config_file in configs:
         if not config_file.exists():
             raise SystemExit(f"luria migrate: {config_file} not found")
+        plan.config_files.append(config_file)
         plan.section_renames.append(
             (config_file, f"[luria.schemes.{old_prefix}]",
              f"[luria.schemes.{new_prefix}]"))
@@ -170,6 +180,7 @@ def _plan_rename(plan: Plan, op: dict) -> None:
     if op.get("output") and scheme.output:
         old_rel = cfg.rel(scheme.output)
         plan.path_pairs.append((old_rel, op["output"]))
+        plan.removals.append(scheme.output)
         old_name, new_name = Path(old_rel).name, Path(op["output"]).name
         if old_name != new_name and (Path(old_rel).parent
                                      == Path(op["output"]).parent):
@@ -235,14 +246,19 @@ def _tracked_files() -> list[Path]:
     return keep
 
 
-def sweep_text(text: str, plan: Plan) -> tuple[str, int]:
+URL_RE = re.compile(r"\b[a-z][a-z0-9+.-]*://[^\s<>)\]\"']+", re.IGNORECASE)
+
+
+def sweep_text(text: str, plan: Plan, paths: bool = True) -> tuple[str, int]:
     """Every mapped spelling in one text, rewritten. Masks only what the
     mapping doesn't own: composed remote codes (another project's namespace)
-    that the spec didn't explicitly claim via `remotes = [...]`."""
+    that the spec didn't explicitly claim via `remotes = [...]`, URLs for
+    the path pairs (a foreign repo can host a file by the same name), and
+    every `formerly:` block."""
     count = 0
     claimed = {p.old for p in plan.composed}
 
-    def masked_spans(text: str) -> list[tuple[int, int]]:
+    def masked_spans(text: str, mask_urls: bool = False) -> list[tuple[int, int]]:
         spans = [(r.start, r.end) for r in remotes.references(text)
                  if r.composed not in claimed]
         # `formerly:` lists are the one place old spellings are the point —
@@ -251,11 +267,13 @@ def sweep_text(text: str, plan: Plan) -> tuple[str, int]:
         # trail would corrupt exactly what makes aliases derivable.
         spans += [m.span() for m in
                   re.finditer(r"^formerly:\n(?:- .*\n)*", text, re.MULTILINE)]
+        if mask_urls:
+            spans += [m.span() for m in URL_RE.finditer(text)]
         return spans
 
-    def swap(text: str, pattern: str, repl) -> str:
+    def swap(text: str, pattern: str, repl, mask_urls: bool = False) -> str:
         nonlocal count
-        spans = masked_spans(text)
+        spans = masked_spans(text, mask_urls)
 
         def guarded(m: re.Match) -> str:
             nonlocal count
@@ -277,8 +295,13 @@ def sweep_text(text: str, plan: Plan) -> tuple[str, int]:
         text = swap(text,
                     rf"(?<![A-Za-z0-9-]){re.escape(old_p)}([- ])"
                     rf"(0*{old_n})(?!\d)", code_repl)
-        return swap(text,
+        # The two spellings of a machinery-authored anchor: the `#dp-4` a
+        # link target carries, and the `name="dp-4"` the render emits.
+        text = swap(text,
                     rf"(?<=#){re.escape(old_p.lower())}-0*{old_n}(?!\d)",
+                    f"{new_p.lower()}-{new_n}")
+        return swap(text,
+                    rf"(?<=name=\"){re.escape(old_p.lower())}-0*{old_n}(?=\")",
                     f"{new_p.lower()}-{new_n}")
 
     # Composed pairs first: `LU-DP-013` must be rewritten whole before the
@@ -287,9 +310,34 @@ def sweep_text(text: str, plan: Plan) -> tuple[str, int]:
         text = swap_pair(text, pair)
     for pair in plan.mapping:
         text = swap_pair(text, pair)
-    for old, new in plan.path_pairs:
-        text = swap(text, re.escape(old), new)
+    if paths:
+        for old, new in plan.path_pairs:
+            text = swap(text, re.escape(old), new, mask_urls=True)
     return text, count
+
+
+SECTION_RE = re.compile(r"^\s*\[([^\]]+)\]\s*(?:#.*)?$")
+
+
+def config_paths_pass(text: str, plan: Plan) -> str:
+    """Path pairs in a config file, section-aware: a remote's `document =`
+    line spells *that project's* path, which only moves if the spec claimed
+    the remote via `remotes = [...]`. Everything outside unclaimed remote
+    sections — the scheme's `output`, the `[luria.paths]` values, comments —
+    follows the rename."""
+    out = []
+    section = ""
+    for line in text.splitlines(keepends=True):
+        if m := SECTION_RE.match(line):
+            section = m.group(1)
+        frozen = False
+        if m2 := re.match(r"(?:luria\.)?remotes\.([A-Za-z0-9]+)", section):
+            frozen = m2.group(1).upper() not in plan.claimed_remotes
+        if not frozen:
+            for old, new in plan.path_pairs:
+                line = line.replace(old, new)
+        out.append(line)
+    return "".join(out)
 
 
 def _stamp_formerly(path: Path, old_code: str) -> None:
@@ -341,6 +389,12 @@ def apply(plan: Plan) -> tuple[int, int]:
         text = config_file.read_text()
         if old_header in text:
             config_file.write_text(text.replace(old_header, new_header))
+    for config_file in plan.config_files:
+        config_file.write_text(
+            config_paths_pass(config_file.read_text(), plan))
+    for stale_view in plan.removals:
+        if stale_view.exists():
+            _git(["rm", "-q", str(stale_view)])
 
     files = swept = 0
     if plan.mapping or plan.composed or plan.path_pairs:
@@ -355,7 +409,8 @@ def apply(plan: Plan) -> tuple[int, int]:
                 text = live.read_text()
             except (UnicodeDecodeError, OSError):
                 continue
-            new, count = sweep_text(text, plan)
+            new, count = sweep_text(text, plan,
+                                    paths=live not in plan.config_files)
             if count:
                 live.write_text(new)
                 files += 1
