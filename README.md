@@ -17,11 +17,12 @@
 A simple framework for accumulating accurate domain knowledge by leveraging time tested change management strategies.  
 A simple but effective project memory framework based on change management principles.  
 A framework for steering your collaborators by accumulating priorities and constraints.  
-A linter that guards the semantic integrity of inline references.
-A linter that checks whether cited decisions still apply.
+A linter that guards the semantic integrity of inline references.  
+A linter that checks whether cited decisions still apply.  
 An evidence accumulator for ongoing project improvement.  
+A demonstration of inebriated README workshopping.
 A collateral damage containment field.  
-A Chesterton's Fence Eliminator.
+A Chesterton's Fence Eliminator.  
 
 Luria tracks and lints references to decision records to catch justifications which reference evidence that the repository's record no longer endorses.
 
