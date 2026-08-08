@@ -16,8 +16,9 @@
 
 A simple framework for accumulating accurate domain knowledge by leveraging time tested change management strategies.  
 A simple but effective project memory framework based on change management principles.  
-A constraint accumulator for ongoing LLM improvement and steering.  
-An inline reference saliency linter.
+A framework for steering your collaborators by accumulating priorities and constraints.
+A constraint accumulator for ongoing project improvement and steering.  
+A linter which validates the saliency of inline references.
 
 Luria tracks and lints references to decision records to catch justifications which reference evidence that the repository's record no longer endorses.
 
