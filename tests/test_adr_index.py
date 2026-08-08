@@ -94,26 +94,26 @@ def test_every_generated_relative_link_resolves():
 
 def principle(root: Path, number: int, title: str, body: str = "Body.",
               **front) -> Path:
-    path = root / "docs" / "principles" / f"DP-{number:03d}.md"
+    path = root / "docs" / "principles" / f"VP-{number:03d}.md"
     path.parent.mkdir(parents=True, exist_ok=True)
     lines = ["status: Active", f"title: {title!r}", "tags:", "- record"]
     lines += [f"{k}: {v}" for k, v in front.items()]
     path.write_text("---\n" + "\n".join(lines) + "\n---\n\n"
-                    f"# DP-{number:03d}: {title}\n\n{body}\n")
+                    f"# VP-{number:03d}: {title}\n\n{body}\n")
     return path
 
 
-DP_SCHEME_ARGS = dict(active="Active", render="document")
+VP_SCHEME_ARGS = dict(active="Active", render="document")
 
 
-def dp_scheme(root: Path) -> Scheme:
-    return Scheme("DP", root / "docs" / "principles",
-                  output=root / "docs" / "design-principles.md",
-                  **DP_SCHEME_ARGS)
+def vp_scheme(root: Path) -> Scheme:
+    return Scheme("VP", root / "docs" / "principles",
+                  output=root / "docs" / "values.md",
+                  **VP_SCHEME_ARGS)
 
 
 def render(root: Path) -> str:
-    scheme = dp_scheme(root)
+    scheme = vp_scheme(root)
     return builder.render_document(scheme, builder.load_scheme(scheme))
 
 
@@ -121,14 +121,14 @@ def test_document_demotes_the_heading_and_renumbers(project):
     principle(project, 3, "Fire before trusting")
     out = render(project)
     assert "## 3. Fire before trusting" in out
-    assert "# DP-003" not in out
+    assert "# VP-003" not in out
 
 
 def test_document_emits_a_stable_anchor(project):
     """Keyed to the number, not the wording — a principle is a living document
     and its heading moves (ADR-012)."""
     principle(project, 3, "Fire before trusting")
-    assert '<a name="dp-3"></a>' in render(project)
+    assert '<a name="vp-3"></a>' in render(project)
 
 
 def test_document_strips_the_frontmatter(project):
@@ -182,12 +182,12 @@ def test_outputs_covers_every_scheme(project, monkeypatch):
         '[luria]\nissue_url = "https://example.test/issues/{n}"\n'
         '[luria.schemes.ADR]\ndir = "docs/decisions"\n'
         '[luria.schemes.DP]\ndir = "docs/principles"\n'
-        'render = "document"\noutput = "docs/design-principles.md"\n')
+        'render = "document"\noutput = "docs/values.md"\n')
     from luria import config
     config.reset()
 
     out = builder.outputs()
-    assert project / "docs" / "design-principles.md" in out
+    assert project / "docs" / "values.md" in out
     assert project / "docs" / "decisions" / "README.md" in out
 
 

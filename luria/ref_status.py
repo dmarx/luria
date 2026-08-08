@@ -143,7 +143,7 @@ DANGLING_DIRECTIVE = "unresolved-ok"
 def _codes(spec: str) -> tuple[set[str], str]:
     """The document codes an annotation names, and the text with them removed.
 
-    Composed codes come out first and whole: a remote's `DP-004` is that
+    Composed codes come out first and whole: a composed `SG-DP-4` is that
     remote's principle, and reading the tail out of the middle of the composed
     code would have the validator check the wrong project (ADR-016)."""
     codes: set[str] = set()
