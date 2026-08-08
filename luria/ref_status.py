@@ -350,6 +350,13 @@ def scan(files: list[Path] | None = None, docs: dict[str, Doc] | None = None) ->
             for code in codes:
                 if own.get(path) == code:
                     continue
+                # A document's own former name is the one old spelling it
+                # must keep — the `formerly:` stamp IS the alias map's
+                # source, so counting it would have every migrated document
+                # warn about itself forever.
+                if code in result.aliases \
+                        and result.aliases[code] == own.get(path):
+                    continue
                 if code not in docs:
                     # An old spelling with a `formerly:` answering for it is
                     # not dangling — it resolves, one hop late (ADR-040).
