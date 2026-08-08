@@ -12,7 +12,12 @@
 
 </div>
 
-A simple framework for accumulating domain knowledge by leveraging time tested change management strategies.
+<!-- WIP Banner -->
+
+A simple framework for accumulating accurate domain knowledge by leveraging time tested change management strategies.
+A simple but effective project memory framework based on change management principles.
+
+Luria tracks and lints references to decision records to catch justifications which reference evidence that the repository's record no longer endorses.
 
 Luria encapsulates a collection of best practices you should probably be using anyway. Things like:
 
