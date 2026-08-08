@@ -270,7 +270,7 @@ consumer to hit a bug is this repo.
 ```latex
 @software{marx2026luria,
   author    = {Marx, David},
-  title     = {{Luria}: Project Memory as Change Management},
+  title     = {{Luria}: The norms that matter get walked up the ladder},
   year      = {2026},
   url       = {https://github.com/dmarx/luria},
   note      = {Open-source software}
