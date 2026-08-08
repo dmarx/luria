@@ -24,12 +24,19 @@ A collateral damage containment field.
 A Chesterton's Fence Eliminator.  
 An affordances linter.
 
+---
+
 Luria tracks and lints references to decision records to catch justifications which reference evidence that the repository's record no longer endorses.
+
+---
 
 Luria encapsulates a collection of best practices you should probably be using anyway. Things like:
 
-* maintaining a journal to document your daily activities
+* a miscellaneous daily activity journal
 * documenting decisions along with their context, alternatives considered, and references to other relevant decisions
+
+and a few things it may not even have occurred to you to formalize, like:
+  
 * a mechanism for un-endorsing decisions
 * lineage tracking that facilitates identifying assumptions that are based on premises that are no longer endorsed
 * a feedback loop to surface unwritten rules or principles which should be documented and formalized
