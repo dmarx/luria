@@ -1,5 +1,11 @@
 # CLAUDE.md
 
+**Before anything else, read
+[the design principles](docs/design-principles.md) in full.** They are the
+standing values every choice in this repo is judged against; the rest of
+this file, and the record itself, assume you hold them. Everything else
+here can be pulled in as needed — the principles cannot.
+
 Luria is the machinery *and* a project that uses it: this record is
 scaffolded, generated and linted by its own CLI. This file is a map, not a
 copy ([ADR-037](record/decisions.d/ADR-037.md)) — the doctrine lives in the

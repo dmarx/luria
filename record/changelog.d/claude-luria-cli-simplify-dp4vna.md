@@ -33,3 +33,7 @@
   Prompted by four wrong-frame links in one day, all hand-written, all
   wanting a prose label the (previously undocumented) labeled-wikilink
   syntax already provides.
+- Both CLAUDE.mds now open with a read-this-first directive: load the full
+  design-principles document into context before anything else — the
+  principles are the one part of the record the map assumes rather than
+  links.
