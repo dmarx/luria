@@ -18,8 +18,8 @@ A simple but effective project memory framework based on time-tested change mana
 A framework for collaborative steering by accumulating priorities and constraints.  
 A linter that guards the semantic integrity of inline references.  
 An evidence accumulator for ongoing process improvement.  
-A linter that checks whether cited decisions still apply.  
 A demonstration of inebriated README workshopping.  
+A linter that checks whether cited decisions still apply.  
 A collateral damage containment field.  
 A Chesterton's Fence Eliminator.  
 An affordances linter.
