@@ -17,9 +17,10 @@ To acknowledge one, put the reason where the reference is — `inactive-ok:` cov
 
 Migrations: renaming schemes and moving documents without losing the record's memory
 
-1 unacknowledged reference(s) in 1 file(s).
+2 unacknowledged reference(s) in 2 file(s).
 
 - [`record/decisions.d/ADR-041.md:26`](../../record/decisions.d/ADR-041.md)
+- [`record/principles.d/DP-011.md:10`](../../record/principles.d/DP-011.md)
 
 ## Codes that resolve to no document
 

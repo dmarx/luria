@@ -5,16 +5,17 @@
 
 `Proposed` and `Deferred` both describe an open question. Neither says *since when*, and that is the signal: a decision proposed last week is pending; the same one a year later was either overdue or settled in code and never written back.
 
-**3 document(s) awaiting a decision.**
+**4 document(s) awaiting a decision.**
 
 | Open since | Status | Code | Cited | Unack. | Title |
 |---|---|---|--:|--:|---|
-| 2026-08-07 | Proposed | [ADR-040](../../record/decisions.d/ADR-040.md) | 1 | 1 | Migrations: renaming schemes and moving documents without losing the record's memory |
+| 2026-08-07 | Proposed | [ADR-040](../../record/decisions.d/ADR-040.md) | 2 | 2 | Migrations: renaming schemes and moving documents without losing the record's memory |
 | 2026-08-08 | Proposed | [ADR-041](../../record/decisions.d/ADR-041.md) | 0 | 0 | Bugs enter the record characterized: the minimal working example protocol |
 | 2026-08-08 | Proposed | [DP-010](../../record/principles.d/DP-010.md) | 0 | 0 | Defaults follow the failure mode: guards opt out, disclosures opt in |
+| 2026-08-08 | Proposed | [DP-011](../../record/principles.d/DP-011.md) | 0 | 0 | The ledger looks like the prey: exempt it structurally, not incidentally |
 
 The citation count is the second axis, and it flips the priority: an old proposal nothing references is a stalled idea worth closing, while an old proposal many files cite is a decision the codebase has already made and hasn't written down.
 
 This count and the reference-status report's will differ, and that is not an off-by-one. That report covers documents something actually **cites** and hasn't acknowledged; this one covers every **undecided** document. One here is missing from there for exactly one of two reasons: nothing cites it, or every citation carries an `inactive-ok` annotation.
 
-**Cited nowhere at all** (2): [ADR-041](../../record/decisions.d/ADR-041.md), [DP-010](../../record/principles.d/DP-010.md) — these are the cheapest to close, since nothing depends on the answer.
+**Cited nowhere at all** (3): [ADR-041](../../record/decisions.d/ADR-041.md), [DP-010](../../record/principles.d/DP-010.md), [DP-011](../../record/principles.d/DP-011.md) — these are the cheapest to close, since nothing depends on the answer.
