@@ -8,8 +8,12 @@
 
 ### Added
 
-- [ADR-040](../decisions.d/ADR-040.md): the migrations doctrine — how schemes
+- [ADR-040](record/decisions.d/ADR-040.md): the migrations doctrine — how schemes
   get renamed and documents move between them (mapping-driven sweeps,
   `formerly:` as identity, full rewrite including history, a rung ladder from
   prose relabel to `luria migrate`). Doctrine only; the machinery lands per
   the ladder, starting with rung 1.
+- [ADR-041](record/decisions.d/ADR-041.md): the bug protocol — a defect enters
+  the record as an issue carrying a minimal working example before any fix,
+  the response is classified on the [ADR-035](record/decisions.d/ADR-035.md) ladder, and the fix PR turns the
+  MWE into a regression test. First live run: the journal link-frame bug.
