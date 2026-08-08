@@ -15,7 +15,7 @@
 <!-- WIP Banner -->
 
 A simple but effective project memory framework based on time-tested change management principles.  
-A framework for collaborative steering by accumulating priorities and constraints.  
+A framework that accumulates priorities and constraints to steer collaborations.
 A linter that guards the semantic integrity of inline references.  
 An evidence accumulator for ongoing process improvement.  
 A demonstration of inebriated README workshopping.  
