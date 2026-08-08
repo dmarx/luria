@@ -20,9 +20,10 @@ A linter that guards the semantic integrity of inline references.
 An evidence accumulator for ongoing process improvement.  
 A demonstration of inebriated README workshopping.  
 A linter that checks whether cited decisions still apply.  
+A linter for the premises your project still endorses.  
 A collateral damage containment field.  
 A Chesterton's Fence Eliminator.  
-An affordances linter.
+
 
 ---
 
