@@ -21,3 +21,15 @@
   — guards ship on and are opted out of visibly at the site; disclosures
   ship off and are opted into by a config line; either deviation is written
   down where it applies.
+
+### Documentation
+
+- Both CLAUDE.mds (this repo's and the template's) rewrite the hyperlink
+  ground rule as "never hand-write a link target" — bare codes and
+  `[[CODE|label]]` wikilinks, with the fixer owning every target because
+  only it knows which render frame a target must resolve in — and add a
+  fourth ground rule: a guard that keeps catching the same mistake is a
+  bug report about the workflow, and the fix belongs upstream of the guard.
+  Prompted by four wrong-frame links in one day, all hand-written, all
+  wanting a prose label the (previously undocumented) labeled-wikilink
+  syntax already provides.
