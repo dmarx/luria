@@ -3,7 +3,7 @@
 A migrated document carries its past in its own frontmatter:
 
     formerly:
-    - DP-4
+    - OLD-4
 
 That field is the *only* persistent bookkeeping a migration leaves in the
 record — config describes the present, documents carry their pasts — and
@@ -33,7 +33,7 @@ _cache: tuple[Config, dict[str, str]] | None = None
 
 
 def canon(code: str) -> str | None:
-    """`dp-4`, `DP 4` and `DP-004` are one spelling: `DP-004`."""
+    """`old-4`, `OLD 4` and `OLD-004` are one spelling: `OLD-004`."""
     m = CODE_RE.match(code.strip())
     return f"{m.group(1).upper()}-{int(m.group(2)):03d}" if m else None
 

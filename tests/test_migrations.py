@@ -8,6 +8,10 @@ modernize pass. The guards here are fired on the failure they exist for
 survive, a composed remote code that is another project's namespace, and a
 journal link whose frame the sweep must not disturb (#57).
 """
+# unlinted-file: — migration fixtures; every code spelling in this suite is a
+# deliberate specimen of a pre- or post-migration state, not a claim about
+# this repository's documents. The sweep honors this for the same reason the
+# scanners do: a quote is not an address.
 import subprocess
 from pathlib import Path
 
@@ -314,3 +318,16 @@ def test_new_migration_scaffolds_a_numbered_spec(tmp_path, monkeypatch):
     path = new.new_entry("migration", {"title": "A second move"}, None)
     assert path.name == "0002-a-second-move.toml"
     assert 'title = "A second move"' in path.read_text()
+
+
+def test_the_sweep_honors_unlinted_file(tmp_path, monkeypatch, capsys):
+    """A file that declares its references quotes (`unlinted-file`, #37) is
+    a page of specimens — the sweep leaves every spelling in it alone."""
+    root = _premigration_project(tmp_path, monkeypatch)
+    specimen = root / "docs" / "specimens.md"
+    specimen.write_text(
+        "<!-- unlinted-file: — every code here is a specimen -->\n\n"
+        "# Specimens\n\nThe old spelling DP-4 preserved verbatim.\n")
+    _git(root, "add", "-A")
+    migrate.run("0001")
+    assert "The old spelling DP-4 preserved verbatim." in specimen.read_text()

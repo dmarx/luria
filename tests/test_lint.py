@@ -7,10 +7,10 @@ is to guard that the two agree.
 
 `title:` is the source of truth and the body's H1 repeats it, because someone
 reading the file on its own needs a heading. Two copies of one string is the
-drifting projection [DP-3](../docs/design-principles.md#dp-3) names, and the
+drifting projection [DP-3](../docs/values.md#dp-3) names, and the
 remedy available here is rung 2 — keep the copy, guard the property that they
 agree. So the guard needs firing, not just provisioning
-([DP-6](../docs/design-principles.md#dp-6)).
+([DP-6](../docs/values.md#dp-6)).
 """
 import sys
 from pathlib import Path
@@ -66,17 +66,17 @@ def test_the_check_covers_every_scheme(project):
     (project / "luria.toml").write_text(
         '[luria]\nissue_url = "https://example.test/issues/{n}"\n'
         '[luria.schemes.ADR]\ndir = "docs/decisions"\n'
-        '[luria.schemes.DP]\ndir = "docs/principles"\n'
-        'render = "document"\noutput = "docs/design-principles.md"\n')
+        '[luria.schemes.VP]\ndir = "docs/principles"\n'
+        'render = "document"\noutput = "docs/values.md"\n')
     from luria import config
     config.reset()
 
-    path = project / "docs" / "principles" / "DP-001.md"
+    path = project / "docs" / "principles" / "VP-001.md"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text("---\nstatus: Active\ntitle: 'A value'\ntags:\n- record\n"
-                    "---\n\n# DP-001: A different value\n\nBody.\n")
+                    "---\n\n# VP-001: A different value\n\nBody.\n")
     errors = errors_for(project)
-    assert len(errors) == 1 and "DP-001.md" in errors[0]
+    assert len(errors) == 1 and "VP-001.md" in errors[0]
 
 
 # ── The journal's path agrees with its `created:` (ADR-020) ──────────────

@@ -15,15 +15,15 @@ trail in one artifact:
 
     [[operations]]
     op = "rename_scheme"
-    from = "DP"
-    to = "GP"
+    from = "OLD"
+    to = "NEW"
     output = "docs/guiding-principles.md"   # optional: the view moves too
     remotes = ["LU"]                        # remotes that mirror THIS project
     configs = ["template/luria.toml"]       # extra config files to edit
 
     [[operations]]
     op = "move_doc"
-    doc = "DP-4"
+    doc = "OLD-4"
     to = "NRM"                              # auto-numbered in the target
     # strategy = "supersede"                # copy + tombstone instead of move
 
@@ -60,7 +60,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from . import aliases as aliases_mod
-from . import remotes
+from . import doc_refs, remotes
 from .config import current
 
 MIGRATIONS_DIR = "record/migrations.d"
@@ -69,8 +69,8 @@ BLAME_IGNORE = ".git-blame-ignore-revs"
 
 @dataclass(frozen=True)
 class Pair:
-    old: str                    # canonical old code, e.g. DP-004
-    new: str                    # canonical new code, e.g. GP-004
+    old: str                    # canonical old code, e.g. OLD-004
+    new: str                    # canonical new code, e.g. NEW-004
 
     @property
     def parts(self) -> tuple[str, int, str, int]:
@@ -83,9 +83,9 @@ class Pair:
 class Plan:
     title: str
     mapping: list[Pair] = field(default_factory=list)
-    # Composed pairs for remotes that mirror this project: `LU-DP-004` →
-    # `LU-GP-004`. Same Pair shape — `split` reads the number off the tail,
-    # so `LU-DP` is just a longer prefix.
+    # Composed pairs for remotes that mirror this project: `LU-OLD-004` →
+    # `LU-NEW-004`. Same Pair shape — `split` reads the number off the tail,
+    # so `LU-OLD` is just a longer prefix.
     composed: list[Pair] = field(default_factory=list)
     path_pairs: list[tuple[str, str]] = field(default_factory=list)
     moves: list[tuple[Path, Path]] = field(default_factory=list)
@@ -304,8 +304,8 @@ def sweep_text(text: str, plan: Plan, paths: bool = True) -> tuple[str, int]:
                     rf"(?<=name=\"){re.escape(old_p.lower())}-0*{old_n}(?=\")",
                     f"{new_p.lower()}-{new_n}")
 
-    # Composed pairs first: `LU-DP-013` must be rewritten whole before the
-    # bare-code pattern reads `DP-013` out of the middle of it.
+    # Composed pairs first: `LU-OLD-013` must be rewritten whole before the
+    # bare-code pattern reads `OLD-013` out of the middle of it.
     for pair in plan.composed:
         text = swap_pair(text, pair)
     for pair in plan.mapping:
@@ -408,6 +408,12 @@ def apply(plan: Plan) -> tuple[int, int]:
             try:
                 text = live.read_text()
             except (UnicodeDecodeError, OSError):
+                continue
+            # `unlinted-file` declares every reference in the file a quote,
+            # not a claim (#37) — and a quote is a specimen the sweep must
+            # not modernize. The migration test suite is the proof case: it
+            # is *made of* deliberate old spellings.
+            if doc_refs.unlinted(live, text):
                 continue
             new, count = sweep_text(text, plan,
                                     paths=live not in plan.config_files)

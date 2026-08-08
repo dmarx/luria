@@ -18,30 +18,15 @@ Nothing unacknowledged. ✅
 
 A reference nobody can follow. Three things look identical from here and read very differently — a typo, a number carried in from another project, and an illustrative code in an example — so this is a report, not an error. `unresolved-ok:` retires the deliberate ones, at the same three scopes.
 
-**2 code(s) name no document.** 45 reference(s) carry an `unresolved-ok` annotation and are not listed below.
+**0 code(s) name no document.** 43 reference(s) carry an `unresolved-ok` annotation and are not listed below.
 
-
-### DP-018 — no such document (9 site(s) · 4 acknowledged elsewhere)
-
-- [`record/decisions.d/ADR-040.md:42`](../../record/decisions.d/ADR-040.md)
-- [`tests/test_migrations.py:56`](../../tests/test_migrations.py)
-- [`tests/test_migrations.py:60`](../../tests/test_migrations.py)
-- [`tests/test_migrations.py:62`](../../tests/test_migrations.py)
-- [`tests/test_migrations.py:88`](../../tests/test_migrations.py)
-- [`tests/test_migrations.py:96`](../../tests/test_migrations.py)
-- [`tests/test_migrations.py:188`](../../tests/test_migrations.py)
-- [`tests/test_migrations.py:252`](../../tests/test_migrations.py)
-- [`tests/test_migrations.py:288`](../../tests/test_migrations.py)
-
-### DP-013 — no such document (1 site(s))
-
-- [`luria/migrate.py:308`](../../luria/migrate.py)
+Every code resolves. ✅
 
 ## Files that opt out of reference checking
 
 `unlinted-file:` exempts a whole document from the reference machinery — the blunt tool for a fixture-heavy or vendored page. It is counted here rather than hidden, the same bargain as an acknowledgement: the report stays a complete account of what nobody is checking.
 
-None. Every scanned file is checked. ✅
+- [`tests/test_migrations.py`](../../tests/test_migrations.py)
 
 ## Directives that no longer apply
 
