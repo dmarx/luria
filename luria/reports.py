@@ -41,6 +41,15 @@ def _link(target: Path, base: Path) -> str:
     return os.path.relpath(target, base)
 
 
+def _n(count: int, noun: str, plural: str = "") -> str:
+    """`1 document`, `3 documents` — counted prose, not `document(s)`.
+
+    The console warnings keep the parenthetical style (they are terse by
+    trade); a report is a page someone reads, and `(s)` makes every count a
+    small puzzle."""
+    return f"{count} {noun if count == 1 else (plural or noun + 's')}"
+
+
 def _site(c, base: Path) -> str:
     """A citation site as a clickable list item — the label keeps the line
     number, the link lands on the file."""
@@ -54,20 +63,31 @@ def reference_status(base: Path | None = None) -> str:
     rows = ref_status.flagged(result, docs)
     excused = ref_status.acknowledged_count(result, docs)
 
-    out = ["# Retired documents cited from current docs and code", "",
-           STAMP, ""]
+    out = ["# Reference status", "", STAMP, ""]
     out += [
-        "A reference reads as \"this is why things are the way they are\", and "
-        "that claim holds only while the referenced document is in force. None "
-        "of this is a failure — citing a `Rejected` decision is often exactly "
-        "right — so nothing here fails a build. What is worth knowing is which "
-        "of these nobody has looked at.", "",
-        f"**{len(rows)} retired document(s) cited without acknowledgement.** "
-        f"{excused} reference(s) carry an `inactive-ok` annotation and are not "
-        "listed below.", "",
-        "To acknowledge one, put the reason where the reference is — "
-        "`inactive-ok:` covers its line and the line below, `-block` the "
-        "paragraph, `-file` the page:", "",
+        "Every reference in the record is a claim — \"this is why things are "
+        "the way they are\" — and this page is the account of the claims that "
+        "need a human eye: citations of documents that are not in force, "
+        "codes that resolve to nothing, and the acknowledgements and "
+        "exemptions that keep either kind quiet on purpose. Nothing on this "
+        "page fails a build (ADR-035): every row is a judgement call, and "
+        "the acknowledgement comments are how a judgement, once made, stops "
+        "being asked again.", "",
+        "## Documents cited while not in force", "",
+        "Only an `Active` document is in force. `Proposed` and `Deferred` "
+        "mean *not in force yet* — an open question, being cited as if it "
+        "were settled — while `Superseded` and `Rejected` mean *no longer "
+        "in force*, which is often a perfectly good thing to cite: history, "
+        "or a rejection worth pointing at. Either way the citation should "
+        "be deliberate, and this section lists the ones nobody has vouched "
+        "for yet.", "",
+        f"**{_n(len(rows), 'document')} cited without acknowledgement.** "
+        f"Not listed: {_n(excused, 'citation')} someone has already vouched "
+        "for with an `inactive-ok:` comment at the citing site.", "",
+        "To vouch for one, put the reason where the citation is — "
+        "`inactive-ok:` covers its own line and the line below it, "
+        "`inactive-ok-block:` its paragraph, `inactive-ok-file:` the whole "
+        "page:", "",
         "```",
         "<!-- inactive-ok: ADR-012 — why this citation is right -->",
         "```", "",
@@ -77,30 +97,36 @@ def reference_status(base: Path | None = None) -> str:
         out.append("Nothing unacknowledged. ✅")
     for doc, loud, acked in rows:
         files = len({c.path for c in loud})
-        tail = f" · {acked} acknowledged elsewhere" if acked else ""
-        out += [f"## [{doc.code}]({_link(doc.path, base)}) — {doc.status}", "",
+        tail = (f"; {_n(acked, 'other citation')} of it "
+                f"{'is' if acked == 1 else 'are'} acknowledged" if acked
+                else "")
+        out += [f"### [{doc.code}]({_link(doc.path, base)}) — {doc.status}",
+                "",
                 f"{doc.title}", "",
-                f"{len(loud)} unacknowledged reference(s) in {files} file(s)"
-                f"{tail}.", ""]
+                f"{_n(len(loud), 'citation')} in {_n(files, 'file')} "
+                f"await{'s' if len(loud) == 1 else ''} a look{tail}.", ""]
         out += [_site(c, base) for c in loud]
         out.append("")
 
     loose = ref_status.dangling(result, docs)
-    out += ["## Codes that resolve to no document", "",
-            "A reference nobody can follow. Three things look identical from "
-            "here and read very differently — a typo, a number carried in from "
-            "another project, and an illustrative code in an example — so this "
-            "is a report, not an error. `unresolved-ok:` retires the "
-            "deliberate ones, at the same three scopes.", ""]
     acked = ref_status.dangling_acknowledged_count(result, docs)
-    out += [f"**{len(loose)} code(s) name no document.** {acked} reference(s) "
-            "carry an `unresolved-ok` annotation and are not listed below.", ""]
+    out += ["## Codes that resolve to no document", "",
+            "A reference the reader cannot follow: the code names no "
+            "document in this record. A typo, a number carried in from "
+            "another project, and an illustrative code in an example all "
+            "look identical from here — telling them apart takes a human, "
+            "so this is a report, not an error.", "",
+            f"**{_n(len(loose), 'code')} unaccounted for.** Not listed: "
+            f"{_n(acked, 'mention')} marked deliberate with an "
+            "`unresolved-ok:` comment (same syntax and scopes as "
+            "`inactive-ok:` above).", ""]
     if not loose:
         out.append("Every code resolves. ✅")
     for code, sites, acked in loose:
-        tail = f" · {acked} acknowledged elsewhere" if acked else ""
-        out += ["", f"### {code} — no such document ({len(sites)} site(s)"
-                    f"{tail})", ""]
+        tail = (f" · {_n(acked, 'other mention')} marked deliberate"
+                if acked else "")
+        out += ["", f"### {code} — resolves to nothing "
+                    f"({_n(len(sites), 'unmarked site')}{tail})", ""]
         out += [_site(c, base)
                 for c in sorted(sites, key=lambda c: (str(c.path), c.line))]
     out.append("")
