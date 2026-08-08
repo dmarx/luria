@@ -27,7 +27,7 @@ A Chesterton's Fence Eliminator.
 
 ---
 
-Luria tracks and lints references to decision records to catch justifications (in e.g. documentation, code comments, decision records) which reference evidence that the repository's record no longer endorses.
+Luria tracks and lints references to decision records to catch justifications (in e.g. documentation, code comments, decision records) which reference evidence that the repository's record no longer endorses. Never ask "why are things this way?" again.
 
 ---
 
