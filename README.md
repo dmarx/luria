@@ -34,6 +34,7 @@ Luria encapsulates a collection of best practices you should probably be using a
 
 * a miscellaneous daily activity journal
 * documenting decisions along with their context, alternatives considered, and references to other relevant decisions
+* formally identified guiding principles that have a demonstrable operational purpose and impact
 
 and a few things it may not even have occurred to you to formalize, like:
   
