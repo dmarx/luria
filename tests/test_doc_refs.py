@@ -286,7 +286,7 @@ def test_explicit_anchor_beats_the_heading_slug(project):
     it, which is the fail-stale polarity GP-3 rules out."""
     (project / "docs" / "guiding-principles.md").write_text(
         '<a name="gp-4"></a>\n\n## 4. Fire before trusting\n')
-    assert doc_refs.dp_anchors() == {4: "dp-4"}
+    assert doc_refs.dp_anchors() == {4: "gp-4"}
 
 
 def test_heading_slug_is_the_fallback(project):

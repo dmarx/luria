@@ -723,6 +723,16 @@ def modernize(text: str, source: Path,
         nonlocal count
         skip = code_spans(text) + [m.span() for m in COMMENT_RE.finditer(text)]
         skip += [(r.start, r.end) for r in remotes.references(text)]
+        # Frontmatter is data, and `formerly:` in particular is the record's
+        # memory of old spellings — modernizing it would turn every alias
+        # into a self-reference and erase the map this pass runs on. The
+        # summary stays fair game: it is prose here as everywhere (ADR-005).
+        if fm := _frontmatter_span(text):
+            summary = summary_span(text)
+            if summary:
+                skip += [(fm[0], summary[0]), (summary[1], fm[1])]
+            else:
+                skip.append(fm)
         excused = _excused_lines(text, source, old_code)
         line_of = _line_index(text)
 

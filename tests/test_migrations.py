@@ -331,3 +331,30 @@ def test_the_sweep_honors_unlinted_file(tmp_path, monkeypatch, capsys):
     _git(root, "add", "-A")
     migrate.run("0001")
     assert "The old spelling DP-4 preserved verbatim." in specimen.read_text()
+
+
+def test_modernize_never_touches_formerly_stamps(tmp_path, monkeypatch):
+    """The fixer's mirror of the sweep's rule, caught live on the DP->GP run:
+    modernizing the `formerly:` value turns the alias into a self-reference
+    and erases the very map the pass runs on. Frontmatter is data; only the
+    summary is prose."""
+    root = _record_project(tmp_path, monkeypatch)
+    gp = root / "record" / "principles.d" / "GP-004.md"
+    new, count = doc_refs.modernize(gp.read_text(), gp)
+    assert "formerly:\n- DP-4\n" in new
+    assert count == 0
+
+
+def test_a_formerly_stamp_is_not_a_citation_of_itself(tmp_path, monkeypatch):
+    """Caught live on the DP->GP run: the stamp is the alias map's source
+    data, so counting it as a citation has every migrated document warn
+    about itself forever. Another document using the old spelling still
+    warns — that is the class working."""
+    root = _record_project(tmp_path, monkeypatch)
+    gp = root / "record" / "principles.d" / "GP-004.md"
+    other = root / "docs" / "notes.md"
+    other.write_text("# Notes\n\nStill spelled DP-4 here.\n")
+    result = ref_status.scan(files=[gp, other])
+    sites = result.legacy.get("DP-004", [])
+    assert [c.path for c in sites] == [other], \
+        "the stamp is exempt; the stale prose elsewhere is not"
