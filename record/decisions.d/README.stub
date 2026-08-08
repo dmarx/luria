@@ -6,7 +6,7 @@ future edit could silently violate. Copy [`_template.md`](../../record/decisions
 number is the next one free.
 
 Values that decisions *cite* live in
-[design-principles.md](../../docs/design-principles.md) instead. The split, and why
+[guiding-principles.md](../../docs/guiding-principles.md) instead. The split, and why
 these are separate files, is [ADR-003](../../record/decisions.d/ADR-003.md).
 
 A decision whose **choice** changes is superseded by *adding* a decision and

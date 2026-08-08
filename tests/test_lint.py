@@ -7,10 +7,10 @@ is to guard that the two agree.
 
 `title:` is the source of truth and the body's H1 repeats it, because someone
 reading the file on its own needs a heading. Two copies of one string is the
-drifting projection [DP-3](../docs/design-principles.md#dp-3) names, and the
+drifting projection [GP-3](../docs/values.md#gp-3) names, and the
 remedy available here is rung 2 — keep the copy, guard the property that they
 agree. So the guard needs firing, not just provisioning
-([DP-6](../docs/design-principles.md#dp-6)).
+([GP-6](../docs/values.md#gp-6)).
 """
 import sys
 from pathlib import Path
@@ -41,7 +41,7 @@ def test_a_drifted_heading_is_reported(project):
     assert len(errors) == 1
     assert "disagree" in errors[0]
     # Both spellings are named — a diff the reader has to go and look up is
-    # half a message (DP-1).
+    # half a message (GP-1).
     assert "The corrected title" in errors[0] and "The old title" in errors[0]
 
 
@@ -66,17 +66,17 @@ def test_the_check_covers_every_scheme(project):
     (project / "luria.toml").write_text(
         '[luria]\nissue_url = "https://example.test/issues/{n}"\n'
         '[luria.schemes.ADR]\ndir = "docs/decisions"\n'
-        '[luria.schemes.DP]\ndir = "docs/principles"\n'
-        'render = "document"\noutput = "docs/design-principles.md"\n')
+        '[luria.schemes.VP]\ndir = "docs/principles"\n'
+        'render = "document"\noutput = "docs/values.md"\n')
     from luria import config
     config.reset()
 
-    path = project / "docs" / "principles" / "DP-001.md"
+    path = project / "docs" / "principles" / "VP-001.md"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text("---\nstatus: Active\ntitle: 'A value'\ntags:\n- record\n"
-                    "---\n\n# DP-001: A different value\n\nBody.\n")
+                    "---\n\n# VP-001: A different value\n\nBody.\n")
     errors = errors_for(project)
-    assert len(errors) == 1 and "DP-001.md" in errors[0]
+    assert len(errors) == 1 and "VP-001.md" in errors[0]
 
 
 # ── The journal's path agrees with its `created:` (ADR-020) ──────────────
@@ -126,7 +126,7 @@ def test_a_moved_entry_is_reported(project):
     entry(root, "2026/08/03/211926", created="2026-08-04T03:27:11")
     errors = journal_errors(project)
     assert len(errors) == 1
-    # Says where it belongs, not just that it's wrong (DP-1).
+    # Says where it belongs, not just that it's wrong (GP-1).
     assert "devlog.d/2026/08/04/032711.md" in errors[0]
 
 
@@ -290,7 +290,7 @@ def test_an_acknowledged_row_never_fails(project, capsys):
 
 def test_a_wrong_notch_is_an_error(project, capsys):
     """A dial set to a notch that doesn't exist must not silently enforce
-    nothing (DP-1)."""
+    nothing (GP-1)."""
     dial_project(project, '"retired-refs"')
     errors, _ = dial_errors(capsys)
     assert any("no warning class" in e and "retired-citations" in e

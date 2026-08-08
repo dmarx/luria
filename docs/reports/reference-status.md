@@ -5,7 +5,7 @@
 
 A reference reads as "this is why things are the way they are", and that claim holds only while the referenced document is in force. None of this is a failure — citing a `Rejected` decision is often exactly right — so nothing here fails a build. What is worth knowing is which of these nobody has looked at.
 
-**1 retired document(s) cited without acknowledgement.** 36 reference(s) carry an `inactive-ok` annotation and are not listed below.
+**0 retired document(s) cited without acknowledgement.** 36 reference(s) carry an `inactive-ok` annotation and are not listed below.
 
 To acknowledge one, put the reason where the reference is — `inactive-ok:` covers its line and the line below, `-block` the paragraph, `-file` the page:
 
@@ -13,30 +13,20 @@ To acknowledge one, put the reason where the reference is — `inactive-ok:` cov
 <!-- inactive-ok: ADR-012 — why this citation is right -->
 ```
 
-## [ADR-040](../../record/decisions.d/ADR-040.md) — Proposed
-
-Migrations: renaming schemes and moving documents without losing the record's memory
-
-1 unacknowledged reference(s) in 1 file(s).
-
-- [`record/decisions.d/ADR-041.md:26`](../../record/decisions.d/ADR-041.md)
-
+Nothing unacknowledged. ✅
 ## Codes that resolve to no document
 
 A reference nobody can follow. Three things look identical from here and read very differently — a typo, a number carried in from another project, and an illustrative code in an example — so this is a report, not an error. `unresolved-ok:` retires the deliberate ones, at the same three scopes.
 
-**1 code(s) name no document.** 45 reference(s) carry an `unresolved-ok` annotation and are not listed below.
+**0 code(s) name no document.** 43 reference(s) carry an `unresolved-ok` annotation and are not listed below.
 
-
-### DP-018 — no such document (1 site(s) · 4 acknowledged elsewhere)
-
-- [`record/decisions.d/ADR-040.md:42`](../../record/decisions.d/ADR-040.md)
+Every code resolves. ✅
 
 ## Files that opt out of reference checking
 
 `unlinted-file:` exempts a whole document from the reference machinery — the blunt tool for a fixture-heavy or vendored page. It is counted here rather than hidden, the same bargain as an acknowledgement: the report stays a complete account of what nobody is checking.
 
-None. Every scanned file is checked. ✅
+- [`tests/test_migrations.py`](../../tests/test_migrations.py)
 
 ## Directives that no longer apply
 

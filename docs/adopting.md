@@ -22,7 +22,7 @@ luria lint      # should be clean
 ```
 
 `luria index` is not optional after scaffolding: the two documents a reader
-actually opens — the decision index and `design-principles.md` — do not exist
+actually opens — the decision index and `guiding-principles.md` — do not exist
 until it runs, because both are generated from the fragments beside them
 ([ADR-012](../record/decisions.d/ADR-012.md)).
 
@@ -39,7 +39,7 @@ record/                     the WRITE surface: every source, marked `.d`
     tags.yaml               tag order and blurbs
   principles.d/
     _template.md            copy this to make a principle
-    README.stub             the document's prose; renders to docs/design-principles.md
+    README.stub             the document's prose; renders to docs/guiding-principles.md
     DP-00N.md               seeded with the ones that earn this machinery
   changelog.d/_template.md  one fragment per contribution; collected, then consumed
   devlog.d/_template.md     the shape of a journal entry; optional, significant work only
@@ -153,7 +153,7 @@ Three things worth knowing before you rely on it:
 
   ```toml
   [luria.remotes.SG.schemes.DP]
-  document = "docs/design-principles.md"    # anchor defaults to dp-{number}
+  document = "docs/guiding-principles.md"    # anchor defaults to dp-{number}
   ```
 
   The anchor template covers remotes on current conventions; a legacy remote

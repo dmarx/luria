@@ -44,15 +44,15 @@ def test_label_becomes_the_link_text(project):
 
 
 def test_document_scheme_code_expands_to_an_anchor(project):
-    """`[[DP-3]]` — a shape the prose scanner never takes (it needs a `#`),
+    """`[[VP-3]]` — a shape the prose scanner never takes (it needs a `#`),
     which is half the point of typing the brackets."""
     project_with(project,
-        '[luria.schemes.DP]\ndir = "docs/principles"\n'
-        'render = "document"\noutput = "docs/design-principles.md"\n'
+        '[luria.schemes.VP]\ndir = "docs/principles"\n'
+        'render = "document"\noutput = "docs/values.md"\n'
         '[luria.schemes.ADR]\ndir = "docs/decisions"\n')
-    out, n = expand(project, "per [[DP-3]] this holds")
+    out, n = expand(project, "per [[VP-3]] this holds")
     assert n == 1
-    assert "[DP-3](design-principles.md#dp-3)" in out
+    assert "[VP-3](values.md#vp-3)" in out
 
 
 def test_remote_code_expands_to_a_url(project):
@@ -130,7 +130,7 @@ def test_a_resolvable_wikilink_names_the_fixer(project):
 def test_an_unresolvable_wikilink_is_its_own_error(project):
     """The one place the lint demands something `--fix` cannot do — by design:
     the author asserted a reference, so a silent skip would be a silent
-    refusal (DP-1)."""
+    refusal (GP-1)."""
     project_with(project)
     (project / "docs" / "notes.md").write_text("see [[FAKE-001]]\n")
     errors = wikilink_errors(project)

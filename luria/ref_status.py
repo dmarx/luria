@@ -66,6 +66,7 @@ from pathlib import Path
 from typing import Callable
 
 from . import adr_index as builder
+from . import aliases as aliases_mod
 from . import directives, doc_refs, remotes
 from .config import current
 
@@ -142,7 +143,7 @@ DANGLING_DIRECTIVE = "unresolved-ok"
 def _codes(spec: str) -> tuple[set[str], str]:
     """The document codes an annotation names, and the text with them removed.
 
-    Composed codes come out first and whole: a remote's `DP-004` is that
+    Composed codes come out first and whole: a composed `SG-DP-4` is that
     remote's principle, and reading the tail out of the middle of the composed
     code would have the validator check the wrong project (ADR-016)."""
     codes: set[str] = set()
@@ -234,8 +235,14 @@ class Scan:
     cited: dict[str, list[Citation]] = field(default_factory=dict)
     # Codes cited that name no document here. Kept rather than dropped: a
     # reference that resolves to nothing is a silent no-op, and a tool that
-    # refuses without saying so teaches nobody (DP-1).
+    # refuses without saying so teaches nobody (GP-1).
     dangling: dict[str, list[Citation]] = field(default_factory=dict)
+    # Old spellings of migrated documents (ADR-040): the code names no file,
+    # but a `formerly:` field answers for it, so the reference still means
+    # something — it is just out of date. Keyed by the OLD code; the current
+    # one is in `aliases`.
+    legacy: dict[str, list[Citation]] = field(default_factory=dict)
+    aliases: dict[str, str] = field(default_factory=dict)
     annotations: list[Annotation] = field(default_factory=list)
     # Files that opt out of reference checking wholesale (`unlinted-file:`,
     # #37). Counted, never hidden: the blanket exemption is the one
@@ -243,8 +250,14 @@ class Scan:
     unlinted: list[Path] = field(default_factory=list)
 
     def used(self, ann: Annotation) -> bool:
-        pool = self.dangling if ann.kind == DANGLING_DIRECTIVE else self.cited
-        return any(c.excused_by is ann for sites in pool.values() for c in sites)
+        if ann.kind == DANGLING_DIRECTIVE:
+            # `unresolved-ok` speaks for any code that names no file here —
+            # a fixture number and a deliberately-kept old spelling alike.
+            pools = (self.dangling, self.legacy)
+        else:
+            pools = (self.cited,)
+        return any(c.excused_by is ann
+                   for pool in pools for sites in pool.values() for c in sites)
 
 
 def scanned_files() -> list[Path]:
@@ -267,7 +280,19 @@ def scan(files: list[Path] | None = None, docs: dict[str, Doc] | None = None) ->
     docs = load_docs() if docs is None else docs
     known = set(docs)
     own = {doc.path: doc.code for doc in docs.values()}
-    result = Scan()
+    result = Scan(aliases=aliases_mod.alias_map())
+    # A prefix that appears in `formerly:` used to be this project's
+    # namespace, so the scan keeps watching it after the scheme is gone from
+    # config — otherwise every file still using the old spelling silently
+    # drops out of reference checking, which is the unwatched-history failure
+    # ADR-040 exists to prevent. The *mapping* then sorts each hit: aliased →
+    # legacy, everything else (a fixture number, a typo) → dangling, exactly
+    # as it was before the rename.
+    legacy_patterns = {
+        prefix: re.compile(rf"\b{prefix}[- ](?P<num>\d{{1,4}})\b")
+        for prefix in {code.rsplit("-", 1)[0] for code in result.aliases}
+        if prefix not in schemes()
+    }
     for path in files if files is not None else scanned_files():
         try:
             text = path.read_text()
@@ -319,13 +344,31 @@ def scan(files: list[Path] | None = None, docs: dict[str, Doc] | None = None) ->
             for scheme in schemes().values():
                 codes |= {scheme.code(m.group("num"))
                           for m in scheme.pattern.finditer(bare)}
+            for prefix, pattern in legacy_patterns.items():
+                codes |= {f"{prefix}-{int(m.group('num')):03d}"
+                          for m in pattern.finditer(bare)}
             for code in codes:
                 if own.get(path) == code:
                     continue
+                # A document's own former name is the one old spelling it
+                # must keep — the `formerly:` stamp IS the alias map's
+                # source, so counting it would have every migrated document
+                # warn about itself forever.
+                if code in result.aliases \
+                        and result.aliases[code] == own.get(path):
+                    continue
                 if code not in docs:
+                    # An old spelling with a `formerly:` answering for it is
+                    # not dangling — it resolves, one hop late (ADR-040).
+                    # `unresolved-ok` still excuses a deliberate one: the
+                    # directive's claim ("this spelling names no document
+                    # here on purpose") is exactly as true of a kept old
+                    # spelling as of a fixture number.
                     excuse = next((a for a in usable_dangling
                                    if code in a.codes and a.covers(line_no)), None)
-                    result.dangling.setdefault(code, []).append(
+                    pool = (result.legacy if code in result.aliases
+                            else result.dangling)
+                    pool.setdefault(code, []).append(
                         Citation(path, line_no, code, excuse))
                     continue
                 # An annotation excuses a *retired* reference. Excusing an
@@ -337,7 +380,7 @@ def scan(files: list[Path] | None = None, docs: dict[str, Doc] | None = None) ->
                      if code in a.codes and a.covers(line_no)), None)
                 result.cited.setdefault(code, []).append(
                     Citation(path, line_no, code, excuse))
-    for pool in (result.cited, result.dangling):
+    for pool in (result.cited, result.dangling, result.legacy):
         for sites in pool.values():
             sites.sort(key=lambda c: (str(c.path), c.line))
     return result
@@ -395,6 +438,37 @@ def dangling(result: Scan | None = None,
         if loud:
             rows.append((code, loud, len(sites) - len(loud)))
     return sorted(rows, key=lambda r: (-len(r[1]), r[0]))
+
+
+def legacy(result: Scan | None = None,
+           docs: dict[str, Doc] | None = None) -> list[tuple[str, str, list[Citation], int]]:
+    """(old code, current code, unexcused sites, excused count) for references
+    written in a migrated document's former spelling — most-cited first.
+
+    These resolve — the `formerly:` field answers for them — so they are a
+    softer finding than a dangling code: the reference means what it says,
+    it just says it in last year's spelling, and `luria link --fix` rewrites
+    it. `unresolved-ok` acknowledges one kept deliberately (a quotation of
+    the old spelling, a historical claim about the name itself)."""
+    result = scan(docs=docs) if result is None else result
+    rows = []
+    for code, sites in result.legacy.items():
+        loud = [c for c in sites if c.excused_by is None]
+        if loud:
+            rows.append((code, result.aliases[code], loud,
+                         len(sites) - len(loud)))
+    return sorted(rows, key=lambda r: (-len(r[2]), r[0]))
+
+
+def legacy_lines(result: Scan | None = None,
+                 docs: dict[str, Doc] | None = None) -> list[str]:
+    out = []
+    for code, now, loud, excused in legacy(result, docs):
+        files = len({c.path for c in loud})
+        tail = f", {excused} acknowledged" if excused else ""
+        out.append(f"{code} is now {now}, cited {len(loud)}× in "
+                   f"{files} file(s){tail}")
+    return out
 
 
 def dangling_lines(result: Scan | None = None,

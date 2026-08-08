@@ -17,7 +17,7 @@
   the record as an issue carrying a minimal working example before any fix,
   the response is classified on the [ADR-035](record/decisions.d/ADR-035.md) ladder, and the fix PR turns the
   MWE into a regression test. First live run: the journal link-frame bug.
-- [DP-010](record/principles.d/DP-010.md): defaults follow the failure mode
+- [GP-010](record/principles.d/GP-010.md): defaults follow the failure mode
   — guards ship on and are opted out of visibly at the site; disclosures
   ship off and are opted into by a config line; either deviation is written
   down where it applies.

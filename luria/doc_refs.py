@@ -44,6 +44,7 @@ from pathlib import Path
 
 import yaml  # noqa: F401  (re-exported for callers that parse frontmatter)
 
+from . import aliases as aliases_mod
 from . import directives, remotes
 from .adr_index import parse_frontmatter
 from .config import Config, current
@@ -324,7 +325,7 @@ def directive_problems(path: Path, text: str) -> list[str]:
                        f"(known: {', '.join(sorted(UNEXEMPT_REGIONS))})")
     # A narrower-than-file `unlinted` governs nothing: the opt-out is
     # whole-document by design, and a directive that looks armed but isn't
-    # is the failure this report exists for (DP-1).
+    # is the failure this report exists for (GP-1).
     for d in directives.find(path, text, {UNLINTED}):
         if d.scope != directives.FILE:
             out.append(f"{path.name}:{d.line}: `unlinted` is file-scoped by "
@@ -454,7 +455,7 @@ def _line_index(text: str):
 # the author asserting "this is a reference, link it" (ADR-025). No prose
 # heuristics apply inside the brackets, and one that resolves to nothing is a
 # lint violation rather than a silently-bare code: the request was explicit,
-# so the refusal must be too (DP-1).
+# so the refusal must be too (GP-1).
 WIKILINK_RE = re.compile(r"\[\[([^\][|]+?)(?:\|([^\][]+))?\]\]")
 
 
@@ -478,6 +479,13 @@ def wikilink_target(inner: str, source: Path) -> str | None:
     parsed = remotes.parse_code(inner)
     if parsed is not None:
         return remotes.link(*parsed) or None
+    # An old spelling of a migrated document resolves through its
+    # `formerly:` alias (ADR-040) — one hop late, but not to nothing. The
+    # fixer's modernize pass rewrites the spelling itself; this only keeps
+    # the reference followable in the meantime.
+    canon = aliases_mod.canon(inner)
+    if canon is not None and canon in (amap := aliases_mod.alias_map(cfg)):
+        inner = amap[canon]
     for scheme in cfg.schemes.values():
         m = re.fullmatch(rf"{scheme.prefix}[- ]0*(\d+)", inner, re.IGNORECASE)
         if not m:
@@ -676,15 +684,98 @@ def rewritable_refs(text: str, source: Path, adrs: dict[int, Path],
     return [r for r in refs if not span[0] <= r.start < span[1]]
 
 
+def _excused_lines(text: str, source: Path, old_code: str) -> set[int]:
+    """Lines where an `unresolved-ok` names `old_code` — a spelling kept on
+    purpose (a quotation, a claim about the old name itself), which the
+    modernizer must leave exactly as written."""
+    from .ref_status import DANGLING_DIRECTIVE, _codes
+    out: set[int] = set()
+    for d in directives.find(source, text, {DANGLING_DIRECTIVE}):
+        codes, _ = _codes(" ".join(d.args))
+        if old_code in codes:
+            if d.scope == directives.FILE:
+                return set(range(1, text.count("\n") + 2))
+            out |= {n for n in range(1, text.count("\n") + 2) if d.covers(n)}
+    return out
+
+
+def modernize(text: str, source: Path,
+              amap: dict[str, str] | None = None) -> tuple[str, int]:
+    """Rewrite legacy spellings (ADR-040) to the current code: bare codes,
+    wikilink inners, link labels — plus the matching filenames and anchors.
+
+    Mapping-driven, never prefix-driven: only codes a `formerly:` field
+    answers for are touched, so fixture numbers survive by not being in the
+    map. Quoted regions (fences, inline code), comments, composed remote
+    codes and `unresolved-ok`-acknowledged sites are left alone — a spelling
+    someone excused is a spelling someone meant."""
+    amap = aliases_mod.alias_map() if amap is None else amap
+    if not amap or unlinted(source, text):
+        return text, 0
+
+    count = 0
+
+    def one_pass(text: str, old_code: str, pattern: str, repl) -> str:
+        """One pattern over one text. `re.sub` matches against the text it
+        was handed, so the masks are computed against that same text —
+        recomputed each pass, because the previous pass may have shifted
+        every offset after its first rewrite."""
+        nonlocal count
+        skip = code_spans(text) + [m.span() for m in COMMENT_RE.finditer(text)]
+        skip += [(r.start, r.end) for r in remotes.references(text)]
+        # Frontmatter is data, and `formerly:` in particular is the record's
+        # memory of old spellings — modernizing it would turn every alias
+        # into a self-reference and erase the map this pass runs on. The
+        # summary stays fair game: it is prose here as everywhere (ADR-005).
+        if fm := _frontmatter_span(text):
+            summary = summary_span(text)
+            if summary:
+                skip += [(fm[0], summary[0]), (summary[1], fm[1])]
+            else:
+                skip.append(fm)
+        excused = _excused_lines(text, source, old_code)
+        line_of = _line_index(text)
+
+        def guarded(m: re.Match) -> str:
+            nonlocal count
+            if any(a <= m.start() < b for a, b in skip) \
+                    or line_of(m.start()) in excused:
+                return m.group(0)
+            count += 1
+            return repl(m)
+
+        return re.sub(pattern, guarded, text)
+
+    for old_code, new_code in sorted(amap.items()):
+        old_p, old_n = aliases_mod.split(old_code)
+        new_p, new_n = aliases_mod.split(new_code)
+
+        def code_repl(m: re.Match) -> str:
+            digits = m.group(2)
+            new_digits = f"{new_n:03d}" if digits != str(old_n) else str(new_n)
+            return f"{new_p}{m.group(1)}{new_digits}"
+
+        text = one_pass(
+            text, old_code,
+            rf"(?<![A-Za-z0-9-]){old_p}([- ])(0*{old_n})(?!\d)", code_repl)
+        text = one_pass(
+            text, old_code, rf"(?<=#){old_p.lower()}-0*{old_n}(?!\d)",
+            lambda m: f"{new_p.lower()}-{new_n}")
+    return text, count
+
+
 def linkify(text: str, source: Path, adrs: dict[int, Path] | None = None,
             anchors: dict[int, str] | None = None) -> tuple[str, int]:
-    """Rewrite every resolvable bare reference in `text` as a link.
+    """Rewrite every resolvable bare reference in `text` as a link, after
+    modernizing any legacy spellings a `formerly:` field answers for.
     Returns the new text and the number of rewrites."""
     adrs = adr_paths() if adrs is None else adrs
     anchors = dp_anchors() if anchors is None else anchors
+    text, upgraded = modernize(text, source)
     text, expanded = expand_wikilinks(text, source)
     refs = rewritable_refs(text, source, adrs, anchors)
-    return _apply(text, refs, source, adrs, anchors), len(refs) + expanded
+    return (_apply(text, refs, source, adrs, anchors),
+            len(refs) + expanded + upgraded)
 
 
 def _apply(text: str, refs: list[Ref], source: Path, adrs: dict[int, Path],

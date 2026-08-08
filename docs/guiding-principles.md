@@ -1,7 +1,7 @@
-# Design principles
+# Guiding principles
 
 Standing values that guide Luria — the things a project keeps re-deriving in
-review, written down once so they can be cited by number ("per DP-2") instead of
+review, written down once so they can be cited by number ("per GP-2") instead of
 re-argued.
 
 These are **principles, not decisions.** A [decision](decisions/README.md)
@@ -9,7 +9,7 @@ records a choice among alternatives at a point in time; a principle is a value
 that decisions *cite*.
 
 **Principles are living documents.** Each carries a version, and a revised one
-says so — [DP-2](design-principles.md) and [DP-3](design-principles.md) are both
+says so — [GP-2](guiding-principles.md) and [GP-3](guiding-principles.md) are both
 at v2, because each was first written scoped too narrowly and failed to
 generalize until the second instance forced it. That history is the argument for
 the version field: a principle stated about one artifact is a principle nobody
@@ -23,7 +23,7 @@ instance is a decision, a pattern is a principle.
 
 ---
 
-<a name="dp-1"></a>
+<a name="gp-1"></a>
 
 ## 1. No silent refusal
 
@@ -45,7 +45,7 @@ about it again.
 
 *v1 · origin: The strata-g design-language review, where tools silently no-opped on inputs that didn't meet their preconditions*
 
-<a name="dp-2"></a>
+<a name="gp-2"></a>
 
 ## 2. A file every contribution must touch is a lock — hand out fragments, generate the view
 
@@ -75,7 +75,7 @@ stated about one artifact is a value nobody applies to the next one.
 
 *v2 · shaped by [ADR-002](../record/decisions.d/ADR-002.md), [ADR-004](../record/decisions.d/ADR-004.md) · origin: Fragments assembled into a changelog; then, months later, the identical conflicts recurring on the narrative log; then the decision index*
 
-<a name="dp-3"></a>
+<a name="gp-3"></a>
 
 ## 3. A hand-maintained projection of a source of truth will drift — derive it
 
@@ -94,7 +94,7 @@ Three remedies, in order of strength:
    asserts "the list contains these names" is the drifting list in a costume.
    Assert the invariant — *any change that alters the output must alter the
    projection* — and fire the guard once to prove it catches
-   ([DP-6](design-principles.md#6-fire-before-trusting)).
+   ([GP-6](guiding-principles.md#6-fire-before-trusting)).
 3. **When a hand list must remain, choose its failure polarity** and say so in a
    comment. Fail-safe (the missed entry still works, suboptimally) and fail-loud
    (the miss is immediately visible) are both acceptable. **Fail-stale — the
@@ -105,7 +105,7 @@ In this package, the decision index is rung 1 and the reference lint is rung 2.
 
 *v2 · shaped by [ADR-004](../record/decisions.d/ADR-004.md), [ADR-005](../record/decisions.d/ADR-005.md) · origin: A hardcoded type union that had drifted to 13 of 21 keys; generalized by a later arc where every one of five converted projections was already wrong*
 
-<a name="dp-4"></a>
+<a name="gp-4"></a>
 
 ## 4. One authoritative implementation, read the same way everywhere
 
@@ -130,7 +130,7 @@ files.
 
 *v1 · shaped by [ADR-005](../record/decisions.d/ADR-005.md), [ADR-006](../record/decisions.d/ADR-006.md) · origin: A tool-icon migration whose bug was precisely a fallback that only one render site preferred, so every other site leaked the legacy value*
 
-<a name="dp-5"></a>
+<a name="gp-5"></a>
 
 ## 5. Culture must be compiled
 
@@ -154,10 +154,10 @@ convention from the corpus and stops trying.
 
 *v1 · shaped by [ADR-003](../record/decisions.d/ADR-003.md), [ADR-005](../record/decisions.d/ADR-005.md) · origin: The strata-g project-memory doctrine. The linked-versus-bare reference split was the demonstration: convention written down but unguarded, and the corpus drifted toward random rather than toward wrong*
 
-<a name="dp-6"></a>
+<a name="gp-6"></a>
 
 <!-- inactive-ok-file: ADR-007 — the evidence trail predates the supersession; ADR-035 carries the doctrine -->
-# DP-006: Fire before trusting
+# GP-006: Fire before trusting
 
 Every guard, alert, and CI gate gets one deliberate sabotage run to prove it
 catches, before anyone relies on it. **Provisioned is not working.**
@@ -177,7 +177,7 @@ scratch because they can't tell whether it works.
 
 *v1 · shaped by [ADR-007](../record/decisions.d/ADR-007.md) · origin: Two inert mechanisms in strata-g — an alert shape that could never fire, and a CI fast path whose fail-safe polarity made a month of inertness invisible. Both were discovered by accident rather than by the thing they guarded*
 
-<a name="dp-7"></a>
+<a name="gp-7"></a>
 
 ## 7. No private brains
 
@@ -194,7 +194,7 @@ shared docs, and the agent file links to it.
 
 *v1 · origin: The strata-g project-memory doctrine*
 
-<a name="dp-8"></a>
+<a name="gp-8"></a>
 
 ## 8. File it in the same contribution as the work
 
@@ -212,7 +212,7 @@ expensive thing for the next person to rediscover.
 
 *v1 · shaped by [ADR-002](../record/decisions.d/ADR-002.md) · origin: The reason the fragment convention exists at all — the changelog was being reconstructed retroactively from git log, badly*
 
-<a name="dp-9"></a>
+<a name="gp-9"></a>
 
 ## 9. Structure is read before text — spend affordances deliberately
 
@@ -253,11 +253,11 @@ Two disciplines keep the spend honest. **Structural beats documentary**: a
 comment saying "GENERATED — do not edit" is read after landing in the wrong
 place and enforces nothing; a directory name is read before, and a linter can
 hold it. And where the structure encodes a checkable property, walk it up
-[DP-5](design-principles.md#dp-5)'s ladder — the read/write boundary
+[GP-5](guiding-principles.md#gp-5)'s ladder — the read/write boundary
 ([ADR-021](../record/decisions.d/ADR-021.md)) is this principle's worked
 application, and its payoff rung is a lint: a view directory holds only what
 the generator wrote, so a hand edit there fails with the polarity
-[DP-3](design-principles.md#dp-3) demands.
+[GP-3](guiding-principles.md#gp-3) demands.
 
 <!-- url-ok-block: SG-DP-18 — the construction reaches the right document, but strata-g's legacy anchors are heading-derived and no template can produce the slug -->
 
@@ -271,7 +271,7 @@ don't merely avoid falsifying them.
 
 *v1 · shaped by [ADR-012](../record/decisions.d/ADR-012.md), [ADR-013](../record/decisions.d/ADR-013.md), [ADR-021](../record/decisions.d/ADR-021.md) · origin: An inventory of one repository's layout found the same rules expressed structurally in some places and not at all in others — two source containers marked `.d` and two unmarked, a generated document beside its own sources, an index buried under the things it indexes, and `README.md` meaning "edit me" in one directory and "never edit me" in the next. The layout had been shaping attention the whole time; nobody had been steering it*
 
-<a name="dp-10"></a>
+<a name="gp-10"></a>
 
 ## 10. Defaults follow the failure mode: guards opt out, disclosures opt in
 
@@ -308,4 +308,4 @@ and who pays?* If the project pays in missed defects, on-by-default. If
 the author pays in unwanted exposure, off-by-default. A switch where both
 answers feel true is usually two switches wearing one name — split it.
 
-*v1 · shaped by [ADR-035](../record/decisions.d/ADR-035.md) · **Proposed***
+*v1 · shaped by [ADR-035](../record/decisions.d/ADR-035.md)*

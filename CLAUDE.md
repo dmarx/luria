@@ -1,7 +1,7 @@
 # CLAUDE.md
 
 **Before anything else, read
-[the design principles](docs/design-principles.md) in full.** They are the
+[the guiding principles](docs/guiding-principles.md) in full.** They are the
 standing values every choice in this repo is judged against; the rest of
 this file, and the record itself, assume you hold them. Read them
 immediately after finishing this file, before any other code or
@@ -17,8 +17,8 @@ disagrees with either, this file is the one that's wrong.
   `--help`.
 - [Project memory: how a repo thinks](docs/project-memory.md) — the doctrine:
   the four layers, what files where, how the record is revised. Start here.
-- [Design principles](docs/design-principles.md) — the standing values,
-  cited as "DP-2".
+- [Guiding principles](docs/guiding-principles.md) — the standing values,
+  cited as "GP-2".
 - [The decision record](docs/decisions/README.md) — every choice, its
   alternatives, its status.
 - [Comment directives](docs/directives.md) — the acknowledgement vocabulary,
@@ -37,7 +37,7 @@ Four ground rules, terse enough to restate:
   a fact filed while its context is loaded costs a paragraph; re-derived
   cold, it costs a session.
 - **Never hand-write a link target.** Write the bare code (`ADR-035`,
-  `DP-6`, `#57`) and let `luria link --fix` spell the target: record prose
+  `GP-6`, `#57`) and let `luria link --fix` spell the target: record prose
   is rendered into views in *other directories*, so a target has to resolve
   from where the text lands, not where it lives — only the fixer knows that
   frame. Want prose as the label? That's `[[ADR-035|the escalation
@@ -47,7 +47,7 @@ Four ground rules, terse enough to restate:
   One catch is the net working; the same catch again means the hazard is
   upstream — a practice, a missing affordance, an undocumented rule — and
   the fix is to remove what *generates* the mistake, not to keep thanking
-  the net ([DP-5](docs/design-principles.md#dp-5): a repeated correction is
+  the net ([GP-5](docs/guiding-principles.md#gp-5): a repeated correction is
   the signal to walk the norm up a rung). Quiet guards are the goal; a busy
   one is compensating for something.
 
@@ -56,4 +56,4 @@ is what CI runs; a new check joins the lint only if the violation is always
 wrong and mechanically fixable, otherwise it is a report
 ([ADR-035](record/decisions.d/ADR-035.md)); and fire any new guard once
 before trusting it, saying so in the devlog
-([DP-6](docs/design-principles.md#dp-6)).
+([GP-6](docs/guiding-principles.md#gp-6)).

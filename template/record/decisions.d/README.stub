@@ -6,7 +6,7 @@ future edit could silently violate. Copy [`_template.md`](_template.md); the
 number is the next one free.
 
 Values that decisions *cite* live in
-[design-principles.md](../design-principles.md) instead — also generated, from
+[guiding-principles.md](../guiding-principles.md) instead — also generated, from
 the fragments in `../principles/`. The split, and why these are separate files,
 is [LU-ADR-001](https://github.com/dmarx/luria/blob/main/record/decisions.d/ADR-001.md).
 

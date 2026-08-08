@@ -1,7 +1,7 @@
-# Design principles
+# Guiding principles
 
 Standing values that guide Luria — the things a project keeps re-deriving in
-review, written down once so they can be cited by number ("per DP-2") instead of
+review, written down once so they can be cited by number ("per GP-2") instead of
 re-argued.
 
 These are **principles, not decisions.** A [decision](decisions/README.md)
@@ -9,7 +9,7 @@ records a choice among alternatives at a point in time; a principle is a value
 that decisions *cite*.
 
 **Principles are living documents.** Each carries a version, and a revised one
-says so — [DP-2](design-principles.md) and [DP-3](design-principles.md) are both
+says so — [GP-2](guiding-principles.md) and [GP-3](guiding-principles.md) are both
 at v2, because each was first written scoped too narrowly and failed to
 generalize until the second instance forced it. That history is the argument for
 the version field: a principle stated about one artifact is a principle nobody

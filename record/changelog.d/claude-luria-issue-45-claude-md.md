@@ -8,7 +8,7 @@
   when the file disagrees with the docs or the CLI, the file is the one
   that's wrong. The restated command block and doctrine walkthroughs are
   gone; they had drifted twice in one week, exactly as
-  [DP-3](docs/design-principles.md#dp-3) predicts for hand-maintained
+  [GP-3](docs/guiding-principles.md#gp-3) predicts for hand-maintained
   copies. The scaffolded `template/CLAUDE.md` gets the same treatment,
   mapping an adopting project instead of this one.
 

@@ -1,6 +1,6 @@
 # Luria's own configuration — this repo runs its own machinery on its own
 # record, which is the only way the machinery gets exercised before a consumer
-# hits the bug (DP-6).
+# hits the bug (GP-6).
 [luria]
 issue_url = "https://github.com/dmarx/luria/issues/{n}"
 
@@ -11,7 +11,7 @@ issue_url = "https://github.com/dmarx/luria/issues/{n}"
 [luria.paths]
 docs = "docs"
 decisions = "record/decisions.d"
-design_principles = "docs/design-principles.md"
+design_principles = "docs/guiding-principles.md"
 # Committed views, not build artifacts, so the README badges land on the
 # report that explains their numbers (#35).
 reports = "docs/reports"
@@ -52,11 +52,11 @@ render = "index"
 
 # Principles are read as a whole, not browsed one at a time, so their view is a
 # document rather than a table (ADR-012). Same fragment convention either way.
-[luria.schemes.DP]
+[luria.schemes.GP]
 dir = "record/principles.d"
 active = "Active"
 render = "document"
-output = "docs/design-principles.md"
+output = "docs/guiding-principles.md"
 
 # Other projects' records, cited from this one. A reference composes the prefix
 # with that project's own code — `SG-ADR-032`, `LU-ADR-013` — so the namespace
@@ -94,9 +94,9 @@ ref  = "main"
 dir  = "record/decisions.d"
 
 # Dogfood for the document construction against a repository `luria remotes
-# --check` can actually verify: LU-DP-9 → …/docs/design-principles.md#dp-9.
-[luria.remotes.LU.schemes.DP]
-document = "docs/design-principles.md"
+# --check` can actually verify: LU-GP-9 → …/docs/guiding-principles.md#gp-9.
+[luria.remotes.LU.schemes.GP]
+document = "docs/guiding-principles.md"
 
 # Fixture codes (#38): FX-ADR-032 is an example, resolvable by construction
 # to the note that says so — never a claim about this record, and never able

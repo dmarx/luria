@@ -135,7 +135,7 @@ def test_book_lists_its_contents(tmp_path):
 
 def test_anchor_is_the_timestamp_not_the_title(tmp_path):
     """A title can be corrected. A heading-derived anchor would break every
-    link to it silently, which is the failure polarity DP-3 rules out."""
+    link to it silently, which is the failure polarity GP-3 rules out."""
     j = jrnl(tmp_path)
     file_entry(j, "2026-08-03T21:19:26", "Before")
     before = journal.entries(j)[0].anchor

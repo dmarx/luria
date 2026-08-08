@@ -92,7 +92,7 @@ def run(into: str = None, issue_url: str = "",
     verb = "would write" if dry_run else "wrote"
     print(f"{verb} {written} file(s), skipped {skipped} existing.")
     # A file the project already owns is never touched — but the one an
-    # agent reads first deserves more than a silent skip (DP-1): say what
+    # agent reads first deserves more than a silent skip (GP-1): say what
     # the scaffolded shape would have been, and leave the merge to a human
     # or their agent.
     if any(p.name == "CLAUDE.md" for p in kept):

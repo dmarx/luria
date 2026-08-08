@@ -9,7 +9,7 @@ particular project. It reads `luria.toml` from the project root:
     [luria.paths]
     docs = "docs"
     decisions = "record/decisions.d"
-    design_principles = "docs/design-principles.md"
+    design_principles = "docs/guiding-principles.md"
 
     [luria.fragments]
     "record/changelog.d" = "CHANGELOG.md"   # collected into…
@@ -57,7 +57,7 @@ DEFAULTS: dict = {
     "paths": {
         "docs": "docs",
         "decisions": "record/decisions.d",
-        "design_principles": "docs/design-principles.md",
+        "design_principles": "docs/guiding-principles.md",
         # Committed with the other views rather than left in a build dir, so a
         # README badge has somewhere real to point (#35).
         "reports": "docs/reports",
@@ -151,6 +151,12 @@ class Scheme:
     # read/write boundary existed (ADR-021), kept so adoption never starts
     # with a move.
     output: Path | None = None
+    # Frontmatter fields every document in this scheme must carry, beyond
+    # the standard set the lint always checks. The enabling piece for moving
+    # a document in from a scheme with a different template (ADR-040): the
+    # machinery moves the file, and the missing field fails lint until a
+    # human supplies it — the human vouches for the move.
+    requires: tuple[str, ...] = ()
 
     @property
     def view(self) -> Path:
@@ -206,7 +212,7 @@ class Scheme:
         """Number → path for every document in this scheme, ascending.
 
         The one place a scheme directory is read. Five copies of this glob had
-        accumulated, each with its own regex — the drift DP-4 names, harmless
+        accumulated, each with its own regex — the drift GP-4 names, harmless
         only for as long as the filename shape never changed."""
         found: dict[int, Path] = {}
         for path in sorted(self.dir.glob("*.md")):
@@ -227,7 +233,7 @@ class RemoteScheme:
         dir = "docs/decisions"                 # file per code
 
         [luria.remotes.SG.schemes.DP]
-        document = "docs/design-principles.md" # sections of one file…
+        document = "docs/guiding-principles.md" # sections of one file…
         anchor = "dp-{number}"                 # …at Luria's stable anchors
 
     `anchor` defaults to the prefix lowercased plus the number — `dp-18` —
@@ -548,6 +554,7 @@ def load(root: Path | None = None) -> Config:
                 prefix, root / spec["dir"], spec.get("active", "Active"),
                 spec.get("render", "index"),
                 root / spec["output"] if spec.get("output") else None,
+                tuple(spec.get("requires", ())),
             )
             for prefix, spec in raw["schemes"].items()
         },

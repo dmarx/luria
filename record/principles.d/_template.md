@@ -1,12 +1,12 @@
 ---
 # Copy this file to DP-<NNN>.md — next number wins. Numbering is sequential and
-# permanent: a principle is cited by number ("per DP-3"), so a number can be
+# permanent: a principle is cited by number ("per GP-3"), so a number can be
 # retired but never reused. The filename is the code and nothing else; the title
 # goes in `title:` below, where a revision costs an edit rather than a rename
 # plus every link (ADR-013) — which matters more here than for a decision,
 # because principles are expected to be reworded.
 #
-# This frontmatter is the ONLY place these facts live. `docs/design-principles.md`
+# This frontmatter is the ONLY place these facts live. `docs/guiding-principles.md`
 # is generated from it (ADR-012) — never edit that file by hand; run
 # `luria index`.
 

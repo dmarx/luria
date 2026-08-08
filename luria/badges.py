@@ -70,7 +70,7 @@ def report_link(filename: str) -> str:
 
     Read from config rather than restated — a default that spells out a
     configured path is a projection, and projections drift
-    ([DP-3](../docs/design-principles.md#dp-3)); the predecessor of this
+    ([GP-3](../docs/guiding-principles.md#gp-3)); the predecessor of this
     function proved it, the moment the index moved."""
     return current().rel(current().reports / filename)
 
@@ -91,7 +91,7 @@ def rewrite(text: str) -> str:
 
     Returns the text unchanged when there is no region — a project that hasn\'t
     opted in isn\'t nagged, and `--write` says so rather than silently doing
-    nothing (DP-1)."""
+    nothing (GP-1)."""
     return REGION_RE.sub(lambda _: region(), text, count=1)
 
 

@@ -1,6 +1,6 @@
 ### Added
 
-- **Design principles are fragments, and `docs/design-principles.md` is
+- **Design principles are fragments, and `docs/guiding-principles.md` is
   generated from them**
   ([ADR-012](record/decisions.d/ADR-012.md)). One file
   per principle in `docs/principles/`, with frontmatter carrying a `version`
@@ -26,7 +26,7 @@
   `<a name="dp-N">` beside each heading, and `luria link` prefers it over the
   heading slug: a principle is a living document, so a heading-derived anchor
   stops resolving the moment the wording moves — silently, which is the
-  fail-stale polarity [DP-3](docs/design-principles.md#dp-3) rules out. Projects
+  fail-stale polarity [GP-3](docs/guiding-principles.md#gp-3) rules out. Projects
   whose principles are still one hand-written file keep the heading-slug
   fallback.
 

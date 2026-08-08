@@ -14,7 +14,7 @@ from _scheme import decision
 
 from luria import config, doc_refs, ref_status, remotes
 
-# unresolved-ok-file: ADR-999 UP-ADR-999 DP-018 — fixture codes, not claims about
+# unresolved-ok-file: ADR-999 UP-ADR-999 — fixture codes, not claims about
 # this repo. ADR-032 left the list when a real thirty-second decision arrived and
 # the fixture number started resolving.
 REPO = Path(__file__).resolve().parents[1]
@@ -58,7 +58,7 @@ def test_a_discovered_filename_wins(project):
 
 def test_discovery_is_authoritative_once_done(project):
     """A code absent from a lockfile that was read *from the remote* names no
-    document there. Guessing a filename anyway is how `DP-004` produced a
+    document there. Guessing a filename anyway is how a foreign `SG-DP-4` produced a
     confident link to a file that has never existed."""
     with_remote(project)
     lockfile(project, {"ADR-032": "adr-032-x.md"})
@@ -184,7 +184,7 @@ def test_an_unparseable_upstream_config_leaves_the_default_standing():
 
 def test_discovery_says_why_it_found_nothing(project):
     """A discovery that silently returns {} is indistinguishable from a remote
-    with no documents (DP-1)."""
+    with no documents (GP-1)."""
     (project / "luria.toml").write_text(
         '[luria]\nissue_url = ""\n[luria.remotes.UP]\nname = "upstream"\n')
     config.reset()
@@ -207,7 +207,7 @@ def test_hand_written_url_is_reported(project):
     with_remote(project)
     flagged, stale = hand(project, "[UP-ADR-032](https://example.test/elsewhere.md)\n")
     assert len(flagged) == 1
-    # Names the code, the fact, and what construction would have said (DP-1).
+    # Names the code, the fact, and what construction would have said (GP-1).
     assert "UP-ADR-032" in flagged[0] and "hand-written" in flagged[0]
     assert "record/decisions.d/ADR-032.md" in flagged[0]
     assert stale == []
@@ -265,7 +265,7 @@ def test_a_quoted_hand_link_is_a_specimen_not_a_citation(project):
 
 
 SCHEMED = (
-    '[luria.remotes.UP.schemes.DP]\ndocument = "docs/design-principles.md"\n'
+    '[luria.remotes.UP.schemes.VP]\ndocument = "docs/values.md"\n'
     '[luria.remotes.UP.schemes.RFC]\ndir = "docs/rfcs"\n'
 )
 
@@ -274,22 +274,22 @@ def test_document_scheme_constructs_a_file_anchor(project):
     """A document-rendered scheme's documents are sections, not files — the
     construction is the assembled page plus an anchor."""
     with_remote(project, SCHEMED)
-    assert remotes.resolve("UP", "DP-18") == (
-        "https://github.com/o/r/blob/main/docs/design-principles.md#dp-18")
+    assert remotes.resolve("UP", "VP-18") == (
+        "https://github.com/o/r/blob/main/docs/values.md#vp-18")
 
 
 def test_anchor_defaults_to_the_stable_anchor_shape(project):
-    """`dp-{number}` unpadded — the shape Luria's own document render emits,
+    """`vp-{number}` unpadded — the shape Luria's own document render emits,
     so a remote on current conventions needs only the `document` line."""
     with_remote(project, SCHEMED)
-    assert remotes.resolve("UP", "DP-9").endswith("#dp-9")
+    assert remotes.resolve("UP", "VP-9").endswith("#vp-9")
 
 
 def test_anchor_template_is_configurable(project):
     with_remote(project,
-        '[luria.remotes.UP.schemes.DP]\ndocument = "PRINCIPLES.md"\n'
+        '[luria.remotes.UP.schemes.VP]\ndocument = "PRINCIPLES.md"\n'
         'anchor = "principle-{number}"\n')
-    assert remotes.resolve("UP", "DP-4").endswith("PRINCIPLES.md#principle-4")
+    assert remotes.resolve("UP", "VP-4").endswith("PRINCIPLES.md#principle-4")
 
 
 def test_scheme_dir_scopes_the_file_convention(project):
@@ -303,9 +303,9 @@ def test_scheme_dir_scopes_the_file_convention(project):
 
 def test_scheme_url_template_wins(project):
     with_remote(project,
-        '[luria.remotes.UP.schemes.DP]\n'
+        '[luria.remotes.UP.schemes.VP]\n'
         'url = "https://up.example/values/{number}"\n')
-    assert remotes.resolve("UP", "DP-3") == "https://up.example/values/3"
+    assert remotes.resolve("UP", "VP-3") == "https://up.example/values/3"
 
 
 def test_lockfile_authority_does_not_cover_document_schemes(project):
@@ -314,7 +314,7 @@ def test_lockfile_authority_does_not_cover_document_schemes(project):
     lockfile is not evidence — the anchor construction must survive it."""
     with_remote(project, SCHEMED)
     lockfile(project, {"ADR-032": "adr-032-changelog-ci-collection.md"})
-    assert remotes.resolve("UP", "DP-18").endswith("#dp-18")
+    assert remotes.resolve("UP", "VP-18").endswith("#vp-18")
     # …while file-per-code codes stay under its authority (ADR-016).
     assert remotes.resolve("UP", "ADR-999") == ""
 
@@ -324,8 +324,8 @@ def test_url_ok_retires_when_the_construction_catches_up(project):
     and a leftover acknowledgement reports itself stale."""
     with_remote(project, SCHEMED)
     flagged, stale = hand(project,
-        "<!-- url-ok: UP-DP-18 — was unconstructible before ADR-023 -->\n"
-        "[UP-DP-18](https://github.com/o/r/blob/main/docs/design-principles.md#dp-18)\n")
+        "<!-- url-ok: UP-VP-18 — was unconstructible before ADR-023 -->\n"
+        "[UP-VP-18](https://github.com/o/r/blob/main/docs/values.md#vp-18)\n")
     assert flagged == []                      # the link now matches construction
     assert len(stale) == 1                    # …so the annotation is done
 
@@ -380,7 +380,7 @@ def test_unconfigured_prefixes_do_not_match(project):
 
 def test_uid_remote_without_a_template_constructs_nothing(project):
     """One rung only — with no template there is nothing to guess with, and
-    "" is what makes ref-status report the citation as dangling (DP-1)."""
+    "" is what makes ref-status report the citation as dangling (GP-1)."""
     with_remote(project, '[luria.remotes.ARXIV]\nuid = "\\\\d{4}[.]\\\\d{4,5}"\n')
     assert remotes.resolve("ARXIV", "2403.05530") == ""
 
@@ -418,4 +418,4 @@ def test_fixture_prefix_resolves_to_the_convention_note():
     it, and can never collide with the real sequence."""
     url = remotes.resolve("FX", "ADR-032")
     assert url.endswith("docs/directives.md#fixture-codes")
-    assert remotes.resolve("FX", "DP-9").endswith("#fixture-codes")
+    assert remotes.resolve("FX", "VP-9").endswith("#fixture-codes")

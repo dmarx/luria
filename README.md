@@ -6,8 +6,8 @@
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/github/license/dmarx/luria)](LICENSE)
 <!-- luria:badges -->
-[![needs decision: 3](https://img.shields.io/badge/needs%20decision-3-orange)](docs/reports/pending-decisions.md)
-[![cited but retired: 1](https://img.shields.io/badge/cited%20but%20retired-1-orange)](docs/reports/reference-status.md)
+[![needs decision: 1](https://img.shields.io/badge/needs%20decision-1-orange)](docs/reports/pending-decisions.md)
+[![cited but retired: 0](https://img.shields.io/badge/cited%20but%20retired-0-brightgreen)](docs/reports/reference-status.md)
 <!-- /luria:badges -->
 
 </div>
@@ -64,21 +64,21 @@ In Luria, decisions carry a state. Decisions can be Active, Proposed, Deferred, 
 In addition to making decisions and authoring fragments, the user participates by promoting daily choices from the devlog into formally documented
 decisions, superseding old decisions with new ones, and promoting insights that repeatedly inform decisions into guiding principles.
 
-The norms that matter get walked up the ladder — prose → convention → mechanism → guarantee ([DP-5](docs/design-principles.md#dp-5)), and Luria instruments the rungs.
+The norms that matter get walked up the ladder — prose → convention → mechanism → guarantee ([GP-5](docs/guiding-principles.md#gp-5)), and Luria instruments the rungs.
 
 ### The four layers
 
 | layer | holds | test |
 |---|---|---|
-| design principles | standing **values**, numbered, citable and **versioned** | *have we re-derived this more than once?* |
+| guiding principles | standing **values**, numbered, citable and **versioned** | *have we re-derived this more than once?* |
 | decisions | a **choice among alternatives** at a point in time | *did we reject an alternative, or set a constraint?* |
 | changelog fragments | **what changed**, operator-facing | *would someone running this notice?* |
 | devlog entries | **how it went**, including the wrong theories | *will a future debugger want the narrative?* |
 
 Each contribution writes a *fragment* nobody else touches; the shared documents are **views** ([ADR-002](record/decisions.d/ADR-002.md), [ADR-020](record/decisions.d/ADR-020.md), [ADR-021](record/decisions.d/ADR-021.md)). 
-A file every contribution appends to is a lock, and its conflicts carry no information ([DP-2](docs/design-principles.md#dp-2)).
+A file every contribution appends to is a lock, and its conflicts carry no information ([GP-2](docs/guiding-principles.md#gp-2)).
 
-The tree says which is which ([DP-9](docs/design-principles.md#dp-9),
+The tree says which is which ([GP-9](docs/guiding-principles.md#gp-9),
 [ADR-021](record/decisions.d/ADR-021.md)): **you read in `docs/`, you file in
 `record/`**. Browsing lands on prose and generated views; the sources sit in
 `record/`'s `.d`-suffixed containers, arrived at by link or on purpose. A view
@@ -249,7 +249,7 @@ drifted.** Not toward one wrong value — toward *variety*, which is worse,
 because a reader can't learn what the convention is.
 
 So the norms that matter get walked up the ladder — prose → convention →
-mechanism → guarantee ([DP-5](docs/design-principles.md#dp-5)) — and this
+mechanism → guarantee ([GP-5](docs/guiding-principles.md#gp-5)) — and this
 package is the last rung.
 
 ## Provenance
@@ -268,7 +268,7 @@ consumer to hit a bug is this repo.
 ## Docs
 
 - [Project memory](docs/project-memory.md) — **humans** start here: the doctrine.
-- [Design principles](docs/design-principles.md) - **agents** start here: the constitution.
+- [Design principles](docs/guiding-principles.md) - **agents** start here: the constitution.
 - [Decisions](docs/decisions/README.md) - **contributors** start here: the history.
 - [Comment directives](docs/directives.md) - **power users** start here. — `inactive-ok`, `unexempt` 
 - [Adopting Luria](docs/adopting.md)

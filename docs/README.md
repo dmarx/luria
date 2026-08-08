@@ -2,7 +2,7 @@
 
 - [Project memory: how a repo thinks](project-memory.md) — the doctrine. Start
   here; this is what an agent file should point at.
-- [Design principles](design-principles.md) — the standing values, numbered and
+- [Guiding principles](guiding-principles.md) — the standing values, numbered and
   citable.
 - [Decisions](decisions/README.md) — the choices, with their alternatives.
 - [Comment directives](directives.md) — the `inactive-ok` / `unexempt`

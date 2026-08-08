@@ -6,7 +6,7 @@
 
 A scheme's view used to be hand-maintained: every decision-bearing branch
 appended a row to the same table and a link to the same category list. That
-makes it the shared-file lock [DP-2](../docs/design-principles.md#dp-2) names,
+makes it the shared-file lock [GP-2](../docs/guiding-principles.md#gp-2) names,
 and it *drifts*, because the row duplicates data the document already owns — in
 the corpus this was extracted from, 45 of 155 rows disagreed with their own
 decision's status (ADR-004).
@@ -22,7 +22,7 @@ declares how its documents are rendered (ADR-012):
        in it an error, ADR-021)
 
   render = "document"   the read-as-a-whole shape — bodies concatenated
-      docs/design-principles.md       stub prose + every principle in order
+      docs/guiding-principles.md       stub prose + every principle in order
 
 Adding a document means adding ONE file. Adding a *tag* means using it in one;
 `tags.yaml` only supplies ordering and a blurb, so an unlisted tag still renders.
@@ -258,7 +258,7 @@ def render_document(scheme, docs: list[Adr]) -> str:
     """Every document's body, in number order, as one page.
 
     The right shape when the set is read *as a whole* rather than browsed one at
-    a time — which is what a principles document is: people cite "DP-3" and then
+    a time — which is what a principles document is: people cite "GP-3" and then
     read it in the context of its neighbours. The metadata line is what the
     fragment frontmatter buys: a version, so a revised principle says so
     (ADR-012), and the decisions whose experience produced it."""
@@ -275,7 +275,7 @@ def render_document(scheme, docs: list[Adr]) -> str:
         # A stable anchor, because the heading is not one. A principle is a
         # living document — two of the eight here have been reworded already —
         # and a heading-derived anchor stops resolving the moment the wording
-        # moves, silently, which is the fail-stale polarity DP-3 rules out.
+        # moves, silently, which is the fail-stale polarity GP-3 rules out.
         # This one is keyed to the number, which is the thing that never moves.
         body = f'<a name="{doc.prefix.lower()}-{doc.number}"></a>\n\n{body}'
         meta = [f"*v{doc.version}"]
@@ -297,7 +297,7 @@ def _link(code: str, base: Path) -> str:
     Relative to *where the text renders*, not where the fragment lives — the
     same rule the reference fixer follows for anything assembled elsewhere
     (ADR-005). An unresolvable code yields "", and the caller renders the bare
-    code rather than a link to nothing (DP-1: say what you can, don't invent)."""
+    code rather than a link to nothing (GP-1: say what you can, don't invent)."""
     try:
         prefix, number = code.split("-")
         path = current().schemes[prefix.upper()].documents().get(int(number))
@@ -408,7 +408,7 @@ def run(check: bool = False) -> None:
         p.write_text(text)
     # Name every scheme, not just the decisions: a project that adds one wants
     # to see it counted, and a scheme silently rendering nothing is the failure
-    # this line exists to make visible (DP-1).
+    # this line exists to make visible (GP-1).
     from . import journal
     filed = {n: len(journal.entries(j)) for n, j in sorted(cfg.journals.items())}
     counted = ", ".join(
