@@ -18,17 +18,24 @@ Nothing unacknowledged. ✅
 
 A reference nobody can follow. Three things look identical from here and read very differently — a typo, a number carried in from another project, and an illustrative code in an example — so this is a report, not an error. `unresolved-ok:` retires the deliberate ones, at the same three scopes.
 
-**1 code(s) name no document.** 45 reference(s) carry an `unresolved-ok` annotation and are not listed below.
+**2 code(s) name no document.** 45 reference(s) carry an `unresolved-ok` annotation and are not listed below.
 
 
-### DP-018 — no such document (6 site(s) · 4 acknowledged elsewhere)
+### DP-018 — no such document (9 site(s) · 4 acknowledged elsewhere)
 
 - [`record/decisions.d/ADR-040.md:42`](../../record/decisions.d/ADR-040.md)
-- [`tests/test_migrations.py:54`](../../tests/test_migrations.py)
-- [`tests/test_migrations.py:58`](../../tests/test_migrations.py)
+- [`tests/test_migrations.py:56`](../../tests/test_migrations.py)
 - [`tests/test_migrations.py:60`](../../tests/test_migrations.py)
-- [`tests/test_migrations.py:86`](../../tests/test_migrations.py)
-- [`tests/test_migrations.py:94`](../../tests/test_migrations.py)
+- [`tests/test_migrations.py:62`](../../tests/test_migrations.py)
+- [`tests/test_migrations.py:88`](../../tests/test_migrations.py)
+- [`tests/test_migrations.py:96`](../../tests/test_migrations.py)
+- [`tests/test_migrations.py:181`](../../tests/test_migrations.py)
+- [`tests/test_migrations.py:236`](../../tests/test_migrations.py)
+- [`tests/test_migrations.py:270`](../../tests/test_migrations.py)
+
+### DP-013 — no such document (1 site(s))
+
+- [`luria/migrate.py:285`](../../luria/migrate.py)
 
 ## Files that opt out of reference checking
 
