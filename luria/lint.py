@@ -106,6 +106,15 @@ def check_frontmatter(errors: list[str]) -> None:
                     "' — note')")
             if not (meta.get("tags") or []):
                 errors.append(f"{rel}: no `tags:` in frontmatter (see ADR-003)")
+            # Per-scheme requirements (ADR-040): the fields a scheme demands
+            # beyond the standard set — what makes a cross-scheme move safe
+            # to automate, because the moved document fails here until a
+            # human supplies what the target scheme's template would have.
+            for field in scheme.requires:
+                if not meta.get(field):
+                    errors.append(
+                        f"{rel}: no `{field}:` in frontmatter — the "
+                        f"{scheme.prefix} scheme requires it (luria.toml)")
 
 
 def check_title(errors: list[str], rel: str, meta: dict, body: str) -> None:
@@ -261,8 +270,9 @@ def check_bare_refs(errors: list[str]) -> None:
 # UNACKNOWLEDGED rows ever reach a class, so the directives stay the escape
 # hatch under enforcement — the dial changes the consequence, not the
 # accounting.
-FAILABLE = ("retired-citations", "unresolved-codes", "hand-written-urls",
-            "stale-directives", "pending-documents", "unlinted-files")
+FAILABLE = ("retired-citations", "unresolved-codes", "legacy-spellings",
+            "hand-written-urls", "stale-directives", "pending-documents",
+            "unlinted-files")
 
 
 def status_sections() -> list[tuple[str, str, list[str]]]:
@@ -289,6 +299,17 @@ def status_sections() -> list[tuple[str, str, list[str]]]:
             f"{len(loose)} code(s) resolve to no document "
             "(`luria reports` for the sites, `unresolved-ok:` for the "
             "deliberate ones)", loose))
+
+    # An old spelling of a migrated document (ADR-040): it resolves through
+    # the `formerly:` alias, so nothing is broken — but one spelling
+    # tree-wide is the migration's contract, and the fixer restores it.
+    stale_spellings = ref_status.legacy_lines(result, docs)
+    if stale_spellings:
+        sections.append((
+            "legacy-spellings",
+            f"{len(stale_spellings)} migrated code(s) cited by their old "
+            "spelling (`luria link --fix` modernizes prose; `unresolved-ok:` "
+            "keeps a deliberate one)", stale_spellings))
 
     # A whole file opting out of reference checking is legitimate and blunt
     # (#37) — blunt enough that the count surfaces even though nothing here
