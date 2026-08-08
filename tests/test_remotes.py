@@ -184,7 +184,7 @@ def test_an_unparseable_upstream_config_leaves_the_default_standing():
 
 def test_discovery_says_why_it_found_nothing(project):
     """A discovery that silently returns {} is indistinguishable from a remote
-    with no documents (DP-1)."""
+    with no documents (GP-1)."""
     (project / "luria.toml").write_text(
         '[luria]\nissue_url = ""\n[luria.remotes.UP]\nname = "upstream"\n')
     config.reset()
@@ -207,7 +207,7 @@ def test_hand_written_url_is_reported(project):
     with_remote(project)
     flagged, stale = hand(project, "[UP-ADR-032](https://example.test/elsewhere.md)\n")
     assert len(flagged) == 1
-    # Names the code, the fact, and what construction would have said (DP-1).
+    # Names the code, the fact, and what construction would have said (GP-1).
     assert "UP-ADR-032" in flagged[0] and "hand-written" in flagged[0]
     assert "record/decisions.d/ADR-032.md" in flagged[0]
     assert stale == []
@@ -380,7 +380,7 @@ def test_unconfigured_prefixes_do_not_match(project):
 
 def test_uid_remote_without_a_template_constructs_nothing(project):
     """One rung only — with no template there is nothing to guess with, and
-    "" is what makes ref-status report the citation as dangling (DP-1)."""
+    "" is what makes ref-status report the citation as dangling (GP-1)."""
     with_remote(project, '[luria.remotes.ARXIV]\nuid = "\\\\d{4}[.]\\\\d{4,5}"\n')
     assert remotes.resolve("ARXIV", "2403.05530") == ""
 

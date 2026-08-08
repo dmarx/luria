@@ -19,6 +19,6 @@
   a link — the flagged decision, every citing line, every pending code. The
   reports carry no clock (ages read "open since <date>"), because a committed
   view that embeds today's date goes stale at midnight on every branch at
-  once ([DP-2](docs/design-principles.md#dp-2)). The default `reports` path
+  once ([GP-2](docs/guiding-principles.md#gp-2)). The default `reports` path
   moves from `build/doc-reports` to `docs/reports`; `luria reports` still
   writes them standalone for the CI artifact.

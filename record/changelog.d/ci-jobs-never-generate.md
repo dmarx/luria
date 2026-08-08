@@ -25,7 +25,7 @@
   ([#21](https://github.com/dmarx/luria/issues/21), [#23](https://github.com/dmarx/luria/issues/23)).
 - Bare `luria badges` says on **stderr** that it only printed. As a `- run:`
   step it looked exactly like a write and exited 0 having done nothing
-  ([DP-1](docs/design-principles.md#dp-1)). Stdout is unchanged, so redirection still works.
+  ([GP-1](docs/guiding-principles.md#gp-1)). Stdout is unchanged, so redirection still works.
 
 ### Documentation
 

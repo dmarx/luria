@@ -4,7 +4,7 @@
 A single long file that every substantial contribution appends to is a reliable
 merge-conflict generator: two branches that touch nothing else in common still
 collide at the bottom of it, and so does every rebase onto a main that has
-collected since. That is [DP-2](../docs/design-principles.md#dp-2), and the fix
+collected since. That is [GP-2](../docs/guiding-principles.md#gp-2), and the fix
 is structural — each contribution owns a fragment nobody else writes, and the
 shared file becomes a VIEW assembled on a cadence.
 
@@ -80,7 +80,7 @@ def collect(view_text: str, bodies: list[str], style: str = "append",
 
     Pure — the CLI does the I/O. Raises if the marker is missing rather than
     guessing where the entries belong: silently appending to the wrong place in
-    a long narrative is worse than failing (DP-1). A batch of only stubs
+    a long narrative is worse than failing (GP-1). A batch of only stubs
     changes nothing — in the changelog style that is what keeps an empty
     `## <date>` heading from accumulating per quiet collection.
     """

@@ -17,7 +17,7 @@ place on its first try.
 
 | layer | holds | one-line test |
 |---|---|---|
-| [`record/principles.d/`](design-principles.md) | standing **values**, numbered, cited as "DP-2" instead of re-argued | *have we re-derived this reasoning more than once?* |
+| [`record/principles.d/`](guiding-principles.md) | standing **values**, numbered, cited as "GP-2" instead of re-argued | *have we re-derived this reasoning more than once?* |
 | [`record/decisions.d/`](decisions/README.md) | a **choice among alternatives** at a point in time, one file each | *did we reject an alternative, or set a constraint a future edit could violate?* |
 | `record/changelog.d/` fragments | **what changed**, operator-facing, terse | *would someone running or using this notice?* |
 | `record/devlog.d/` entries | **how it went** — including failed approaches and wrong theories, which are the reusable part | *will a future debugger want the narrative?* |
@@ -25,7 +25,7 @@ place on its first try.
 The links go to the *views* — the generated index, the assembled document —
 because that is where reading starts; the paths name the *sources*, because
 that is where filing happens. The split is the layout's one rule
-([DP-9](design-principles.md#dp-9), [ADR-021](../record/decisions.d/ADR-021.md)):
+([GP-9](guiding-principles.md#gp-9), [ADR-021](../record/decisions.d/ADR-021.md)):
 `docs/` is the read surface, `record/` is the write surface, and the `.d`
 suffix marks each container you file into.
 
@@ -35,7 +35,7 @@ by adding a decision rather than by rewriting its body; a principle is added on
 the *second* re-derivation of the same reasoning.
 
 The top two layers are one file each, in `record/principles.d/` and
-`record/decisions.d/`, with YAML frontmatter — `docs/design-principles.md` and the
+`record/decisions.d/`, with YAML frontmatter — `docs/guiding-principles.md` and the
 decision index are both **generated** from them
 ([ADR-012](../record/decisions.d/ADR-012.md)). A principle's
 frontmatter carries a `version`, because principles are living documents: a
@@ -47,7 +47,7 @@ evidence that stops a principle reading as taste.
 
 **File in the same contribution as the work.** "Later" is a euphemism for never,
 and a fact filed while its context is loaded costs a paragraph — re-derived
-cold, it costs a session ([DP-8](design-principles.md#dp-8)).
+cold, it costs a session ([GP-8](guiding-principles.md#gp-8)).
 
 ---
 
@@ -92,8 +92,8 @@ itself is a rule nobody has tested:
 - **Reason wrong, choice stands.** [ADR-018](../record/decisions.d/ADR-018.md) is at `v2`.
   It rejected an alternative by citing a decision that didn't apply; the
   rejection survives on a better argument, and `history:` records both.
-- **Value reworded.** [DP-2](design-principles.md#dp-2) and
-  [DP-3](design-principles.md#dp-3) are both at `v2`. Each was first written
+- **Value reworded.** [GP-2](guiding-principles.md#gp-2) and
+  [GP-3](guiding-principles.md#gp-3) are both at `v2`. Each was first written
   about a single artifact and failed to generalize until a second instance
   forced it — which is the most useful thing either of them teaches, and it
   only survives because the version is on the document.
@@ -136,7 +136,7 @@ list built from the titles. The timestamp is also the ordering, so what the log
 says happened first is a property of the record rather than of the order the
 branches landed.
 
-The reasoning is [DP-2](design-principles.md#dp-2): a file every contribution must
+The reasoning is [GP-2](guiding-principles.md#gp-2): a file every contribution must
 append to is a *lock*. Concurrent branches collide in it contentlessly, and
 every hand-merge is a chance to drop someone's work. The fix is structural —
 each contribution owns a file nobody else writes, and the shared artifact is
@@ -150,7 +150,7 @@ caught instead of discovered.
 
 ## 4. The drift doctrine
 
-The most-earned lesson, [DP-3](design-principles.md#dp-3): **a hand-maintained
+The most-earned lesson, [GP-3](guiding-principles.md#gp-3): **a hand-maintained
 projection of a source of truth will drift** — not as a risk but as a rate. The
 remedy ladder:
 
@@ -163,7 +163,7 @@ remedy ladder:
    a comment: *fail-safe* or *fail-loud*. *Fail-stale* — the miss ships as
    silently wrong behavior — is never acceptable, and it is the naive default.
 
-The enforcement clause is [DP-6](design-principles.md#dp-6): **fire before
+The enforcement clause is [GP-6](guiding-principles.md#gp-6): **fire before
 trusting.** Every guard gets one deliberate sabotage run to prove it catches.
 Provisioned is not working.
 
@@ -171,13 +171,13 @@ Provisioned is not working.
 
 ## 5. The collaboration model, in the open
 
-**Culture must be compiled** ([DP-5](design-principles.md#dp-5)). A stateless
+**Culture must be compiled** ([GP-5](guiding-principles.md#gp-5)). A stateless
 collaborator can't be socialized, so a norm that exists only as prose is
 followed probabilistically. Norms that matter get walked up the ladder *prose →
 convention → mechanism → guarantee*. When you find yourself repeating a
 correction, that is the signal to walk the norm up a rung.
 
-**No private brains** ([DP-7](design-principles.md#dp-7)). Agent files are legitimate
+**No private brains** ([GP-7](guiding-principles.md#gp-7)). Agent files are legitimate
 as **bootloaders** — pointers to the shared record, plus harness mechanics no
 human needs — never as knowledge stores. The decision test: *would a new human
 hire need this?* Then it belongs in the shared docs, and the agent file links to
@@ -196,10 +196,10 @@ it. This page is what the bootloader points at.
 - [ ] A principle only on the *second* re-derivation of the same reasoning —
       and when an existing one nearly covers it, **widen that one and bump its
       `version`** rather than adding a neighbour it will be confused with.
-- [ ] In code, cite the record inline (`# ADR-004`, `# DP-3`): comments that
+- [ ] In code, cite the record inline (`# ADR-004`, `# GP-3`): comments that
       name their justification survive refactors that arguments don't.
 - [ ] If you built a guard or gate: note the sabotage run that fired it
-      ([DP-6](design-principles.md#dp-6)).
+      ([GP-6](guiding-principles.md#gp-6)).
 
 ## What keeps this true
 

@@ -1,0 +1,20 @@
+# A migration spec (ADR-040): the executable plan and the audit trail in one
+# artifact. `luria migrate 0001 --dry-run` prints what it would do.
+# This file is deliberately never swept — its mapping remembers the old
+# spellings, which is its job.
+title = "Design principles become guiding principles"
+issue = "#29"
+
+[[operations]]
+op = "rename_scheme"
+from = "DP"
+to = "GP"
+output = "docs/guiding-principles.md"
+# LU is this project registered as a remote of itself (the dogfood entry),
+# so its composed codes follow the rename. SG is strata-g's namespace and is
+# deliberately absent.
+remotes = ["LU"]
+# The template ships the same scheme to new adopters; its config follows.
+# (Its seed documents are moved by hand — the template is in effect a
+# downstream project, and downstream replay is rung 3, deferred.)
+configs = ["template/luria.toml"]

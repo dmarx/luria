@@ -12,5 +12,5 @@
 ### Changed
 
 - [ADR-040](record/decisions.d/ADR-040.md), [ADR-041](record/decisions.d/ADR-041.md)
-  and [DP-010](record/principles.d/DP-010.md) go Active: the doctrine
+  and [GP-010](record/principles.d/GP-010.md) go Active: the doctrine
   batch's merge was the verdict.

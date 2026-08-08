@@ -295,8 +295,8 @@ def sweep_text(text: str, plan: Plan, paths: bool = True) -> tuple[str, int]:
         text = swap(text,
                     rf"(?<![A-Za-z0-9-]){re.escape(old_p)}([- ])"
                     rf"(0*{old_n})(?!\d)", code_repl)
-        # The two spellings of a machinery-authored anchor: the `#dp-4` a
-        # link target carries, and the `name="dp-4"` the render emits.
+        # The two spellings of a machinery-authored anchor: the `#gp-4` a
+        # link target carries, and the `name="gp-4"` the render emits.
         text = swap(text,
                     rf"(?<=#){re.escape(old_p.lower())}-0*{old_n}(?!\d)",
                     f"{new_p.lower()}-{new_n}")

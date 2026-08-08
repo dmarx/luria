@@ -105,7 +105,7 @@ convention ([ADR-016](../record/decisions.d/ADR-016.md)). When the
 construction cannot be right — the remote's principles are sections of one
 document, say, so there is no file to point at — the URL is written by hand,
 and the hand-written target is a projection frozen at writing time
-([DP-3](design-principles.md#dp-3)): if the remote later adopts a convention
+([GP-3](guiding-principles.md#gp-3)): if the remote later adopts a convention
 or the lockfile learns the real filename, nothing updates it. So each one is
 reported until acknowledged:
 

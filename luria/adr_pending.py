@@ -52,7 +52,7 @@ DEFAULT_STALE_DAYS = 90
 
 @dataclass(frozen=True)
 class Pending:
-    code: str                # `ADR-012`, `DP-004` — every scheme, not just one
+    code: str                # `ADR-012`, `GP-004` — every scheme, not just one
     number: int
     status: str
     title: str

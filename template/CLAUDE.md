@@ -1,7 +1,7 @@
 # CLAUDE.md
 
 **Before anything else, read
-[the design principles](docs/design-principles.md) in full.** They are the
+[the design principles](docs/guiding-principles.md) in full.** They are the
 standing values every choice in this project is judged against; the rest of
 this file, and the record itself, assume you hold them. Read them
 immediately after finishing this file, before any other code or

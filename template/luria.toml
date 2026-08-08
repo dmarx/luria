@@ -11,7 +11,7 @@ issue_url = ""
 [luria.paths]
 docs = "docs"
 decisions = "record/decisions.d"
-design_principles = "docs/design-principles.md"
+design_principles = "docs/guiding-principles.md"
 # Committed views, not build artifacts, so the README badges land on
 # the report that explains their numbers.
 reports = "docs/reports"
@@ -58,11 +58,11 @@ output = "docs/decisions"
 active = "Active"
 render = "index"
 
-[luria.schemes.DP]
+[luria.schemes.GP]
 dir = "record/principles.d"
 active = "Active"
 render = "document"
-output = "docs/design-principles.md"
+output = "docs/guiding-principles.md"
 
 # Another project's record, cited from this one. `LU-ADR-013` then means that
 # project's ADR-013: the fixer links it, the lint demands it, and
@@ -81,8 +81,8 @@ dir  = "record/decisions.d"
 # file-per-code schemes, `document` (+ optional `anchor`) for schemes whose
 # documents are sections of one page. The anchor defaults to `dp-{number}`,
 # the stable shape Luria's document render emits.
-[luria.remotes.LU.schemes.DP]
-document = "docs/design-principles.md"
+[luria.remotes.LU.schemes.GP]
+document = "docs/guiding-principles.md"
 
 # Add your own the same way. A remote whose filenames carry title slugs needs
 # `luria remotes --refresh` once, to discover them into remotes.lock.json; one

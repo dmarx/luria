@@ -9,7 +9,7 @@
   The anchor defaults to the stable shape Luria's document render emits
   (`dp-{number}`), so a remote on current conventions needs one `document`
   line: `SG-DP-18` now constructs to
-  `…/docs/design-principles.md#dp-18` instead of a URL to a file that never
+  `…/docs/guiding-principles.md#dp-18` instead of a URL to a file that never
   existed.
 - `luria remotes` labels which construction answered per code — "a document
   anchor, per the scheme" — alongside the existing rung labels.

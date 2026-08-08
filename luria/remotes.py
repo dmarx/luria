@@ -109,7 +109,7 @@ def parse_code(text: str) -> tuple[Remote, str] | None:
     """`SG-DP-18` → (the SG remote, "DP-018"); None when no remote matches the
     whole string. The one reader of a composed code's anatomy — annotation
     arguments, link labels and report keys all come through here, so the
-    delimiter is spelled in exactly one place (DP-4)."""
+    delimiter is spelled in exactly one place (GP-4)."""
     for remote in sorted(current().remotes.values(),
                          key=lambda r: len(r.prefix), reverse=True):
         m = re.fullmatch(
@@ -199,7 +199,7 @@ def hand_links(files: list[Path] | None = None
     Construction has real limits: a remote's principles may be sections of one
     document, which no filename convention can address, so a hand-written URL
     is sometimes the only correct citation. It is also a hand-maintained
-    projection ([DP-3](../docs/design-principles.md#dp-3)) frozen at writing
+    projection ([GP-3](../docs/guiding-principles.md#gp-3)) frozen at writing
     time — if the remote later adopts a convention or the lockfile learns the
     real filename, nothing updates it. So each one is either acknowledged or
     reported (ADR-035): never an error, never silent.
@@ -311,7 +311,7 @@ def _fetch(url: str) -> tuple[str, str]:
 def discover(remote: Remote) -> tuple[dict[str, str], str]:
     """({code: filename}, how) for one remote. `how` names the source, or the
     reason there wasn't one — a discovery that silently finds nothing is
-    indistinguishable from a remote with no documents (DP-1)."""
+    indistinguishable from a remote with no documents (GP-1)."""
     if not remote.repo:
         return {}, "no `repo` configured"
     raw = f"https://raw.githubusercontent.com/{remote.repo}/{remote.ref}"
@@ -431,7 +431,7 @@ def run(refresh: bool = False, check: bool = False) -> None:
             if remote.uid:
                 # No directory of files to list — the uid template is the
                 # whole construction, so there is nothing to discover, and
-                # saying so beats a silent skip (DP-1).
+                # saying so beats a silent skip (GP-1).
                 print(f"{remote.prefix} ({remote.label}): a uid remote — "
                       "nothing to discover")
                 continue

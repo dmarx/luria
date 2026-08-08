@@ -130,7 +130,7 @@ def test_a_resolvable_wikilink_names_the_fixer(project):
 def test_an_unresolvable_wikilink_is_its_own_error(project):
     """The one place the lint demands something `--fix` cannot do — by design:
     the author asserted a reference, so a silent skip would be a silent
-    refusal (DP-1)."""
+    refusal (GP-1)."""
     project_with(project)
     (project / "docs" / "notes.md").write_text("see [[FAKE-001]]\n")
     errors = wikilink_errors(project)

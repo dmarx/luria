@@ -325,7 +325,7 @@ def directive_problems(path: Path, text: str) -> list[str]:
                        f"(known: {', '.join(sorted(UNEXEMPT_REGIONS))})")
     # A narrower-than-file `unlinted` governs nothing: the opt-out is
     # whole-document by design, and a directive that looks armed but isn't
-    # is the failure this report exists for (DP-1).
+    # is the failure this report exists for (GP-1).
     for d in directives.find(path, text, {UNLINTED}):
         if d.scope != directives.FILE:
             out.append(f"{path.name}:{d.line}: `unlinted` is file-scoped by "
@@ -455,7 +455,7 @@ def _line_index(text: str):
 # the author asserting "this is a reference, link it" (ADR-025). No prose
 # heuristics apply inside the brackets, and one that resolves to nothing is a
 # lint violation rather than a silently-bare code: the request was explicit,
-# so the refusal must be too (DP-1).
+# so the refusal must be too (GP-1).
 WIKILINK_RE = re.compile(r"\[\[([^\][|]+?)(?:\|([^\][]+))?\]\]")
 
 

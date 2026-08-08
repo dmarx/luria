@@ -27,8 +27,8 @@ rebase = builder.rebase_links
 def test_relative_targets_are_rebased():
     assert rebase("see [ADR-053](adr-053-x.md)", "../") == \
         "see [ADR-053](../adr-053-x.md)"
-    assert rebase("see [dp](../design-principles.md#13-a)", "../") == \
-        "see [dp](../../design-principles.md#13-a)"
+    assert rebase("see [dp](../guiding-principles.md#13-a)", "../") == \
+        "see [dp](../../guiding-principles.md#13-a)"
 
 
 def test_absolute_and_anchor_targets_are_left_alone():
@@ -166,7 +166,7 @@ def test_influenced_by_renders_as_a_followable_backlink(project):
 
 
 def test_an_unresolvable_backlink_stays_a_bare_code(project):
-    """DP-1: say what can be said, rather than linking to nothing."""
+    """GP-1: say what can be said, rather than linking to nothing."""
     principle(project, 1, "A value", influenced_by="[ADR-404]")
     out = render(project)
     assert "shaped by ADR-404" in out and "](" not in out.split("shaped by")[1]

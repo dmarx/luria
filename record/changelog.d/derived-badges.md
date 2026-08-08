@@ -8,7 +8,7 @@
   amber — neither number is a failure.
 - **`luria pending` covers every scheme**, not just decisions. A `Proposed`
   principle is an open question in exactly the same way, and its rows are keyed
-  by code (`ADR-012`, `DP-004`) rather than by ADR number.
+  by code (`ADR-012`, `GP-004`) rather than by ADR number.
 
 ### Added
 

@@ -235,7 +235,7 @@ class Scan:
     cited: dict[str, list[Citation]] = field(default_factory=dict)
     # Codes cited that name no document here. Kept rather than dropped: a
     # reference that resolves to nothing is a silent no-op, and a tool that
-    # refuses without saying so teaches nobody (DP-1).
+    # refuses without saying so teaches nobody (GP-1).
     dangling: dict[str, list[Citation]] = field(default_factory=dict)
     # Old spellings of migrated documents (ADR-040): the code names no file,
     # but a `formerly:` field answers for it, so the reference still means

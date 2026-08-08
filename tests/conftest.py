@@ -34,7 +34,7 @@ def project(tmp_path, monkeypatch):
     (tmp_path / "luria.toml").write_text(
         '[luria]\nissue_url = "https://example.test/issues/{n}"\n'
     )
-    (tmp_path / "docs" / "design-principles.md").write_text(
+    (tmp_path / "docs" / "guiding-principles.md").write_text(
         "# Design principles\n\n## 1. First value\n\nBody.\n"
     )
     monkeypatch.setenv("LURIA_ROOT", str(tmp_path))

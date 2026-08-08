@@ -120,7 +120,7 @@ def check_frontmatter(errors: list[str]) -> None:
 def check_title(errors: list[str], rel: str, meta: dict, body: str) -> None:
     """`title:` is the source of truth, and the body's H1 repeats it.
 
-    Two copies of one string is the drifting projection DP-3 names, and the
+    Two copies of one string is the drifting projection GP-3 names, and the
     filename no longer carries a third (ADR-013). The H1 can't simply be
     dropped — someone reading the file on its own needs a heading — so this is
     rung 2: keep the copy, guard the property that they agree."""
@@ -226,7 +226,7 @@ def check_wikilinks(errors: list[str]) -> None:
     """A wikilink is the author asserting "this is a reference" (ADR-025), so
     both failure modes are violations, with different remedies: a resolvable
     one just hasn't been fixed yet, and an unresolvable one is a request the
-    machinery cannot honour — which must be said, not skipped (DP-1)."""
+    machinery cannot honour — which must be said, not skipped (GP-1)."""
     cfg = current()
     for path in doc_refs.doc_files():
         text = path.read_text()
@@ -363,7 +363,7 @@ def report_warnings(errors: list[str]) -> None:
     fail = set(current().fail_on)
     for name in sorted(fail - set(FAILABLE)):
         # A dial set to a notch that doesn't exist must not silently enforce
-        # nothing (DP-1).
+        # nothing (GP-1).
         errors.append(f"luria.toml: `fail_on` names {name!r}, which is no "
                       f"warning class (known: {', '.join(FAILABLE)})")
 

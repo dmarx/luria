@@ -1,6 +1,6 @@
 # Docs
 
-- [Design principles](design-principles.md) — standing values, numbered.
+- [Design principles](guiding-principles.md) — standing values, numbered.
 - [Decisions](decisions/README.md) — choices, with their alternatives.
 - [Development log](devlog/README.md) — the narrative, one book per month.
 
