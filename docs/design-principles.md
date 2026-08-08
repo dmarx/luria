@@ -308,4 +308,4 @@ and who pays?* If the project pays in missed defects, on-by-default. If
 the author pays in unwanted exposure, off-by-default. A switch where both
 answers feel true is usually two switches wearing one name — split it.
 
-*v1 · shaped by [ADR-035](../record/decisions.d/ADR-035.md) · **Proposed***
+*v1 · shaped by [ADR-035](../record/decisions.d/ADR-035.md)*
