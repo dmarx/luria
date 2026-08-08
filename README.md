@@ -258,10 +258,10 @@ consumer to hit a bug is this repo.
 
 ## Docs
 
-- [Project memory](docs/project-memory.md) — the doctrine
-- [Design principles](docs/design-principles.md)
-- [Decisions](docs/decisions/README.md)
-- [Comment directives](docs/directives.md) — `inactive-ok`, `unexempt`
+- [Project memory](docs/project-memory.md) — **humans** start here: the doctrine.
+- [Design principles](docs/design-principles.md) - **agents** start here: the constitution.
+- [Decisions](docs/decisions/README.md) - **contributors** start here: the history.
+- [Comment directives](docs/directives.md) - **power users** start here. — `inactive-ok`, `unexempt` 
 - [Adopting Luria](docs/adopting.md)
 
 
