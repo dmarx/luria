@@ -1,5 +1,12 @@
 # CLAUDE.md
 
+**Before anything else, read
+[the design principles](docs/design-principles.md) in full.** They are the
+standing values every choice in this project is judged against; the rest of
+this file, and the record itself, assume you hold them. Read them
+immediately after finishing this file, before any other code or
+documentation in this repository.
+
 This project keeps its memory in a Luria record — decisions, principles, a
 changelog and a devlog — scaffolded, generated and linted by the `luria`
 CLI. This file is a map, not a copy
@@ -19,7 +26,7 @@ that's wrong.
   — the acknowledgement vocabulary (`inactive-ok:` and friends), wikilinks,
   and fixture codes.
 
-Three ground rules, terse enough to restate:
+Four ground rules, terse enough to restate:
 
 - **Work goes to a branch and a pull request, never straight to the default
   branch** — the record is the deliverable, and it needs a chance to be read
@@ -27,6 +34,15 @@ Three ground rules, terse enough to restate:
 - **File the fragment in the same contribution as the work** (`luria new`):
   a fact filed while its context is loaded costs a paragraph; re-derived
   cold, it costs a session.
-- **Every reference is a hyperlink.** Don't hand-write them — `luria link
-  --fix` writes exactly what the lint demands, and `[[BRACKETS]]` force one
-  the heuristics would pass over.
+- **Never hand-write a link target.** Write the bare code and let `luria
+  link --fix` spell the target: record prose is rendered into views in
+  *other directories*, so a target has to resolve from where the text
+  lands, not where it lives — only the fixer knows that frame. Want prose
+  as the label? That's `[[ADR-001|a labeled wikilink]]`, still the fixer's
+  job. A hand-written target that looks right here is wrong somewhere.
+- **A guard that keeps catching you is a bug report about the workflow.**
+  One catch is the net working; the same catch again means the hazard is
+  upstream — a practice, a missing affordance, an undocumented rule — and
+  the fix is to remove what *generates* the mistake, not to keep thanking
+  the net. Quiet guards are the goal; a busy one is compensating for
+  something.
