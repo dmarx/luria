@@ -17,8 +17,9 @@
 A simple framework for accumulating accurate domain knowledge by leveraging time tested change management strategies.  
 A simple but effective project memory framework based on change management principles.  
 A framework for steering your collaborators by accumulating priorities and constraints.  
-A constraint accumulator for ongoing project improvement and steering.  
-A linter which validates the saliency of inline references.  
+A linter that guards the semantic integrity of inline references.
+A linter that checks whether cited decisions still apply.
+An evidence accumulator for ongoing project improvement.  
 A collateral damage containment field.  
 A Chesterton's Fence Eliminator.
 
