@@ -20,7 +20,7 @@ A framework for steering your collaborators by accumulating priorities and const
 A linter that guards the semantic integrity of inline references.  
 A linter that checks whether cited decisions still apply.  
 An evidence accumulator for ongoing project improvement.  
-A demonstration of inebriated README workshopping.
+A demonstration of inebriated README workshopping.  
 A collateral damage containment field.  
 A Chesterton's Fence Eliminator.  
 
