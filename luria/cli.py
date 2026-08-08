@@ -5,6 +5,8 @@
     luria index         regenerate every generated view, badges included
     luria new [kind]    scaffold an entry: the journal by default, or any
                         configured scheme or fragment dir (adr, dp, changelog)
+    luria migrate       execute a migration spec: rename a scheme, move
+                        documents between schemes (ADR-040)
     luria remotes       other projects' records cited from this one
     luria init          scaffold the record into a project that has none
 
@@ -26,13 +28,15 @@ the package.
 
 import fire
 
-from . import adr_index, collect, init, link_refs, lint, new, remotes, reports
+from . import (adr_index, collect, init, link_refs, lint, migrate, new,
+               remotes, reports)
 
 COMMANDS = {
     "lint": lint.run,
     "link": link_refs.run,
     "index": adr_index.run,
     "new": new.run,
+    "migrate": migrate.run,
     "remotes": remotes.run,
     "init": init.run,
     "reports": reports.run,

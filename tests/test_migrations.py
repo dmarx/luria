@@ -1,15 +1,17 @@
-"""The migrations ladder (ADR-040), rung 1: old spellings resolve, warn, and
-get modernized.
+"""The migrations ladder (ADR-040): rung 1 (old spellings resolve, warn, and
+get modernized) and rung 2 (`luria migrate` executes a spec).
 
 A migrated document carries `formerly:` in its frontmatter; everything else
 is derived — the alias map, the `legacy-spellings` warning class, the fixer's
 modernize pass. The guards here are fired on the failure they exist for
 (DP-6): a reference written in last year's spelling, a fixture code that must
-survive, a composed remote code that is another project's namespace.
+survive, a composed remote code that is another project's namespace, and a
+journal link whose frame the sweep must not disturb (#57).
 """
+import subprocess
 from pathlib import Path
 
-from luria import aliases, config, doc_refs, lint, ref_status
+from luria import aliases, config, doc_refs, lint, migrate, ref_status
 
 
 def _record_project(tmp_path, monkeypatch):
@@ -143,3 +145,154 @@ def test_a_scheme_can_require_fields(tmp_path, monkeypatch):
     errors = []
     lint.check_frontmatter(errors)
     assert errors == []
+
+
+# ── Rung 2: `luria migrate` ──────────────────────────────────────────────
+
+
+def _git(root, *args):
+    subprocess.run(["git", *args], cwd=root, capture_output=True, check=True)
+
+
+def _premigration_project(tmp_path, monkeypatch):
+    """A project the day before its DP scheme becomes GP — documents,
+    citations in three frames, a fixture number, and two remotes: SG is
+    another project (its namespace survives), LU mirrors this one (its
+    composed codes follow the rename)."""
+    (tmp_path / "docs").mkdir()
+    (tmp_path / "luria.toml").write_text(
+        '[luria]\nissue_url = "https://example.test/issues/{n}"\n'
+        '[luria.paths]\ndesign_principles = "docs/design-principles.md"\n'
+        '[luria.schemes.DP]\ndir = "record/principles.d"\n'
+        'render = "document"\noutput = "docs/design-principles.md"\n'
+        '[luria.remotes.SG]\nrepo = "example/strata-g"\n'
+        '[luria.remotes.LU]\nrepo = "example/this-project"\n'
+    )
+    dp_dir = tmp_path / "record" / "principles.d"
+    dp_dir.mkdir(parents=True)
+    for n, title in ((1, "First value"), (4, "Fourth value")):
+        (dp_dir / f"DP-{n:03d}.md").write_text(
+            f"---\nstatus: Active\ntitle: '{title}'\ntags:\n- record\n"
+            f"date: '2026-01-01'\n---\n\n# DP-{n:03d}: {title}\n\n"
+            f"Body citing DP-1 sometimes.\n")
+    (tmp_path / "docs" / "notes.md").write_text(
+        "# Notes\n\n"
+        "Bare DP-4 and a link [DP-4](design-principles.md#dp-4).\n"
+        "Fixture DP-018 is nobody's document.\n"
+        "Foreign SG-DP-4 belongs to strata-g.\n"
+        "Mirrored LU-DP-004 follows this project.\n")
+    entry_dir = tmp_path / "record" / "devlog.d" / "2026" / "08" / "01"
+    entry_dir.mkdir(parents=True)
+    (entry_dir / "120000.md").write_text(
+        "---\ntitle: 'An entry'\ncreated: '2026-08-01T12:00:00'\ntags: []\n"
+        "---\n\nBook-frame link: [DP-4](../../record/../docs/"
+        "design-principles.md#dp-4).\n")
+    mig_dir = tmp_path / "record" / "migrations.d"
+    mig_dir.mkdir(parents=True)
+    (mig_dir / "0001-dp-to-gp.toml").write_text(
+        'title = "DP becomes GP"\nissue = "#29"\n\n'
+        '[[operations]]\nop = "rename_scheme"\nfrom = "DP"\nto = "GP"\n'
+        'output = "docs/guiding-principles.md"\nremotes = ["LU"]\n')
+    _git(tmp_path, "init", "-q")
+    _git(tmp_path, "add", "-A")
+    _git(tmp_path, "-c", "user.email=t@t", "-c", "user.name=t",
+         "commit", "-qm", "before")
+    monkeypatch.setenv("LURIA_ROOT", str(tmp_path))
+    config.reset()
+    aliases.reset()
+    return tmp_path
+
+
+def test_dry_run_prints_the_plan_and_changes_nothing(tmp_path, monkeypatch, capsys):
+    root = _premigration_project(tmp_path, monkeypatch)
+    before = {p: p.read_text() for p in root.rglob("*.md")}
+    migrate.run("0001", dry_run=True)
+    out = capsys.readouterr().out
+    assert "DP-001 -> GP-001" in out and "DP-004 -> GP-004" in out
+    assert "LU-DP-004 -> LU-GP-004" in out
+    assert "design-principles.md -> guiding-principles.md" in out
+    assert {p: p.read_text() for p in root.rglob("*.md")} == before
+
+
+def test_rename_scheme_end_to_end(tmp_path, monkeypatch, capsys):
+    root = _premigration_project(tmp_path, monkeypatch)
+    migrate.run("0001")
+
+    dp_dir = root / "record" / "principles.d"
+    assert not (dp_dir / "DP-004.md").exists()
+    moved = (dp_dir / "GP-004.md").read_text()
+    assert "formerly:\n- DP-4\n" in moved, "identity stamped"
+    assert "# GP-004: Fourth value" in moved, "own heading swept"
+    assert "citing GP-1 sometimes" in moved, "cross-citations swept"
+
+    config_text = (root / "luria.toml").read_text()
+    assert "[luria.schemes.GP]" in config_text
+    assert "[luria.schemes.DP]" not in config_text
+    assert 'design_principles = "docs/guiding-principles.md"' in config_text
+    assert 'output = "docs/guiding-principles.md"' in config_text
+
+    notes = (root / "docs" / "notes.md").read_text()
+    assert "Bare GP-4 and a link [GP-4](guiding-principles.md#gp-4)." in notes
+    assert "Fixture DP-018 is nobody's document." in notes, "not in the mapping"
+    assert "Foreign SG-DP-4 belongs to strata-g." in notes, "their namespace"
+    assert "Mirrored LU-GP-004 follows this project." in notes
+
+    entry = next((root / "record" / "devlog.d").rglob("1*.md")).read_text()
+    assert "[GP-4](../../record/../docs/guiding-principles.md#gp-4)" in entry, \
+        "history swept, and the link's frame untouched (#57)"
+
+    spec = (root / "record" / "migrations.d" / "0001-dp-to-gp.toml").read_text()
+    assert 'from = "DP"' in spec, "the spec remembers the old spelling"
+
+    # Full circle into rung 1: the fresh config resolves old spellings.
+    config.reset()
+    aliases.reset()
+    assert aliases.alias_map() == {"DP-001": "GP-001", "DP-004": "GP-004"}
+
+
+def test_move_doc_renumbers_and_stamps(tmp_path, monkeypatch, capsys):
+    root = _premigration_project(tmp_path, monkeypatch)
+    (root / "luria.toml").write_text(
+        (root / "luria.toml").read_text()
+        + '[luria.schemes.VAL]\ndir = "record/values.d"\n')
+    (root / "record" / "values.d").mkdir(parents=True)
+    config.reset()
+    aliases.reset()
+    mig = root / "record" / "migrations.d" / "0002-promote.toml"
+    mig.write_text('title = "DP-4 becomes a value"\n\n'
+                   '[[operations]]\nop = "move_doc"\ndoc = "DP-4"\nto = "VAL"\n')
+    migrate.run("0002")
+    moved = (root / "record" / "values.d" / "VAL-001.md").read_text()
+    assert "formerly:\n- DP-4\n" in moved
+    assert not (root / "record" / "principles.d" / "DP-004.md").exists()
+    notes = (root / "docs" / "notes.md").read_text()
+    assert "Bare VAL-1" in notes
+    assert "Fixture DP-018" in notes
+
+
+def test_move_doc_supersede_copies_and_tombstones(tmp_path, monkeypatch, capsys):
+    root = _premigration_project(tmp_path, monkeypatch)
+    (root / "luria.toml").write_text(
+        (root / "luria.toml").read_text()
+        + '[luria.schemes.VAL]\ndir = "record/values.d"\n')
+    (root / "record" / "values.d").mkdir(parents=True)
+    config.reset()
+    aliases.reset()
+    mig = root / "record" / "migrations.d" / "0002-supersede.toml"
+    mig.write_text('title = "DP-4 superseded by a value"\n\n'
+                   '[[operations]]\nop = "move_doc"\ndoc = "DP-4"\nto = "VAL"\n'
+                   'strategy = "supersede"\n')
+    migrate.run("0002")
+    old = (root / "record" / "principles.d" / "DP-004.md").read_text()
+    assert "status: Superseded — by VAL-001" in old
+    assert (root / "record" / "values.d" / "VAL-001.md").exists()
+    notes = (root / "docs" / "notes.md").read_text()
+    assert "Bare DP-4" in notes, "supersede mode rewrites nothing"
+
+
+def test_new_migration_scaffolds_a_numbered_spec(tmp_path, monkeypatch):
+    _premigration_project(tmp_path, monkeypatch)
+    from luria import new
+    path = new.new_entry("migration", {"title": "A second move"}, None)
+    assert path.name == "0002-a-second-move.toml"
+    assert 'title = "A second move"' in path.read_text()

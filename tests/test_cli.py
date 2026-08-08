@@ -3,7 +3,7 @@ exit codes by SystemExit only.
 
 The dispatch itself is exercised end-to-end by every other test file and by
 the smoke run in publish.yml; what needs its own tests is the surface — the
-eight commands are registered, an unknown name refuses with the list, and a
+nine commands are registered, an unknown name refuses with the list, and a
 failing gate's exit code survives Fire.
 """
 
@@ -12,14 +12,15 @@ from __future__ import annotations
 import subprocess
 import sys
 
-from luria import adr_index, cli, collect, init, link_refs, lint, new, remotes, reports
+from luria import (adr_index, cli, collect, init, link_refs, lint, migrate,
+                   new, remotes, reports)
 
 
-def test_the_eight_commands_are_registered():
+def test_the_nine_commands_are_registered():
     assert cli.COMMANDS == {
         "lint": lint.run, "link": link_refs.run, "index": adr_index.run,
-        "new": new.run, "remotes": remotes.run, "init": init.run,
-        "reports": reports.run, "collect": collect.run,
+        "new": new.run, "migrate": migrate.run, "remotes": remotes.run,
+        "init": init.run, "reports": reports.run, "collect": collect.run,
     }
 
 
