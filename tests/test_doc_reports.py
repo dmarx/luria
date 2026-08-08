@@ -71,16 +71,35 @@ def test_reference_report_links_the_flagged_document(project):
     import os.path
     rel = os.path.relpath(current().schemes["ADR"].dir / "ADR-012.md",
                           current().reports)
-    assert f"## [ADR-012]({rel}) — Superseded" in text
+    assert f"### [ADR-012]({rel}) — Superseded" in text
 
 
 def test_reference_report_counts_match_the_scan():
     docs = ref_status.load_docs()
     result = ref_status.scan(docs=docs)
     rows = ref_status.flagged(result, docs)
+    excused = ref_status.acknowledged_count(result, docs)
     text = reports.reference_status()
-    assert f"**{len(rows)} retired document(s) cited without acknowledgement.**" in text
-    assert f"{ref_status.acknowledged_count(result, docs)} reference(s) carry" in text
+    assert (f"**{reports._n(len(rows), 'document')} cited without "
+            "acknowledgement.**") in text
+    assert f"Not listed: {reports._n(excused, 'citation')} someone" in text
+
+
+def test_the_report_never_calls_a_proposed_document_retired(project):
+    """The clarification #63 asked for: a Proposed document was listed under
+    a page titled "Retired documents", and Proposed is the opposite of
+    retired — it hasn't been in force yet. The umbrella is "not in force",
+    and the section says which side of that a status falls on."""
+    decision(project, 12, "Proposed")
+    (project / "notes.md").write_text("cites ADR-012\n")
+    (project / "luria.toml").write_text(
+        '[luria]\nissue_url = ""\n[luria.code]\nglobs = ["notes.md"]\n')
+    from luria import config
+    config.reset()
+    text = reports.reference_status()
+    assert "Retired" not in text
+    assert "## Documents cited while not in force" in text
+    assert "— Proposed" in text
 
 
 def test_pending_report_links_every_row_to_its_decision(project):

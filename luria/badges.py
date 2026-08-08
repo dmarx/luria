@@ -17,10 +17,12 @@ to answer without cloning it:
                         every configured scheme. An open question stated is
                         fine; an open question nobody can see is how a decision
                         gets made in code and never written down.
-  **cited but retired** — documents no longer in force that current docs or
-                        code still cite *without an acknowledgement*. Citing a
-                        `Rejected` decision is often right, which is why this
-                        counts only the unconsidered ones (ADR-035).
+  **cited, not in force** — documents that are not in force — not yet
+                        (`Proposed`, `Deferred`) or no longer (`Superseded`,
+                        `Rejected`) — that current docs or code cite *without
+                        an acknowledgement*. Citing one is often right, which
+                        is why this counts only the unconsidered ones
+                        (ADR-035, #63).
 
 Derived, not hand-written (ADR-018). The numbers are computed from frontmatter
 and baked into static shields.io URLs, which `luria index` rewrites and
@@ -53,7 +55,7 @@ GOOD, ATTENTION = "brightgreen", "orange"
 
 
 def counts() -> tuple[int, int]:
-    """(needs decision, cited but retired). Both across every local scheme."""
+    """(needs decision, cited-not-in-force). Both across every local scheme."""
     docs = ref_status.load_docs()
     scan = ref_status.scan(docs=docs)
     return len(adr_pending.pending()), len(ref_status.flagged(scan, docs))
@@ -80,7 +82,7 @@ def region() -> str:
     return "\n".join([
         OPEN,
         badge("needs decision", undecided, report_link("pending-decisions.md")),
-        badge("cited but retired", retired,
+        badge("cited, not in force", retired,
               report_link("reference-status.md")),
         CLOSE,
     ])
@@ -132,7 +134,7 @@ def run(write: bool = False, check: bool = False) -> None:
         return
     path.write_text(fresh)
     undecided, retired = counts()
-    print(f"badges: needs decision {undecided}, cited but retired {retired}")
+    print(f"badges: needs decision {undecided}, cited not in force {retired}")
 
 
 if __name__ == "__main__":
