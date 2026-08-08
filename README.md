@@ -20,7 +20,7 @@ A framework for steering your collaborators by accumulating priorities and const
 A constraint accumulator for ongoing project improvement and steering.  
 A linter which validates the saliency of inline references.  
 A collateral damage containment field.  
-
+A Chesterton's Fence Eliminator.
 
 Luria tracks and lints references to decision records to catch justifications which reference evidence that the repository's record no longer endorses.
 
