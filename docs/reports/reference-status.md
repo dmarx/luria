@@ -21,9 +21,14 @@ A reference nobody can follow. Three things look identical from here and read ve
 **1 code(s) name no document.** 45 reference(s) carry an `unresolved-ok` annotation and are not listed below.
 
 
-### DP-018 — no such document (1 site(s) · 4 acknowledged elsewhere)
+### DP-018 — no such document (6 site(s) · 4 acknowledged elsewhere)
 
 - [`record/decisions.d/ADR-040.md:42`](../../record/decisions.d/ADR-040.md)
+- [`tests/test_migrations.py:54`](../../tests/test_migrations.py)
+- [`tests/test_migrations.py:58`](../../tests/test_migrations.py)
+- [`tests/test_migrations.py:60`](../../tests/test_migrations.py)
+- [`tests/test_migrations.py:86`](../../tests/test_migrations.py)
+- [`tests/test_migrations.py:94`](../../tests/test_migrations.py)
 
 ## Files that opt out of reference checking
 
