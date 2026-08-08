@@ -6,7 +6,7 @@
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/github/license/dmarx/luria)](LICENSE)
 <!-- luria:badges -->
-[![needs decision: 1](https://img.shields.io/badge/needs%20decision-1-orange)](docs/reports/pending-decisions.md)
+[![needs decision: 2](https://img.shields.io/badge/needs%20decision-2-orange)](docs/reports/pending-decisions.md)
 [![cited but retired: 0](https://img.shields.io/badge/cited%20but%20retired-0-brightgreen)](docs/reports/reference-status.md)
 <!-- /luria:badges -->
 
