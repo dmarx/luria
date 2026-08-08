@@ -29,13 +29,13 @@ A reference nobody can follow. Three things look identical from here and read ve
 - [`tests/test_migrations.py:62`](../../tests/test_migrations.py)
 - [`tests/test_migrations.py:88`](../../tests/test_migrations.py)
 - [`tests/test_migrations.py:96`](../../tests/test_migrations.py)
-- [`tests/test_migrations.py:181`](../../tests/test_migrations.py)
-- [`tests/test_migrations.py:236`](../../tests/test_migrations.py)
-- [`tests/test_migrations.py:270`](../../tests/test_migrations.py)
+- [`tests/test_migrations.py:188`](../../tests/test_migrations.py)
+- [`tests/test_migrations.py:252`](../../tests/test_migrations.py)
+- [`tests/test_migrations.py:288`](../../tests/test_migrations.py)
 
 ### DP-013 — no such document (1 site(s))
 
-- [`luria/migrate.py:285`](../../luria/migrate.py)
+- [`luria/migrate.py:308`](../../luria/migrate.py)
 
 ## Files that opt out of reference checking
 
