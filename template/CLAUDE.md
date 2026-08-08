@@ -3,8 +3,9 @@
 **Before anything else, read
 [the design principles](docs/design-principles.md) in full.** They are the
 standing values every choice in this project is judged against; the rest of
-this file, and the record itself, assume you hold them. Everything else
-here can be pulled in as needed — the principles cannot.
+this file, and the record itself, assume you hold them. Read them
+immediately after finishing this file, before any other code or
+documentation in this repository.
 
 This project keeps its memory in a Luria record — decisions, principles, a
 changelog and a devlog — scaffolded, generated and linted by the `luria`
