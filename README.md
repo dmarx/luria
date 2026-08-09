@@ -34,7 +34,7 @@ Luria tracks and lints references to decision records to catch justifications (i
 Luria encapsulates a collection of best practices you should probably be using anyway. Things like:
 
 * a miscellaneous daily activity journal
-* documenting decisions along with their context, alternatives considered, and references to other relevant decisions
+* a decision log that documents the context in which a decision was made and alternatives considered
 * formally identified guiding principles that have a demonstrable operational purpose and impact
 * a feedback loop to surface unwritten rules or principles which should be documented and formalized
 
