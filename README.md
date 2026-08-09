@@ -62,7 +62,7 @@ the LLM feels inclined to relitigate anything it will find itself directed towar
 In Luria, decisions carry a state. Decisions can be Active, Proposed, Deferred, Rejected, or Superseded ([ADR-003](record/decisions.d/ADR-003.md)). Decisions influence things like code, documentation, and other decisions. When a decision influences something and the decision has been formally documented somewhere, this naturally encourages directly referencing those documents. Luria's linter standardizes the form these references take ([ADR-005](record/decisions.d/ADR-005.md)), and also checks that all referenced decisions are in an "active" state ([ADR-035](record/decisions.d/ADR-035.md)). If the linter discovers (unacknowledged) references to inactive decisions, it can raise warnings, generate reports, and/or fail CI until the unendorsed decisions are dealt with (or the references to them are annotated for the linter). 
 
 In addition to making decisions and authoring fragments, the user participates by promoting daily choices from the devlog into formally documented
-decisions, superseding old decisions with new ones, and promoting insights that repeatedly inform decisions into guiding principles.
+decisions, superseding old decisions with new ones, and distilling patterns that repeatedly appear in decisions into overarching principles.
 
 The norms that matter get walked up the ladder — prose → convention → mechanism → guarantee ([DP-5](docs/design-principles.md#dp-5)), and Luria instruments the rungs.
 
