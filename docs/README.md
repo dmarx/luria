@@ -14,7 +14,8 @@
   [documents awaiting a decision](reports/pending-decisions.md) and
   [retired documents still cited](reports/reference-status.md).
 - [Adopting Luria](adopting.md) — putting the record into a project that hasn't
-  got one.
+  got one, and [publishing it](adopting.md#publishing-the-record) as a site
+  with a citation graph.
 
 Everything in this directory is for *reading* — the prose pages are authored,
 and the decisions index, principles document, devlog books and status reports

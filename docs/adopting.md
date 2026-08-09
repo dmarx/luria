@@ -43,6 +43,9 @@ record/                     the WRITE surface: every source, marked `.d`
     DP-00N.md               seeded with the ones that earn this machinery
   changelog.d/_template.md  one fragment per contribution; collected, then consumed
   devlog.d/_template.md     the shape of a journal entry; optional, significant work only
+.github/workflows/
+  docs.yml                  regenerate views, lint them, collect fragments on a cadence
+  pages.yml                 publish the record as a site with a citation graph
 CLAUDE.md                   a bootloader section pointing at the above
 ```
 
@@ -345,6 +348,44 @@ jobs:
     steps:
       - run: luria collect --commit
 ```
+
+## Publishing the record
+
+`luria init` also scaffolds
+[a Pages workflow](../template/.github/workflows/pages.yml). It stages the
+record as an Obsidian/Quartz vault and builds it, which turns the citations
+the lint already guarantees are links into a graph, backlinks, full-text
+search and per-tag pages — none of them maintained by hand
+([ADR-042](../record/decisions.d/ADR-042.md)):
+
+```yaml
+- id: site
+  uses: dmarx/luria/actions/site@main       # stage + build, outputs a directory
+- uses: actions/upload-pages-artifact@v3
+  with:
+    path: ${{ steps.site.outputs.path }}
+```
+
+**One step cannot be scaffolded.** Set Settings → Pages → Source to "GitHub
+Actions" on the repository. Until you do, the deploy job fails with "Pages is
+not enabled" while the build job stays green.
+
+Nothing needs configuring beyond that: the site's title, its URL and the base
+a link falls back to when it points at a repository file the site does not
+publish all derive from your `issue_url`. `[luria.site]` exists to override one
+of those, or to keep a directory of markdown out of the site
+(`exclude = ["vendor/**"]`).
+
+Run `luria site --out build/site` locally to see what would be published
+before any of it ships. It prints what it staged and — the number worth
+watching — how many links it could not place.
+
+Two things are worth knowing about *what* it publishes. Pages land at their
+repository paths, so the relative links `luria link --fix` already wrote keep
+resolving and nothing re-derives them. And a file whose prose renders into a
+view somewhere else — a changelog fragment, a journal entry, a
+document-scheme source — is deliberately **not** published: its links are
+spelled for the page it lands in, and that page is already on the site.
 
 ## What to expect
 

@@ -29,7 +29,7 @@ Migrations: renaming schemes and moving documents without losing the record's me
 
 A reference the reader cannot follow: the code names no document in this record. A typo, a number carried in from another project, and an illustrative code in an example all look identical from here — telling them apart takes a human, so this is a report, not an error.
 
-**1 code unaccounted for.** Not listed: 45 mentions marked deliberate with an `unresolved-ok:` comment (same syntax and scopes as `inactive-ok:` above).
+**1 code unaccounted for.** Not listed: 47 mentions marked deliberate with an `unresolved-ok:` comment (same syntax and scopes as `inactive-ok:` above).
 
 
 ### DP-018 — resolves to nothing (1 unmarked site · 4 other mentions marked deliberate)

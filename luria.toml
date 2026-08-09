@@ -38,6 +38,15 @@ archaeology, failed approaches, verification details, and the traps the next \
 person would otherwise rediscover. Generated from the entries in \
 `record/devlog.d/` — file one with `luria new`."""
 
+# The published site (ADR-042). `title`, `base_url` and `source_url` all
+# derive from `issue_url` above, so only the exclusion is here: `template/`
+# is the scaffold Luria hands to other projects, and its pages are a *sample*
+# record — published beside the real one they would read as a second, emptier
+# copy of this one, which is exactly the confusion DP-9 says a layout owes a
+# visitor protection from.
+[luria.site]
+exclude = ["template/**"]
+
 [luria.code]
 globs = ["luria/*.py", "tests/*.py", ".github/workflows/*.yml",
          "actions/**/*.yml", "template/**/*.yml",

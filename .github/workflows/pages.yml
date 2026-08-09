@@ -1,0 +1,59 @@
+# Luria publishes its own record (ADR-009, ADR-042), using the same composite
+# action adopters get — referenced by local path so a change to the action is
+# exercised by the pull request that makes it (ADR-029).
+#
+# Build runs on every pull request and deploys on none: a site that stopped
+# building should fail the branch that broke it, not the merge. Deploy is a
+# separate job because it is the only one that needs `pages: write`, and the
+# smallest surface that can publish is the right one (the same reasoning as
+# the PyPI split in publish.yml).
+#
+# One repository setting is required and cannot live here: Settings → Pages →
+# Source must be "GitHub Actions". Until it is, `deploy` fails with "Pages is
+# not enabled" while `build` stays green.
+name: Pages
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# A published page is the whole repository's markdown rendered; nothing in the
+# build needs to write anything back.
+permissions:
+  contents: read
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - id: site
+        uses: ./actions/site
+        with:
+          pip-spec: -e .
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: ${{ steps.site.outputs.path }}
+
+  deploy:
+    if: github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@v4

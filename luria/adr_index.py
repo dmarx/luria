@@ -39,6 +39,7 @@ generator substitutes `{placeholders}`, and tags get their own generated pages.
 from __future__ import annotations
 
 import os.path
+import posixpath
 import re
 import sys
 from pathlib import Path
@@ -94,10 +95,25 @@ def rebase_links(text: str, prefix: str) -> str:
     same base as the ADR body they were lifted from — and this index renders
     them into the view directory and again one level down in `tags/<tag>.md`.
     Owning the rendering is what lets a summary carry links at all: without
-    this, no single relative target could be correct everywhere (ADR-005)."""
+    this, no single relative target could be correct everywhere (ADR-005).
+
+    The result is **normalized**, because a link that only a webserver's path
+    resolver forgives is a link some readers lose: concatenation alone yields
+    `../../record/decisions.d/../../docs/design-principles.md`, which GitHub
+    collapses and a static-site generator does not (#13)."""
     if not prefix:
         return text
-    return RELATIVE_LINK_RE.sub(lambda m: prefix + m.group(1), text)
+    return RELATIVE_LINK_RE.sub(
+        lambda m: _normalize(prefix + m.group(1)), text)
+
+
+def _normalize(target: str) -> str:
+    """Collapse `a/../b` in a relative link target, fragment preserved.
+
+    `posixpath` because these are URLs, not filesystem paths — the separator
+    is `/` on every platform that renders the view."""
+    path, sep, fragment = target.partition("#")
+    return (posixpath.normpath(path) if path else path) + sep + fragment
 
 
 def prefix_for(scheme, out_dir: Path) -> str:

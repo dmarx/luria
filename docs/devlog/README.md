@@ -6,6 +6,7 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 
 ## Currently — [August 2026](2026-08.md)
 
+- [9 Aug 21:44 — Building the site was a reference-integrity check the lint doesn't have](2026-08.md#20260809214428)
 - [8 Aug 00:19 — The link that was wrong in both frames: characterizing the journal link-frame bug](2026-08.md#20260808001939)
 - [7 Aug 23:48 — The rename that refused to stay small: DP→GP becomes a migrations doctrine](2026-08.md#20260807234804)
 - [7 Aug 19:05 — Idiomatic Fire, drafted: what the rewrite cost and bought](2026-08.md#20260807190509)
@@ -35,8 +36,8 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 
 ## All books
 
-26 entries across 1 book, newest first.
+27 entries across 1 book, newest first.
 
 | Book | Entries | First | Last |
 |---|--:|---|---|
-| [2026-08](2026-08.md) | 26 | 2026-08-03 | 2026-08-08 |
+| [2026-08](2026-08.md) | 27 | 2026-08-03 | 2026-08-09 |

@@ -95,6 +95,18 @@ document = "docs/design-principles.md"
 name = "fixtures"
 url  = "https://github.com/dmarx/luria/blob/main/docs/directives.md#fixture-codes"
 
+# The published site (LU-ADR-042), built by the Pages workflow in
+# `.github/workflows/pages.yml`. Everything here derives from `issue_url` for
+# a GitHub project — the title, the Pages URL, and the base a link falls back
+# to when it points at a repository file the site doesn't publish — so this
+# table is only needed to override one of them, or to keep a directory of
+# markdown out of the site.
+# [luria.site]
+# title      = "My project"
+# base_url   = "owner.github.io/repo"
+# source_url = "https://github.com/owner/repo/blob/HEAD"
+# exclude    = ["vendor/**"]
+
 # The enforcement dial (LU-ADR-035): status findings are warnings by default,
 # and a class named here fails `luria lint` instead. The acknowledgement
 # directives keep working under enforcement — only unacknowledged rows fail.
