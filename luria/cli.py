@@ -6,6 +6,7 @@
     luria new [kind]    scaffold an entry: the journal by default, or any
                         configured scheme or fragment dir (adr, dp, changelog)
     luria remotes       other projects' records cited from this one
+    luria site          stage the record as a Quartz vault, ready to build
     luria init          scaffold the record into a project that has none
 
 Two more exist for CI, which is their only regular caller:
@@ -26,7 +27,8 @@ the package.
 
 import fire
 
-from . import adr_index, collect, init, link_refs, lint, new, remotes, reports
+from . import (adr_index, collect, init, link_refs, lint, new, remotes,
+               reports, site)
 
 COMMANDS = {
     "lint": lint.run,
@@ -34,6 +36,7 @@ COMMANDS = {
     "index": adr_index.run,
     "new": new.run,
     "remotes": remotes.run,
+    "site": site.run,
     "init": init.run,
     "reports": reports.run,
     "collect": collect.run,

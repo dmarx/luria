@@ -1,0 +1,76 @@
+# The publishing third of the recommended docs workflow (ADR-029, ADR-042):
+# stage the record as a Quartz vault, build it, and hand the caller a
+# directory to upload. Like the generate and lint actions, this is the single
+# authoritative implementation — luria's own Pages workflow and the template
+# one both `uses:` it rather than restating the build.
+#
+# Caller contract:
+#   - Check out the repository first, and set up Python (actions/setup-python).
+#     Node is set up here, because the version is Quartz's requirement rather
+#     than the caller's choice.
+#   - Read the `path` output and hand it to actions/upload-pages-artifact.
+#   - Enable Pages on the repository with "GitHub Actions" as the source. That
+#     is a repository setting, not a file, and nothing in this action can do
+#     it — the first deploy fails with "Pages is not enabled" until it is.
+#
+# Quartz is pinned to a tag rather than tracked: a static site generator that
+# moves under you turns an unrelated merge into a broken publish, and the
+# config this action writes is written against one version's plugin API.
+name: luria site build
+description: >-
+  Stage the record with `luria site` and build it with a pinned Quartz, into a
+  directory of static HTML ready for actions/upload-pages-artifact.
+inputs:
+  pip-spec:
+    description: >-
+      pip requirement spec used to install luria (e.g. "luria==0.1.2", or
+      "-e ." inside luria's own repository). Empty string skips the install
+      for callers that installed it already.
+    default: luria
+  quartz-repo:
+    description: The Quartz repository to build with.
+    default: jackyzha0/quartz
+  quartz-ref:
+    description: >-
+      The Quartz tag to pin. Bump it deliberately: `luria site` writes a
+      quartz.config.ts against this version's plugin API, and v5 replaced
+      that file with a YAML one.
+    default: v4.5.2
+  node-version:
+    description: Node version. Quartz v4 requires 22 or newer.
+    default: "22"
+outputs:
+  path:
+    description: Directory of built HTML, for actions/upload-pages-artifact.
+    value: ${{ steps.build.outputs.path }}
+runs:
+  using: composite
+  steps:
+    - if: ${{ inputs.pip-spec != '' }}
+      shell: bash
+      run: pip install ${{ inputs.pip-spec }}
+    - shell: bash
+      run: luria site --out "$RUNNER_TEMP/luria-site"
+    - uses: actions/checkout@v4
+      with:
+        repository: ${{ inputs.quartz-repo }}
+        ref: ${{ inputs.quartz-ref }}
+        path: .quartz-build
+    - uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.node-version }}
+        cache: npm
+        cache-dependency-path: .quartz-build/package-lock.json
+    - id: build
+      shell: bash
+      run: |
+        set -euo pipefail
+        # The vault replaces Quartz's own sample content wholesale; leaving it
+        # would publish the generator's documentation alongside the record.
+        rm -rf .quartz-build/content
+        cp -r "$RUNNER_TEMP/luria-site/content" .quartz-build/content
+        cp "$RUNNER_TEMP/luria-site/quartz.config.ts" .quartz-build/quartz.config.ts
+        cd .quartz-build
+        npm ci
+        npx quartz build --output "$RUNNER_TEMP/luria-site/public"
+        echo "path=$RUNNER_TEMP/luria-site/public" >> "$GITHUB_OUTPUT"

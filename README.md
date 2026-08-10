@@ -3,6 +3,7 @@
 <img src="assets/branding/luria-brainslug/luria_project_memory_lockup_horizontal.svg" alt="luria"  height="240">
 
 [![CI](https://github.com/dmarx/luria/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/dmarx/luria/actions/workflows/ci.yml)
+[![the record, browsable](https://img.shields.io/badge/the%20record-browsable-6b7f9e)](https://dmarx.github.io/luria/)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/github/license/dmarx/luria)](LICENSE)
 <!-- luria:badges -->

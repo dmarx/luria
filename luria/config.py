@@ -100,7 +100,22 @@ DEFAULTS: dict = {
     "lint": {
         "fail_on": [],
     },
+    # The published site (ADR-042). Every key is derivable from `issue_url`
+    # for a GitHub project, so the conventional case needs no `[luria.site]`
+    # table at all — a default nobody has to read the docs to get.
+    "site": {
+        "title": "",
+        "base_url": "",
+        "source_url": "",
+        "exclude": [],
+    },
 }
+
+# `https://github.com/owner/repo/issues/{n}` → ("owner", "repo"). The one
+# fact the site defaults are derived from, so a GitHub project that already
+# configured issue links gets a title, a Pages URL and a source base free.
+GITHUB_ISSUE_RE = re.compile(
+    r"https?://github\.com/([^/]+)/([^/]+)/issues\b")
 
 
 def find_root(start: Path | None = None) -> Path:
@@ -405,6 +420,29 @@ class Journal:
 
 
 @dataclass(frozen=True)
+class Site:
+    """How the record publishes as a browsable site (ADR-042).
+
+        [luria.site]
+        title      = "Luria"
+        base_url   = "dmarx.github.io/luria"
+        source_url = "https://github.com/dmarx/luria/blob/HEAD"
+        exclude    = ["template/**"]
+
+    Only `exclude` is genuinely per-project: the rest default off `issue_url`,
+    because a project that told Luria where its issues live has already told
+    it which GitHub repository it is (DP-3 — derive the projection).
+
+    `source_url` is where a link lands when its target is a repository file
+    the site does not publish: a workflow, a template, the licence. Empty
+    means "leave those links alone", and `luria site` says how many it left."""
+    title: str
+    base_url: str
+    source_url: str
+    exclude: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
 class Config:
     root: Path
     issue_url: str
@@ -420,6 +458,7 @@ class Config:
     journals: dict[str, Journal]
     stale_days: int
     fail_on: tuple[str, ...]            # warning classes promoted to failures
+    site: Site
     _raw: dict = field(default_factory=dict, repr=False)
 
     def _index_scheme(self):
@@ -588,7 +627,31 @@ def load(root: Path | None = None) -> Config:
         },
         stale_days=int(raw.get("stale_days", 90)),
         fail_on=tuple(raw["lint"]["fail_on"]),
+        site=_site(raw, root),
         _raw=raw,
+    )
+
+
+def _site(raw: dict, root: Path) -> Site:
+    """The site settings, with every unset key derived from `issue_url`.
+
+    A non-GitHub (or absent) issue URL derives nothing: the title falls back
+    to the directory name and the two URLs stay empty, which `luria site`
+    reports rather than guessing at."""
+    spec = raw.get("site", {})
+    m = GITHUB_ISSUE_RE.match(raw.get("issue_url", "") or "")
+    owner, repo = m.groups() if m else ("", "")
+    return Site(
+        title=spec.get("title") or repo or root.name,
+        # GitHub Pages' own default for a project site. Quartz wants it
+        # without the scheme.
+        base_url=spec.get("base_url")
+        or (f"{owner.lower()}.github.io/{repo}" if owner else ""),
+        # `HEAD` rather than a branch name: one fewer projection to keep in
+        # step with whatever the default branch is called (DP-3).
+        source_url=spec.get("source_url")
+        or (f"https://github.com/{owner}/{repo}/blob/HEAD" if owner else ""),
+        exclude=tuple(spec.get("exclude", ())),
     )
 
 
