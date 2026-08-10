@@ -46,6 +46,40 @@ person would otherwise rediscover. Generated from the entries in \
 # visitor protection from.
 [luria.site]
 exclude = ["template/**"]
+# The brainslug kit is the identity; the site wears it rather than the
+# generator's. `icon` is the vector master — the favicon is rasterized from it
+# at build time, so no derived PNG is committed here to drift out of step
+# (DP-3). `logo` replaces the site title in the sidebar, re-inked per theme
+# through the `--luria-ink` property the kit documents.
+icon = "assets/branding/luria-brainslug/luria_project_memory_icon.svg"
+logo = "assets/branding/luria-brainslug/luria_project_memory_lockup_horizontal.svg"
+
+# Paper and ink, from the kit's own two colours (#111111 / #F4F1E8), with the
+# neutrals stepped between them so the lockup sits on its own background
+# instead of floating on the generator's cooler white. The accent is the one
+# addition the monochrome kit doesn't supply: a muted teal, chosen to sit with
+# warm paper rather than fight it. Every text pair is above 6.5:1.
+[luria.site.theme.light]
+light = "#f4f1e8"
+lightgray = "#dcd5c3"
+gray = "#8f8a7c"
+darkgray = "#3a3630"
+dark = "#111111"
+secondary = "#2e5c62"
+tertiary = "#7d9e94"
+highlight = "rgba(46, 92, 98, 0.10)"
+textHighlight = "#e8d99a88"
+
+[luria.site.theme.dark]
+light = "#151412"
+lightgray = "#33302a"
+gray = "#7a746a"
+darkgray = "#d8d3c6"
+dark = "#f4f1e8"
+secondary = "#9dbfb4"
+tertiary = "#7d9e94"
+highlight = "rgba(157, 191, 180, 0.14)"
+textHighlight = "#a8912d66"
 
 [luria.code]
 globs = ["luria/*.py", "tests/*.py", ".github/workflows/*.yml",

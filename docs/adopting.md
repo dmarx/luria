@@ -376,6 +376,37 @@ publish all derive from your `issue_url`. `[luria.site]` exists to override one
 of those, or to keep a directory of markdown out of the site
 (`exclude = ["vendor/**"]`).
 
+### Putting your own brand on it
+
+Three optional keys, and the site wears your artwork instead of the
+generator's:
+
+```toml
+[luria.site]
+icon = "assets/brand/icon.svg"      # favicon: point at the vector master
+logo = "assets/brand/lockup.svg"    # replaces the site title in the sidebar
+
+[luria.site.theme.light]            # any of Quartz's colour names; the rest
+light = "#f4f1e8"                   # stay the generator's
+dark  = "#111111"
+```
+
+The favicon is **rasterized during the build**, from whatever you point
+`icon` at — so the file you maintain is the vector one, and no derived PNG
+sits in the repository going quietly out of date
+([DP-3](design-principles.md#dp-3)). A name Quartz doesn't know is refused
+and named, rather than dropped where you'd be left wondering why the colour
+never took.
+
+The logo is baked once per theme, because whether artwork can invert itself
+is a *browser* question — a browser that carries the page's `color-scheme`
+into an embedded SVG resolves the artwork's own dark-mode rules against the
+site's toggle, and one that doesn't resolves them against the reader's
+operating system, which the toggle has nothing to do with. If your artwork
+exposes a `--luria-ink` custom property it is re-inked to match each theme
+automatically; otherwise give it a `logo_dark` or accept one rendition in
+both.
+
 Run `luria site --out build/site` locally to see what would be published
 before any of it ships. It prints what it staged and — the number worth
 watching — how many links it could not place.

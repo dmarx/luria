@@ -108,6 +108,11 @@ DEFAULTS: dict = {
         "base_url": "",
         "source_url": "",
         "exclude": [],
+        # Branding. All optional: unset means the generator's own look.
+        "icon": "",
+        "logo": "",
+        "logo_dark": "",
+        "theme": {},
     },
 }
 
@@ -435,11 +440,29 @@ class Site:
 
     `source_url` is where a link lands when its target is a repository file
     the site does not publish: a workflow, a template, the licence. Empty
-    means "leave those links alone", and `luria site` says how many it left."""
+    means "leave those links alone", and `luria site` says how many it left.
+
+    The branding keys are the project's own artwork, cited by path:
+
+        icon      = "assets/brand/icon.svg"    # favicon, any square image
+        logo      = "assets/brand/lockup.svg"  # shown in place of the title
+        logo_dark = "assets/brand/lockup-inverted.svg"   # optional
+
+        [luria.site.theme.light]
+        light = "#f4f1e8"                      # any of Quartz's colour names
+
+    `logo_dark` is only needed when the artwork can't invert itself. A logo
+    whose SVG exposes a `--luria-ink` custom property — the convention this
+    project's own kit uses — is re-inked to the theme automatically, and one
+    that doesn't is used as it is in both modes."""
     title: str
     base_url: str
     source_url: str
     exclude: tuple[str, ...] = ()
+    icon: Path | None = None
+    logo: Path | None = None
+    logo_dark: Path | None = None
+    theme: dict = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -652,6 +675,10 @@ def _site(raw: dict, root: Path) -> Site:
         source_url=spec.get("source_url")
         or (f"https://github.com/{owner}/{repo}/blob/HEAD" if owner else ""),
         exclude=tuple(spec.get("exclude", ())),
+        icon=root / spec["icon"] if spec.get("icon") else None,
+        logo=root / spec["logo"] if spec.get("logo") else None,
+        logo_dark=root / spec["logo_dark"] if spec.get("logo_dark") else None,
+        theme=spec.get("theme", {}) or {},
     )
 
 

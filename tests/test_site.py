@@ -6,6 +6,7 @@ spelled for the view's directory. That rule is derived from `link_base`, so
 these tests assert the *invariant* over the real corpus rather than a list of
 directories that would drift the day one moved (DP-3).
 """
+import re
 from pathlib import Path
 
 import pytest
@@ -240,13 +241,89 @@ def test_the_graph_sits_above_the_article_not_in_the_sidebar(tmp_path):
     assert "Component.Graph(" not in right
 
 
-def test_the_action_copies_every_file_the_staging_writes(tmp_path):
+def test_the_action_copies_everything_the_staging_writes(tmp_path):
     """The pair that has to move together. `stage` gained a second generated
     file and the action did not copy it — a whole layout silently reverting
     to Quartz's default is exactly the drift DP-3 says to guard as a
-    property, not as a list somebody remembers to extend."""
+    property, not as a list somebody remembers to extend.
+
+    It matches `cp` commands rather than mentions. The first version of this
+    test asked whether the name appeared anywhere in the action, which a
+    directory called `static` satisfies from any of the three other lines
+    that say `quartz/static/` — a guard that passes for a reason unrelated to
+    what it checks is not a guard."""
     site.stage(tmp_path)
-    written = {p.name for p in tmp_path.iterdir() if p.is_file()}
+    staged = {p.name for p in tmp_path.iterdir() if p.name != "content"}
     action = (current().root / "actions" / "site" / "action.yml").read_text()
-    for name in written:
-        assert name in action, f"actions/site never copies {name}"
+    copied = set(re.findall(r"^\s*cp\b[^\n]*luria-site/([\w.-]+)", action,
+                            re.MULTILINE))
+    assert staged, "nothing staged beside content/ — the guard would be vacuous"
+    assert staged <= copied, f"actions/site never copies {staged - copied}"
+
+
+def test_the_palette_merges_over_the_generators_defaults():
+    """A project names the colours it cares about; the rest stay Quartz's."""
+    block = site.colors(current().site)
+    assert 'light: "#f4f1e8"' in block          # this project's paper
+    assert 'fontOrigin' not in block            # only the colour block
+    for mode in ("lightMode", "darkMode"):
+        assert f"{mode}: {{" in block
+    for name in site.THEME_DEFAULTS["light"]:
+        assert f"{name}: " in block, f"{name} dropped from the palette"
+
+
+def test_an_unknown_colour_name_is_refused_by_name():
+    """Silently dropping a key is a project wondering why its brand didn't
+    take (DP-1)."""
+    from luria.config import Site
+    broken = Site(title="t", base_url="", source_url="",
+                  theme={"light": {"lightt": "#fff"}})
+    with pytest.raises(SystemExit) as caught:
+        site.colors(broken)
+    assert "lightt" in str(caught.value)
+
+
+def test_the_icon_is_staged_as_the_vector_master(tmp_path):
+    """Not rasterized here and not committed anywhere: `actions/site` renders
+    it with the generator's own `sharp`, so nothing derived from the artwork
+    exists in the repository to drift (DP-3)."""
+    site.stage(tmp_path)
+    assert (tmp_path / "static" / "icon.svg").exists()
+
+
+def test_the_logo_is_baked_once_per_theme(tmp_path):
+    site.stage(tmp_path)
+    light = (tmp_path / "static" / "logo-light.svg").read_text()
+    dark = (tmp_path / "static" / "logo-dark.svg").read_text()
+    assert f"{site.INK_VAR}:#111111" in light
+    assert f"{site.INK_VAR}:#f4f1e8" in dark
+    scss = (tmp_path / "custom.scss").read_text()
+    assert 'url("static/logo-light.svg")' in scss
+    assert '[saved-theme="dark"]' in scss
+    # The aspect comes from the artwork, so a different lockup still fits.
+    assert "aspect-ratio: 1177.0 / 340.0" in scss
+
+
+def test_artwork_that_cannot_be_re_inked_is_left_alone():
+    plain = '<svg viewBox="0 0 10 5"><path fill="#000" d="M0 0"/></svg>'
+    assert site._reinked(plain, "#ffffff") == plain
+
+
+def test_missing_artwork_is_named_not_skipped(project):
+    (project / "luria.toml").write_text(
+        '[luria]\nissue_url = "https://example.test/issues/{n}"\n'
+        '[luria.site]\nicon = "nope/icon.svg"\nlogo = "nope/logo.svg"\n')
+    from luria import config as config_module
+    config_module.reset()
+    report = site.stage(project / "build" / "site")
+    assert any("icon" in line and "no such file" in line
+               for line in report.unplaced)
+    assert any("logo" in line for line in report.unplaced)
+
+
+def test_a_project_with_no_artwork_still_gets_a_stylesheet(project):
+    site.stage(project / "build" / "site")
+    scss = (project / "build" / "site" / "custom.scss").read_text()
+    assert scss.startswith("// GENERATED")
+    assert '@use "./base.scss";' in scss
+    assert ".page-title" not in scss

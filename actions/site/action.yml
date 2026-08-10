@@ -71,7 +71,33 @@ runs:
         cp -r "$RUNNER_TEMP/luria-site/content" .quartz-build/content
         cp "$RUNNER_TEMP/luria-site/quartz.config.ts" .quartz-build/quartz.config.ts
         cp "$RUNNER_TEMP/luria-site/quartz.layout.ts" .quartz-build/quartz.layout.ts
+        cp "$RUNNER_TEMP/luria-site/custom.scss" .quartz-build/quartz/styles/custom.scss
+        # Merged, not replaced: Quartz ships its own og-image and giscus files
+        # in here that the record has no opinion about.
+        cp -r "$RUNNER_TEMP/luria-site/static/." .quartz-build/quartz/static/
         cd .quartz-build
         npm ci
+        # The favicon is rasterized here rather than committed, so a project
+        # points at the vector master it maintains and nothing derived from it
+        # can drift. `sharp` is Quartz's own dependency — reading an SVG and
+        # writing the `static/icon.png` that Head links and the Favicon
+        # emitter resizes into favicon.ico — so this adds nothing to install.
+        # Read the icon from the STAGING directory, never from the merged
+        # `quartz/static` — that one already holds Quartz's own `icon.png`,
+        # and asking the shell to choose between it and ours by globbing
+        # picks the stock one, since `icon.png` sorts before `icon.svg`.
+        ICON=$(ls "$RUNNER_TEMP"/luria-site/static/icon.* 2>/dev/null | head -1)
+        if [ -n "$ICON" ]; then
+          node -e "
+            const sharp = require('sharp');
+            sharp('$ICON', { density: 384 })
+              .resize(512, 512, { fit: 'contain',
+                                  background: { r: 0, g: 0, b: 0, alpha: 0 } })
+              .png()
+              .toFile('quartz/static/icon.generated.png')
+              .then(() => console.log('icon: rasterized $ICON'));
+          "
+          mv quartz/static/icon.generated.png quartz/static/icon.png
+        fi
         npx quartz build --output "$RUNNER_TEMP/luria-site/public"
         echo "path=$RUNNER_TEMP/luria-site/public" >> "$GITHUB_OUTPUT"
