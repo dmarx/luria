@@ -70,6 +70,7 @@ runs:
         rm -rf .quartz-build/content
         cp -r "$RUNNER_TEMP/luria-site/content" .quartz-build/content
         cp "$RUNNER_TEMP/luria-site/quartz.config.ts" .quartz-build/quartz.config.ts
+        cp "$RUNNER_TEMP/luria-site/quartz.layout.ts" .quartz-build/quartz.layout.ts
         cd .quartz-build
         npm ci
         npx quartz build --output "$RUNNER_TEMP/luria-site/public"
