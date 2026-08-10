@@ -106,6 +106,24 @@ url  = "https://github.com/dmarx/luria/blob/main/docs/directives.md#fixture-code
 # base_url   = "owner.github.io/repo"
 # source_url = "https://github.com/owner/repo/blob/HEAD"
 # exclude    = ["vendor/**"]
+#
+# Your artwork, if you have some. `icon` is the favicon and stays the VECTOR
+# master — the build rasterizes it, so nothing derived from it is committed
+# here to drift (LU-DP-3). `logo` replaces the site title in the sidebar, and
+# is baked once per theme; add `logo_dark` when the artwork can't invert
+# itself.
+# icon = "assets/brand/icon.svg"
+# logo = "assets/brand/lockup.svg"
+#
+# Any of Quartz's colour names — light, lightgray, gray, darkgray, dark,
+# secondary, tertiary, highlight, textHighlight. The ones you leave out stay
+# the generator's; one it doesn't know is refused by name.
+# [luria.site.theme.light]
+# light = "#f4f1e8"
+# dark  = "#111111"
+# [luria.site.theme.dark]
+# light = "#151412"
+# dark  = "#f4f1e8"
 
 # The enforcement dial (LU-ADR-035): status findings are warnings by default,
 # and a class named here fails `luria lint` instead. The acknowledgement
