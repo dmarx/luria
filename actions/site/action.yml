@@ -86,7 +86,16 @@ runs:
         # `quartz/static` — that one already holds Quartz's own `icon.png`,
         # and asking the shell to choose between it and ours by globbing
         # picks the stock one, since `icon.png` sorts before `icon.svg`.
-        ICON=$(ls "$RUNNER_TEMP"/luria-site/static/icon.* 2>/dev/null | head -1)
+        #
+        # A loop rather than `ls … | head -1`: with `pipefail` set, `ls` on a
+        # pattern that matches nothing fails the whole pipeline and `set -e`
+        # ends the step — so a project that configures no icon would get a
+        # broken Pages build instead of the generator's default one (#73). An
+        # unmatched glob expands to itself here, which `-e` rejects.
+        ICON=""
+        for candidate in "$RUNNER_TEMP"/luria-site/static/icon.*; do
+          if [ -e "$candidate" ]; then ICON="$candidate"; break; fi
+        done
         if [ -n "$ICON" ]; then
           node -e "
             const sharp = require('sharp');

@@ -6,6 +6,7 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 
 ## Currently — [August 2026](2026-08.md)
 
+- [10 Aug 03:42 — The branding that never shipped: a squash merge photographs the branch, not the branch name](2026-08.md#20260810034232)
 - [10 Aug 03:10 — Branding the site: a rasterizer reads an icon before any human does](2026-08.md#20260810031009)
 - [10 Aug 00:49 — The first look at the published site found what no build check could](2026-08.md#20260810004959)
 - [9 Aug 21:44 — Building the site was a reference-integrity check the lint doesn't have](2026-08.md#20260809214428)
@@ -38,8 +39,8 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 
 ## All books
 
-29 entries across 1 book, newest first.
+30 entries across 1 book, newest first.
 
 | Book | Entries | First | Last |
 |---|--:|---|---|
-| [2026-08](2026-08.md) | 29 | 2026-08-03 | 2026-08-10 |
+| [2026-08](2026-08.md) | 30 | 2026-08-03 | 2026-08-10 |

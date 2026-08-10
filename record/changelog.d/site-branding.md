@@ -19,3 +19,13 @@
   kit's two colours, the horizontal lockup in the sidebar, and a new
   `luria_project_memory_icon.svg` — the mark on a paper badge, contours
   thickened so the line art still reads at 16px — as the favicon.
+
+### Fixed
+
+- **`actions/site` no longer fails the build for a project with no favicon**
+  ([#73](https://github.com/dmarx/luria/issues/73)): the icon lookup used
+  `ls … 2>/dev/null | head -1`, and under the step's own `set -euo pipefail`
+  an unmatched glob ends the step before Quartz ever runs. Silencing a
+  command's stderr reads as handling its failure and isn't. It could not
+  bite this repository, which always configures an icon; it would have bitten
+  the first adopter who didn't.
