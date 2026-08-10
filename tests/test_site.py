@@ -209,3 +209,44 @@ def test_a_superseded_decision_says_so_on_its_page(project):
     staged = (out / "content" / "record" / "decisions.d"
               / "ADR-002.md").read_text()
     assert "> **Status** Superseded — by [ADR-001](ADR-001.md)" in staged
+
+
+def test_an_html_image_is_staged_beside_its_page(tmp_path):
+    """`<img src>` is how a README centres a banner — markdown isn't parsed
+    inside an HTML block — and an unrecognised shape is worse than a wrong
+    one: it is neither staged, nor redirected, nor counted (#70)."""
+    report = site.stage(tmp_path)
+    banner = (tmp_path / "content" / "assets" / "branding"
+              / "luria-brainslug"
+              / "luria_project_memory_lockup_horizontal.svg")
+    assert banner.exists()
+    assert report.assets >= 1
+
+
+def test_the_landing_page_is_named_and_still_answers_to_README(tmp_path):
+    site.stage(tmp_path)
+    index = (tmp_path / "content" / "index.md").read_text()
+    assert index.startswith('---\ntitle: "luria"\n')
+    assert 'aliases:\n- "README"' in index
+
+
+def test_the_graph_sits_above_the_article_not_in_the_sidebar(tmp_path):
+    """Quartz's sidebars stack below the content under 1200px, so a graph in
+    the right rail is at the bottom of the page on most windows (#71)."""
+    site.stage(tmp_path)
+    layout = (tmp_path / "quartz.layout.ts").read_text()
+    before, _, right = layout.partition("right: [")
+    assert "Component.Graph(" in before.split("left: [")[0]
+    assert "Component.Graph(" not in right
+
+
+def test_the_action_copies_every_file_the_staging_writes(tmp_path):
+    """The pair that has to move together. `stage` gained a second generated
+    file and the action did not copy it — a whole layout silently reverting
+    to Quartz's default is exactly the drift DP-3 says to guard as a
+    property, not as a list somebody remembers to extend."""
+    site.stage(tmp_path)
+    written = {p.name for p in tmp_path.iterdir() if p.is_file()}
+    action = (current().root / "actions" / "site" / "action.yml").read_text()
+    for name in written:
+        assert name in action, f"actions/site never copies {name}"
