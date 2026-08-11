@@ -161,32 +161,39 @@ def test_active_selects_a_status_it_does_not_define(example):
     assert any("nonstandard status" in e for e in errors)
 
 
-def test_omitting_output_does_not_collocate_the_shipped_adr_scheme(example):
-    """The same root cause as the test below, and the one that bites hardest.
+def test_a_declared_family_replaces_the_defaults(example):
+    """A project that declares schemes gets exactly the schemes it declared.
 
-    Config merges over `DEFAULTS`, and the shipped `[luria.schemes.ADR]`
-    carries `output = "docs/decisions"`. So an existing project that points
-    `dir` at its decisions and omits `output` — the documented way to keep an
-    existing layout — silently gets its index relocated to `docs/decisions/`.
-    The workaround is to set `output` equal to `dir`, which is what
-    `examples/collocated` does and says."""
-    example("rfcs-and-specs")            # sets no `output` for ADR at all
+    These used to be two pinned *limits*: the shipped ADR scheme could not be
+    removed, and omitting its `output` inherited `docs/decisions` instead of
+    unsetting it — both because families merged over `DEFAULTS`. ADR-047
+    changed the rule: a declared family replaces the default one. The pins
+    fired when the rule changed, which is what they were for; these are their
+    inversions."""
+    root = example("rfcs-and-specs")     # declares RFC and SPEC, no ADR
+    assert set(config.current().schemes) == {"RFC", "SPEC"}
+    assert not (root / "docs" / "decisions").exists(), \
+        "no phantom decision index for a scheme nobody declared"
+
+
+def test_an_undeclared_family_keeps_the_defaults(example):
+    """The other half of the replacement rule: a family you never mention is
+    still the shipped one. `many-journals` declares only journals, so its
+    scheme family is untouched and the default ADR scheme survives."""
+    example("many-journals")
+    assert "ADR" in config.current().schemes
+    assert set(config.current().journals) == {"devlog", "incidents", "meetings"}
+
+
+def test_omitting_output_collocates_a_declared_scheme(example):
+    """Declaring `[luria.schemes.ADR] dir = "decisions"` with no `output`
+    now genuinely unsets it — nothing is left for the key to inherit from —
+    so the view renders beside the sources, as the `collocated` example's
+    config reads."""
+    example("collocated")
     adr = config.current().schemes["ADR"]
-    assert adr.output is not None, "inherited from DEFAULTS, not unset"
-    assert adr.output.name == "decisions"
-    assert adr.view != adr.dir, "so the view is NOT beside the sources"
-
-
-def test_the_shipped_adr_scheme_cannot_be_removed(example):
-    """Config merges over the defaults, so `[luria.schemes.ADR]` is always
-    present. A project that wants only RFCs still carries an ADR scheme and
-    still renders an empty decision index.
-
-    Asserted rather than wished away: `examples/README.md` tells adopters
-    this, and a doc that states a limit has to be right about it."""
-    root = example("rfcs-and-specs")
-    assert "ADR" in config.current().schemes, "no way to opt out today"
-    assert (root / "docs" / "decisions" / "README.md").exists()
+    assert adr.output is None
+    assert adr.view == adr.dir
 
 
 # --- reference checking is scheme-driven ---------------------------------

@@ -25,26 +25,24 @@ LURIA_ROOT=$PWD luria index
 LURIA_ROOT=$PWD luria lint
 ```
 
-## Three limits these examples make visible
+## The merge rule these examples demonstrate
 
-Worth knowing before you design a record around them, and both are the kind
-of thing that only shows up when someone actually runs the configuration.
+A family table you declare — `schemes`, `fragments`, `journals`, `remotes` —
+**replaces** the shipped default; one you never mention keeps it
+([LU-ADR-047](https://github.com/dmarx/luria/blob/main/record/decisions.d/ADR-047.md)).
+`rfcs-and-specs/` declares two schemes and has exactly two: no phantom
+decision index for an ADR scheme nobody asked for. `many-journals/` declares
+only journals, so its scheme family is untouched and the default ADR scheme
+survives. And `collocated/` omits `output` and gets a genuinely unset key —
+the view renders beside its sources, because a declared family has no default
+entry left to inherit from.
 
-**The shipped `ADR` scheme cannot be removed.** Configuration merges over
-Luria's defaults, and those defaults include `[luria.schemes.ADR]`. A project
-that wants RFCs and no decisions still gets an ADR scheme pointing at
-`record/decisions.d`, and still renders an empty decision index. Leaving it
-empty is harmless and is what these examples do; deleting it is not currently
-possible.
+Two of these were *limits* when this directory was first written — the ADR
+scheme could not be removed, and its `output` could not be unset by omission
+— and the tests that pinned them fired the day the rule changed, which is
+what pins are for.
 
-**Omitting `output` does not collocate the `ADR` scheme** — set it equal to
-`dir` instead. This is the same merge, and it is the one that bites hardest,
-because it hits the documented adoption path. `output` is *unset* for a scheme
-you invent, so omitting it renders the view beside the sources as described.
-But the shipped ADR entry carries `output = "docs/decisions"`, so a project
-that points `dir` at its existing decisions and omits `output` — expecting to
-keep its layout — silently gets its index relocated to `docs/decisions/`.
-`examples/collocated/` writes `output = "decisions"` for exactly this reason.
+## One limit these examples make visible
 
 **`active` selects from a closed vocabulary — it does not define one.** The
 five statuses (`Active`, `Proposed`, `Deferred`, `Superseded`, `Rejected`)

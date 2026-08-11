@@ -79,7 +79,10 @@ DEFAULT_DOCUMENT_STUB = """# {title}
 {principles}
 """
 
-DEFAULT_STUB = """# Architecture decision records
+# Same rule as DEFAULT_DOCUMENT_STUB above, found the same way: the heading
+# names the scheme, because a project that hasn't written a stub for its RFC
+# index should not get a page titled after this package's decisions.
+DEFAULT_STUB = """# {title}
 
 <!-- GENERATED below this line by `luria index` — edit README.stub instead. -->
 
@@ -252,7 +255,10 @@ def render_index(adrs: list[Adr], tags: list[tuple[str, dict]],
     prefix = prefix_for(scheme, scheme.view)
     table = TABLE_HEAD + "\n".join(a.row(prefix) for a in adrs) + "\n"
     stub = scheme.stub
-    prose = stub.read_text() if stub.exists() else DEFAULT_STUB
+    prose = (stub.read_text() if stub.exists()
+             else DEFAULT_STUB.replace(
+                 "{title}", "Architecture decision records"
+                 if scheme.prefix == "ADR" else f"{scheme.prefix} documents"))
     return (prose.replace("{categories}", render_categories(adrs, tags, prefix))
                  .replace("{table}", table))
 
