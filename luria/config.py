@@ -509,6 +509,11 @@ class Config:
         return s.tag_dir if s else self.decisions / "tags"
 
     @property
+    def config_doc(self) -> Path:
+        """Where the generated configuration reference lands."""
+        return self.docs / "configuration.md"
+
+    @property
     def remotes_lock(self) -> Path:
         """Discovered code→filename maps for the remotes, checked in.
 
@@ -526,6 +531,14 @@ class Config:
         would gain a citation site inside the page that flags it, and the
         view could never converge."""
         if path.parent == self.reports:
+            return True
+        # The configuration reference (`luria index` renders it from this
+        # module's own dataclasses). Generated for the usual reason — a
+        # hand-written copy of a schema drifts — and flagged here for a second
+        # one: the page is *made* of example codes, and `doc_refs.doc_files`
+        # filters on this method, so the bare-reference lint and the fixer
+        # both leave it alone.
+        if path == self.config_doc:
             return True
         for s in self.schemes.values():
             if s.render == "index" and (path == s.index_path

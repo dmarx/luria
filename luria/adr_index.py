@@ -368,7 +368,7 @@ def outputs() -> dict[Path, str]:
     pure function of the tree, so they run as parallel units. `pmap` returns
     in input order, which is what keeps the merged dict — and therefore the
     staleness diff — deterministic."""
-    from . import journal, reports
+    from . import config_doc, journal, reports
     from .parallel import pmap
     cfg = current()
     units = [lambda s=s: _render_scheme(s) for s in cfg.schemes.values()]
@@ -376,6 +376,10 @@ def outputs() -> dict[Path, str]:
     # The status reports render with everything else (#35), so the badges have
     # a committed page to land on and a stale report is a lint failure.
     units += [reports.outputs]
+    # The configuration reference is a projection of the config schema, so it
+    # goes stale on a code change rather than a record change — which is
+    # exactly why it renders here instead of being written by hand.
+    units += [config_doc.outputs]
     out: dict[Path, str] = {}
     for rendered in pmap(lambda u: u(), units):
         out.update(rendered)
