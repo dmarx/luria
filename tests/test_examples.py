@@ -6,10 +6,15 @@ drifted. So each example is built into a temporary directory, the real
 `luria index` and `luria lint` run against it, and the capability it advertises
 is asserted.
 
-Two of these tests assert *limits* rather than features. They exist because
-both were discovered by running a configuration that the documentation, at the
-time, said would work — and a limit nobody has pinned is one the docs will
-quietly start lying about again.
+Three of these tests assert *limits* rather than features. They exist because
+each was discovered by running a configuration the documentation, at the time,
+said would work — and a limit nobody has pinned is one the docs will quietly
+start lying about again.
+
+The last group is the opposite: capabilities that were *promised* and absent
+until these examples found them missing. Reference checking used to know three
+hardcoded patterns, so a configured `RFC` scheme was rendered, scaffolded and
+indexed — and never linted.
 """
 import shutil
 from pathlib import Path
@@ -182,3 +187,59 @@ def test_the_shipped_adr_scheme_cannot_be_removed(example):
     root = example("rfcs-and-specs")
     assert "ADR" in config.current().schemes, "no way to opt out today"
     assert (root / "docs" / "decisions" / "README.md").exists()
+
+
+# --- reference checking is scheme-driven ---------------------------------
+
+def test_a_configured_scheme_is_linted_like_any_other(example):
+    """The promise ADR-006 made, at the layer that was missing it.
+
+    `find_refs` used to know three hardcoded patterns — ADR, the `#` spelling
+    of DP, and issues. A project that configured `RFC` got indexes, tag pages
+    and `luria new rfc`, and no reference checking at all: `RFC-7` in prose was
+    neither linked nor reported. Rendering was general; the linter was not."""
+    root = example("rfcs-and-specs")
+    source = root / "record" / "specs.d" / "SPEC-001.md"
+
+    refs = doc_refs.find_refs("see RFC-001 and SPEC-001", source)
+    assert [(r.kind, r.prefix, r.num) for r in refs] == [
+        ("scheme", "RFC", 1), ("scheme", "SPEC", 1)]
+
+
+def test_cross_scheme_references_resolve_to_each_shape(example):
+    """An index-rendered scheme resolves to the document's own file; a
+    document-rendered one to an anchor in the assembled page. Both from the
+    right base, which is where the text *renders*, not where it lives."""
+    root = example("rfcs-and-specs")
+
+    from_rfc, _ = doc_refs.linkify(
+        "See SPEC-001.", root / "record" / "rfcs.d" / "RFC-001.md")
+    assert "interfaces.md#spec-1" in from_rfc
+
+    from_spec, _ = doc_refs.linkify(
+        "Motivated by RFC-001.", root / "record" / "specs.d" / "SPEC-001.md")
+    assert "rfcs.d/RFC-001.md" in from_spec
+
+
+def test_the_dp_code_spelling_is_found_not_only_the_prose_one(example):
+    """`CLAUDE.md` and the scaffolded template both tell contributors to write
+    the bare code and let the fixer spell the target. For `DP-6` that was
+    false: `DP_RE` matched only `design principles #6`, so a bare `DP-6` was
+    neither linked nor reported — the worst of the three behaviours."""
+    root = example("rfcs-and-specs")
+    source = root / "record" / "specs.d" / "SPEC-001.md"
+    assert doc_refs.find_refs("per SPEC-1 exactly", source)
+    assert doc_refs.find_refs("per SPEC 1 exactly", source)
+
+
+def test_a_document_never_links_to_itself(example):
+    """A fragment is a different file from the page it assembles into, so the
+    `target == source` test that protects an index-rendered scheme does not
+    fire here. Without an explicit guard a principle's own `# DP-001:` heading
+    becomes a link, and the title check then fails on a heading that no longer
+    matches its frontmatter — which is exactly what happened first."""
+    root = example("rfcs-and-specs")
+    spec = root / "record" / "specs.d" / "SPEC-001.md"
+    linked, count = doc_refs.linkify(spec.read_text(), spec)
+    assert count == 0
+    assert linked.count("# SPEC-001:") == 1

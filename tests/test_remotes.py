@@ -97,7 +97,8 @@ def test_the_finder_claims_the_whole_composed_span(project):
 
 def test_a_local_code_still_reads_as_local(project):
     with_remote(project)
-    assert [r.kind for r in doc_refs.find_refs("see ADR-032 for that")] == ["adr"]
+    refs = doc_refs.find_refs("see ADR-032 for that")
+    assert [(r.kind, r.prefix) for r in refs] == [("scheme", "ADR")]
 
 
 def test_the_fixer_writes_a_url_not_a_relative_path(project):

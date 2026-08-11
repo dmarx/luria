@@ -35,7 +35,9 @@ renders into `docs/devlog/` (ADR-020). `link_base()` maps a path to the
 directory its links must resolve from.
 """
 
-# unresolved-ok-file: ADR-919, ADR-157 — illustrative codes in this module's prose
+# unresolved-ok-file: ADR-919, ADR-157, DP-017, DP-018 — illustrative codes in
+# this module's prose. The DP pair became visible once scheme references were
+# found by pattern rather than by hardcoded kind; they were always here.
 from __future__ import annotations
 
 import re
@@ -85,12 +87,14 @@ ISSUE_CUE_RE = re.compile(
     re.IGNORECASE,
 )
 
-KINDS = ("dp", "adr", "issue")
 
 
 @dataclass(frozen=True)
 class Ref:
-    kind: str          # "adr" | "dp" | "issue" | "remote"
+    # "scheme" | "issue" | "remote". A scheme reference carries the prefix it
+    # was found under in `prefix` — the linter is not allowed to know that
+    # `ADR` is special (ADR-006), so there is no per-scheme kind.
+    kind: str
     num: int
     start: int
     end: int
@@ -100,13 +104,15 @@ class Ref:
     # and which code in that project's namespace (ADR-016). Empty otherwise.
     remote: str = ""
     code: str = ""
+    # Which configured scheme matched, for `kind == "scheme"`.
+    prefix: str = ""
 
     def describe(self) -> str:
+        if self.kind == "scheme":
+            return f"{self.prefix}-{self.num:03d}"
         if self.kind == "remote":
             return self.text or f"{self.remote}-{self.code}"
-        return {"adr": f"ADR-{self.num:03d}",
-                "dp": f"design principle #{self.num}",
-                "issue": f"#{self.num}"}[self.kind]
+        return f"#{self.num}"
 
 
 # ── Masking ──────────────────────────────────────────────────────────────
@@ -384,12 +390,14 @@ def find_refs(text: str, path: Path = ANY_MD) -> list[Ref]:
     claimed = [False] * len(text)
     refs: list[Ref] = []
 
-    def take(kind: str, num: int, start: int, end: int) -> bool:
+    def take(kind: str, num: int, start: int, end: int,
+             prefix: str = "") -> bool:
         if any(mask[i] or claimed[i] for i in range(start, end)):
             return False
         for i in range(start, end):
             claimed[i] = True
-        refs.append(Ref(kind, num, start, end, text[start:end], line_of(start)))
+        refs.append(Ref(kind, num, start, end, text[start:end], line_of(start),
+                        prefix=prefix))
         return True
 
     # Remotes first: `LU-ADR-013` must claim its whole span before the local
@@ -409,18 +417,41 @@ def find_refs(text: str, path: Path = ANY_MD) -> list[Ref]:
                         rref.start, rref.end, rref.text, line_of(rref.start),
                         remote=rref.prefix, code=rref.tail))
 
-    for kind, regex in (("dp", DP_RE), ("adr", ADR_RE), ("issue", ISSUE_RE)):
+    # Every configured scheme, by its own pattern (ADR-006). `DP_RE` runs first
+    # and separately because it also matches the *prose* spelling — "design
+    # principles #17" — which no scheme pattern covers; the code spelling
+    # `DP-17` arrives with the schemes, like every other prefix.
+    #
+    # This loop used to be `ADR_RE` alone, which meant a project that
+    # configured `RFC` or `SPEC` got indexes, tag pages and `luria new rfc`
+    # but no reference checking at all: `RFC-7` in prose was neither linked
+    # nor reported. The generality ADR-006 promised stopped one layer short of
+    # the linter, which is the layer the promise was about.
+    schemes = current().schemes
+    dp_prefix = next((s.prefix for s in schemes.values()
+                      if s.render == "document"), "")
+    patterns: list[tuple[str, str, re.Pattern]] = [("scheme", dp_prefix, DP_RE)] \
+        if dp_prefix else []
+    patterns += [("scheme", s.prefix, s.pattern) for s in schemes.values()]
+    patterns += [("issue", "", ISSUE_RE)]
+
+    for kind, prefix, regex in patterns:
         for m in regex.finditer(text):
-            if not take(kind, int(m.group("num")), m.start(), m.end()):
+            start, end = m.start(), m.end()
+            if any(mask[i] or claimed[i] for i in range(start, end)):
                 continue
-            if kind != "dp":
+            for i in range(start, end):
+                claimed[i] = True
+            refs.append(Ref(kind, int(m.group("num")), start, end,
+                            text[start:end], line_of(start), prefix=prefix))
+            if regex is not DP_RE:
                 continue
             # "design principles #17 and #18" — the label governs the whole run,
             # so the siblings are principles too, not issues 18 and 19.
             cursor = m.end()
             while (chain := DP_CHAIN_RE.match(text, cursor)) and take(
-                    "dp", int(chain.group("num")), chain.start("ref"),
-                    chain.end("ref")):
+                    "scheme", int(chain.group("num")), chain.start("ref"),
+                    chain.end("ref"), prefix):
                 cursor = chain.end()
     refs.sort(key=lambda r: r.start)
     return refs
@@ -609,17 +640,43 @@ def resolve(ref: Ref, source: Path, adrs: dict[int, Path],
         # No `issue_url` configured means issue numbers aren't linkable here,
         # which is a legitimate project shape — say nothing rather than guess.
         return cfg.issue_url.format(n=ref.num) if cfg.issue_url else None
-    if ref.kind == "adr":
-        target = adrs.get(ref.num)
+    scheme = cfg.schemes.get(ref.prefix)
+    if scheme is None:
+        return None
+
+    # An index-rendered scheme resolves to the document's own file. `adrs` is
+    # passed in precomputed for the common case; any other scheme reads its
+    # directory, which is why `documents()` is the one place that glob lives.
+    if scheme.render != "document":
+        target = (adrs if ref.prefix == "ADR" else scheme.documents()).get(
+            ref.num)
         if target is None or target == source:
             return None
         return _relative(target, base)
-    anchor = anchors.get(ref.num)
-    if anchor is None:
+
+    # A document-rendered scheme resolves to an anchor in the assembled page.
+    # `anchors` wins where it has an entry: it is discovered from the document
+    # itself, so it carries the heading-derived anchors of a project whose
+    # principles are still one hand-written file (ADR-012). Constructed
+    # otherwise, which is the shape this generator emits.
+    page = scheme.output or cfg.design_principles
+    documents = scheme.documents()
+    # Never link a document to itself. For an index-rendered scheme that is
+    # `target == source` above; here the source is the *fragment*, which is a
+    # different file from the page it assembles into — so without this, a
+    # principle's own `# DP-001:` heading becomes a link to the document it is
+    # part of, and the title check then fails on a heading that no longer
+    # matches its frontmatter.
+    if documents.get(ref.num) == source:
         return None
-    if source == cfg.design_principles:
+    anchor = (anchors.get(ref.num) if page == cfg.design_principles else None)
+    if anchor is None:
+        if ref.num not in documents:
+            return None
+        anchor = f"{scheme.prefix.lower()}-{ref.num}"
+    if source == page:
         return f"#{anchor}"
-    return f"{_relative(cfg.design_principles, base)}#{anchor}"
+    return f"{_relative(page, base)}#{anchor}"
 
 
 def _absorb_brackets(text: str, ref: Ref) -> tuple[int, int]:
