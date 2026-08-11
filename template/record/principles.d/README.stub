@@ -1,7 +1,7 @@
 # Design principles
 
 Standing values this project keeps re-deriving in review, written down once so
-they can be cited by number ("per DP-1") instead of re-argued.
+they can be cited by number ("per [DP-1](design-principles.md#dp-1)") instead of re-argued.
 
 These are **principles, not decisions.** A [decision](decisions/README.md)
 records a choice among alternatives at a point in time; a principle is a value

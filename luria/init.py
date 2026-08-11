@@ -1,32 +1,47 @@
-"""`luria init` — scaffold the record into a project that has none.
+"""`luria init` — scaffold the record a project's config declares.
 
     luria init                    # into the current project root
+    luria init --config my.toml   # install this config, scaffold its shape
     luria init --into PATH
     luria init --dry-run          # list what would be written
 
-Copies the `template/` tree: the four layers' directories and their templates,
-a `luria.toml` with the project's issue URL, a seed set of design principles,
-and a `CLAUDE.md` section pointing an agent at all of it.
+The scaffold is planned from configuration, not copied from a fixed tree
+(ADR-048). Three sources, in order: a file named with `--config`; a
+`luria.toml` the project already has at its root; and the shipped template's
+config, which is what a bare `luria init` has always meant. Whichever wins,
+the plan is the same function of it: a directory and a `_template.md` for
+every scheme, journal and fragment directory the config declares, a stub for
+every scheme's view, the docs index listing exactly the views this record
+renders, and the agent file and workflows from the template.
+
+The shipped ADR and DP schemes keep their rich templates — the decision
+doctrine and the seed principles are the content this package has to offer a
+default-shaped record. Any other scheme gets a neutral template and a stub
+titled after itself: Luria has no opinion about what an RFC should say.
+
+The seed principles are deliberately about *the record itself* — drift, locks,
+one authoritative implementation. They ship whenever the config declares a
+document-rendered DP scheme, which is the shape they were written for. Delete
+the ones you disagree with; a principle nobody believes is worse than an
+empty file.
 
 **Nothing is overwritten.** Existing files are reported as skipped, so running
 this on a project that already has half the record adds only the missing half —
 and running it twice is a no-op. A scaffolder that clobbers is a scaffolder
 nobody dares re-run, which means the one thing it is good at (filling in what a
-project grew past) never gets used.
-
-The seed principles are deliberately about *the record itself* — drift, locks,
-one authoritative implementation. They are the ones a project needs before it
-has learned anything of its own, and they are the ones that earn the machinery
-in this package. Delete the ones you disagree with; a principle nobody believes
-is worse than an empty file.
+project grew past) never gets used. The one hard refusal: `--config` against a
+project that already has a `luria.toml` is an error, not a skip — scaffolding
+one config's shape while a different config governs the record would build
+directories the project's own machinery doesn't know about.
 """
 
 from __future__ import annotations
 
-import shutil
+import os
 from pathlib import Path
 
-from .config import CONFIG_NAME, find_root
+from .config import CONFIG_NAME, Config, Scheme, find_root, load
+
 
 def _template_dir() -> Path:
     """The scaffold's location, which depends on how Luria arrived.
@@ -43,20 +58,187 @@ def _template_dir() -> Path:
 
 TEMPLATE = _template_dir()
 
+# The template for a scheme this package has no doctrine about. The
+# `{PREFIX}-NNN` placeholder is `luria new`'s contract (ADR-036): the copy
+# gets its real code substituted everywhere a reader would see one, and the
+# `date:` line is restamped. The frontmatter is the shape the lint demands —
+# a canonical status, a title agreeing with the heading, at least one tag.
+GENERIC_TEMPLATE = """\
+---
+# Copy this file to {PREFIX}-NNN.md — or run `luria new {prefix}`, which
+# computes the next free number and stamps the date. The filename is the code
+# and nothing else; the title lives in `title:`, where correcting it costs an
+# edit rather than a rename plus every inbound link (LU-ADR-013).
 
-def plan(into: Path) -> list[tuple[Path, Path]]:
-    """(source, destination) for every template file, in a stable order."""
+# Active | Proposed | Deferred | Superseded | Rejected, optionally " — note".
+# `luria lint` enforces the vocabulary; which one counts as "in force" for
+# this scheme is the `active` key in luria.toml.
+status: Proposed
+
+title: Stated as the thing it establishes
+
+version: 1
+
+tags:
+- record
+
+date: '2026-01-01'
+
+# Optional, but it is what the index shows in place of the bare title: what
+# this document establishes, and what it rejected.
+summary: >-
+  One-paragraph description for the index row.
+---
+
+# {PREFIX}-NNN: Stated as the thing it establishes
+
+## Context
+
+What was true that made this necessary.
+
+## Content
+
+The substance, in the active voice.
+"""
+
+# The view stubs a custom scheme starts with. Both are *authored* files — the
+# generator fills the placeholders and leaves the prose to the project.
+GENERIC_STUB_INDEX = """\
+# {PREFIX} documents
+
+One entry per document, generated from frontmatter — edit the fragments in
+this directory, then run `luria index`.
+
+<!-- GENERATED below this line by `luria index` — edit README.stub instead. -->
+
+{{categories}}
+
+{{table}}
+"""
+
+GENERIC_STUB_DOCUMENT = """\
+# {PREFIX} documents
+
+<!-- GENERATED by `luria index` — edit the fragments, not this file. -->
+
+{{principles}}
+"""
+
+
+def _read(rel: str) -> str:
+    return (TEMPLATE / rel).read_text()
+
+
+def _toml_text(into: Path, config_arg: str | None, issue_url: str) -> str:
+    """The config the scaffold is planned from, resolved in priority order."""
+    root_cfg = into / CONFIG_NAME
+    if config_arg:
+        if root_cfg.exists():
+            raise SystemExit(
+                f"luria init: {CONFIG_NAME} already exists in {into} — "
+                "refusing to scaffold from a different config. Merge the two "
+                "by hand, then re-run without --config.")
+        return Path(config_arg).read_text()
+    if root_cfg.exists():
+        return root_cfg.read_text()
+    text = _read(CONFIG_NAME)
+    if issue_url:
+        text = text.replace(
+            'issue_url = ""',
+            f'issue_url = "{issue_url.rstrip("/")}/{{n}}"'
+            if "{n}" not in issue_url else f'issue_url = "{issue_url}"')
+    return text
+
+
+def _scheme_files(scheme: Scheme) -> dict[Path, str]:
+    """What one scheme's directory starts with.
+
+    ADR and a document-rendered DP get the shipped rich content — the
+    decision doctrine and the seed principles are what this package has to
+    say, and they are prefix-specific on purpose. Everything else gets the
+    neutral shapes above, titled after itself."""
+    if scheme.prefix == "ADR":
+        return {
+            scheme.dir / "_template.md": _read("record/decisions.d/_template.md"),
+            scheme.stub: _read("record/decisions.d/README.stub"),
+            scheme.tags_yaml: _read("record/decisions.d/tags.yaml"),
+        }
+    if scheme.prefix == "DP" and scheme.render == "document":
+        return {scheme.dir / src.name: src.read_text()
+                for src in sorted((TEMPLATE / "record/principles.d").glob("*"))
+                if src.is_file()}
+    stub = (GENERIC_STUB_DOCUMENT if scheme.render == "document"
+            else GENERIC_STUB_INDEX)
+    subs = {"{PREFIX}": scheme.prefix, "{prefix}": scheme.prefix.lower()}
+    template = GENERIC_TEMPLATE
+    for key, value in subs.items():
+        template = template.replace(key, value)
+    return {scheme.dir / "_template.md": template,
+            scheme.stub: stub.replace("{PREFIX}", scheme.prefix)}
+
+
+def _views(cfg: Config) -> str:
+    """The docs index's bullet list — one line per view this record renders,
+    derived from the config so the list and the record cannot disagree about
+    what exists (the docs-index lint would catch it, but a scaffold that
+    starts red teaches the wrong first lesson)."""
+    rel = lambda p: os.path.relpath(p, cfg.docs)  # noqa: E731
+    lines = []
+    for s in cfg.schemes.values():
+        if s.render == "document":
+            target = s.output if s.output else s.view / "README.md"
+            if s.prefix == "DP":
+                lines.append(f"- [Design principles]({rel(target)}) — standing "
+                             "values, numbered.")
+            else:
+                lines.append(f"- [{s.prefix} documents]({rel(target)}) — the "
+                             "set, read as one page.")
+        elif s.prefix == "ADR":
+            lines.append(f"- [Decisions]({rel(s.index_path)}) — choices, with "
+                         "their alternatives.")
+        else:
+            lines.append(f"- [{s.prefix} index]({rel(s.index_path)}) — one "
+                         "entry per document, with status and tags.")
+    for j in cfg.journals.values():
+        lines.append(f"- [{j.title}]({rel(j.output / 'README.md')}) — the "
+                     f"narrative, one book per {j.granularity}.")
+    lines.append("- [Configuration](configuration.md) — every `luria.toml` "
+                 "key, generated from Luria's own schema. Read it before "
+                 "assuming this record can only hold decisions: schemes, "
+                 "journals, fragment directories and remotes are families "
+                 "*this* project names.")
+    return "\n".join(lines)
+
+
+def plan(into: Path, config_arg: str | None = None,
+         issue_url: str = "") -> list[tuple[Path, str]]:
+    """(destination, content) for everything the scaffold would write."""
     if not TEMPLATE.is_dir():                       # installed without data
         return []
-    return [(src, into / src.relative_to(TEMPLATE))
-            for src in sorted(TEMPLATE.rglob("*")) if src.is_file()]
+    toml_text = _toml_text(into, config_arg, issue_url)
+    cfg = load(into, text=toml_text)
+
+    files: dict[Path, str] = {into / CONFIG_NAME: toml_text}
+    for scheme in cfg.schemes.values():
+        files.update(_scheme_files(scheme))
+    for journal in cfg.journals.values():
+        files[journal.dir / "_template.md"] = _read("record/devlog.d/_template.md")
+    for name in cfg.fragments:
+        files[into / name / "_template.md"] = _read("record/changelog.d/_template.md")
+    files[cfg.docs / "README.md"] = _read("docs/README.md").replace(
+        "{views}", _views(cfg))
+    files[into / "CLAUDE.md"] = _read("CLAUDE.md")
+    for wf in sorted((TEMPLATE / ".github").rglob("*")):
+        if wf.is_file():
+            files[into / wf.relative_to(TEMPLATE)] = wf.read_text()
+    return sorted(files.items())
 
 
-def write(into: Path, issue_url: str = "",
-          dry_run: bool = False) -> tuple[int, int, list[Path]]:
+def write(into: Path, issue_url: str = "", dry_run: bool = False,
+          config: str | None = None) -> tuple[int, int, list[Path]]:
     written = skipped = 0
     kept: list[Path] = []
-    for src, dest in plan(into):
+    for dest, content in plan(into, config, issue_url):
         if dest.exists():
             print(f"  skip   {dest.relative_to(into)} (exists)")
             skipped += 1
@@ -67,25 +249,19 @@ def write(into: Path, issue_url: str = "",
         if dry_run:
             continue
         dest.parent.mkdir(parents=True, exist_ok=True)
-        text = src.read_text()
-        if dest.name == CONFIG_NAME and issue_url:
-            text = text.replace(
-                'issue_url = ""',
-                f'issue_url = "{issue_url.rstrip("/")}/{{n}}"'
-                if "{n}" not in issue_url else f'issue_url = "{issue_url}"')
-        dest.write_text(text)
-        shutil.copystat(src, dest)
+        dest.write_text(content)
     return written, skipped, kept
 
 
-def run(into: str = None, issue_url: str = "",
-        dry_run: bool = False) -> None:
-    """Scaffold the record into a project (default: the detected root).
-    Never overwrites; --dry-run lists what would be written; --issue-url
-    makes issue numbers linkable."""
+def run(into: str = None, issue_url: str = "", dry_run: bool = False,
+        config: str = None) -> None:
+    """Scaffold the record a config declares (default: the detected root's
+    own config, or the shipped template's). Never overwrites; --config PATH
+    installs that file as luria.toml and scaffolds its shape; --dry-run lists
+    what would be written; --issue-url makes issue numbers linkable."""
     into = (Path(into) if into else find_root()).resolve()
     print(f"luria init → {into}")
-    written, skipped, kept = write(into, issue_url, dry_run)
+    written, skipped, kept = write(into, issue_url, dry_run, config)
     if not written and not skipped:
         print("  nothing to write — is the template directory installed?")
         raise SystemExit(1)
@@ -101,7 +277,7 @@ def run(into: str = None, issue_url: str = "",
               "run `luria --help` (LU-ADR-037). Worth borrowing: ask your "
               "agent to fold that shape into your existing file.")
     if written and not dry_run:
-        print("\nNext: `luria index` to build the decision index, then "
+        print("\nNext: `luria index` to build the generated views, then "
               "`luria lint`.")
 
 

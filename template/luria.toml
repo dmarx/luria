@@ -52,6 +52,11 @@ historical = ["CHANGELOG.md"]
 # force", and how its view is rendered — `index` when the documents are browsed
 # and read one at a time, `document` when the set is read as a whole (ADR-012).
 # Add another (RFC, SPEC) as a third entry; nothing else needs to change.
+#
+# A declared family is yours entirely (LU-ADR-047): this file declares ADR and
+# DP, so this record has ADR and DP — delete one of these tables and the
+# scheme is gone, record and views alike. A family left undeclared keeps the
+# shipped default.
 [luria.schemes.ADR]
 dir = "record/decisions.d"
 output = "docs/decisions"
