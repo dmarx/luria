@@ -21,9 +21,11 @@ To vouch for one, put the reason where the citation is — `inactive-ok:` covers
 
 Migrations: renaming schemes and moving documents without losing the record's memory
 
-1 citation in 1 file awaits a look.
+3 citations in 3 files await a look.
 
+- [`docs/adopting.md:150`](../adopting.md)
 - [`record/decisions.d/ADR-041.md:26`](../../record/decisions.d/ADR-041.md)
+- [`record/decisions.d/ADR-044.md:142`](../../record/decisions.d/ADR-044.md)
 
 ## Codes that resolve to no document
 

@@ -4,7 +4,7 @@
 
 How the machinery is adopted, run, and reported on.
 
-16 of 43 decisions. Back to the [full index](../README.md).
+16 of 44 decisions. Back to the [full index](../README.md).
 
 | # | Title | Status |
 |---|---|---|
