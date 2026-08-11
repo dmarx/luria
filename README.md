@@ -15,6 +15,7 @@
 
 <!-- WIP Banner -->
 
+<!--
 A simple project memory framework based on time-tested change management principles.  
 A framework that accumulates priorities and constraints to steer collaborations.  
 A linter that guards the semantic integrity of inline references.  
@@ -24,11 +25,11 @@ A linter that checks whether cited decisions still apply.
 A linter for the premises your project still endorses.  
 A collateral damage containment field.  
 A Chesterton's Fence Eliminator.  
+-->
 
+A linter that checks whether cited decisions still apply. Never ask "why are things this way?" again.
 
----
-
-Luria tracks and lints references to decision records to catch justifications (in e.g. documentation, code comments, decision records) which reference evidence that the repository's record no longer endorses. Never ask "why are things this way?" again.
+Luria tracks and lints references to decision records to catch justifications (in docs or code) which reference evidence that the repository no longer endorses. 
 
 ---
 
