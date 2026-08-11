@@ -1,0 +1,24 @@
+# Two document families side by side, and neither of them is a decision.
+#
+# The prefix is the table's name, so `RFC-7` and `SPEC-3` become first-class
+# references the moment these tables exist: `luria link --fix` writes their
+# links, `luria lint` demands them, and `luria new rfc` scaffolds the next
+# free number.
+[luria]
+issue_url = "https://github.com/acme/widgets/issues/{n}"
+
+# Browsed one at a time → an index plus per-tag pages.
+[luria.schemes.RFC]
+dir    = "record/rfcs.d"
+output = "docs/rfcs"
+render = "index"
+
+# Read as a whole → one concatenated document. Same convention either way;
+# only the reading changes (LU-ADR-012).
+[luria.schemes.SPEC]
+dir    = "record/specs.d"
+output = "docs/interfaces.md"
+render = "document"
+
+# NOTE: there is no way to remove the ADR scheme Luria ships — config merges
+# over the defaults. It stays empty here, and renders an empty index.

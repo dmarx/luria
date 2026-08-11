@@ -1,0 +1,9 @@
+# `luria index` writes views next to the sources when an example is run in
+# place. None of it is committed: `tests/test_examples.py` builds each example
+# in a temporary directory and generates there, so nothing here can become a
+# stale committed view — which is the failure these examples exist to argue
+# against.
+*/docs/*
+!*/docs/README.md
+*/decisions/README.md
+*/decisions/tags/
