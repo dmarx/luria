@@ -18,7 +18,7 @@ disagrees with either, this file is the one that's wrong.
 - [Project memory: how a repo thinks](docs/project-memory.md) — the doctrine:
   the four layers, what files where, how the record is revised. Start here.
 - [Design principles](docs/design-principles.md) — the standing values,
-  cited as "DP-2".
+  cited as "[DP-2](docs/design-principles.md#dp-2)".
 - [The decision record](docs/decisions/README.md) — every choice, its
   alternatives, its status.
 - [Comment directives](docs/directives.md) — the acknowledgement vocabulary,

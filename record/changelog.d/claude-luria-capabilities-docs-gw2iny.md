@@ -43,3 +43,23 @@
   extend it, and omitting `output` does not collocate the shipped `ADR`
   scheme (set it equal to `dir`). Both are now documented accurately and
   pinned by tests.
+
+### Fixed (reference checking)
+
+- **Every configured scheme is now linted and linked, not just `ADR`.**
+  Reference detection matched three hardcoded patterns, so a project with an
+  `RFC` or `SPEC` scheme got indexes, tag pages and `luria new rfc` — and no
+  reference checking at all. `RFC-7` in prose was neither linked nor reported
+  ([ADR-046](record/decisions.d/ADR-046.md)).
+- The bare `DP-6` spelling is found. `CLAUDE.md` and the scaffolded template
+  both tell contributors to write the bare code and let `luria link --fix`
+  spell the target; for design principles that had never been true, because
+  only the prose spelling (`design principles #6`) was matched. Applying the
+  fix linked 38 references in this repository that had accumulated unseen.
+- Cross-scheme references resolve in both directions — a file link into an
+  index-rendered scheme, an anchor into a document-rendered one, each from
+  the base where the citing text renders.
+
+**Upgrading:** references your record has been carrying unchecked will become
+violations in one pass. Run `luria link --fix` and read a sample of the diff
+rather than trusting it wholesale.
