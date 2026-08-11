@@ -17,7 +17,7 @@ place on its first try.
 
 | layer | holds | one-line test |
 |---|---|---|
-| [`record/principles.d/`](design-principles.md) | standing **values**, numbered, cited as "DP-2" instead of re-argued | *have we re-derived this reasoning more than once?* |
+| [`record/principles.d/`](design-principles.md) | standing **values**, numbered, cited as "[DP-2](design-principles.md#dp-2)" instead of re-argued | *have we re-derived this reasoning more than once?* |
 | [`record/decisions.d/`](decisions/README.md) | a **choice among alternatives** at a point in time, one file each | *did we reject an alternative, or set a constraint a future edit could violate?* |
 | `record/changelog.d/` fragments | **what changed**, operator-facing, terse | *would someone running or using this notice?* |
 | `record/devlog.d/` entries | **how it went** — including failed approaches and wrong theories, which are the reusable part | *will a future debugger want the narrative?* |

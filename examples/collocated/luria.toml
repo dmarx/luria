@@ -1,0 +1,16 @@
+# The shape a project has before it splits reading from writing: no `output`
+# anywhere, so each view renders beside the sources it is built from.
+#
+# This is what adoption looks like when you do NOT want to move files first
+# (LU-ADR-021). `decisions/README.md` is generated in place, next to the
+# decisions themselves.
+[luria]
+issue_url = "https://github.com/acme/monolith/issues/{n}"
+
+[luria.paths]
+docs = "docs"
+
+# No `output` key at all — the index lands in `decisions/`.
+[luria.schemes.ADR]
+dir    = "decisions"
+output = "decisions"

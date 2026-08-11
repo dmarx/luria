@@ -7,8 +7,8 @@
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/github/license/dmarx/luria)](LICENSE)
 <!-- luria:badges -->
-[![needs decision: 3](https://img.shields.io/badge/needs%20decision-3-orange)](docs/reports/pending-decisions.md)
-[![cited, not in force: 1](https://img.shields.io/badge/cited,%20not%20in%20force-1-orange)](docs/reports/reference-status.md)
+[![needs decision: 6](https://img.shields.io/badge/needs%20decision-6-orange)](docs/reports/pending-decisions.md)
+[![cited, not in force: 3](https://img.shields.io/badge/cited,%20not%20in%20force-3-orange)](docs/reports/reference-status.md)
 <!-- /luria:badges -->
 
 </div>
@@ -55,6 +55,8 @@ just pointing them to your project's documentation instead. Like you would with 
 ## How It Works
 
 Luria is comprised of four documentation subsystems ([ADR-001](record/decisions.d/ADR-001.md)) designed to reference one another, a linter for ensuring those references haven't gone stale, and some convenience tools ([ADR-020](record/decisions.d/ADR-020.md), [ADR-025](record/decisions.d/ADR-025.md)) for interfacing with the linter and documentation subsystems.
+
+Those four subsystems are the *shipped default*, not the machinery's fixed parts. A referable document family, a fragment directory, a journal and a foreign record are each a table you name in `luria.toml` — so a project can add RFCs, run a second journal, or lint citations to things that aren't Luria records at all, without touching code. The [configuration reference](docs/configuration.md) is generated from the schema and says what every dial does; [Adopting Luria](docs/adopting.md#shaping-the-record-to-your-project) has the worked examples.
 
 The heart and soul of luria is the **decision record**. If you take away nothing else from reading this: ADD SOME KIND OF DECISION LOG TO
 YOUR PROJECT. It is the best possible guard against [Chesterton's Fence](https://en.wikipedia.org/wiki/G._K._Chesterton#Chesterton's_Fence)
@@ -273,6 +275,8 @@ consumer to hit a bug is this repo.
 - [Design principles](docs/design-principles.md) - **agents** start here: the constitution.
 - [Decisions](docs/decisions/README.md) - **contributors** start here: the history.
 - [Comment directives](docs/directives.md) - **power users** start here. — `inactive-ok`, `unexempt` 
+- [Configuration](docs/configuration.md) — **adopters** start here: every `luria.toml` key, generated from the schema.
+- [Worked configurations](examples/) — four complete projects in other shapes, each one run by CI.
 - [Adopting Luria](docs/adopting.md)
 
 

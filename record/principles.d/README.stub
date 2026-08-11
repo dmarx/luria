@@ -1,7 +1,7 @@
 # Design principles
 
 Standing values that guide Luria — the things a project keeps re-deriving in
-review, written down once so they can be cited by number ("per DP-2") instead of
+review, written down once so they can be cited by number ("per [DP-2](design-principles.md#dp-2)") instead of
 re-argued.
 
 These are **principles, not decisions.** A [decision](decisions/README.md)

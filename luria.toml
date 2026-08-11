@@ -45,7 +45,7 @@ person would otherwise rediscover. Generated from the entries in \
 # copy of this one, which is exactly the confusion DP-9 says a layout owes a
 # visitor protection from.
 [luria.site]
-exclude = ["template/**"]
+exclude = ["template/**", "examples/**"]
 # The brainslug kit is the identity; the site wears it rather than the
 # generator's. `icon` is the vector master — the favicon is rasterized from it
 # at build time, so no derived PNG is committed here to drift out of step

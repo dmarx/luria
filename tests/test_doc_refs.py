@@ -29,7 +29,11 @@ ROOT_DECISIONS = os.path.relpath(doc_refs.current().schemes["ADR"].dir, REPO)
 
 
 def kinds(text):
-    return [(r.kind, r.num) for r in doc_refs.find_refs(text)]
+    """(what matched, which number). A scheme reference reports its prefix
+    rather than the bare kind — `ADR` is not special to the finder any more
+    (ADR-006), so "adr" here means "the ADR scheme matched"."""
+    return [(r.prefix.lower() if r.kind == "scheme" else r.kind, r.num)
+            for r in doc_refs.find_refs(text)]
 
 
 # ── What counts as a reference ───────────────────────────────────────────

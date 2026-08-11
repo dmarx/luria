@@ -9,7 +9,7 @@ Every reference in the record is a claim — "this is why things are the way the
 
 Only an `Active` document is in force. `Proposed` and `Deferred` mean *not in force yet* — an open question, being cited as if it were settled — while `Superseded` and `Rejected` mean *no longer in force*, which is often a perfectly good thing to cite: history, or a rejection worth pointing at. Either way the citation should be deliberate, and this section lists the ones nobody has vouched for yet.
 
-**1 document cited without acknowledgement.** Not listed: 36 citations someone has already vouched for with an `inactive-ok:` comment at the citing site.
+**3 documents cited without acknowledgement.** Not listed: 36 citations someone has already vouched for with an `inactive-ok:` comment at the citing site.
 
 To vouch for one, put the reason where the citation is — `inactive-ok:` covers its own line and the line below it, `inactive-ok-block:` its paragraph, `inactive-ok-file:` the whole page:
 
@@ -21,16 +21,42 @@ To vouch for one, put the reason where the citation is — `inactive-ok:` covers
 
 Migrations: renaming schemes and moving documents without losing the record's memory
 
-1 citation in 1 file awaits a look.
+3 citations in 3 files await a look.
 
+- [`docs/adopting.md:179`](../adopting.md)
 - [`record/decisions.d/ADR-041.md:26`](../../record/decisions.d/ADR-041.md)
+- [`record/decisions.d/ADR-044.md:142`](../../record/decisions.d/ADR-044.md)
+
+### [ADR-044](../../record/decisions.d/ADR-044.md) — Proposed
+
+The configuration reference is generated from the config schema
+
+3 citations in 2 files await a look.
+
+- [`record/decisions.d/ADR-045.md:11`](../../record/decisions.d/ADR-045.md)
+- [`record/decisions.d/ADR-045.md:37`](../../record/decisions.d/ADR-045.md)
+- [`record/decisions.d/ADR-046.md:40`](../../record/decisions.d/ADR-046.md)
+
+### [ADR-045](../../record/decisions.d/ADR-045.md) — Proposed
+
+Worked configurations are executable examples, not prose
+
+3 citations in 1 file await a look.
+
+- [`record/decisions.d/ADR-046.md:10`](../../record/decisions.d/ADR-046.md)
+- [`record/decisions.d/ADR-046.md:24`](../../record/decisions.d/ADR-046.md)
+- [`record/decisions.d/ADR-046.md:68`](../../record/decisions.d/ADR-046.md)
 
 ## Codes that resolve to no document
 
 A reference the reader cannot follow: the code names no document in this record. A typo, a number carried in from another project, and an illustrative code in an example all look identical from here — telling them apart takes a human, so this is a report, not an error.
 
-**1 code unaccounted for.** Not listed: 47 mentions marked deliberate with an `unresolved-ok:` comment (same syntax and scopes as `inactive-ok:` above).
+**2 codes unaccounted for.** Not listed: 48 mentions marked deliberate with an `unresolved-ok:` comment (same syntax and scopes as `inactive-ok:` above).
 
+
+### DP-017 — resolves to nothing (1 unmarked site · 1 other mention marked deliberate)
+
+- [`record/decisions.d/ADR-046.md:50`](../../record/decisions.d/ADR-046.md)
 
 ### DP-018 — resolves to nothing (1 unmarked site · 4 other mentions marked deliberate)
 

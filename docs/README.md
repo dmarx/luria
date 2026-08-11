@@ -5,6 +5,10 @@
 - [Design principles](design-principles.md) — the standing values, numbered and
   citable.
 - [Decisions](decisions/README.md) — the choices, with their alternatives.
+- [Configuration](configuration.md) — every `luria.toml` key, generated from
+  the config schema itself. Also the answer to "can it hold something other
+  than decisions?": schemes, fragment directories, journals and remotes are
+  families you name, and the record this repo keeps is one instantiation.
 - [Comment directives](directives.md) — the `inactive-ok` / `unexempt`
   vocabulary and its scope rules.
 - [Development log](devlog/README.md) — the narrative: failed approaches, root
