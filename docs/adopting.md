@@ -59,6 +59,97 @@ worse than an empty file. Keep the ones you keep *honest*: replace each
 missing reads as taste, and taste gets re-litigated by the next person with
 different taste.
 
+## Shaping the record to your project
+
+The scaffold above is a *default*, not a shape you have to accept. Four of the
+tables in `luria.toml` — `schemes`, `fragments`, `journals` and `remotes` —
+are families: you name the entries, and the name becomes part of the
+vocabulary. Nothing in Luria spells `ADR` as a constant ([ADR-006](../record/decisions.d/ADR-006.md)). The
+[configuration reference](configuration.md) is generated from the schema and
+lists every key; this section is the short version, in the order the questions
+usually arrive.
+
+**A second document family.** Decisions are not the only thing worth
+numbering:
+
+```toml
+[luria.schemes.RFC]
+dir    = "record/rfcs.d"
+output = "docs/rfcs"
+active = "Accepted"          # whatever "in force" means for RFCs
+```
+
+`RFC-7` is now a first-class reference — `luria link --fix` writes its link,
+`luria lint` demands one, the index and tag pages generate, and `luria new
+rfc` scaffolds the next free number from `_template.md`. Nothing else changes,
+because the kinds are the config ([ADR-036](../record/decisions.d/ADR-036.md)).
+
+**Browsed, or read as a whole.** `render = "index"` builds a table of links
+plus per-tag pages: right when documents are read one at a time. `render =
+"document"` concatenates the bodies into a single page: right when the set is
+read start-to-finish, which is what a principles document is ([ADR-012](../record/decisions.d/ADR-012.md)). The
+shipped `DP` scheme is the second kind, and it is an ordinary scheme entry —
+not a special case.
+
+**Keeping the layout you already have.** Omit `output` and the view renders
+beside its sources, the collocated shape projects had before the read/write
+boundary existed ([ADR-021](../record/decisions.d/ADR-021.md)). Adoption never has to start with moving files.
+
+**More than one journal.** `[luria.journals.X]` is a family like the others, so
+a devlog, a meeting log and an incident log can run side by side, each with its
+own cadence:
+
+```toml
+[luria.journals.incidents]
+dir         = "record/incidents.d"
+output      = "docs/incidents"
+granularity = "year"         # year | month | day — measure your rate first
+title       = "Incident log"
+```
+
+The distinction that decides between a journal and a fragment directory is
+whether the sources survive. A journal's entries are dated observations that
+stay true, so they persist and the books are generated from them ([ADR-020](../record/decisions.d/ADR-020.md)). A
+fragment directory's files are *consumed* when collected — right for a
+changelog, wrong for anything you might want to reread.
+
+**How fragments assemble.** `style = "append"` is the narrative shape, bodies
+oldest-first. `style = "changelog"` is the release shape, dated batches newest
+first ([ADR-028](../record/decisions.d/ADR-028.md)). The same directory-of-fragments serves either; the collector
+is not the contract.
+
+**Citing things that are not Luria records.** A remote need not hold a record
+at all. Give it a `uid` pattern and a URL template and its references are
+linted like any other ([ADR-024](../record/decisions.d/ADR-024.md)):
+
+```toml
+[luria.remotes.ARXIV]
+uid = "(\\d{4})[.:](\\d{4,5})"
+url = "https://arxiv.org/abs/{1}.{2}"    # {0} or {uid} is the whole tail
+
+[luria.remotes.JIRA]
+uid = "[A-Z]+-\\d+"
+url = "https://example.atlassian.net/browse/{uid}"
+```
+
+`ARXIV-2301.07041` and `JIRA-PROJ-412` now resolve, and `luria remotes
+--check` reports whether they still do.
+
+**How much the lint enforces.** Status findings are warnings by default;
+`fail_on` promotes a class to a build failure, and the acknowledgement
+directives keep working under enforcement because only unacknowledged rows
+ever reach a class ([ADR-035](../record/decisions.d/ADR-035.md)):
+
+```toml
+[luria.lint]
+fail_on = ["retired-citations"]
+```
+
+One limit worth knowing before you commit to names: adding a scheme costs one
+table, but **renaming** one — or moving its documents — is a manual pass
+today. There is no migration command; [ADR-040](../record/decisions.d/ADR-040.md) is the decision that would give
+it one. Pick prefixes you can live with.
+
 ## Adopting into a project that already has decisions
 
 Point `luria.toml` at wherever they live and run `luria lint`. Expect failures
