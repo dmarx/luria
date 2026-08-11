@@ -72,13 +72,19 @@ The tables below are the whole schema. Four of them — `schemes`, `fragments`,
 `journals` and `remotes` — are *families*: you name the entries, and the name
 you choose becomes part of the vocabulary. `[luria.schemes.RFC]` is how a
 project gets RFCs; `[luria.journals.incidents]` is how it gets a second
-journal. Nothing in Luria spells `ADR` as a constant.
+journal. No code path spells `ADR`.
 
 That is worth stating plainly, because this package ships one instantiation of
 its own machinery — decisions, principles, a changelog and a devlog — and it
 is easy to read those four as Luria's parts. They are its defaults. A record
 made of RFCs, specs and a meeting log is the same engine with different
 tables.
+
+The defaults themselves do spell `ADR`, though, and configuration *merges*
+over them rather than replacing them. Two consequences worth knowing before
+you design around them, both under "What is not configurable" below: the
+shipped `ADR` scheme cannot be removed, and omitting its `output` inherits
+`docs/decisions` rather than collocating the view.
 
 | table | what it configures | families |
 |---|---|---|
@@ -130,6 +136,20 @@ everything is one:
   table; renaming an existing scheme, or moving its documents, is currently a
   manual pass — there is no migration command. The decision that would give
   it one is still Proposed.
+- **Removing the shipped `ADR` scheme.** Configuration merges over the
+  defaults rather than replacing them, and the defaults define
+  `[luria.schemes.ADR]`. A project that wants only RFCs still carries an ADR
+  scheme and still renders an empty decision index. Leaving it empty is
+  harmless; deleting it is not possible today.
+- **Collocating `ADR` by omitting `output`.** Same merge, sharper edge. For a
+  scheme you invent, an omitted `output` is genuinely unset and the view
+  renders beside its sources. For `ADR` it inherits `docs/decisions` from the
+  defaults — so a project that points `dir` at its existing decisions and
+  omits `output`, expecting to keep its layout, finds the index relocated.
+  Write `output` equal to `dir` instead.
+
+Both `ADR` limits are demonstrated and pinned by `examples/` in the Luria
+repository, which CI runs.
 """
 
 # The families, in the order the reference reads them: the two that define a

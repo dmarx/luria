@@ -170,6 +170,11 @@ class Scheme:
     # the sources — the collocated shape every project had before the
     # read/write boundary existed (ADR-021), kept so adoption never starts
     # with a move.
+    #
+    # Reachable by omission only for a scheme a project invents. `ADR` is in
+    # DEFAULTS with `output = "docs/decisions"`, and config merges over the
+    # defaults, so omitting the key there inherits it instead of unsetting
+    # it; that scheme collocates by setting `output` equal to `dir`.
     output: Path | None = None
 
     @property

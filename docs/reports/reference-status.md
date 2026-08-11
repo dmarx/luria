@@ -9,7 +9,7 @@ Every reference in the record is a claim — "this is why things are the way the
 
 Only an `Active` document is in force. `Proposed` and `Deferred` mean *not in force yet* — an open question, being cited as if it were settled — while `Superseded` and `Rejected` mean *no longer in force*, which is often a perfectly good thing to cite: history, or a rejection worth pointing at. Either way the citation should be deliberate, and this section lists the ones nobody has vouched for yet.
 
-**1 document cited without acknowledgement.** Not listed: 36 citations someone has already vouched for with an `inactive-ok:` comment at the citing site.
+**2 documents cited without acknowledgement.** Not listed: 36 citations someone has already vouched for with an `inactive-ok:` comment at the citing site.
 
 To vouch for one, put the reason where the citation is — `inactive-ok:` covers its own line and the line below it, `inactive-ok-block:` its paragraph, `inactive-ok-file:` the whole page:
 
@@ -23,9 +23,18 @@ Migrations: renaming schemes and moving documents without losing the record's me
 
 3 citations in 3 files await a look.
 
-- [`docs/adopting.md:150`](../adopting.md)
+- [`docs/adopting.md:179`](../adopting.md)
 - [`record/decisions.d/ADR-041.md:26`](../../record/decisions.d/ADR-041.md)
 - [`record/decisions.d/ADR-044.md:142`](../../record/decisions.d/ADR-044.md)
+
+### [ADR-044](../../record/decisions.d/ADR-044.md) — Proposed
+
+The configuration reference is generated from the config schema
+
+2 citations in 1 file await a look.
+
+- [`record/decisions.d/ADR-045.md:11`](../../record/decisions.d/ADR-045.md)
+- [`record/decisions.d/ADR-045.md:37`](../../record/decisions.d/ADR-045.md)
 
 ## Codes that resolve to no document
 

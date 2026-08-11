@@ -64,10 +64,17 @@ different taste.
 The scaffold above is a *default*, not a shape you have to accept. Four of the
 tables in `luria.toml` — `schemes`, `fragments`, `journals` and `remotes` —
 are families: you name the entries, and the name becomes part of the
-vocabulary. Nothing in Luria spells `ADR` as a constant ([ADR-006](../record/decisions.d/ADR-006.md)). The
-[configuration reference](configuration.md) is generated from the schema and
-lists every key; this section is the short version, in the order the questions
-usually arrive.
+vocabulary ([ADR-006](../record/decisions.d/ADR-006.md)). No code path spells
+`ADR` — only the shipped defaults do, which is a difference that matters in
+two places, both flagged below.
+
+The [configuration reference](configuration.md) is generated from the schema
+and lists every key. [`examples/`](../examples/) holds four complete projects
+in these shapes — RFCs and specs, a collocated layout, three journals, and
+citations to things that are not records at all — and CI runs `luria index`
+and `luria lint` against every one of them, so what follows is described
+rather than hoped. This section is the short version, in the order the
+questions usually arrive.
 
 **A second document family.** Decisions are not the only thing worth
 numbering:
@@ -76,13 +83,20 @@ numbering:
 [luria.schemes.RFC]
 dir    = "record/rfcs.d"
 output = "docs/rfcs"
-active = "Accepted"          # whatever "in force" means for RFCs
 ```
 
 `RFC-7` is now a first-class reference — `luria link --fix` writes its link,
 `luria lint` demands one, the index and tag pages generate, and `luria new
 rfc` scaffolds the next free number from `_template.md`. Nothing else changes,
 because the kinds are the config ([ADR-036](../record/decisions.d/ADR-036.md)).
+
+There is an `active` key for the status that means "in force", but it
+*selects* from the closed vocabulary rather than extending it. `Active`,
+`Proposed`, `Deferred`, `Superseded` and `Rejected` are fixed and
+lint-enforced on purpose ([ADR-003](../record/decisions.d/ADR-003.md)) — an
+audit found thirty spellings of "this one counts" across 121 files. So
+`active = "Accepted"` names a state no document can legally hold, and fails
+every document in the scheme.
 
 **Browsed, or read as a whole.** `render = "index"` builds a table of links
 plus per-tag pages: right when documents are read one at a time. `render =
@@ -91,9 +105,24 @@ read start-to-finish, which is what a principles document is ([ADR-012](../recor
 shipped `DP` scheme is the second kind, and it is an ordinary scheme entry —
 not a special case.
 
-**Keeping the layout you already have.** Omit `output` and the view renders
-beside its sources, the collocated shape projects had before the read/write
-boundary existed ([ADR-021](../record/decisions.d/ADR-021.md)). Adoption never has to start with moving files.
+**Keeping the layout you already have.** A view renders beside its sources
+when `output` names the same directory as `dir` — the collocated shape
+projects had before the read/write boundary existed
+([ADR-021](../record/decisions.d/ADR-021.md)). Adoption never has to start
+with moving files:
+
+```toml
+[luria.schemes.ADR]
+dir    = "decisions"      # wherever yours already live
+output = "decisions"      # …and the index renders there, not under docs/
+```
+
+Write `output` explicitly here rather than omitting it. Omitting it collocates
+a scheme you invent, but **not** `ADR`: configuration merges over Luria's
+defaults, and the shipped ADR entry already carries `output =
+"docs/decisions"`, so an omitted key inherits that and quietly relocates your
+index. [`examples/collocated/`](../examples/collocated/) is the worked
+version, and CI runs it.
 
 **More than one journal.** `[luria.journals.X]` is a family like the others, so
 a devlog, a meeting log and an incident log can run side by side, each with its
