@@ -8,11 +8,30 @@ cd your-project
 luria init --issue-url https://github.com/owner/repo/issues
 ```
 
+The scaffold is planned from configuration, not copied from a fixed tree
+([ADR-048](../record/decisions.d/ADR-048.md)), which gives `luria init` three modes:
+
+- **Bare** (above): the shipped default config — decisions, principles, a
+  changelog, a devlog.
+- **`luria init --config my.toml`**: write your `luria.toml` first — the
+  schemes, journals and fragment directories *your* record needs — and init
+  installs it and scaffolds exactly that shape. A config that declares RFCs
+  and an incident log gets RFC and incident directories, their templates and
+  stubs, and a docs index listing those views; it does not get a decision
+  directory it never asked for. Skip ahead to
+  [shaping the record](#shaping-the-record-to-your-project) for what a config
+  can declare.
+- **A project that already has a `luria.toml`**: init reads it and scaffolds
+  what it declares, filling in whatever is missing.
+
 `luria init` never overwrites. Existing files are reported as skipped, so
 running it on a project that already has half the record adds only the missing
 half — and running it twice is a no-op. A scaffolder that clobbers is one nobody
 dares re-run, which means the thing it is best at (filling in what a project
-grew past) never gets used.
+grew past) never gets used. The one refusal: `--config` against a project that
+already has a `luria.toml` is an error, because scaffolding one config's shape
+while another governs the record would build directories the project's own
+machinery doesn't know about.
 
 Then:
 
@@ -64,9 +83,12 @@ different taste.
 The scaffold above is a *default*, not a shape you have to accept. Four of the
 tables in `luria.toml` — `schemes`, `fragments`, `journals` and `remotes` —
 are families: you name the entries, and the name becomes part of the
-vocabulary ([ADR-006](../record/decisions.d/ADR-006.md)). No code path spells
-`ADR` — only the shipped defaults do, which is a difference that matters in
-two places, both flagged below.
+vocabulary ([ADR-006](../record/decisions.d/ADR-006.md)). A family you
+declare **replaces** the shipped default rather than merging into it
+([ADR-047](../record/decisions.d/ADR-047.md)) — so a record of RFCs and specs is exactly that, with no phantom
+decision scheme left over from the defaults — while a family you never
+mention keeps them. Settings tables (`paths`, `code`, `lint`, `site`) merge
+per key as you'd expect.
 
 The [configuration reference](configuration.md) is generated from the schema
 and lists every key. [`examples/`](../examples/) holds four complete projects
@@ -105,24 +127,22 @@ read start-to-finish, which is what a principles document is ([ADR-012](../recor
 shipped `DP` scheme is the second kind, and it is an ordinary scheme entry —
 not a special case.
 
-**Keeping the layout you already have.** A view renders beside its sources
-when `output` names the same directory as `dir` — the collocated shape
-projects had before the read/write boundary existed
-([ADR-021](../record/decisions.d/ADR-021.md)). Adoption never has to start
-with moving files:
+**Keeping the layout you already have.** Omit `output` and the view renders
+beside its sources — the collocated shape projects had before the read/write
+boundary existed ([ADR-021](../record/decisions.d/ADR-021.md)). Adoption
+never has to start with moving files:
 
 ```toml
 [luria.schemes.ADR]
-dir    = "decisions"      # wherever yours already live
-output = "decisions"      # …and the index renders there, not under docs/
+dir = "decisions"         # wherever yours already live; the index renders here
 ```
 
-Write `output` explicitly here rather than omitting it. Omitting it collocates
-a scheme you invent, but **not** `ADR`: configuration merges over Luria's
-defaults, and the shipped ADR entry already carries `output =
-"docs/decisions"`, so an omitted key inherits that and quietly relocates your
-index. [`examples/collocated/`](../examples/collocated/) is the worked
-version, and CI runs it.
+Omission works because a declared family replaces the defaults — there is no
+shipped `output = "docs/decisions"` left for the blank to inherit. (Under the
+old merge rule there was, and the documented adoption path silently relocated
+your index; the fix is [ADR-047](../record/decisions.d/ADR-047.md).)
+[`examples/collocated/`](../examples/collocated/) is the worked version, and
+CI runs it.
 
 **More than one journal.** `[luria.journals.X]` is a family like the others, so
 a devlog, a meeting log and an incident log can run side by side, each with its

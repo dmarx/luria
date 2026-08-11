@@ -9,7 +9,7 @@ Every reference in the record is a claim — "this is why things are the way the
 
 Only an `Active` document is in force. `Proposed` and `Deferred` mean *not in force yet* — an open question, being cited as if it were settled — while `Superseded` and `Rejected` mean *no longer in force*, which is often a perfectly good thing to cite: history, or a rejection worth pointing at. Either way the citation should be deliberate, and this section lists the ones nobody has vouched for yet.
 
-**3 documents cited without acknowledgement.** Not listed: 36 citations someone has already vouched for with an `inactive-ok:` comment at the citing site.
+**6 documents cited without acknowledgement.** Not listed: 36 citations someone has already vouched for with an `inactive-ok:` comment at the citing site.
 
 To vouch for one, put the reason where the citation is — `inactive-ok:` covers its own line and the line below it, `inactive-ok-block:` its paragraph, `inactive-ok-file:` the whole page:
 
@@ -17,13 +17,45 @@ To vouch for one, put the reason where the citation is — `inactive-ok:` covers
 <!-- inactive-ok: ADR-012 — why this citation is right -->
 ```
 
+### [ADR-047](../../record/decisions.d/ADR-047.md) — Proposed
+
+A declared family replaces the default; settings still merge
+
+13 citations in 7 files await a look.
+
+- [`docs/adopting.md:88`](../adopting.md)
+- [`docs/adopting.md:143`](../adopting.md)
+- [`luria/config.py:38`](../../luria/config.py)
+- [`luria/config.py:185`](../../luria/config.py)
+- [`luria/config.py:617`](../../luria/config.py)
+- [`luria/config.py:637`](../../luria/config.py)
+- [`luria/config_doc.py:83`](../../luria/config_doc.py)
+- [`luria/config_doc.py:145`](../../luria/config_doc.py)
+- [`luria/doc_refs.py:582`](../../luria/doc_refs.py)
+- [`record/decisions.d/ADR-048.md:11`](../../record/decisions.d/ADR-048.md)
+- [`record/decisions.d/ADR-048.md:42`](../../record/decisions.d/ADR-048.md)
+- [`tests/test_config.py:1`](../../tests/test_config.py)
+- [`tests/test_examples.py:169`](../../tests/test_examples.py)
+
+### [ADR-045](../../record/decisions.d/ADR-045.md) — Proposed
+
+Worked configurations are executable examples, not prose
+
+5 citations in 2 files await a look.
+
+- [`record/decisions.d/ADR-046.md:10`](../../record/decisions.d/ADR-046.md)
+- [`record/decisions.d/ADR-046.md:24`](../../record/decisions.d/ADR-046.md)
+- [`record/decisions.d/ADR-046.md:69`](../../record/decisions.d/ADR-046.md)
+- [`record/decisions.d/ADR-047.md:10`](../../record/decisions.d/ADR-047.md)
+- [`record/decisions.d/ADR-047.md:38`](../../record/decisions.d/ADR-047.md)
+
 ### [ADR-040](../../record/decisions.d/ADR-040.md) — Proposed
 
 Migrations: renaming schemes and moving documents without losing the record's memory
 
 3 citations in 3 files await a look.
 
-- [`docs/adopting.md:179`](../adopting.md)
+- [`docs/adopting.md:199`](../adopting.md)
 - [`record/decisions.d/ADR-041.md:26`](../../record/decisions.d/ADR-041.md)
 - [`record/decisions.d/ADR-044.md:142`](../../record/decisions.d/ADR-044.md)
 
@@ -37,26 +69,30 @@ The configuration reference is generated from the config schema
 - [`record/decisions.d/ADR-045.md:37`](../../record/decisions.d/ADR-045.md)
 - [`record/decisions.d/ADR-046.md:40`](../../record/decisions.d/ADR-046.md)
 
-### [ADR-045](../../record/decisions.d/ADR-045.md) — Proposed
+### [ADR-048](../../record/decisions.d/ADR-048.md) — Proposed
 
-Worked configurations are executable examples, not prose
+The scaffold is planned from configuration, not copied from a tree
 
-3 citations in 1 file await a look.
+3 citations in 3 files await a look.
 
-- [`record/decisions.d/ADR-046.md:10`](../../record/decisions.d/ADR-046.md)
-- [`record/decisions.d/ADR-046.md:24`](../../record/decisions.d/ADR-046.md)
-- [`record/decisions.d/ADR-046.md:68`](../../record/decisions.d/ADR-046.md)
+- [`docs/adopting.md:12`](../adopting.md)
+- [`luria/init.py:9`](../../luria/init.py)
+- [`tests/test_init.py:26`](../../tests/test_init.py)
+
+### [ADR-046](../../record/decisions.d/ADR-046.md) — Proposed
+
+Reference detection is scheme-driven, not three hardcoded patterns
+
+1 citation in 1 file awaits a look.
+
+- [`record/decisions.d/ADR-048.md:110`](../../record/decisions.d/ADR-048.md)
 
 ## Codes that resolve to no document
 
 A reference the reader cannot follow: the code names no document in this record. A typo, a number carried in from another project, and an illustrative code in an example all look identical from here — telling them apart takes a human, so this is a report, not an error.
 
-**2 codes unaccounted for.** Not listed: 48 mentions marked deliberate with an `unresolved-ok:` comment (same syntax and scopes as `inactive-ok:` above).
+**1 code unaccounted for.** Not listed: 49 mentions marked deliberate with an `unresolved-ok:` comment (same syntax and scopes as `inactive-ok:` above).
 
-
-### DP-017 — resolves to nothing (1 unmarked site · 1 other mention marked deliberate)
-
-- [`record/decisions.d/ADR-046.md:50`](../../record/decisions.d/ADR-046.md)
 
 ### DP-018 — resolves to nothing (1 unmarked site · 4 other mentions marked deliberate)
 
