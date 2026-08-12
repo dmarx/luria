@@ -21,7 +21,7 @@ To vouch for one, put the reason where the citation is — `inactive-ok:` covers
 
 Temporary codes at filing; concretized and aliased at the serialization point
 
-19 citations in 9 files await a look.
+21 citations in 9 files await a look.
 
 - [`docs/adopting.md:190`](../adopting.md)
 - [`luria/adr_index.py:51`](../../luria/adr_index.py)
@@ -30,18 +30,40 @@ Temporary codes at filing; concretized and aliased at the serialization point
 - [`luria/adr_index.py:260`](../../luria/adr_index.py)
 - [`luria/cli.py:8`](../../luria/cli.py)
 - [`luria/concretize.py:2`](../../luria/concretize.py)
+- [`luria/concretize.py:31`](../../luria/concretize.py)
 - [`luria/config.py:188`](../../luria/config.py)
 - [`luria/config.py:229`](../../luria/config.py)
 - [`luria/doc_refs.py:112`](../../luria/doc_refs.py)
 - [`luria/doc_refs.py:440`](../../luria/doc_refs.py)
 - [`luria/doc_refs.py:646`](../../luria/doc_refs.py)
 - [`luria/doc_refs.py:658`](../../luria/doc_refs.py)
-- [`luria/doc_refs.py:714`](../../luria/doc_refs.py)
+- [`luria/doc_refs.py:717`](../../luria/doc_refs.py)
 - [`luria/lint.py:92`](../../luria/lint.py)
 - [`luria/new.py:86`](../../luria/new.py)
 - [`luria/new.py:107`](../../luria/new.py)
 - [`tests/test_concretize.py:1`](../../tests/test_concretize.py)
 - [`tests/test_concretize.py:76`](../../tests/test_concretize.py)
+- [`tests/test_concretize.py:155`](../../tests/test_concretize.py)
+
+### [ADR-040](../../record/decisions.d/ADR-040.md) — Proposed
+
+Migrations: renaming schemes and moving documents without losing the record's memory
+
+13 citations in 7 files await a look.
+
+- [`docs/adopting.md:220`](../adopting.md)
+- [`luria/concretize.py:30`](../../luria/concretize.py)
+- [`luria/concretize.py:79`](../../luria/concretize.py)
+- [`luria/doc_refs.py:667`](../../luria/doc_refs.py)
+- [`record/decisions.d/ADR-041.md:26`](../../record/decisions.d/ADR-041.md)
+- [`record/decisions.d/ADR-044.md:142`](../../record/decisions.d/ADR-044.md)
+- [`record/decisions.d/ADR-049.md:11`](../../record/decisions.d/ADR-049.md)
+- [`record/decisions.d/ADR-049.md:88`](../../record/decisions.d/ADR-049.md)
+- [`record/decisions.d/ADR-049.md:98`](../../record/decisions.d/ADR-049.md)
+- [`record/decisions.d/ADR-049.md:150`](../../record/decisions.d/ADR-049.md)
+- [`record/decisions.d/ADR-049.md:161`](../../record/decisions.d/ADR-049.md)
+- [`record/decisions.d/ADR-049.md:168`](../../record/decisions.d/ADR-049.md)
+- [`tests/test_concretize.py:154`](../../tests/test_concretize.py)
 
 ### [ADR-047](../../record/decisions.d/ADR-047.md) — Proposed
 
@@ -62,23 +84,6 @@ A declared family replaces the default; settings still merge
 - [`record/decisions.d/ADR-048.md:42`](../../record/decisions.d/ADR-048.md)
 - [`tests/test_config.py:1`](../../tests/test_config.py)
 - [`tests/test_examples.py:169`](../../tests/test_examples.py)
-
-### [ADR-040](../../record/decisions.d/ADR-040.md) — Proposed
-
-Migrations: renaming schemes and moving documents without losing the record's memory
-
-10 citations in 4 files await a look.
-
-- [`docs/adopting.md:220`](../adopting.md)
-- [`record/decisions.d/ADR-041.md:26`](../../record/decisions.d/ADR-041.md)
-- [`record/decisions.d/ADR-044.md:142`](../../record/decisions.d/ADR-044.md)
-- [`record/decisions.d/ADR-049.md:11`](../../record/decisions.d/ADR-049.md)
-- [`record/decisions.d/ADR-049.md:88`](../../record/decisions.d/ADR-049.md)
-- [`record/decisions.d/ADR-049.md:98`](../../record/decisions.d/ADR-049.md)
-- [`record/decisions.d/ADR-049.md:150`](../../record/decisions.d/ADR-049.md)
-- [`record/decisions.d/ADR-049.md:161`](../../record/decisions.d/ADR-049.md)
-- [`record/decisions.d/ADR-049.md:166`](../../record/decisions.d/ADR-049.md)
-- [`record/decisions.d/ADR-049.md:173`](../../record/decisions.d/ADR-049.md)
 
 ### [ADR-045](../../record/decisions.d/ADR-045.md) — Proposed
 

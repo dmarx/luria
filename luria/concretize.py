@@ -21,15 +21,19 @@ reason: a filename is not required to sort chronologically):
    which covers link labels and link targets in one pass, since the target
    is the code plus `.md`;
 3. the temporary code is recorded in the document's `formerly:` frontmatter,
-   which the resolver honours forever — a citation the rewrite could not
-   reach (a PR thread, an immutable commit message, another repository's
-   `LU-`-prefixed reference) resolves to the concretized document instead of
-   going dead (ADR-014's contract, extended through the rename).
+   which the resolver honours forever — a citation the rewrite cannot reach
+   (a PR thread, an immutable commit message, another repository's
+   `LU-`-prefixed reference, a branch cut before concretization) resolves to
+   the concretized document instead of going dead (ADR-014's contract,
+   extended through the rename).
 
-Historical files are left as written: a dated record is true about its day
-(ADR-020), and the alias is what keeps its temporary codes resolving. The
-rewrite touches the current docs and the configured code globs, nothing
-else.
+The sweep is **full — history included** (ADR-040's second commitment, and
+ADR-049 adopted it deliberately): a temporary code is temporary relative to
+the record, so wherever the tree can be rewritten to the canonical ID, it
+is — journals and the collected changelog too. After a run, exactly one
+spelling of each code exists in the tree; the alias exists for the
+citations that live *outside* it. Immutability of what was actually written
+is git's guarantee, not the working tree's job.
 
 `--check` is the trunk's guard. A temporary code on the default branch is
 always wrong and mechanically fixable — run this command — so it fails
@@ -71,9 +75,12 @@ def _record_alias(text: str, old_code: str) -> str:
 
 
 def _rewrite_files(renames: list[tuple[str, str]]) -> int:
-    """Every occurrence of each old code, in every current file. Historical
-    files are skipped — the alias resolves them — and generated views are
-    absent from `doc_files` already; the caller regenerates them."""
+    """Every occurrence of each old code, in every file the record scans —
+    history included, per ADR-040's second commitment: a spelling left behind
+    in a journal is not preserved, it is a second name for the same document
+    that grep and readers must both know. The collected changelog and the
+    journal entries ride in `doc_files`; generated views are absent from it
+    and the caller regenerates them."""
     cfg = current()
     files = list(doc_refs.doc_files())
     for pattern in cfg.code_globs:
@@ -81,7 +88,7 @@ def _rewrite_files(renames: list[tuple[str, str]]) -> int:
     touched = 0
     seen = set()
     for path in files:
-        if path in seen or cfg.is_historical(path):
+        if path in seen:
             continue
         seen.add(path)
         text = new = path.read_text()

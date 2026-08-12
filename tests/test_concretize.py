@@ -150,9 +150,13 @@ def test_check_guards_the_trunk(merge_project):
     concretize.run(check=True)          # clean now: must not raise
 
 
-def test_concretize_leaves_historical_files_alone(merge_project):
-    """A dated record is true about its day; the alias is what keeps its
-    temporary codes resolving, not a rewrite of what was written."""
+def test_concretize_rewrites_history_too(merge_project):
+    """The sweep is full — journals included (ADR-040's second commitment,
+    adopted by ADR-049 on review): "temporary" is relative to the record, so
+    wherever the tree can be rewritten to the canonical ID, it is. After a
+    run exactly one spelling of each code exists in the tree; git guards
+    what was actually written, and the alias serves the citations that live
+    outside the tree."""
     root, first, _ = merge_project
     a = first.stem
     (root / "luria.toml").write_text(
@@ -165,9 +169,9 @@ def test_concretize_leaves_historical_files_alone(merge_project):
                      f"---\n\nToday we filed {a}.\n")
 
     concretize.run()
-    assert a in entry.read_text(), "historical text stays as written"
-    linked, count = doc_refs.linkify(entry.read_text(), entry)
-    assert count >= 1, "…and the alias keeps it resolvable"
+    text = entry.read_text()
+    assert a not in text, "history is swept to the canonical spelling"
+    assert "Today we filed ADR-" in text
 
 
 def test_filing_allocation_is_untouched(project):

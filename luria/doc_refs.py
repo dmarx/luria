@@ -659,10 +659,13 @@ def _temp_target(scheme, tail: str, source: Path, base: Path) -> str | None:
 
     A live temporary document wins: file link for an index scheme, a
     tail-keyed anchor in the assembled page for a document scheme. A tail
-    with no live document may be an `formerly:` alias of a concretized document,
-    which then resolves exactly as its number would — so a temp code cited
-    somewhere the concretizer's rewrite couldn't reach (a historical devlog
-    entry, another repository) never goes dead, only stale in spelling."""
+    with no live document may be a `formerly:` alias of a concretized
+    document, which then resolves exactly as its number would — so a temp
+    code cited somewhere the concretizer's rewrite cannot reach (a PR
+    thread, a commit message, another repository, a branch cut before
+    concretization) never goes dead, only stale in spelling. In-tree the
+    sweep is full, history included (ADR-040), so an alias hit from a local
+    file usually means an in-flight branch awaiting its next `--fix`."""
     cfg = current()
     live = scheme.temp_documents()
     documents = scheme.documents()
