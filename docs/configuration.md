@@ -24,11 +24,15 @@ is easy to read those four as Luria's parts. They are its defaults. A record
 made of RFCs, specs and a meeting log is the same engine with different
 tables.
 
-The defaults themselves do spell `ADR`, though, and configuration *merges*
-over them rather than replacing them. Two consequences worth knowing before
-you design around them, both under "What is not configurable" below: the
-shipped `ADR` scheme cannot be removed, and omitting its `output` inherits
-`docs/decisions` rather than collocating the view.
+Two merge rules follow from that split (ADR-047). A *settings* table —
+`paths`, `code`, `lint`, `site` — merges per key: setting `docs` does not
+clear `reports`. A *family* table is **replaced whole the moment you declare
+it**: a project that writes `[luria.schemes.RFC]` and nothing else has
+exactly one scheme, and the shipped `ADR` is simply absent. Declare a family
+and it is yours entirely; leave it undeclared and the default stands. This is
+also what makes omission meaningful inside a declared family — an `output`
+you leave out is genuinely unset, because there is no default entry left for
+it to inherit from.
 
 | table | what it configures | families |
 |---|---|---|
@@ -318,17 +322,10 @@ everything is one:
   table; renaming an existing scheme, or moving its documents, is currently a
   manual pass — there is no migration command. The decision that would give
   it one is still Proposed.
-- **Removing the shipped `ADR` scheme.** Configuration merges over the
-  defaults rather than replacing them, and the defaults define
-  `[luria.schemes.ADR]`. A project that wants only RFCs still carries an ADR
-  scheme and still renders an empty decision index. Leaving it empty is
-  harmless; deleting it is not possible today.
-- **Collocating `ADR` by omitting `output`.** Same merge, sharper edge. For a
-  scheme you invent, an omitted `output` is genuinely unset and the view
-  renders beside its sources. For `ADR` it inherits `docs/decisions` from the
-  defaults — so a project that points `dir` at its existing decisions and
-  omits `output`, expecting to keep its layout, finds the index relocated.
-  Write `output` equal to `dir` instead.
 
-Both `ADR` limits are demonstrated and pinned by `examples/` in the Luria
-repository, which CI runs.
+Two earlier entries in this list are gone because they stopped being true
+(ADR-047): the shipped `ADR` scheme *can* be removed — declare the `schemes`
+family without it — and a declared scheme's `output` *is* unset by omission,
+because a declared family no longer inherits from the defaults. Both are
+demonstrated and pinned by `examples/` in the Luria repository, which CI
+runs.

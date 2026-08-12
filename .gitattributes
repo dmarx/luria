@@ -1,0 +1,14 @@
+# Generated views, marked so GitHub collapses them in PR review (#76): the
+# sources are the reviewable surface, and the regenerated views were reading
+# as "this PR changes 20 files". They stay committed — ADR-032's reasons
+# stand (badges land on real pages, staleness fails the lint) — this only
+# changes how review renders them.
+#
+# The list mirrors the outputs luria.toml declares. That is a projection, and
+# the cost of it drifting is one uncollapsed diff in review — display only,
+# so a mismatch is an annoyance, never an error.
+docs/decisions/** linguist-generated=true
+docs/design-principles.md linguist-generated=true
+docs/configuration.md linguist-generated=true
+docs/devlog/** linguist-generated=true
+docs/reports/** linguist-generated=true

@@ -4,7 +4,7 @@
     luria new                  # a journal entry (the devlog), at its timestamp
     luria new adr              # the next free decision number, from _template.md
     luria new dp               # the next free principle number
-    luria new changelog        # a fragment named after the current branch
+    luria new changelog        # a fragment named for its filing moment
 
 Prints the created path and nothing else. The identity fields a machine can
 compute — filename, number, timestamp, `date:` — are computed; every other
@@ -22,7 +22,6 @@ from __future__ import annotations
 
 import datetime as dt
 import re
-import subprocess
 import sys
 from pathlib import Path
 
@@ -120,30 +119,28 @@ def new_scheme_doc(scheme, fields: dict[str, str]) -> Path:
     return path
 
 
-def branch_slug() -> str | None:
-    """The current branch, as a fragment filename — the ADR-002 convention
-    of one fragment per contribution, named after its branch."""
-    try:
-        out = subprocess.run(
-            ["git", "rev-parse", "--abbrev-ref", "HEAD"], cwd=current().root,
-            capture_output=True, text=True, check=True).stdout.strip()
-    except (subprocess.CalledProcessError, OSError):
-        return None
-    slug = re.sub(r"[^a-z0-9]+", "-", out.lower()).strip("-")
-    return slug or None
-
-
 def new_fragment(dir_name: str, name: str | None) -> Path:
-    slug = name or branch_slug()
-    if not slug:
-        raise SystemExit(f"luria new: {Path(dir_name).name} needs a filename "
-                         "and no git branch answered — pass --name <slug>")
+    """A fragment named for its filing moment, like a journal entry.
+
+    It used to be named for the git branch — one fragment per contribution,
+    addressed by where the contribution lived. That identity broke the first
+    time a branch was restarted from the default branch after a squash merge:
+    the same branch name filed a second contribution, `luria new changelog`
+    reopened the *merged* fragment, and two PRs' entries muddled into one
+    batch (#76). A timestamp is the identity the devlog already uses, and it
+    cannot collide; flat rather than `yyyy/mm/dd/` nested, because the
+    collector and the lint glob a fragment directory one level deep. Two
+    fragments from one contribution is fine — they collect into the same
+    dated batch. `--name` remains the explicit override, and an existing
+    named fragment is reopened rather than duplicated."""
     frag_dir = current().root / dir_name
-    path = frag_dir / f"{slug.removesuffix('.md')}.md"
-    if path.exists():
-        # One fragment per contribution (ADR-002): the second ask on a branch
-        # is the same fragment, so hand back where it already is.
-        return path
+    if name:
+        path = frag_dir / f"{name.removesuffix('.md')}.md"
+        if path.exists():
+            return path
+    else:
+        stamp = dt.datetime.now().strftime("%Y%m%d-%H%M%S")
+        path = frag_dir / f"{stamp}.md"
     template = frag_dir / TEMPLATE_NAME
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(template.read_text() if template.exists()

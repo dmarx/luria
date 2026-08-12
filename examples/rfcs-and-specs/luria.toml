@@ -20,5 +20,6 @@ dir    = "record/specs.d"
 output = "docs/interfaces.md"
 render = "document"
 
-# NOTE: there is no way to remove the ADR scheme Luria ships — config merges
-# over the defaults. It stays empty here, and renders an empty index.
+# There is no ADR table here, so there is no ADR scheme: a declared `schemes`
+# family replaces the shipped defaults rather than merging into them
+# (LU-ADR-047). This record is RFCs and SPECs, and nothing else renders.

@@ -6,6 +6,7 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 
 ## Currently — [August 2026](2026-08.md)
 
+- [11 Aug 23:36 — Config-first adoption: replacement semantics and a config-driven init](2026-08.md#20260811233614)
 - [11 Aug 21:39 — Generating the configuration reference](2026-08.md#20260811213949)
 - [10 Aug 03:42 — The branding that never shipped: a squash merge photographs the branch, not the branch name](2026-08.md#20260810034232)
 - [10 Aug 03:10 — Branding the site: a rasterizer reads an icon before any human does](2026-08.md#20260810031009)
@@ -40,8 +41,8 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 
 ## All books
 
-31 entries across 1 book, newest first.
+32 entries across 1 book, newest first.
 
 | Book | Entries | First | Last |
 |---|--:|---|---|
-| [2026-08](2026-08.md) | 31 | 2026-08-03 | 2026-08-11 |
+| [2026-08](2026-08.md) | 32 | 2026-08-03 | 2026-08-11 |

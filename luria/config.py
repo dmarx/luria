@@ -35,6 +35,17 @@ Every key has a default, so a project with the conventional layout needs a
 `luria.toml` containing only `issue_url` — and Luria still runs without one, on
 defaults alone, which is what makes `luria init` able to bootstrap.
 
+Two merge rules, split by what a table *is* (ADR-047). A settings table —
+`paths`, `code`, `lint`, `site` — merges per key: setting `docs` does not
+clear `reports`. A **family** table — `schemes`, `fragments`, `journals`,
+`remotes` — is replaced whole the moment the project declares it: the entries
+are named by the project, so a family you write is yours entirely, and the
+shipped `ADR` scheme is simply absent from a project that declares schemes
+without it. Before this split, families merged too, which produced the two
+limits that could only be documented, never obeyed: the default scheme could
+not be removed, and a key it set (`output = "docs/decisions"`) could not be
+unset by omission — only overridden.
+
 The alternative was arguments threaded through every entry point. That works
 until the second caller forgets one and the linter and the fixer disagree about
 which files they cover — the exact class of bug ADR-002 exists to prevent. One
@@ -169,12 +180,10 @@ class Scheme:
     # index and its tag pages render into. Unset means the view renders beside
     # the sources — the collocated shape every project had before the
     # read/write boundary existed (ADR-021), kept so adoption never starts
-    # with a move.
-    #
-    # Reachable by omission only for a scheme a project invents. `ADR` is in
-    # DEFAULTS with `output = "docs/decisions"`, and config merges over the
-    # defaults, so omitting the key there inherits it instead of unsetting
-    # it; that scheme collocates by setting `output` equal to `dir`.
+    # with a move. Omission genuinely unsets it for every scheme, the shipped
+    # `ADR` included: a declared `schemes` family replaces the defaults
+    # rather than merging into them (ADR-047), so there is nothing left to
+    # inherit the key from.
     output: Path | None = None
 
     @property
@@ -604,13 +613,32 @@ class Config:
             return str(path)
 
 
-def load(root: Path | None = None) -> Config:
+# The tables whose entries a project names, as opposed to the settings tables
+# whose keys Luria names. The distinction decides the merge rule (ADR-047).
+FAMILIES = ("schemes", "fragments", "journals", "remotes")
+
+
+def load(root: Path | None = None, text: str | None = None) -> Config:
+    """The config at `root`, or parsed from `text` when given.
+
+    `text` exists for `luria init --config`: the scaffold has to be planned
+    from a config that is not on disk yet (and, under `--dry-run`, never will
+    be), so the parser is reachable without a write."""
     root = root or find_root()
     raw = DEFAULTS
     config_file = root / CONFIG_NAME
-    if config_file.exists():
-        parsed = tomllib.loads(config_file.read_text())
-        raw = _merge(DEFAULTS, parsed.get("luria", parsed))
+    if text is None and config_file.exists():
+        text = config_file.read_text()
+    if text is not None:
+        parsed = tomllib.loads(text)
+        parsed = parsed.get("luria", parsed)
+        raw = _merge(DEFAULTS, parsed)
+        # A declared family replaces the default one rather than merging into
+        # it (ADR-047): its entries are named by the project, and "you get the
+        # ones you wrote" is the only reading under which a family can shrink.
+        for family in FAMILIES:
+            if family in parsed:
+                raw[family] = parsed[family]
 
     paths = raw["paths"]
     return Config(

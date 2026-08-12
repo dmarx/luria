@@ -577,7 +577,12 @@ def expand_wikilinks(text: str, source: Path) -> tuple[str, int]:
 
 
 def adr_paths() -> dict[int, Path]:
-    return current().schemes["ADR"].documents()
+    """The ADR scheme's documents — {} when the project has no ADR scheme,
+    which is a legal record shape now that a declared `schemes` family
+    replaces the defaults (ADR-047). Kept as a named helper because the two
+    entry points precompute it for the common case."""
+    scheme = current().schemes.get("ADR")
+    return scheme.documents() if scheme else {}
 
 
 EXPLICIT_ANCHOR_RE = re.compile(r'^<a name="[a-z]+-(\d+)"></a>\s*$')
