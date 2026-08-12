@@ -92,6 +92,12 @@ dir = "record/decisions.d"
 output = "docs/decisions"
 active = "Active"
 render = "index"
+# Numbers are assigned where merges serialize (ADR-049): `luria new adr`
+# mints a temporary code on the branch, and the merge-to-main docs job runs
+# `luria concretize`. This repo runs N concurrent agent branches — the
+# collision case the mechanism was built for — and is, as ever, its own
+# first consumer (ADR-009).
+allocate = "merge"
 
 # Principles are read as a whole, not browsed one at a time, so their view is a
 # document rather than a table (ADR-012). Same fragment convention either way.

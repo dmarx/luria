@@ -7,8 +7,8 @@
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/github/license/dmarx/luria)](LICENSE)
 <!-- luria:badges -->
-[![needs decision: 9](https://img.shields.io/badge/needs%20decision-9-orange)](docs/reports/pending-decisions.md)
-[![cited, not in force: 7](https://img.shields.io/badge/cited,%20not%20in%20force-7-orange)](docs/reports/reference-status.md)
+[![needs decision: 3](https://img.shields.io/badge/needs%20decision-3-orange)](docs/reports/pending-decisions.md)
+[![cited, not in force: 1](https://img.shields.io/badge/cited,%20not%20in%20force-1-orange)](docs/reports/reference-status.md)
 <!-- /luria:badges -->
 
 </div>

@@ -40,6 +40,9 @@ jobs:
         uses: ./actions/generate
         with:
           pip-spec: -e .
+          # Concretize only where merges serialize (ADR-049): the push-to-main
+          # run. A pull request's temporary codes are its normal state.
+          concretize: ${{ github.event_name != 'pull_request' }}
 
   test:
     if: github.event_name != 'schedule'

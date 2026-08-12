@@ -316,6 +316,17 @@ def status_sections() -> list[tuple[str, str, list[str]]]:
             f"{len(hand)} link(s) hand-written where a URL would be "
             "constructed (`url-ok:` acknowledges a deliberate one)", hand))
 
+    # A citation still spelled with a concretized code's old temporary name
+    # (ADR-040, ADR-049). The in-tree steady state is zero — the
+    # concretizer's sweep is full — so a row here means an in-flight branch
+    # merged after a concretization pass, and the remedy is mechanical.
+    legacy = doc_refs.legacy_spellings()
+    if legacy:
+        sections.append((
+            "legacy-spellings",
+            f"{len(legacy)} citation(s) in a concretized code's old spelling "
+            "(`luria link --fix` upgrades them)", legacy))
+
     # A directive that silently does nothing is worse than no directive.
     stale = ref_status.stale_annotations(result, docs) + stale_urls
     for path in doc_refs.doc_files():
