@@ -37,6 +37,19 @@ A declared family replaces the default; settings still merge
 - [`tests/test_config.py:1`](../../tests/test_config.py)
 - [`tests/test_examples.py:169`](../../tests/test_examples.py)
 
+### [ADR-040](../../record/decisions.d/ADR-040.md) — Proposed
+
+Migrations: renaming schemes and moving documents without losing the record's memory
+
+6 citations in 4 files await a look.
+
+- [`docs/adopting.md:199`](../adopting.md)
+- [`record/decisions.d/ADR-041.md:26`](../../record/decisions.d/ADR-041.md)
+- [`record/decisions.d/ADR-044.md:142`](../../record/decisions.d/ADR-044.md)
+- [`record/decisions.d/ADR-049.md:11`](../../record/decisions.d/ADR-049.md)
+- [`record/decisions.d/ADR-049.md:84`](../../record/decisions.d/ADR-049.md)
+- [`record/decisions.d/ADR-049.md:130`](../../record/decisions.d/ADR-049.md)
+
 ### [ADR-045](../../record/decisions.d/ADR-045.md) — Proposed
 
 Worked configurations are executable examples, not prose
@@ -48,16 +61,6 @@ Worked configurations are executable examples, not prose
 - [`record/decisions.d/ADR-046.md:69`](../../record/decisions.d/ADR-046.md)
 - [`record/decisions.d/ADR-047.md:10`](../../record/decisions.d/ADR-047.md)
 - [`record/decisions.d/ADR-047.md:38`](../../record/decisions.d/ADR-047.md)
-
-### [ADR-040](../../record/decisions.d/ADR-040.md) — Proposed
-
-Migrations: renaming schemes and moving documents without losing the record's memory
-
-3 citations in 3 files await a look.
-
-- [`docs/adopting.md:199`](../adopting.md)
-- [`record/decisions.d/ADR-041.md:26`](../../record/decisions.d/ADR-041.md)
-- [`record/decisions.d/ADR-044.md:142`](../../record/decisions.d/ADR-044.md)
 
 ### [ADR-044](../../record/decisions.d/ADR-044.md) — Proposed
 
@@ -91,8 +94,13 @@ Reference detection is scheme-driven, not three hardcoded patterns
 
 A reference the reader cannot follow: the code names no document in this record. A typo, a number carried in from another project, and an illustrative code in an example all look identical from here — telling them apart takes a human, so this is a report, not an error.
 
-**1 code unaccounted for.** Not listed: 49 mentions marked deliberate with an `unresolved-ok:` comment (same syntax and scopes as `inactive-ok:` above).
+**2 codes unaccounted for.** Not listed: 49 mentions marked deliberate with an `unresolved-ok:` comment (same syntax and scopes as `inactive-ok:` above).
 
+
+### ADR-123 — resolves to nothing (2 unmarked sites · 2 other mentions marked deliberate)
+
+- [`record/decisions.d/ADR-049.md:28`](../../record/decisions.d/ADR-049.md)
+- [`record/decisions.d/ADR-049.md:46`](../../record/decisions.d/ADR-049.md)
 
 ### DP-018 — resolves to nothing (1 unmarked site · 4 other mentions marked deliberate)
 

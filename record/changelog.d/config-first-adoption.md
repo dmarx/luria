@@ -45,3 +45,12 @@ records scaffolded by `luria init` are unaffected.
 - Generated views are marked `linguist-generated` in `.gitattributes`, so
   PR review collapses them by default and a contribution's diff reads as
   its sources. The views stay committed; only review's rendering changes.
+
+### Proposed
+
+- [ADR-049](record/decisions.d/ADR-049.md): schemes gain an `allocate = "merge"` mode — `luria new` issues a
+  temporary code (`ADR-x47fje`) that is first-class on its branch, and
+  `luria concretize`, run where merges serialize, assigns real numbers in
+  merge order and records the temporary code as a permanent `aka:` alias.
+  Filed from the review discussion on [#76](https://github.com/dmarx/luria/issues/76); implementation to follow in its
+  own PR.
