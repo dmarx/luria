@@ -109,6 +109,10 @@ class Ref:
 
     def describe(self) -> str:
         if self.kind == "scheme":
+            # A temporary code carries its tail in `code` (ADR-049); a
+            # numeric one is spelled canonically, zero-padded.
+            if self.code:
+                return f"{self.prefix}-{self.code}"
             return f"{self.prefix}-{self.num:03d}"
         if self.kind == "remote":
             return self.text or f"{self.remote}-{self.code}"
@@ -433,6 +437,11 @@ def find_refs(text: str, path: Path = ANY_MD) -> list[Ref]:
     patterns: list[tuple[str, str, re.Pattern]] = [("scheme", dp_prefix, DP_RE)] \
         if dp_prefix else []
     patterns += [("scheme", s.prefix, s.pattern) for s in schemes.values()]
+    # Temporary codes (ADR-049): `ADR-x47fje`, the merge-allocated shape.
+    # Matched for every scheme, not just merge-allocated ones — a temp code
+    # can outlive its scheme's dial via an `aka:` alias, and a reference's
+    # validity shouldn't depend on a setting that may have changed since.
+    patterns += [("scheme", s.prefix, s.temp_pattern) for s in schemes.values()]
     patterns += [("issue", "", ISSUE_RE)]
 
     for kind, prefix, regex in patterns:
@@ -442,8 +451,10 @@ def find_refs(text: str, path: Path = ANY_MD) -> list[Ref]:
                 continue
             for i in range(start, end):
                 claimed[i] = True
-            refs.append(Ref(kind, int(m.group("num")), start, end,
-                            text[start:end], line_of(start), prefix=prefix))
+            tail = m.groupdict().get("tail") or ""
+            refs.append(Ref(kind, 0 if tail else int(m.group("num")), start,
+                            end, text[start:end], line_of(start),
+                            prefix=prefix, code=tail))
             if regex is not DP_RE:
                 continue
             # "design principles #17 and #18" — the label governs the whole run,
@@ -510,6 +521,9 @@ def wikilink_target(inner: str, source: Path) -> str | None:
     if parsed is not None:
         return remotes.link(*parsed) or None
     for scheme in cfg.schemes.values():
+        t = re.fullmatch(rf"{scheme.prefix}-({scheme.TEMP_TAIL})", inner)
+        if t:
+            return _temp_target(scheme, t.group(1), source, base)
         m = re.fullmatch(rf"{scheme.prefix}[- ]0*(\d+)", inner, re.IGNORECASE)
         if not m:
             continue
@@ -627,6 +641,54 @@ def is_ambiguous_issue(ref: Ref, text: str, anchors: dict[int, str]) -> bool:
     return not ISSUE_CUE_RE.search(text[max(0, ref.start - 120):ref.start])
 
 
+def alias_number(scheme, tail: str) -> int | None:
+    """The number a concretized document carries for a temporary code it
+    used to be (ADR-049). Scanned from `aka:` frontmatter on demand — this
+    path only runs for a temp code with no live document, which is rare —
+    so nothing caches and nothing can go stale."""
+    code = f"{scheme.prefix}-{tail}"
+    for number, path in scheme.documents().items():
+        meta, _ = parse_frontmatter(path.read_text())
+        if any(str(a).strip() == code for a in (meta.get("aka") or [])):
+            return number
+    return None
+
+
+def _temp_target(scheme, tail: str, source: Path, base: Path) -> str | None:
+    """Where a temporary code points, cited from `source` (ADR-049).
+
+    A live temporary document wins: file link for an index scheme, a
+    tail-keyed anchor in the assembled page for a document scheme. A tail
+    with no live document may be an `aka:` alias of a concretized document,
+    which then resolves exactly as its number would — so a temp code cited
+    somewhere the concretizer's rewrite couldn't reach (a historical devlog
+    entry, another repository) never goes dead, only stale in spelling."""
+    cfg = current()
+    live = scheme.temp_documents()
+    documents = scheme.documents()
+    page = scheme.output or cfg.design_principles
+    target = live.get(tail)
+    number = None
+    if target is None:
+        number = alias_number(scheme, tail)
+        if number is None:
+            return None
+        target = documents.get(number)
+    if target == source:
+        return None
+    if scheme.render != "document":
+        return _relative(target, base)
+    if number is not None:
+        anchor = f"{scheme.prefix.lower()}-{number}"
+        if page == cfg.design_principles:
+            anchor = dp_anchors().get(number) or anchor
+    else:
+        anchor = f"{scheme.prefix.lower()}-{tail}"
+    if source == page:
+        return f"#{anchor}"
+    return f"{_relative(page, base)}#{anchor}"
+
+
 def resolve(ref: Ref, source: Path, adrs: dict[int, Path],
             anchors: dict[int, str], text: str | None = None) -> str | None:
     """The link target for `ref` as cited from `source`, or None when the
@@ -648,6 +710,10 @@ def resolve(ref: Ref, source: Path, adrs: dict[int, Path],
     scheme = cfg.schemes.get(ref.prefix)
     if scheme is None:
         return None
+    if ref.code:
+        # A temporary code (ADR-049): live on this branch, or a permanent
+        # `aka:` alias of a document already concretized.
+        return _temp_target(scheme, ref.code, source, base)
 
     # An index-rendered scheme resolves to the document's own file. `adrs` is
     # passed in precomputed for the common case; any other scheme reads its
