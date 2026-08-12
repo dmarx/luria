@@ -28,10 +28,12 @@ per-contribution rather than merging across fragments the way scriv did.
     luria collect --commit           # collect and commit (CI mode)
 
 Fragments are ordered by when they were COMMITTED (first commit that added the
-file), not filename order, because a log reads chronologically and branch-slug
-filenames sort arbitrarily. Uncommitted fragments sort last, by filename —
-which is what you want locally, where the fragment you just wrote is the
-newest thing.
+file), not filename order: a log reads chronologically, and a fragment's name
+is not required to sort that way — `luria new` stamps timestamped names now,
+but an explicitly `--name`d fragment still sorts arbitrarily, and commit time
+is the truth either way. Uncommitted fragments sort last, by filename — which
+is what you want locally, where the fragment you just wrote is the newest
+thing.
 
 That ordering is the weak point, and it is why a *journal* is not collected:
 commit order is not authoring order, and a rebase can change it. A journal

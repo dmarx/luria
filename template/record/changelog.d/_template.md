@@ -1,4 +1,5 @@
-<!-- One fragment per contribution, named changelog.d/<branch-slug>.md. Keep
+<!-- One fragment per contribution, named for its filing moment — `luria new
+     changelog` stamps it, the way the devlog stamps entries. Keep
      only the headings that apply; delete the rest. Collected into CHANGELOG.md
      on a cadence, never on every merge (ADR-002).
 

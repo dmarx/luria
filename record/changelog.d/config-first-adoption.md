@@ -34,3 +34,14 @@ records scaffolded by `luria init` are unaffected.
   reference detection and would have made every new scaffold start red. The
   three-command adoption loop is now a CI-run test, so the class stays
   closed.
+
+### Changed (review round)
+
+- `luria new` stamps an unnamed fragment with its filing moment
+  (`20260812-021035.md`), the identity the devlog already uses, instead of
+  naming it after the git branch — which collided the first time a branch
+  was restarted after a squash merge and refiled ([ADR-036](record/decisions.d/ADR-036.md), v2). `--name`
+  remains the explicit override and still reopens rather than duplicates.
+- Generated views are marked `linguist-generated` in `.gitattributes`, so
+  PR review collapses them by default and a contribution's diff reads as
+  its sources. The views stay committed; only review's rendering changes.

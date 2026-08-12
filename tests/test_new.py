@@ -74,11 +74,30 @@ def test_a_fragment_takes_the_given_name(project):
     (project / "changelog.d").mkdir()
     (project / "changelog.d" / "_template.md").write_text("### Changed\n\n- \n")
 
-    path = new_mod.new_entry("changelog", {}, "my-branch")
-    assert path == project / "changelog.d" / "my-branch.md"
+    path = new_mod.new_entry("changelog", {}, "my-name")
+    assert path == project / "changelog.d" / "my-name.md"
     assert path.read_text() == "### Changed\n\n- \n"
-    assert new_mod.new_entry("changelog", {}, "my-branch") == path, \
-        "one fragment per contribution — the second ask returns the first file"
+    assert new_mod.new_entry("changelog", {}, "my-name") == path, \
+        "an explicit name is an address — asking again reopens, not duplicates"
+
+
+def test_an_unnamed_fragment_is_stamped_like_a_journal_entry(project):
+    """The default identity is the filing moment (ADR-036 v2). It used to be
+    the git branch, which collided the first time a branch was restarted
+    after a squash merge and refiled: `luria new changelog` reopened the
+    MERGED fragment and muddled two PRs into one batch."""
+    import re
+    (project / "luria.toml").write_text(
+        '[luria]\nissue_url = ""\n'
+        '[luria.fragments."changelog.d"]\nfile = "CHANGELOG.md"\n')
+    from luria import config
+    config.reset()
+    (project / "changelog.d").mkdir()
+
+    path = new_mod.new_entry("changelog", {}, None)
+    assert re.fullmatch(r"\d{8}-\d{6}\.md", path.name), path.name
+    assert path.parent == project / "changelog.d", \
+        "flat, not yyyy/mm/dd/ nested — the collector globs one level deep"
 
 
 def test_an_unknown_kind_names_what_this_project_scaffolds(project):
