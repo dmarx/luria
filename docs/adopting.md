@@ -196,9 +196,9 @@ output   = "docs/decisions"
 allocate = "merge"           # numbers are assigned where merges serialize
 ```
 
-`luria new adr` then issues a temporary code (`ADR-x47fje`) that is
+`luria new adr` then issues a temporary code (`ADR-tmp47fje`) that is
 first-class on its branch — indexed, linted, citable bare or as
-`[[ADR-x47fje]]` — and `luria concretize`, run by whatever serializes your
+`[[ADR-tmp47fje]]` — and `luria concretize`, run by whatever serializes your
 merges (a merge queue, the job that lands PRs), assigns real numbers in merge
 order, rewrites every reference, and records the temporary code as a
 permanent `aka:` alias, so a citation in a PR thread or a commit message

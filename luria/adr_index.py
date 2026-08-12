@@ -48,7 +48,7 @@ import yaml
 
 from .config import current
 
-# The tail accepts a temporary code (`ADR-x47fje`, ADR-049) as well as a
+# The tail accepts a temporary code (`ADR-tmp47fje`, ADR-049) as well as a
 # number: both are codes a heading legitimately carries.
 TITLE_RE = re.compile(r"^#\s*[A-Z]+-[A-Za-z0-9]+\s*(?::|—|-)\s*")
 TABLE_HEAD = "| # | Title | Status |\n|---|---|---|\n"

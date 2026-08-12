@@ -21,7 +21,7 @@ To vouch for one, put the reason where the citation is — `inactive-ok:` covers
 
 Temporary codes at filing; concretized and aliased at the serialization point
 
-18 citations in 9 files await a look.
+19 citations in 9 files await a look.
 
 - [`docs/adopting.md:190`](../adopting.md)
 - [`luria/adr_index.py:51`](../../luria/adr_index.py)
@@ -31,7 +31,7 @@ Temporary codes at filing; concretized and aliased at the serialization point
 - [`luria/cli.py:8`](../../luria/cli.py)
 - [`luria/concretize.py:2`](../../luria/concretize.py)
 - [`luria/config.py:188`](../../luria/config.py)
-- [`luria/config.py:228`](../../luria/config.py)
+- [`luria/config.py:229`](../../luria/config.py)
 - [`luria/doc_refs.py:112`](../../luria/doc_refs.py)
 - [`luria/doc_refs.py:440`](../../luria/doc_refs.py)
 - [`luria/doc_refs.py:646`](../../luria/doc_refs.py)
@@ -39,8 +39,9 @@ Temporary codes at filing; concretized and aliased at the serialization point
 - [`luria/doc_refs.py:714`](../../luria/doc_refs.py)
 - [`luria/lint.py:92`](../../luria/lint.py)
 - [`luria/new.py:86`](../../luria/new.py)
-- [`luria/new.py:106`](../../luria/new.py)
+- [`luria/new.py:107`](../../luria/new.py)
 - [`tests/test_concretize.py:1`](../../tests/test_concretize.py)
+- [`tests/test_concretize.py:76`](../../tests/test_concretize.py)
 
 ### [ADR-047](../../record/decisions.d/ADR-047.md) — Proposed
 
@@ -52,8 +53,8 @@ A declared family replaces the default; settings still merge
 - [`docs/adopting.md:143`](../adopting.md)
 - [`luria/config.py:38`](../../luria/config.py)
 - [`luria/config.py:185`](../../luria/config.py)
-- [`luria/config.py:649`](../../luria/config.py)
-- [`luria/config.py:669`](../../luria/config.py)
+- [`luria/config.py:654`](../../luria/config.py)
+- [`luria/config.py:674`](../../luria/config.py)
 - [`luria/config_doc.py:83`](../../luria/config_doc.py)
 - [`luria/config_doc.py:145`](../../luria/config_doc.py)
 - [`luria/doc_refs.py:596`](../../luria/doc_refs.py)
@@ -72,8 +73,8 @@ Migrations: renaming schemes and moving documents without losing the record's me
 - [`record/decisions.d/ADR-041.md:26`](../../record/decisions.d/ADR-041.md)
 - [`record/decisions.d/ADR-044.md:142`](../../record/decisions.d/ADR-044.md)
 - [`record/decisions.d/ADR-049.md:11`](../../record/decisions.d/ADR-049.md)
-- [`record/decisions.d/ADR-049.md:84`](../../record/decisions.d/ADR-049.md)
-- [`record/decisions.d/ADR-049.md:130`](../../record/decisions.d/ADR-049.md)
+- [`record/decisions.d/ADR-049.md:88`](../../record/decisions.d/ADR-049.md)
+- [`record/decisions.d/ADR-049.md:142`](../../record/decisions.d/ADR-049.md)
 
 ### [ADR-045](../../record/decisions.d/ADR-045.md) — Proposed
 

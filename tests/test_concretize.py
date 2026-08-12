@@ -57,12 +57,23 @@ def lint_errors() -> list[str]:
     return errors
 
 
+def test_prose_that_merely_resembles_a_code_is_not_a_reference(merge_project):
+    """The sentinel is also a false-positive guard: the first temp shape
+    (any six alphanumerics starting with a letter) read "the ADR-review
+    process" as a temporary reference, because `review` is six letters."""
+    _, first, _ = merge_project
+    assert doc_refs.find_refs("the ADR-review process", first) == []
+    assert doc_refs.find_refs("see ADR-tmpab123 here", first), \
+        "…while a real sentinel-shaped code is found"
+
+
 def test_a_minted_code_can_never_be_read_as_a_number(merge_project):
     _, first, second = merge_project
     scheme = config.current().schemes["ADR"]
     for path in (first, second):
         tail = scheme.temp_of(path)
-        assert re.fullmatch(r"[a-z][a-z0-9]{5}", tail)
+        assert re.fullmatch(r"tmp[a-z0-9]{5}", tail), \
+            "the sentinel is spelled out — provisional at a glance (ADR-049)"
         assert scheme.number_of(path) is None, "the patterns are disjoint"
 
 

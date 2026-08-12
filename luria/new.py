@@ -83,19 +83,20 @@ def _sub_line(text: str, field: str, value: str) -> str:
 
 
 def _mint_tail(scheme) -> str:
-    """A fresh temporary tail (ADR-049): six base-36 characters, the first
-    alphabetic so it can never be read as a number. Random rather than
-    derived, because the whole point is an identity that needs no
+    """A fresh temporary tail (ADR-049): the `tmp` sentinel plus five base-36
+    characters — `tmp47fje` — so the code can never be read as a number AND
+    reads as provisional to someone who has never met the convention. Random
+    rather than derived, because the whole point is an identity that needs no
     coordination — checked against the tails already on disk, which is the
     only collision this process can see and the only one likely enough to
-    matter (the space is 26·36⁵ per scheme)."""
+    matter (the space is 36⁵ per scheme)."""
     import secrets
     import string
     taken = scheme.temp_documents()
     while True:
-        tail = (secrets.choice(string.ascii_lowercase)
-                + "".join(secrets.choice(string.ascii_lowercase + string.digits)
-                          for _ in range(5)))
+        tail = "tmp" + "".join(
+            secrets.choice(string.ascii_lowercase + string.digits)
+            for _ in range(5))
         if tail not in taken:
             return tail
 

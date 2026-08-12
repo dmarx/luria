@@ -5,7 +5,7 @@
     luria concretize --check    # exit 1 naming any temporary code; no writes
 
 A merge-allocated scheme's documents arrive from their branches under
-temporary codes (`ADR-x47fje`) precisely so that no branch claims a place in
+temporary codes (`ADR-tmp47fje`) precisely so that no branch claims a place in
 the sequence. This command is the other half of that bargain, and it runs at
 the serialization point — a merge queue, the job that lands PRs on the trunk
 — because that is the only place "the next free number" is a fact rather

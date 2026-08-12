@@ -189,7 +189,7 @@ class Scheme:
     # behaviour: `luria new` takes the next free number on the spot — right
     # for a single-writer record, and a distributed claim on a global counter
     # the moment branches are concurrent. "merge" issues a temporary code
-    # instead (`ADR-x47fje`, a tail that can never be read as a number), and
+    # instead (`ADR-tmp47fje`, visibly provisional and never a number), and
     # `luria concretize` — run wherever merges serialize — assigns the real
     # numbers in merge order and records each temporary code as a permanent
     # `aka:` alias.
@@ -223,10 +223,15 @@ class Scheme:
     def pattern(self):
         return re.compile(rf"\b{self.prefix}[- ](?P<num>\d{{1,4}})\b")
 
-    # A temporary code's tail: six base-36 characters, the first alphabetic,
-    # so the numeric and temporary patterns are disjoint by construction —
-    # no parser ever has to guess which kind of code it is reading (ADR-049).
-    TEMP_TAIL = r"[a-z][a-z0-9]{5}"
+    # A temporary code's tail: a literal `tmp` sentinel plus five base-36
+    # characters — `ADR-tmp47fje`. The alphabetic start keeps the numeric and
+    # temporary patterns disjoint by construction, and the spelled-out
+    # sentinel does two more jobs (ADR-049): a reader who has never met the
+    # convention still sees "provisional" at every citation site, and the
+    # prose pattern stops false-matching six-letter English after a prefix —
+    # `[a-z][a-z0-9]{5}`, the first shape, read "the ADR-review process" as
+    # a temporary reference.
+    TEMP_TAIL = r"tmp[a-z0-9]{5}"
 
     @property
     def temp_pattern(self):

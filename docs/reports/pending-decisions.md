@@ -17,7 +17,7 @@
 | 2026-08-11 | Proposed | [ADR-044](../../record/decisions.d/ADR-044.md) | 3 | 3 | The configuration reference is generated from the config schema |
 | 2026-08-11 | Proposed | [ADR-048](../../record/decisions.d/ADR-048.md) | 3 | 3 | The scaffold is planned from configuration, not copied from a tree |
 | 2026-08-11 | Proposed | [ADR-046](../../record/decisions.d/ADR-046.md) | 1 | 1 | Reference detection is scheme-driven, not three hardcoded patterns |
-| 2026-08-12 | Proposed | [ADR-049](../../record/decisions.d/ADR-049.md) | 18 | 18 | Temporary codes at filing; concretized and aliased at the serialization point |
+| 2026-08-12 | Proposed | [ADR-049](../../record/decisions.d/ADR-049.md) | 19 | 19 | Temporary codes at filing; concretized and aliased at the serialization point |
 
 The citation count is the second axis, and it flips the priority: an old proposal nothing references is a stalled idea worth closing, while an old proposal many files cite is a decision the codebase has already made and hasn't written down.
 
