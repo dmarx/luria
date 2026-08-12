@@ -98,6 +98,7 @@ carries its prefix, so a second scheme is an entry here (ADR-006).
 | `active` | `str` | `"Active"` |
 | `render` | `str` | `"index"` |
 | `output` | `Path \| None` | *unset* |
+| `allocate` | `str` | `"filing"` |
 
 ## Fragment directories — `[luria.fragments."dir"]`
 

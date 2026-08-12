@@ -184,6 +184,27 @@ url = "https://example.atlassian.net/browse/{uid}"
 `ARXIV-2301.07041` and `JIRA-PROJ-412` now resolve, and `luria remotes
 --check` reports whether they still do.
 
+**Concurrent branches that both file documents.** A sequential number claimed
+from a branch is a race: two branches both read 122 as the last number and
+both mint `ADR-123`. If your workflow is N concurrent branches — an
+agent-driven flow is — switch the scheme to merge allocation ([ADR-049](../record/decisions.d/ADR-049.md)):
+
+```toml
+[luria.schemes.ADR]
+dir      = "record/decisions.d"
+output   = "docs/decisions"
+allocate = "merge"           # numbers are assigned where merges serialize
+```
+
+`luria new adr` then issues a temporary code (`ADR-x47fje`) that is
+first-class on its branch — indexed, linted, citable bare or as
+`[[ADR-x47fje]]` — and `luria concretize`, run by whatever serializes your
+merges (a merge queue, the job that lands PRs), assigns real numbers in merge
+order, rewrites every reference, and records the temporary code as a
+permanent `aka:` alias, so a citation in a PR thread or a commit message
+never goes dead. Put `luria concretize --check` in CI on your default branch:
+a temporary code there means the concretizer didn't run, and it fails loudly.
+
 **How much the lint enforces.** Status findings are warnings by default;
 `fail_on` promotes a class to a build failure, and the acknowledgement
 directives keep working under enforcement because only unacknowledged rows

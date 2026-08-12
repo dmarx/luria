@@ -2,10 +2,11 @@
 
 {views}
 
-Each of these is **generated** — run `luria index`. The list above is written
-by `luria init` from this project's own `luria.toml` ([LU-ADR-048](https://github.com/dmarx/luria/blob/main/record/decisions.d/ADR-048.md)), so it names
-the views this record actually renders; edit it freely afterwards, it is
-yours. This directory is for
+Each of these is **generated** — run `luria index`. The list above is
+[written by `luria init` from this project's own
+`luria.toml`](https://github.com/dmarx/luria/blob/main/record/decisions.d/ADR-048.md),
+so it names the views this record actually renders; edit it freely
+afterwards, it is yours. This directory is for
 *reading*; filing happens in `record/`, whose `.d`-suffixed containers hold
 the sources ([LU-ADR-021](https://github.com/dmarx/luria/blob/main/record/decisions.d/ADR-021.md)).
 Never edit an assembled page — the lint refuses hand edits, and anything in a
