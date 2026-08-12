@@ -641,6 +641,58 @@ def is_ambiguous_issue(ref: Ref, text: str, anchors: dict[int, str]) -> bool:
     return not ISSUE_CUE_RE.search(text[max(0, ref.start - 120):ref.start])
 
 
+def legacy_spellings() -> list[str]:
+    """Every citation still written in a concretized code's old spelling —
+    `path:line CODE → CODE-NOW` — across the docs and the configured code
+    globs (ADR-040's rung-1 warning class, `legacy-spellings`).
+
+    Raw text on purpose, where the reference scanner masks: a legacy
+    spelling inside an existing link's *label* is exactly the case the
+    rewrite missed, and one in a code span is a quotation that the
+    concretizer's own sweep would have modernized had it been in-tree at the
+    time. Alias-gating is the precision: a temp-shaped string that resolves
+    to no document is not a legacy spelling, it is either a live temp code
+    (the branch's normal state) or prose noise, and neither belongs here.
+    The in-tree steady state is an empty list — the sweep is full — so a
+    row here means an in-flight branch merged after a concretization pass,
+    and `luria link --fix` upgrades it."""
+    cfg = current()
+    files = list(doc_files())
+    for pattern in cfg.code_globs:
+        files += [p for p in cfg.root.glob(pattern) if p.is_file()]
+    known: dict[tuple[str, str], int | None] = {}
+    rows: list[str] = []
+    seen: set[Path] = set()
+    for path in files:
+        if path in seen:
+            continue
+        seen.add(path)
+        text = path.read_text()
+        # The `formerly:` block is where an old spelling is SUPPOSED to
+        # persist — it is the alias record, not a citation.
+        formerly = [m.span() for m in
+                    re.finditer(r"^formerly:(?:\n- .*)*", text, re.MULTILINE)]
+        for scheme in cfg.schemes.values():
+            live = None
+            for m in scheme.temp_pattern.finditer(text):
+                if any(a <= m.start() < b for a, b in formerly):
+                    continue
+                tail = m.group("tail")
+                key = (scheme.prefix, tail)
+                if key not in known:
+                    if live is None:
+                        live = scheme.temp_documents()
+                    known[key] = (None if tail in live
+                                  else alias_number(scheme, tail))
+                number = known[key]
+                if number is None:
+                    continue
+                line = text.count("\n", 0, m.start()) + 1
+                rows.append(f"{cfg.rel(path)}:{line} {m.group(0)} → "
+                            f"{scheme.code(number)}")
+    return sorted(rows)
+
+
 def alias_number(scheme, tail: str) -> int | None:
     """The number a concretized document carries for a temporary code it
     used to be (ADR-049). Scanned from `formerly:` frontmatter on demand — this
@@ -818,6 +870,20 @@ def linkify(text: str, source: Path, adrs: dict[int, Path] | None = None,
     return _apply(text, refs, source, adrs, anchors), len(refs) + expanded
 
 
+def _label(ref: Ref) -> str:
+    """What the written link says. The matched text, with one exception: a
+    temporary code that resolves only through a `formerly:` alias is a
+    legacy spelling, and the fixer upgrades it to the canonical code
+    (ADR-040) rather than engraving the old name into a fresh link."""
+    if ref.kind == "scheme" and ref.code:
+        scheme = current().schemes.get(ref.prefix)
+        if scheme is not None and ref.code not in scheme.temp_documents():
+            number = alias_number(scheme, ref.code)
+            if number is not None:
+                return scheme.code(number)
+    return ref.text
+
+
 def _apply(text: str, refs: list[Ref], source: Path, adrs: dict[int, Path],
            anchors: dict[int, str]) -> str:
     html = html_block_spans(text)
@@ -828,10 +894,11 @@ def _apply(text: str, refs: list[Ref], source: Path, adrs: dict[int, Path],
             continue
         start, end = _absorb_brackets(text, ref)
         out.append(text[cursor:start])
+        label = _label(ref)
         if in_html_block(start, html):
-            out.append(f'<a href="{target}">{ref.text}</a>')
+            out.append(f'<a href="{target}">{label}</a>')
         else:
-            out.append(f"[{ref.text}]({target})")
+            out.append(f"[{label}]({target})")
         cursor = end
     out.append(text[cursor:])
     return "".join(out)

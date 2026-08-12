@@ -5,19 +5,13 @@
 
 `Proposed` and `Deferred` both describe an open question. Neither says *since when*, and that is the signal: a decision proposed last week is pending; the same one a year later was either overdue or settled in code and never written back.
 
-**9 document(s) awaiting a decision.**
+**3 document(s) awaiting a decision.**
 
 | Open since | Status | Code | Cited | Unack. | Title |
 |---|---|---|--:|--:|---|
-| 2026-08-07 | Proposed | [ADR-040](../../record/decisions.d/ADR-040.md) | 13 | 13 | Migrations: renaming schemes and moving documents without losing the record's memory |
+| 2026-08-07 | Proposed | [ADR-040](../../record/decisions.d/ADR-040.md) | 17 | 17 | Migrations: renaming schemes and moving documents without losing the record's memory |
 | 2026-08-08 | Proposed | [ADR-041](../../record/decisions.d/ADR-041.md) | 0 | 0 | Bugs enter the record characterized: the minimal working example protocol |
 | 2026-08-08 | Proposed | [DP-010](../../record/principles.d/DP-010.md) | 0 | 0 | Defaults follow the failure mode: guards opt out, disclosures opt in |
-| 2026-08-11 | Proposed | [ADR-047](../../record/decisions.d/ADR-047.md) | 13 | 13 | A declared family replaces the default; settings still merge |
-| 2026-08-11 | Proposed | [ADR-045](../../record/decisions.d/ADR-045.md) | 6 | 6 | Worked configurations are executable examples, not prose |
-| 2026-08-11 | Proposed | [ADR-044](../../record/decisions.d/ADR-044.md) | 3 | 3 | The configuration reference is generated from the config schema |
-| 2026-08-11 | Proposed | [ADR-048](../../record/decisions.d/ADR-048.md) | 3 | 3 | The scaffold is planned from configuration, not copied from a tree |
-| 2026-08-11 | Proposed | [ADR-046](../../record/decisions.d/ADR-046.md) | 1 | 1 | Reference detection is scheme-driven, not three hardcoded patterns |
-| 2026-08-12 | Proposed | [ADR-049](../../record/decisions.d/ADR-049.md) | 21 | 21 | Temporary codes at filing; concretized and aliased at the serialization point |
 
 The citation count is the second axis, and it flips the priority: an old proposal nothing references is a stalled idea worth closing, while an old proposal many files cite is a decision the codebase has already made and hasn't written down.
 

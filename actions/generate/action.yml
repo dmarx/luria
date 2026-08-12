@@ -31,6 +31,16 @@ inputs:
       "-e ." inside luria's own repository). Empty string skips the install
       for callers that installed it already.
     default: luria
+  concretize:
+    description: >-
+      "true" runs `luria concretize` before the views regenerate, assigning
+      real numbers to any merge-allocated temporary codes (LU-ADR-049). Pass
+      true ONLY where merges serialize — the push-to-default-branch run —
+      and never on pull-request runs: concretizing on a branch is exactly
+      the premature number claim the temporary codes exist to avoid. A
+      project with no merge-allocated schemes can pass true harmlessly; the
+      command is a no-op with nothing pending.
+    default: "false"
   commit-message:
     description: >-
       Commit message for the regenerated views. The default carries GitHub's
@@ -47,6 +57,9 @@ runs:
     - if: ${{ inputs.pip-spec != '' }}
       shell: bash
       run: pip install ${{ inputs.pip-spec }}
+    - if: ${{ inputs.concretize == 'true' }}
+      shell: bash
+      run: luria concretize
     - shell: bash
       run: luria link --fix
     - shell: bash
@@ -81,3 +94,9 @@ runs:
     # after regenerating means luria is broken or non-idempotent.
     - shell: bash
       run: luria index --check
+    # The trunk's guard (LU-ADR-049): where concretization runs, a temporary
+    # code surviving it means the concretizer is broken — fail here, at the
+    # serialization point, not in some later reader's checkout.
+    - if: ${{ inputs.concretize == 'true' }}
+      shell: bash
+      run: luria concretize --check

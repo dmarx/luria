@@ -61,6 +61,11 @@ jobs:
       - id: generate
         # Pin a released tag once you depend on this in anger.
         uses: dmarx/luria/actions/generate@main
+        with:
+          # Assign real numbers to merge-allocated temporary codes
+          # (LU-ADR-049) — only where merges serialize, never on a pull
+          # request. Harmless if no scheme sets `allocate = "merge"`.
+          concretize: ${{ github.event_name != 'pull_request' }}
 
   docs-lint:
     if: github.event_name != 'schedule'

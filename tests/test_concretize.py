@@ -180,3 +180,45 @@ def test_filing_allocation_is_untouched(project):
     (project / "record" / "decisions.d").mkdir(parents=True)
     path = new.new_entry("adr", {"title": "Numbered on the spot"}, None)
     assert path.name == "ADR-001.md"
+
+
+# --- legacy spellings: the rung-1 warning class (ADR-040) ----------------
+
+def test_a_legacy_spelling_is_reported_and_upgraded(merge_project):
+    """An in-flight branch merges after a concretization pass, still citing
+    the old temporary name. The warning names it with its remedy, and the
+    fixer upgrades the *spelling* to the canonical code rather than
+    engraving the old name into a fresh link."""
+    root, first, _ = merge_project
+    a = first.stem
+    concretize.run()
+
+    straggler = root / "docs" / "straggler.md"
+    straggler.write_text(f"# Late branch\n\nPer {a}, we chose this.\n")
+
+    rows = doc_refs.legacy_spellings()
+    assert len(rows) == 1 and a in rows[0] and "→ ADR-" in rows[0]
+
+    linked, count = doc_refs.linkify(straggler.read_text(), straggler)
+    assert count == 1
+    assert a not in linked, "the spelling is upgraded, not preserved"
+    assert "[ADR-0" in linked
+
+    straggler.write_text(linked)
+    assert doc_refs.legacy_spellings() == [], "fixed means gone"
+
+
+def test_a_live_temp_code_is_not_a_legacy_spelling(merge_project):
+    """Before concretization, temporary codes are the branch's normal state —
+    the warning is for spellings a sweep has already retired."""
+    assert doc_refs.legacy_spellings() == []
+
+
+def test_the_warning_is_promotable(merge_project, monkeypatch):
+    """`legacy-spellings` rides the ADR-035 ladder like every other class."""
+    root, first, _ = merge_project
+    concretize.run()
+    (root / "docs" / "straggler.md").write_text(
+        f"# Late\n\nPer {first.stem}.\n")
+    assert any(cls == "legacy-spellings" for cls, _, _ in
+               lint.status_sections())

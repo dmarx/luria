@@ -9,7 +9,7 @@ Every reference in the record is a claim — "this is why things are the way the
 
 Only an `Active` document is in force. `Proposed` and `Deferred` mean *not in force yet* — an open question, being cited as if it were settled — while `Superseded` and `Rejected` mean *no longer in force*, which is often a perfectly good thing to cite: history, or a rejection worth pointing at. Either way the citation should be deliberate, and this section lists the ones nobody has vouched for yet.
 
-**7 documents cited without acknowledgement.** Not listed: 36 citations someone has already vouched for with an `inactive-ok:` comment at the citing site.
+**1 document cited without acknowledgement.** Not listed: 36 citations someone has already vouched for with an `inactive-ok:` comment at the citing site.
 
 To vouch for one, put the reason where the citation is — `inactive-ok:` covers its own line and the line below it, `inactive-ok-block:` its paragraph, `inactive-ok-file:` the whole page:
 
@@ -17,44 +17,19 @@ To vouch for one, put the reason where the citation is — `inactive-ok:` covers
 <!-- inactive-ok: ADR-012 — why this citation is right -->
 ```
 
-### [ADR-049](../../record/decisions.d/ADR-049.md) — Proposed
-
-Temporary codes at filing; concretized and aliased at the serialization point
-
-21 citations in 9 files await a look.
-
-- [`docs/adopting.md:190`](../adopting.md)
-- [`luria/adr_index.py:51`](../../luria/adr_index.py)
-- [`luria/adr_index.py:156`](../../luria/adr_index.py)
-- [`luria/adr_index.py:239`](../../luria/adr_index.py)
-- [`luria/adr_index.py:267`](../../luria/adr_index.py)
-- [`luria/cli.py:8`](../../luria/cli.py)
-- [`luria/concretize.py:2`](../../luria/concretize.py)
-- [`luria/concretize.py:31`](../../luria/concretize.py)
-- [`luria/config.py:188`](../../luria/config.py)
-- [`luria/config.py:229`](../../luria/config.py)
-- [`luria/doc_refs.py:112`](../../luria/doc_refs.py)
-- [`luria/doc_refs.py:440`](../../luria/doc_refs.py)
-- [`luria/doc_refs.py:646`](../../luria/doc_refs.py)
-- [`luria/doc_refs.py:658`](../../luria/doc_refs.py)
-- [`luria/doc_refs.py:717`](../../luria/doc_refs.py)
-- [`luria/lint.py:92`](../../luria/lint.py)
-- [`luria/new.py:86`](../../luria/new.py)
-- [`luria/new.py:107`](../../luria/new.py)
-- [`tests/test_concretize.py:1`](../../tests/test_concretize.py)
-- [`tests/test_concretize.py:76`](../../tests/test_concretize.py)
-- [`tests/test_concretize.py:155`](../../tests/test_concretize.py)
-
 ### [ADR-040](../../record/decisions.d/ADR-040.md) — Proposed
 
 Migrations: renaming schemes and moving documents without losing the record's memory
 
-13 citations in 7 files await a look.
+17 citations in 8 files await a look.
 
 - [`docs/adopting.md:220`](../adopting.md)
 - [`luria/concretize.py:30`](../../luria/concretize.py)
 - [`luria/concretize.py:79`](../../luria/concretize.py)
-- [`luria/doc_refs.py:667`](../../luria/doc_refs.py)
+- [`luria/doc_refs.py:647`](../../luria/doc_refs.py)
+- [`luria/doc_refs.py:719`](../../luria/doc_refs.py)
+- [`luria/doc_refs.py:877`](../../luria/doc_refs.py)
+- [`luria/lint.py:320`](../../luria/lint.py)
 - [`record/decisions.d/ADR-041.md:26`](../../record/decisions.d/ADR-041.md)
 - [`record/decisions.d/ADR-044.md:142`](../../record/decisions.d/ADR-044.md)
 - [`record/decisions.d/ADR-049.md:11`](../../record/decisions.d/ADR-049.md)
@@ -64,73 +39,13 @@ Migrations: renaming schemes and moving documents without losing the record's me
 - [`record/decisions.d/ADR-049.md:161`](../../record/decisions.d/ADR-049.md)
 - [`record/decisions.d/ADR-049.md:168`](../../record/decisions.d/ADR-049.md)
 - [`tests/test_concretize.py:154`](../../tests/test_concretize.py)
-
-### [ADR-047](../../record/decisions.d/ADR-047.md) — Proposed
-
-A declared family replaces the default; settings still merge
-
-13 citations in 7 files await a look.
-
-- [`docs/adopting.md:88`](../adopting.md)
-- [`docs/adopting.md:143`](../adopting.md)
-- [`luria/config.py:38`](../../luria/config.py)
-- [`luria/config.py:185`](../../luria/config.py)
-- [`luria/config.py:654`](../../luria/config.py)
-- [`luria/config.py:674`](../../luria/config.py)
-- [`luria/config_doc.py:83`](../../luria/config_doc.py)
-- [`luria/config_doc.py:145`](../../luria/config_doc.py)
-- [`luria/doc_refs.py:596`](../../luria/doc_refs.py)
-- [`record/decisions.d/ADR-048.md:11`](../../record/decisions.d/ADR-048.md)
-- [`record/decisions.d/ADR-048.md:42`](../../record/decisions.d/ADR-048.md)
-- [`tests/test_config.py:1`](../../tests/test_config.py)
-- [`tests/test_examples.py:169`](../../tests/test_examples.py)
-
-### [ADR-045](../../record/decisions.d/ADR-045.md) — Proposed
-
-Worked configurations are executable examples, not prose
-
-6 citations in 3 files await a look.
-
-- [`record/decisions.d/ADR-046.md:10`](../../record/decisions.d/ADR-046.md)
-- [`record/decisions.d/ADR-046.md:24`](../../record/decisions.d/ADR-046.md)
-- [`record/decisions.d/ADR-046.md:69`](../../record/decisions.d/ADR-046.md)
-- [`record/decisions.d/ADR-047.md:10`](../../record/decisions.d/ADR-047.md)
-- [`record/decisions.d/ADR-047.md:38`](../../record/decisions.d/ADR-047.md)
-- [`tests/test_concretize.py:6`](../../tests/test_concretize.py)
-
-### [ADR-044](../../record/decisions.d/ADR-044.md) — Proposed
-
-The configuration reference is generated from the config schema
-
-3 citations in 2 files await a look.
-
-- [`record/decisions.d/ADR-045.md:11`](../../record/decisions.d/ADR-045.md)
-- [`record/decisions.d/ADR-045.md:37`](../../record/decisions.d/ADR-045.md)
-- [`record/decisions.d/ADR-046.md:40`](../../record/decisions.d/ADR-046.md)
-
-### [ADR-048](../../record/decisions.d/ADR-048.md) — Proposed
-
-The scaffold is planned from configuration, not copied from a tree
-
-3 citations in 3 files await a look.
-
-- [`docs/adopting.md:12`](../adopting.md)
-- [`luria/init.py:9`](../../luria/init.py)
-- [`tests/test_init.py:26`](../../tests/test_init.py)
-
-### [ADR-046](../../record/decisions.d/ADR-046.md) — Proposed
-
-Reference detection is scheme-driven, not three hardcoded patterns
-
-1 citation in 1 file awaits a look.
-
-- [`record/decisions.d/ADR-048.md:110`](../../record/decisions.d/ADR-048.md)
+- [`tests/test_concretize.py:185`](../../tests/test_concretize.py)
 
 ## Codes that resolve to no document
 
 A reference the reader cannot follow: the code names no document in this record. A typo, a number carried in from another project, and an illustrative code in an example all look identical from here — telling them apart takes a human, so this is a report, not an error.
 
-**2 codes unaccounted for.** Not listed: 49 mentions marked deliberate with an `unresolved-ok:` comment (same syntax and scopes as `inactive-ok:` above).
+**3 codes unaccounted for.** Not listed: 49 mentions marked deliberate with an `unresolved-ok:` comment (same syntax and scopes as `inactive-ok:` above).
 
 
 ### ADR-123 — resolves to nothing (4 unmarked sites · 2 other mentions marked deliberate)
@@ -139,6 +54,10 @@ A reference the reader cannot follow: the code names no document in this record.
 - [`luria/concretize.py:19`](../../luria/concretize.py)
 - [`record/decisions.d/ADR-049.md:28`](../../record/decisions.d/ADR-049.md)
 - [`record/decisions.d/ADR-049.md:46`](../../record/decisions.d/ADR-049.md)
+
+### ADR-000 — resolves to nothing (1 unmarked site)
+
+- [`tests/test_concretize.py:205`](../../tests/test_concretize.py)
 
 ### DP-018 — resolves to nothing (1 unmarked site · 4 other mentions marked deliberate)
 
