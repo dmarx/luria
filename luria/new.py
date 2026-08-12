@@ -82,10 +82,36 @@ def _sub_line(text: str, field: str, value: str) -> str:
     return pattern.sub(replacement, text, count=1)
 
 
+def _mint_tail(scheme) -> str:
+    """A fresh temporary tail (ADR-049): the `tmp` sentinel plus five base-36
+    characters — `tmp47fje` — so the code can never be read as a number AND
+    reads as provisional to someone who has never met the convention. Random
+    rather than derived, because the whole point is an identity that needs no
+    coordination — checked against the tails already on disk, which is the
+    only collision this process can see and the only one likely enough to
+    matter (the space is 36⁵ per scheme)."""
+    import secrets
+    import string
+    taken = scheme.temp_documents()
+    while True:
+        tail = "tmp" + "".join(
+            secrets.choice(string.ascii_lowercase + string.digits)
+            for _ in range(5))
+        if tail not in taken:
+            return tail
+
+
 def new_scheme_doc(scheme, fields: dict[str, str]) -> Path:
-    numbers = scheme.documents()
-    number = max(numbers, default=0) + 1
-    code = f"{scheme.prefix}-{number:03d}"
+    if scheme.allocate == "merge":
+        # Merge-allocated schemes don't claim a number from a branch — that
+        # claim is what collides (ADR-049). The code is temporary, and
+        # `luria concretize` assigns the real number where merges serialize.
+        stem = f"{scheme.prefix}-{_mint_tail(scheme)}"
+        code = stem
+    else:
+        number = max(scheme.documents(), default=0) + 1
+        code = f"{scheme.prefix}-{number:03d}"
+        stem = code
     today = dt.date.today().isoformat()
 
     template = scheme.dir / TEMPLATE_NAME
@@ -113,7 +139,7 @@ def new_scheme_doc(scheme, fields: dict[str, str]) -> Path:
     for field, value in fields.items():
         text = _sub_line(text, field, value)
 
-    path = scheme.dir / f"{code}.md"
+    path = scheme.dir / f"{stem}.md"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(text)
     return path

@@ -89,7 +89,12 @@ def check_docs_index(errors: list[str]) -> None:
 def check_frontmatter(errors: list[str]) -> None:
     cfg = current()
     for scheme in cfg.schemes.values():
-        for path in scheme.documents().values():
+        # Temporary documents (ADR-049) are first-class on their branch, so
+        # they meet the same frontmatter bar as numbered ones — a temp doc
+        # that would fail the lint after concretization should fail it now,
+        # while its author still has the context loaded.
+        for path in [*scheme.documents().values(),
+                     *scheme.temp_documents().values()]:
             rel = cfg.rel(path)
             meta, body = builder.parse_frontmatter(path.read_text())
             if not meta:

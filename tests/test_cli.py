@@ -12,15 +12,16 @@ from __future__ import annotations
 import subprocess
 import sys
 
-from luria import (adr_index, cli, collect, init, link_refs, lint, new,
-                   remotes, reports, site)
+from luria import (adr_index, cli, collect, concretize, init, link_refs,
+                   lint, new, remotes, reports, site)
 
 
-def test_the_nine_commands_are_registered():
+def test_every_command_is_registered():
     assert cli.COMMANDS == {
         "lint": lint.run, "link": link_refs.run, "index": adr_index.run,
-        "new": new.run, "remotes": remotes.run, "site": site.run,
-        "init": init.run, "reports": reports.run, "collect": collect.run,
+        "new": new.run, "concretize": concretize.run, "remotes": remotes.run,
+        "site": site.run, "init": init.run, "reports": reports.run,
+        "collect": collect.run,
     }
 
 

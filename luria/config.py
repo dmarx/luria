@@ -185,6 +185,15 @@ class Scheme:
     # rather than merging into them (ADR-047), so there is nothing left to
     # inherit the key from.
     output: Path | None = None
+    # When this scheme's numbers are assigned (ADR-049). "filing" is today's
+    # behaviour: `luria new` takes the next free number on the spot — right
+    # for a single-writer record, and a distributed claim on a global counter
+    # the moment branches are concurrent. "merge" issues a temporary code
+    # instead (`ADR-tmp47fje`, visibly provisional and never a number), and
+    # `luria concretize` — run wherever merges serialize — assigns the real
+    # numbers in merge order and records each temporary code as a permanent
+    # `aka:` alias.
+    allocate: str = "filing"
 
     @property
     def view(self) -> Path:
@@ -213,6 +222,34 @@ class Scheme:
     @property
     def pattern(self):
         return re.compile(rf"\b{self.prefix}[- ](?P<num>\d{{1,4}})\b")
+
+    # A temporary code's tail: a literal `tmp` sentinel plus five base-36
+    # characters — `ADR-tmp47fje`. The alphabetic start keeps the numeric and
+    # temporary patterns disjoint by construction, and the spelled-out
+    # sentinel does two more jobs (ADR-049): a reader who has never met the
+    # convention still sees "provisional" at every citation site, and the
+    # prose pattern stops false-matching six-letter English after a prefix —
+    # `[a-z][a-z0-9]{5}`, the first shape, read "the ADR-review process" as
+    # a temporary reference.
+    TEMP_TAIL = r"tmp[a-z0-9]{5}"
+
+    @property
+    def temp_pattern(self):
+        return re.compile(rf"\b{self.prefix}-(?P<tail>{self.TEMP_TAIL})\b")
+
+    def temp_of(self, path: Path) -> str | None:
+        """The temporary tail a filename carries, or None if it isn't one."""
+        m = re.fullmatch(rf"{self.prefix}-({self.TEMP_TAIL})\.md", path.name)
+        return m.group(1) if m else None
+
+    def temp_documents(self) -> dict[str, Path]:
+        """Tail → path for every temporary document awaiting concretization."""
+        found: dict[str, Path] = {}
+        for path in sorted(self.dir.glob("*.md")):
+            tail = self.temp_of(path)
+            if tail is not None:
+                found[tail] = path
+        return found
 
     def code(self, number: str | int) -> str:
         return f"{self.prefix}-{int(number):03d}"
@@ -656,6 +693,7 @@ def load(root: Path | None = None, text: str | None = None) -> Config:
                 prefix, root / spec["dir"], spec.get("active", "Active"),
                 spec.get("render", "index"),
                 root / spec["output"] if spec.get("output") else None,
+                spec.get("allocate", "filing"),
             )
             for prefix, spec in raw["schemes"].items()
         },

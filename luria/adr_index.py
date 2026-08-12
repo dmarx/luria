@@ -48,7 +48,9 @@ import yaml
 
 from .config import current
 
-TITLE_RE = re.compile(r"^#\s*[A-Z]+-\d+\s*(?::|—|-)\s*")
+# The tail accepts a temporary code (`ADR-tmp47fje`, ADR-049) as well as a
+# number: both are codes a heading legitimately carries.
+TITLE_RE = re.compile(r"^#\s*[A-Z]+-[A-Za-z0-9]+\s*(?::|—|-)\s*")
 TABLE_HEAD = "| # | Title | Status |\n|---|---|---|\n"
 
 # A literal `|` in a summary is a cell delimiter to the table parser: the row
@@ -151,6 +153,9 @@ class Adr:
         self.scheme = scheme
         self.prefix = scheme.prefix
         self.number = scheme.number_of(path)
+        # A merge-allocated document awaiting concretization (ADR-049): no
+        # number yet, addressed by its temporary tail.
+        self.tail = scheme.temp_of(path)
         self.meta, body = parse_frontmatter(path.read_text())
         # `title:` is the source of truth; the body's H1 is the fallback, so a
         # document written before the field existed — or in a project that
@@ -162,6 +167,8 @@ class Adr:
 
     @property
     def code(self) -> str:
+        if self.number is None and self.tail:
+            return f"{self.prefix}-{self.tail}"
         return f"{self.prefix}-{self.number:03d}"
 
     @property
@@ -221,7 +228,13 @@ def load_adrs() -> list[Adr]:
 
 
 def load_scheme(scheme) -> list[Adr]:
-    return [Adr(p, scheme) for p in scheme.documents().values()]
+    """Every document in the scheme: numbered ascending, then any temporary
+    documents (ADR-049) by their `date:` and name — they have no place in the
+    sequence yet, so they read after it."""
+    docs = [Adr(p, scheme) for p in scheme.documents().values()]
+    temps = [Adr(p, scheme) for p in scheme.temp_documents().values()]
+    temps.sort(key=lambda a: (str(a.meta.get("date", "")), a.path.name))
+    return docs + temps
 
 
 def tag_order(adrs: list[Adr], scheme=None) -> list[tuple[str, dict]]:
@@ -244,7 +257,11 @@ def render_categories(adrs: list[Adr], tags: list[tuple[str, dict]],
         listed = [a for a in adrs if tag in a.tags]
         label = meta.get("label", tag.title())
         blurb = f" — {meta['blurb']}" if meta.get("blurb") else ""
-        links = " · ".join(f"[{a.number:03d}]({prefix}{a.path.name})" for a in listed)
+        # A temporary document (ADR-049) has no number to abbreviate to, so
+        # its category chip is the tail — still short, still a link.
+        links = " · ".join(
+            f"[{a.number:03d}]({prefix}{a.path.name})" if a.number is not None
+            else f"[{a.tail}]({prefix}{a.path.name})" for a in listed)
         blocks.append(f"**[{label}](tags/{tag}.md)** ({len(listed)}){blurb}:\n{links}")
     return "\n\n".join(blocks)
 
@@ -302,14 +319,16 @@ def render_document(scheme, docs: list[Adr]) -> str:
         body = parse_frontmatter(doc.path.read_text())[1].strip()
         # Demote the fragment's own H1 to the assembled document's H2, and
         # renumber it into the reader's numbering rather than the file's code.
-        body = re.sub(r"^#\s*[A-Z]+-\d+\s*(?::|—|-)\s*",
-                      f"## {doc.number}. ", body, count=1)
+        label = doc.number if doc.number is not None else doc.code
+        body = re.sub(r"^#\s*[A-Z]+-[A-Za-z0-9]+\s*(?::|—|-)\s*",
+                      f"## {label}. ", body, count=1)
         # A stable anchor, because the heading is not one. A principle is a
         # living document — two of the eight here have been reworded already —
         # and a heading-derived anchor stops resolving the moment the wording
         # moves, silently, which is the fail-stale polarity DP-3 rules out.
         # This one is keyed to the number, which is the thing that never moves.
-        body = f'<a name="{doc.prefix.lower()}-{doc.number}"></a>\n\n{body}'
+        slot = doc.number if doc.number is not None else doc.tail
+        body = f'<a name="{doc.prefix.lower()}-{slot}"></a>\n\n{body}'
         meta = [f"*v{doc.version}"]
         if doc.influenced_by:
             meta.append("shaped by " + ", ".join(
