@@ -348,8 +348,9 @@ def test_a_pipe_in_a_summary_stays_one_cell(tmp_path, monkeypatch):
         "---\n\n# ADR-001: Vocab\n")
 
     row = builder.load_adrs()[0].row()
-    # Unescaped pipes bound exactly the four cells; every summary pipe is `\|`.
-    assert re.findall(r"(?<!\\)\|", row) == ["|"] * 4
+    # Unescaped pipes bound exactly the four cells — code, title, summary,
+    # status — and every pipe inside the summary is `\|`.
+    assert re.findall(r"(?<!\\)\|", row) == ["|"] * 5
     assert "(Active \\| Proposed \\| Rejected)" in row
     config.reset()
 
@@ -371,4 +372,29 @@ def test_a_hand_escaped_pipe_is_not_double_escaped(tmp_path, monkeypatch):
     row = builder.load_adrs()[0].row()
     assert "node\\|selection" in row
     assert "\\\\|" not in row
+    config.reset()
+
+
+def test_title_and_summary_are_separate_columns(tmp_path, monkeypatch):
+    """The middle column used to be one blob — summary when present, else
+    title — under a header that said "Title", so any document with a summary
+    showed its summary mislabelled. Title now has its own column, and the
+    summary cell is honestly empty when there is none, rather than a
+    fallback papering over the gap."""
+    from luria import config
+    monkeypatch.setenv("LURIA_ROOT", str(tmp_path))
+    config.reset()
+    adr_dir = config.current().schemes["ADR"].dir
+    adr_dir.mkdir(parents=True)
+    (adr_dir / "ADR-001.md").write_text(
+        "---\nstatus: Active\ntags:\n- record\ntitle: 'The choice'\n"
+        "summary: 'Why, and what lost.'\n---\n\n# ADR-001: The choice\n")
+    (adr_dir / "ADR-002.md").write_text(
+        "---\nstatus: Active\ntags:\n- record\ntitle: 'Terse one'\n"
+        "---\n\n# ADR-002: Terse one\n")
+
+    with_summary, without = (a.row() for a in builder.load_adrs())
+    assert "| The choice | Why, and what lost. |" in with_summary
+    assert "| Terse one |  |" in without, "no summary → an empty cell, not the title twice"
+    assert builder.TABLE_HEAD.startswith("| # | Title | Summary | Status |")
     config.reset()
