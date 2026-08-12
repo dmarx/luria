@@ -51,7 +51,7 @@ from .config import current
 # The tail accepts a temporary code (`ADR-tmp47fje`, ADR-049) as well as a
 # number: both are codes a heading legitimately carries.
 TITLE_RE = re.compile(r"^#\s*[A-Z]+-[A-Za-z0-9]+\s*(?::|—|-)\s*")
-TABLE_HEAD = "| # | Title | Status |\n|---|---|---|\n"
+TABLE_HEAD = "| # | Title | Summary | Status |\n|---|---|---|---|\n"
 
 # A literal `|` in a summary is a cell delimiter to the table parser: the row
 # grows extra columns, the summary truncates and its tail lands in the status
@@ -180,15 +180,21 @@ class Adr:
         return [str(t).strip().lower() for t in (self.meta.get("tags") or [])]
 
     def cell(self, prefix: str = "") -> str:
-        """The table's middle column: the summary when there is one, else the
-        title. A row has always been one blob, not a title plus a description —
-        keeping that shape is what made the migration byte-identical.
+        """The Summary column: the `summary:` frontmatter, or empty.
+
+        The row used to be one blob — summary when present, else title —
+        under a column labelled "Title", a shape kept originally to make the
+        migration byte-identical and outlived by its reason: any document
+        with a summary showed its summary mislabelled as a title. The title
+        now has its own column, so this one is honest about being optional —
+        an empty cell is a document whose index row could say more, not a
+        rendering fallback papering over the gap.
 
         A summary may carry relative links, written — like the ADR's body —
         relative to the scheme's source directory. `prefix` rebases them for
         output that renders somewhere else (ADR-005); it is the same prefix
         the row's own ADR link already took."""
-        return rebase_links(str(self.meta.get("summary") or self.title).strip(), prefix)
+        return rebase_links(str(self.meta.get("summary") or "").strip(), prefix)
 
     @property
     def version(self) -> int:
@@ -217,6 +223,7 @@ class Adr:
         # where it is read (ADR-016).
         version = f" v{self.version}" if self.version > 1 else ""
         return (f"| [{self.code}]({prefix}{self.path.name}){version} "
+                f"| {escape_cell(self.title)} "
                 f"| {escape_cell(self.cell(prefix))} "
                 f"| {escape_cell(rebase_links(self.status, prefix))} |")
 
