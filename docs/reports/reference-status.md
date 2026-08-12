@@ -67,14 +67,18 @@ A declared family replaces the default; settings still merge
 
 Migrations: renaming schemes and moving documents without losing the record's memory
 
-6 citations in 4 files await a look.
+10 citations in 4 files await a look.
 
 - [`docs/adopting.md:220`](../adopting.md)
 - [`record/decisions.d/ADR-041.md:26`](../../record/decisions.d/ADR-041.md)
 - [`record/decisions.d/ADR-044.md:142`](../../record/decisions.d/ADR-044.md)
 - [`record/decisions.d/ADR-049.md:11`](../../record/decisions.d/ADR-049.md)
 - [`record/decisions.d/ADR-049.md:88`](../../record/decisions.d/ADR-049.md)
-- [`record/decisions.d/ADR-049.md:142`](../../record/decisions.d/ADR-049.md)
+- [`record/decisions.d/ADR-049.md:98`](../../record/decisions.d/ADR-049.md)
+- [`record/decisions.d/ADR-049.md:150`](../../record/decisions.d/ADR-049.md)
+- [`record/decisions.d/ADR-049.md:161`](../../record/decisions.d/ADR-049.md)
+- [`record/decisions.d/ADR-049.md:166`](../../record/decisions.d/ADR-049.md)
+- [`record/decisions.d/ADR-049.md:173`](../../record/decisions.d/ADR-049.md)
 
 ### [ADR-045](../../record/decisions.d/ADR-045.md) — Proposed
 

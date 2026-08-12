@@ -201,7 +201,7 @@ first-class on its branch — indexed, linted, citable bare or as
 `[[ADR-tmp47fje]]` — and `luria concretize`, run by whatever serializes your
 merges (a merge queue, the job that lands PRs), assigns real numbers in merge
 order, rewrites every reference, and records the temporary code as a
-permanent `aka:` alias, so a citation in a PR thread or a commit message
+permanent `formerly:` alias, so a citation in a PR thread or a commit message
 never goes dead. Put `luria concretize --check` in CI on your default branch:
 a temporary code there means the concretizer didn't run, and it fails loudly.
 

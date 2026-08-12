@@ -9,7 +9,7 @@
 
 | Open since | Status | Code | Cited | Unack. | Title |
 |---|---|---|--:|--:|---|
-| 2026-08-07 | Proposed | [ADR-040](../../record/decisions.d/ADR-040.md) | 6 | 6 | Migrations: renaming schemes and moving documents without losing the record's memory |
+| 2026-08-07 | Proposed | [ADR-040](../../record/decisions.d/ADR-040.md) | 10 | 10 | Migrations: renaming schemes and moving documents without losing the record's memory |
 | 2026-08-08 | Proposed | [ADR-041](../../record/decisions.d/ADR-041.md) | 0 | 0 | Bugs enter the record characterized: the minimal working example protocol |
 | 2026-08-08 | Proposed | [DP-010](../../record/principles.d/DP-010.md) | 0 | 0 | Defaults follow the failure mode: guards opt out, disclosures opt in |
 | 2026-08-11 | Proposed | [ADR-047](../../record/decisions.d/ADR-047.md) | 13 | 13 | A declared family replaces the default; settings still merge |

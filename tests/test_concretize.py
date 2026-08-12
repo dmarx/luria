@@ -116,10 +116,10 @@ def test_concretize_assigns_renames_rewrites_and_aliases(merge_project):
     n_first, t_first = by_title["First"]
     n_second, t_second = by_title["Second"]
     assert f"[ADR-{n_first:03d}](ADR-{n_first:03d}.md)" in t_second
-    assert a not in t_second, "no temporary code survives outside aka:"
+    assert a not in t_second, "no temporary code survives outside formerly:"
 
     # The temporary code is recorded as an alias on its own document only.
-    assert re.search(rf"^aka:\n- {a}$", t_first, flags=re.MULTILINE)
+    assert re.search(rf"^formerly:\n- {a}$", t_first, flags=re.MULTILINE)
 
     # And the views regenerated in the same run.
     index = (root / "docs" / "decisions" / "README.md").read_text()

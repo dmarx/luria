@@ -20,7 +20,7 @@ reason: a filename is not required to sort chronologically):
 2. every occurrence of the temporary code in current files is rewritten —
    which covers link labels and link targets in one pass, since the target
    is the code plus `.md`;
-3. the temporary code is recorded in the document's `aka:` frontmatter,
+3. the temporary code is recorded in the document's `formerly:` frontmatter,
    which the resolver honours forever — a citation the rewrite could not
    reach (a PR thread, an immutable commit message, another repository's
    `LU-`-prefixed reference) resolves to the concretized document instead of
@@ -59,14 +59,14 @@ def pending() -> list[tuple[object, str, Path]]:
 
 
 def _record_alias(text: str, old_code: str) -> str:
-    """`old_code` appended to the document's `aka:` frontmatter — created
+    """`old_code` appended to the document's `formerly:` frontmatter — created
     after `status:` when the field doesn't exist yet, extended in place when
     it does. Runs after the tree-wide rewrite, so the alias is the only place
     the temporary code still appears."""
-    if re.search(r"^aka:", text, flags=re.MULTILINE):
-        return re.sub(r"^(aka:(?:\n- .*)*)", rf"\1\n- {old_code}", text,
+    if re.search(r"^formerly:", text, flags=re.MULTILINE):
+        return re.sub(r"^(formerly:(?:\n- .*)*)", rf"\1\n- {old_code}", text,
                       count=1, flags=re.MULTILINE)
-    return re.sub(r"^(status:.*)$", rf"\1\naka:\n- {old_code}", text,
+    return re.sub(r"^(status:.*)$", rf"\1\nformerly:\n- {old_code}", text,
                   count=1, flags=re.MULTILINE)
 
 

@@ -439,7 +439,7 @@ def find_refs(text: str, path: Path = ANY_MD) -> list[Ref]:
     patterns += [("scheme", s.prefix, s.pattern) for s in schemes.values()]
     # Temporary codes (ADR-049): `ADR-tmp47fje`, the merge-allocated shape.
     # Matched for every scheme, not just merge-allocated ones — a temp code
-    # can outlive its scheme's dial via an `aka:` alias, and a reference's
+    # can outlive its scheme's dial via an `formerly:` alias, and a reference's
     # validity shouldn't depend on a setting that may have changed since.
     patterns += [("scheme", s.prefix, s.temp_pattern) for s in schemes.values()]
     patterns += [("issue", "", ISSUE_RE)]
@@ -643,13 +643,13 @@ def is_ambiguous_issue(ref: Ref, text: str, anchors: dict[int, str]) -> bool:
 
 def alias_number(scheme, tail: str) -> int | None:
     """The number a concretized document carries for a temporary code it
-    used to be (ADR-049). Scanned from `aka:` frontmatter on demand — this
+    used to be (ADR-049). Scanned from `formerly:` frontmatter on demand — this
     path only runs for a temp code with no live document, which is rare —
     so nothing caches and nothing can go stale."""
     code = f"{scheme.prefix}-{tail}"
     for number, path in scheme.documents().items():
         meta, _ = parse_frontmatter(path.read_text())
-        if any(str(a).strip() == code for a in (meta.get("aka") or [])):
+        if any(str(a).strip() == code for a in (meta.get("formerly") or [])):
             return number
     return None
 
@@ -659,7 +659,7 @@ def _temp_target(scheme, tail: str, source: Path, base: Path) -> str | None:
 
     A live temporary document wins: file link for an index scheme, a
     tail-keyed anchor in the assembled page for a document scheme. A tail
-    with no live document may be an `aka:` alias of a concretized document,
+    with no live document may be an `formerly:` alias of a concretized document,
     which then resolves exactly as its number would — so a temp code cited
     somewhere the concretizer's rewrite couldn't reach (a historical devlog
     entry, another repository) never goes dead, only stale in spelling."""
@@ -712,7 +712,7 @@ def resolve(ref: Ref, source: Path, adrs: dict[int, Path],
         return None
     if ref.code:
         # A temporary code (ADR-049): live on this branch, or a permanent
-        # `aka:` alias of a document already concretized.
+        # `formerly:` alias of a document already concretized.
         return _temp_target(scheme, ref.code, source, base)
 
     # An index-rendered scheme resolves to the document's own file. `adrs` is
