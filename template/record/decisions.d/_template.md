@@ -1,8 +1,12 @@
 ---
-# Copy this file to ADR-<NNN>.md — next number wins, numbering is sequential and
-# carries information (it's the order decisions were made). The filename is the
-# code and nothing else; the title goes in `title:` below, where correcting it
-# costs an edit rather than a rename plus every link. Why:
+# Don't copy this file by hand — run `luria new adr`, which takes the next free
+# number and fills in the fields a machine can compute. The kinds are the
+# config: every scheme, fragment directory and journal in luria.toml is one, so
+# `luria new <kind>` works for a scheme the moment it is declared.
+#
+# Numbering is sequential and carries information (it's the order decisions were
+# made). The filename is the code and nothing else; the title goes in `title:`
+# below, where correcting it costs an edit rather than a rename plus every link.
 #   Why: LU-ADR-013.
 #
 # This frontmatter is the ONLY place these facts live. The index and the per-tag

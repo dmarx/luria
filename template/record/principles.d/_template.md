@@ -1,6 +1,6 @@
 ---
-# Copy this file to DP-<NNN>.md — next number wins. Numbering is sequential and
-# permanent: a principle is cited by number ("per DP-3"), so a number can be
+# Don't copy this file by hand — run `luria new dp`, which takes the next free
+# number. Numbering is sequential and permanent: a principle is cited by number ("per DP-3"), so a number can be
 # retired but never reused. The filename is the code and nothing else; the title
 # goes in `title:` below, where a revision costs an edit rather than a rename
 # plus every link — which matters more here than for a decision, because
