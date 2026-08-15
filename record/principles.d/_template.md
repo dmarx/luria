@@ -1,10 +1,15 @@
 ---
-# Copy this file to DP-<NNN>.md — next number wins. Numbering is sequential and
-# permanent: a principle is cited by number ("per DP-3"), so a number can be
-# retired but never reused. The filename is the code and nothing else; the title
-# goes in `title:` below, where a revision costs an edit rather than a rename
-# plus every link (ADR-013) — which matters more here than for a decision,
-# because principles are expected to be reworded.
+# Don't copy this file by hand — run `luria new dp`, which assigns the identity
+# and fills in the fields a machine can compute. WHICH identity depends on the
+# scheme's `allocate` mode: `filing` (the default) takes the next free number
+# on the spot, `merge` mints a temporary code that `luria concretize` numbers
+# where merges serialize (ADR-049).
+#
+# Numbering is sequential and permanent: a principle is cited by number ("per
+# DP-3"), so a number can be retired but never reused. The filename is the code
+# and nothing else; the title goes in `title:` below, where a revision costs an
+# edit rather than a rename plus every link (ADR-013) — which matters more here
+# than for a decision, because principles are expected to be reworded.
 #
 # This frontmatter is the ONLY place these facts live. `docs/design-principles.md`
 # is generated from it (ADR-012) — never edit that file by hand; run
