@@ -167,6 +167,28 @@ def _merge(base: dict, override: dict) -> dict:
     return out
 
 
+# A temporary code's tail: a literal `tmp` sentinel plus five base-36
+# characters — `ADR-tmp47fje`. The alphabetic start keeps the numeric and
+# temporary patterns disjoint by construction, and the spelled-out sentinel
+# does two more jobs (ADR-049): a reader who has never met the convention still
+# sees "provisional" at every citation site, and the prose pattern stops
+# false-matching six-letter English after a prefix — `[a-z][a-z0-9]{5}`, the
+# first shape, read "the ADR-review process" as a temporary reference.
+TEMP_TAIL = r"tmp[a-z0-9]{5}"
+_TEMP_TAIL_RE = re.compile(rf"^{TEMP_TAIL}$")
+
+
+def is_temp_tail(tail: str) -> bool:
+    """Whether a code's tail is a temporary one — the ONE place that decides.
+
+    Every other spelling of this question composes `TEMP_TAIL` with a prefix to
+    match a code or a filename. A caller holding only the tail asks here rather
+    than inventing a cheaper test: `not tail.isdigit()` looks equivalent and
+    is not, because it answers "this is not a number" — which a malformed tail
+    also satisfies."""
+    return bool(_TEMP_TAIL_RE.match(tail))
+
+
 @dataclass(frozen=True)
 class Scheme:
     """A family of referable documents — `ADR-012`, `RFC-7`, `SPEC-3`.
@@ -236,15 +258,9 @@ class Scheme:
     def pattern(self):
         return re.compile(rf"\b{self.prefix}[- ](?P<num>\d{{1,4}})\b")
 
-    # A temporary code's tail: a literal `tmp` sentinel plus five base-36
-    # characters — `ADR-tmp47fje`. The alphabetic start keeps the numeric and
-    # temporary patterns disjoint by construction, and the spelled-out
-    # sentinel does two more jobs (ADR-049): a reader who has never met the
-    # convention still sees "provisional" at every citation site, and the
-    # prose pattern stops false-matching six-letter English after a prefix —
-    # `[a-z][a-z0-9]{5}`, the first shape, read "the ADR-review process" as
-    # a temporary reference.
-    TEMP_TAIL = r"tmp[a-z0-9]{5}"
+    # Kept as a class attribute because every regex here composes it with a
+    # prefix; the definition and the predicate both live at module level.
+    TEMP_TAIL = TEMP_TAIL
 
     @property
     def temp_pattern(self):

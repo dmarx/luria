@@ -15,7 +15,8 @@ journal link whose frame the sweep must not disturb (#57).
 import subprocess
 from pathlib import Path
 
-from luria import aliases, config, doc_refs, lint, migrate, ref_status
+from luria import (aliases, concretize, config, doc_refs, lint, migrate,
+                   ref_status)
 
 
 def _record_project(tmp_path, monkeypatch):
@@ -163,7 +164,36 @@ def test_rename_scheme_end_to_end(tmp_path, monkeypatch, capsys):
     assert aliases.alias_map() == {"DP-001": "GP-001", "DP-004": "GP-004"}
 
 
-def test_move_doc_renumbers_and_stamps(tmp_path, monkeypatch, capsys):
+def test_a_rename_mirrors_each_citation_s_padding(tmp_path, monkeypatch):
+    """`DP-004` stays padded, `DP-4` stays bare, and the anchor stays bare.
+
+    The tail is one string with two spellings in play at once — the padded
+    filename form and the bare prose form — so a rewrite has to answer
+    "padded?" per citation rather than once per pair. Pinned because the
+    provisional-tail work touched exactly this branch."""
+    root = _premigration_project(tmp_path, monkeypatch)
+    page = root / "docs" / "padding.md"
+    page.write_text("Padded DP-004, bare DP-4, anchor "
+                    "[x](design-principles.md#dp-4).\n")
+    _git(root, "add", "-A")
+    _git(root, "-c", "user.email=t@t", "-c", "user.name=t", "commit",
+         "-qm", "padding")
+    migrate.run("0001")
+    out = page.read_text()
+    assert "Padded GP-004" in out, out
+    assert "bare GP-4," in out, out
+    assert "#gp-4)" in out, out
+
+
+def test_move_doc_lands_provisional_then_concretizes(tmp_path, monkeypatch):
+    """A move arrives under a TEMPORARY code and is numbered afterwards.
+
+    "The next free number" is no more a fact inside a migration than it is on
+    a branch: every operation plans against the tree as it is now. So the move
+    mints a temp code (ADR-049) and the concretizer — which runs where merges
+    serialize — assigns the real one. The document ends up carrying BOTH
+    aliases: the code it migrated from, and the temporary code it wore in
+    between."""
     root = _premigration_project(tmp_path, monkeypatch)
     (root / "luria.toml").write_text(
         (root / "luria.toml").read_text()
@@ -173,17 +203,76 @@ def test_move_doc_renumbers_and_stamps(tmp_path, monkeypatch, capsys):
     aliases.reset()
     mig = root / "record" / "migrations.d" / "0002-promote.toml"
     mig.write_text('title = "DP-4 becomes a value"\n\n'
-                   '[[operations]]\nop = "move_doc"\ndoc = "DP-4"\nto = "VAL"\n')
+                   '[[operations]]\nop = "move_doc"\ndoc = "DP-4"\n'
+                   'to = "VAL"\n')
     migrate.run("0002")
-    moved = (root / "record" / "values.d" / "VAL-001.md").read_text()
-    assert "formerly:\n- DP-4\n" in moved
+
+    landed = list((root / "record" / "values.d").glob("VAL-tmp*.md"))
+    assert len(landed) == 1, "the move lands provisional, never numbered"
+    assert "formerly:\n- DP-4\n" in landed[0].read_text()
     assert not (root / "record" / "principles.d" / "DP-004.md").exists()
+    assert "Bare VAL-tmp" in (root / "docs" / "notes.md").read_text()
+
+    _git(root, "add", "-A")
+    _git(root, "-c", "user.email=t@t", "-c", "user.name=t", "commit",
+         "-qm", "migrated")
+    config.reset()
+    aliases.reset()
+    concretize.run()
+
+    final = (root / "record" / "values.d" / "VAL-001.md").read_text()
+    assert "- DP-4" in final and "- VAL-tmp" in final, \
+        "both the migrated-from code and the provisional one stay resolvable"
     notes = (root / "docs" / "notes.md").read_text()
-    assert "Bare VAL-1" in notes
-    assert "Fixture DP-018" in notes
+    assert "Bare VAL-001" in notes
+    assert "#val-001" in notes, "the anchor follows the code, not just the label"
+    assert "val-tmp" not in notes, "no provisional spelling survives the sweep"
+    assert "Fixture DP-018" in notes, "a fixture number is not in the mapping"
 
 
-def test_move_doc_supersede_copies_and_tombstones(tmp_path, monkeypatch, capsys):
+def test_two_moves_into_one_scheme_do_not_collide(tmp_path, monkeypatch):
+    """Two moves into one scheme, in one spec, must not claim one identity.
+
+    With numbers they did: both read the same highest number and the second
+    `git mv` overwrote the first — a document destroyed, and the dry-run
+    printed two lines saying so in plain sight. Temporary codes make the
+    collision structurally impossible rather than arithmetically avoided."""
+    root = _premigration_project(tmp_path, monkeypatch)
+    (root / "luria.toml").write_text(
+        (root / "luria.toml").read_text()
+        + '[luria.schemes.VAL]\ndir = "record/values.d"\n')
+    (root / "record" / "values.d").mkdir(parents=True)
+    config.reset()
+    aliases.reset()
+    mig = root / "record" / "migrations.d" / "0002-promote-both.toml"
+    mig.write_text('title = "Both principles become values"\n\n'
+                   '[[operations]]\nop = "move_doc"\ndoc = "DP-1"\n'
+                   'to = "VAL"\n\n'
+                   '[[operations]]\nop = "move_doc"\ndoc = "DP-4"\n'
+                   'to = "VAL"\n')
+    migrate.run("0002")
+
+    landed = sorted((root / "record" / "values.d").glob("VAL-tmp*.md"))
+    assert len(landed) == 2, [p.name for p in landed]
+    assert not list((root / "record" / "principles.d").glob("DP-*.md"))
+
+    _git(root, "add", "-A")
+    _git(root, "-c", "user.email=t@t", "-c", "user.name=t", "commit",
+         "-qm", "migrated")
+    config.reset()
+    aliases.reset()
+    concretize.run()
+    numbered = sorted(p.name for p in
+                      (root / "record" / "values.d").glob("VAL-0*.md"))
+    assert numbered == ["VAL-001.md", "VAL-002.md"], numbered
+
+
+def test_move_doc_supersede_copies_and_tombstones(tmp_path, monkeypatch):
+    """Supersede copies rather than moves, and rewrites nothing.
+
+    The tombstone names the provisional code; the concretizer rewrites it to
+    the assigned number along with every other occurrence, so the status line
+    ends up pointing at the real one without the migration having to know it."""
     root = _premigration_project(tmp_path, monkeypatch)
     (root / "luria.toml").write_text(
         (root / "luria.toml").read_text()
@@ -193,14 +282,24 @@ def test_move_doc_supersede_copies_and_tombstones(tmp_path, monkeypatch, capsys)
     aliases.reset()
     mig = root / "record" / "migrations.d" / "0002-supersede.toml"
     mig.write_text('title = "DP-4 superseded by a value"\n\n'
-                   '[[operations]]\nop = "move_doc"\ndoc = "DP-4"\nto = "VAL"\n'
-                   'strategy = "supersede"\n')
+                   '[[operations]]\nop = "move_doc"\ndoc = "DP-4"\n'
+                   'to = "VAL"\nstrategy = "supersede"\n')
     migrate.run("0002")
     old = (root / "record" / "principles.d" / "DP-004.md").read_text()
+    assert "status: Superseded — by VAL-tmp" in old
+    assert len(list((root / "record" / "values.d").glob("VAL-tmp*.md"))) == 1
+    assert "Bare DP-4" in (root / "docs" / "notes.md").read_text(), \
+        "supersede mode rewrites nothing"
+
+    _git(root, "add", "-A")
+    _git(root, "-c", "user.email=t@t", "-c", "user.name=t", "commit",
+         "-qm", "superseded")
+    config.reset()
+    aliases.reset()
+    concretize.run()
+    old = (root / "record" / "principles.d" / "DP-004.md").read_text()
     assert "status: Superseded — by VAL-001" in old
-    assert (root / "record" / "values.d" / "VAL-001.md").exists()
-    notes = (root / "docs" / "notes.md").read_text()
-    assert "Bare DP-4" in notes, "supersede mode rewrites nothing"
+    assert "Bare DP-4" in (root / "docs" / "notes.md").read_text()
 
 
 def test_new_migration_scaffolds_a_numbered_spec(tmp_path, monkeypatch):
@@ -222,3 +321,17 @@ def test_the_sweep_honors_unlinted_file(tmp_path, monkeypatch, capsys):
     _git(root, "add", "-A")
     migrate.run("0001")
     assert "The old spelling DP-4 preserved verbatim." in specimen.read_text()
+
+
+def test_provisional_is_decided_in_one_place(tmp_path, monkeypatch):
+    """`Pair.new_is_provisional` must ask the canonical predicate.
+
+    The cheap version — `not tail.isdigit()` — looks equivalent and answers a
+    different question: "this is not a number", which a malformed tail also
+    satisfies. Pinned by asserting the two disagree exactly where they should."""
+    from luria.config import is_temp_tail
+    assert is_temp_tail("tmp47fje") and not is_temp_tail("004")
+    assert not is_temp_tail("nonsense"), "not-a-number is not the same test"
+    assert migrate.Pair("DP-004", "VAL-tmp47fje").new_is_provisional
+    assert not migrate.Pair("DP-004", "VAL-007").new_is_provisional
+    assert not migrate.Pair("DP-004", "VAL-nonsense").new_is_provisional

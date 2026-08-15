@@ -60,8 +60,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from . import aliases as aliases_mod
-from . import doc_refs, remotes
-from .config import current
+from . import doc_refs, new as new_mod, remotes
+from .config import current, is_temp_tail
 
 MIGRATIONS_DIR = "record/migrations.d"
 BLAME_IGNORE = ".git-blame-ignore-revs"
@@ -73,10 +73,38 @@ class Pair:
     new: str                    # canonical new code, e.g. NEW-004
 
     @property
-    def parts(self) -> tuple[str, int, str, int]:
-        op, on = aliases_mod.split(self.old)
-        np, nn = aliases_mod.split(self.new)
-        return op, on, np, nn
+    def old_parts(self) -> tuple[str, int]:
+        """Prefix and number. The old side is always numeric: a document that
+        never had a number has nothing to migrate away from."""
+        return aliases_mod.split(self.old)
+
+    @property
+    def new_parts(self) -> tuple[str, str]:
+        """Prefix and the LITERAL new tail — `004`, or `tmp47fje`.
+
+        A string either way. The two spellings do not share a type: one is a
+        number carrying a padding convention, the other is an opaque identity
+        (ADR-049). An earlier `int | str` union pushed the ambiguity out to
+        every call site, which then had to test the type to learn which it
+        had — and the padding branch and the provisional branch are not the
+        same question."""
+        prefix, tail = self.new.rsplit("-", 1)
+        return prefix, tail
+
+    @property
+    def new_is_provisional(self) -> bool:
+        """A temporary code, awaiting `luria concretize`."""
+        return is_temp_tail(self.new_parts[1])
+
+    @property
+    def new_anchor_tail(self) -> str:
+        """How the tail is spelled inside an anchor: `#gp-4`, `#gp-tmp47fje`.
+
+        Anchors never pad — the generator emits the bare number — so a
+        numeric tail normalizes through `int` and a provisional one passes
+        through untouched."""
+        tail = self.new_parts[1]
+        return tail if self.new_is_provisional else str(int(tail))
 
 
 @dataclass
@@ -103,6 +131,10 @@ class Plan:
     # Supersede mode: (source path, new status line) + fresh copies to write.
     tombstones: list[tuple[Path, str]] = field(default_factory=list)
     copies: list[tuple[Path, Path, str, str]] = field(default_factory=list)
+    # Temporary tails this plan has already minted, per target prefix, so a
+    # second mint in the same run cannot repeat one — `_mint_tail` can only
+    # see what is on disk, and nothing has been written yet.
+    minted: dict[str, set[str]] = field(default_factory=dict)
 
 
 def _spec_path(ref: str) -> Path:
@@ -205,9 +237,20 @@ def _plan_move(plan: Plan, op: dict) -> None:
     path = source.documents().get(number)
     if path is None:
         raise SystemExit(f"luria migrate: {old_code} has no document")
-    new_number = max(target.documents(), default=0) + 1
-    new_code = target.code(new_number)
-    new_path = target.dir / target.filename(new_number)
+    # A moved document arrives under a TEMPORARY code, never a number
+    # (ADR-049). Every operation in a spec plans against the tree as it is
+    # now — nothing has moved yet — so "the next free number" is not a fact
+    # here any more than it is on a branch: two moves into one scheme both
+    # read the same highest number, and the second `git mv` would overwrite
+    # the first. The concretizer assigns the real numbers afterwards, at the
+    # serialization point, which is the only place that answer is true. It
+    # also stamps `formerly:`, so the alias the move needs comes for free.
+    seen = plan.minted.setdefault(target.prefix, set())
+    while (tail := new_mod._mint_tail(target)) in seen:
+        pass
+    seen.add(tail)
+    new_code = f"{target.prefix}-{tail}"
+    new_path = target.dir / f"{new_code}.md"
     if op.get("strategy") == "supersede":
         plan.copies.append((path, new_path, old_code, new_code))
         plan.tombstones.append((path, f"Superseded — by {new_code}"))
@@ -285,12 +328,20 @@ def sweep_text(text: str, plan: Plan, paths: bool = True) -> tuple[str, int]:
         return re.sub(pattern, guarded, text)
 
     def swap_pair(text: str, pair: Pair) -> str:
-        old_p, old_n, new_p, new_n = pair.parts
+        old_p, old_n = pair.old_parts
+        new_p, new_tail = pair.new_parts
 
         def code_repl(m: re.Match) -> str:
-            digits = m.group(2)
-            new_digits = f"{new_n:03d}" if digits != str(old_n) else str(new_n)
-            return f"{new_p}{m.group(1)}{new_digits}"
+            sep, digits = m.group(1), m.group(2)
+            if pair.new_is_provisional:
+                # A temporary tail has no padded form to preserve; the
+                # concretizer rewrites it to a number later, everywhere.
+                return f"{new_p}{sep}{new_tail}"
+            # Otherwise mirror the spelling the citation used: a padded
+            # reference stays padded, a bare one stays bare.
+            number = int(new_tail)
+            spelled = f"{number:03d}" if digits != str(old_n) else str(number)
+            return f"{new_p}{sep}{spelled}"
 
         text = swap(text,
                     rf"(?<![A-Za-z0-9-]){re.escape(old_p)}([- ])"
@@ -299,10 +350,10 @@ def sweep_text(text: str, plan: Plan, paths: bool = True) -> tuple[str, int]:
         # link target carries, and the `name="gp-4"` the render emits.
         text = swap(text,
                     rf"(?<=#){re.escape(old_p.lower())}-0*{old_n}(?!\d)",
-                    f"{new_p.lower()}-{new_n}")
+                    f"{new_p.lower()}-{pair.new_anchor_tail}")
         return swap(text,
                     rf"(?<=name=\"){re.escape(old_p.lower())}-0*{old_n}(?=\")",
-                    f"{new_p.lower()}-{new_n}")
+                    f"{new_p.lower()}-{pair.new_anchor_tail}")
 
     # Composed pairs first: `LU-OLD-013` must be rewritten whole before the
     # bare-code pattern reads `OLD-013` out of the middle of it.
