@@ -80,6 +80,7 @@ The dial between reported and enforced. Status findings are warnings by default;
 | key | default | what it does |
 |---|---|---|
 | `fail_on` | *unset* | Warning classes promoted to failures. |
+| `narrow_terms` | *unset* | This project's own concrete nouns. A title in a scheme marked `titles_generalize` that names one is reported as `narrow-titles`. Luria ships none — the words are yours, and empty means the class never fires. |
 
 ## Schemes — `[luria.schemes.X]`
 
@@ -99,6 +100,7 @@ carries its prefix, so a second scheme is an entry here (ADR-006).
 | `render` | `str` | `"index"` |
 | `output` | `Path \| None` | *unset* |
 | `allocate` | `str` | `"filing"` |
+| `titles_generalize` | `bool` | `False` |
 
 ## Fragment directories — `[luria.fragments."dir"]`
 
