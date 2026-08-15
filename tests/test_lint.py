@@ -277,6 +277,18 @@ def test_a_promoted_class_fails_instead_of_printing(project, capsys):
         "promoted, not duplicated"
 
 
+def test_every_emitted_class_is_nameable_in_the_dial(project, capsys):
+    """A class the linter can emit must be one the dial accepts.
+
+    `legacy-spellings` was reported by `status_sections` but missing from
+    FAILABLE, so a project asking to enforce it was told the class did not
+    exist — the dial rejecting a notch it was already printing (DP-1). The
+    assertion is over the whole vocabulary, not the one that bit."""
+    dial_project(project, '"legacy-spellings"')
+    errors, _ = dial_errors(capsys)
+    assert not any("is no warning class" in e for e in errors), errors
+
+
 def test_an_acknowledged_row_never_fails(project, capsys):
     """The dial changes the consequence, not the accounting — `inactive-ok:`
     is the escape hatch under enforcement too."""
