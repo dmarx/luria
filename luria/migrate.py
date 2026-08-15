@@ -61,7 +61,7 @@ from pathlib import Path
 
 from . import aliases as aliases_mod
 from . import doc_refs, new as new_mod, remotes
-from .config import current
+from .config import current, is_temp_tail
 
 MIGRATIONS_DIR = "record/migrations.d"
 BLAME_IGNORE = ".git-blame-ignore-revs"
@@ -94,7 +94,7 @@ class Pair:
     @property
     def new_is_provisional(self) -> bool:
         """A temporary code, awaiting `luria concretize`."""
-        return not self.new_parts[1].isdigit()
+        return is_temp_tail(self.new_parts[1])
 
     @property
     def new_anchor_tail(self) -> str:

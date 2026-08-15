@@ -321,3 +321,17 @@ def test_the_sweep_honors_unlinted_file(tmp_path, monkeypatch, capsys):
     _git(root, "add", "-A")
     migrate.run("0001")
     assert "The old spelling DP-4 preserved verbatim." in specimen.read_text()
+
+
+def test_provisional_is_decided_in_one_place(tmp_path, monkeypatch):
+    """`Pair.new_is_provisional` must ask the canonical predicate.
+
+    The cheap version — `not tail.isdigit()` — looks equivalent and answers a
+    different question: "this is not a number", which a malformed tail also
+    satisfies. Pinned by asserting the two disagree exactly where they should."""
+    from luria.config import is_temp_tail
+    assert is_temp_tail("tmp47fje") and not is_temp_tail("004")
+    assert not is_temp_tail("nonsense"), "not-a-number is not the same test"
+    assert migrate.Pair("DP-004", "VAL-tmp47fje").new_is_provisional
+    assert not migrate.Pair("DP-004", "VAL-007").new_is_provisional
+    assert not migrate.Pair("DP-004", "VAL-nonsense").new_is_provisional
