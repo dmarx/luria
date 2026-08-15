@@ -50,7 +50,8 @@ issue: '#000'
 # Say what was decided AND what was rejected — the index is read far more often
 # than the decision, and "why not the obvious thing" is what people come for.
 # This field is prose, so it carries links like any other prose; the rest of the
-# frontmatter is data and stays plain.
+# frontmatter is data and stays plain. (`origin:` on a principle is
+# prose for the same reason — the generator renders it.)
 summary: >-
   One-paragraph description of the decision, the cost that motivated it, and the
   alternatives that lost. Written to be read in a table row.

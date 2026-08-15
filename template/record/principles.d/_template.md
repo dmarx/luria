@@ -57,7 +57,11 @@ influenced_by: []
 #     Generalized, after the second instance made the narrow statement useless.
 
 # Where this came from: the concrete episode that made it a principle, not a
-# preference. One sentence, rendered at the end of the principle's metadata line.
+# preference. One sentence, rendered at the end of the principle's metadata
+# line — so it is read every time the principle is. Prose, like `summary:`:
+# references here are linked by `luria link --fix` and checked by the lint,
+# because the value is rendered as markdown. (The rest of the frontmatter is
+# data, read by value, and stays plain.)
 origin: >-
   The specific thing that happened twice.
 

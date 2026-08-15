@@ -158,28 +158,41 @@ def _frontmatter_span(text: str) -> tuple[int, int] | None:
     return None if end == -1 else (0, end + 5)
 
 
-SUMMARY_KEY_RE = re.compile(r"^summary:", re.MULTILINE)
+# The frontmatter keys whose values are PROSE, and so may carry links.
+#
+# Membership is decided by the generator, not by taste: a key is prose exactly
+# when the generator renders its value as markdown somewhere. `summary:` is
+# rendered into the index and the tag pages; `origin:` into the principle's
+# metadata line. Relative targets are rebased per output (ADR-005), so a link
+# written in either works in every place it lands.
+#
+# Everything else in frontmatter is data — `status:`, `issue:`, `tags:` — read
+# by value and never rendered, where a link would simply be a link inside a
+# data field. That is why this is a constant rather than configuration: a
+# project cannot make a field prose by declaring it so, because the rendering
+# is what makes it true.
+PROSE_KEYS = ("summary", "origin")
+
+PROSE_KEY_RE = re.compile(
+    r"^(?:" + "|".join(PROSE_KEYS) + r"):", re.MULTILINE)
 NEXT_KEY_RE = re.compile(r"^(?=[A-Za-z_][\w-]*:|---[ \t]*$)", re.MULTILINE)
 
 
-def summary_span(text: str) -> tuple[int, int] | None:
-    """The value of an ADR's `summary:` key — the one part of frontmatter that
-    is prose, and the only part that may carry links.
-
-    The rest of the frontmatter is data (`status:`, `issue:`, `tags:`) that the
-    generator reads by value; a link there would be a link in a data field. The
-    summary is different: `build_adr_index.py` renders it as markdown into the
-    index and the tag pages, and rebases relative targets per output (ADR-005),
-    so a link written here works in every place it lands."""
+def prose_spans(text: str) -> list[tuple[int, int]]:
+    """Every prose value in the frontmatter, in document order."""
     fm = _frontmatter_span(text)
     if not fm:
-        return None
+        return []
     head = text[:fm[1]]
-    key = SUMMARY_KEY_RE.search(head)
-    if not key:
-        return None
-    nxt = NEXT_KEY_RE.search(head, key.end())
-    return key.end(), (nxt.start() if nxt else len(head))
+    spans = []
+    for key in PROSE_KEY_RE.finditer(head):
+        nxt = NEXT_KEY_RE.search(head, key.end())
+        spans.append((key.end(), nxt.start() if nxt else len(head)))
+    return spans
+
+
+def in_prose(spans: list[tuple[int, int]], pos: int) -> bool:
+    return any(a <= pos < b for a, b in spans)
 
 
 def _fence_spans(text: str) -> list[tuple[int, int]]:
@@ -353,9 +366,8 @@ def masked(text: str, path: Path = ANY_MD) -> list[bool]:
     fm = _frontmatter_span(text)
     if fm:
         cover(*fm)
-        summary = summary_span(text)
-        if summary:                       # …except the summary, which is prose
-            for i in range(*summary):
+        for span in prose_spans(text):    # …except the prose keys
+            for i in range(*span):
                 mask[i] = False
     for span in _fence_spans(text):
         cover(*span)
@@ -553,11 +565,11 @@ def wikilinks(text: str, source: Path = ANY_MD) -> list[Wikilink]:
     skip = code_spans(text)
     skip += [m.span() for m in COMMENT_RE.finditer(text)]
     if fm := _frontmatter_span(text):
-        summary = summary_span(text)
-        if summary:
-            skip += [(fm[0], summary[0]), (summary[1], fm[1])]
-        else:
-            skip.append(fm)
+        cursor = fm[0]
+        for a, b in prose_spans(text):
+            skip.append((cursor, a))
+            cursor = b
+        skip.append((cursor, fm[1]))
     out = []
     for m in WIKILINK_RE.finditer(text):
         if any(a <= m.start() < b for a, b in skip):
@@ -823,7 +835,7 @@ def _frontmatter_survives(old: str, new: str) -> bool:
     parses, every other key is untouched, and stripping the new links yields the
     original summary back.
 
-    A summary can be a quoted scalar, a folded block, or a plain multi-line
+    A prose value can be a quoted scalar, a folded block, or a plain multi-line
     scalar, and only the last of those has characters a link could disturb.
     Rather than enumerate which styles are safe, the rewrite is checked. The
     check lives here, not in the fixer, because the linter calls it too: a
@@ -836,11 +848,11 @@ def _frontmatter_survives(old: str, new: str) -> bool:
         return False
     if not before or not after:
         return False
-    if {k: v for k, v in before.items() if k != "summary"} != \
-       {k: v for k, v in after.items() if k != "summary"}:
+    if {k: v for k, v in before.items() if k not in PROSE_KEYS} != \
+       {k: v for k, v in after.items() if k not in PROSE_KEYS}:
         return False
-    return UNLINK_RE.sub(r"\1", str(after.get("summary", ""))) == \
-        str(before.get("summary", ""))
+    return all(UNLINK_RE.sub(r"\1", str(after.get(k, ""))) ==
+               str(before.get(k, "")) for k in PROSE_KEYS)
 
 
 def rewritable_refs(text: str, source: Path, adrs: dict[int, Path],
@@ -851,12 +863,12 @@ def rewritable_refs(text: str, source: Path, adrs: dict[int, Path],
         return []
     refs = [r for r in find_refs(text, source)
             if resolve(r, source, adrs, anchors, text) is not None]
-    span = summary_span(text)
-    if not span or not any(span[0] <= r.start < span[1] for r in refs):
+    spans = prose_spans(text)
+    if not spans or not any(in_prose(spans, r.start) for r in refs):
         return refs
     if _frontmatter_survives(text, _apply(text, refs, source, adrs, anchors)):
         return refs
-    return [r for r in refs if not span[0] <= r.start < span[1]]
+    return [r for r in refs if not in_prose(spans, r.start)]
 
 
 def linkify(text: str, source: Path, adrs: dict[int, Path] | None = None,
