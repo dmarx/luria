@@ -15,7 +15,9 @@ driving the CLI can still set fields inline (`--title`, `--status`,
 
 **The kinds are the config.** Every journal, scheme and fragment directory in
 `luria.toml` is a kind, so a project that adds a scheme gets its scaffold for
-free — nothing here spells "adr".
+free — nothing here spells "adr". One kind is built in rather than
+configured: `luria new migration` scaffolds a migration spec (ADR-040),
+because migrations belong to the machinery, not to any one project's layout.
 """
 
 from __future__ import annotations
@@ -58,6 +60,7 @@ def kinds() -> dict[str, tuple[str, object]]:
         out[Path(name).name.removesuffix(".d")] = ("fragment", name)
     for name, jrnl in cfg.journals.items():
         out[name] = ("journal", jrnl)
+    out.setdefault("migration", ("migration", None))
     return out
 
 
@@ -174,6 +177,47 @@ def new_fragment(dir_name: str, name: str | None) -> Path:
     return path
 
 
+MIGRATION_TEMPLATE = '''\
+# A migration spec (ADR-040): the executable plan and the audit trail in one
+# artifact. `luria migrate {number} --dry-run` prints what it would do.
+# This file is deliberately never swept — its mapping remembers the old
+# spellings, which is its job.
+title = "{title}"
+issue = ""
+
+# [[operations]]
+# op = "rename_scheme"
+# from = "OLD"
+# to = "NEW"
+# output = "docs/new-view.md"       # optional: the rendered view moves too
+# remotes = []                      # remotes that mirror THIS project
+# configs = []                      # extra config files carrying the scheme
+
+# [[operations]]
+# op = "move_doc"
+# doc = "OLD-4"
+# to = "NEW"                        # auto-numbered in the target scheme
+# strategy = "supersede"            # optional: copy + tombstone, no rewrite
+'''
+
+
+def new_migration(fields: dict[str, str], name: str | None) -> Path:
+    """The next spec in record/migrations.d/ — numbered like a document,
+    because execution order is information (a move can depend on a rename)."""
+    from .migrate import MIGRATIONS_DIR
+    mig_dir = current().root / MIGRATIONS_DIR
+    taken = [int(m.group(1)) for p in
+             (mig_dir.glob("*.toml") if mig_dir.exists() else [])
+             if (m := re.match(r"(\d{4})-", p.name))]
+    number = f"{max(taken, default=0) + 1:04d}"
+    title = fields.get("title") or "What moves, and why"
+    slug = name or re.sub(r"[^a-z0-9]+", "-", title.lower()).strip("-")
+    path = mig_dir / f"{number}-{slug}.toml"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(MIGRATION_TEMPLATE.format(number=number, title=title))
+    return path
+
+
 def new_entry(kind: str | None, fields: dict[str, str],
               name: str | None) -> Path:
     available = kinds()
@@ -187,6 +231,8 @@ def new_entry(kind: str | None, fields: dict[str, str],
         return new_scheme_doc(target, dict(fields))
     if what == "fragment":
         return new_fragment(target, name)
+    if what == "migration":
+        return new_migration(dict(fields), name)
     title = fields.get("title") or "A sentence-shaped title"
     return journal_mod.new(target, title, dt.datetime.now())
 
