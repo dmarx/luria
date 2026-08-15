@@ -9,7 +9,7 @@ Every reference in the record is a claim — "this is why things are the way the
 
 Only an `Active` document is in force. `Proposed` and `Deferred` mean *not in force yet* — an open question, being cited as if it were settled — while `Superseded` and `Rejected` mean *no longer in force*, which is often a perfectly good thing to cite: history, or a rejection worth pointing at. Either way the citation should be deliberate, and this section lists the ones nobody has vouched for yet.
 
-**1 document cited without acknowledgement.** Not listed: 36 citations someone has already vouched for with an `inactive-ok:` comment at the citing site.
+**0 documents cited without acknowledgement.** Not listed: 36 citations someone has already vouched for with an `inactive-ok:` comment at the citing site.
 
 To vouch for one, put the reason where the citation is — `inactive-ok:` covers its own line and the line below it, `inactive-ok-block:` its paragraph, `inactive-ok-file:` the whole page:
 
@@ -17,30 +17,7 @@ To vouch for one, put the reason where the citation is — `inactive-ok:` covers
 <!-- inactive-ok: ADR-012 — why this citation is right -->
 ```
 
-### [ADR-040](../../record/decisions.d/ADR-040.md) — Proposed
-
-Migrations: renaming schemes and moving documents without losing the record's memory
-
-17 citations in 8 files await a look.
-
-- [`docs/adopting.md:220`](../adopting.md)
-- [`luria/concretize.py:30`](../../luria/concretize.py)
-- [`luria/concretize.py:79`](../../luria/concretize.py)
-- [`luria/doc_refs.py:647`](../../luria/doc_refs.py)
-- [`luria/doc_refs.py:719`](../../luria/doc_refs.py)
-- [`luria/doc_refs.py:877`](../../luria/doc_refs.py)
-- [`luria/lint.py:320`](../../luria/lint.py)
-- [`record/decisions.d/ADR-041.md:26`](../../record/decisions.d/ADR-041.md)
-- [`record/decisions.d/ADR-044.md:142`](../../record/decisions.d/ADR-044.md)
-- [`record/decisions.d/ADR-049.md:11`](../../record/decisions.d/ADR-049.md)
-- [`record/decisions.d/ADR-049.md:88`](../../record/decisions.d/ADR-049.md)
-- [`record/decisions.d/ADR-049.md:98`](../../record/decisions.d/ADR-049.md)
-- [`record/decisions.d/ADR-049.md:150`](../../record/decisions.d/ADR-049.md)
-- [`record/decisions.d/ADR-049.md:161`](../../record/decisions.d/ADR-049.md)
-- [`record/decisions.d/ADR-049.md:168`](../../record/decisions.d/ADR-049.md)
-- [`tests/test_concretize.py:154`](../../tests/test_concretize.py)
-- [`tests/test_concretize.py:185`](../../tests/test_concretize.py)
-
+Nothing unacknowledged. ✅
 ## Codes that resolve to no document
 
 A reference the reader cannot follow: the code names no document in this record. A typo, a number carried in from another project, and an illustrative code in an example all look identical from here — telling them apart takes a human, so this is a report, not an error.
@@ -67,7 +44,7 @@ A reference the reader cannot follow: the code names no document in this record.
 
 `unlinted-file:` exempts a whole document from the reference machinery — the blunt tool for a fixture-heavy or vendored page. It is counted here rather than hidden, the same bargain as an acknowledgement: the report stays a complete account of what nobody is checking.
 
-None. Every scanned file is checked. ✅
+- [`tests/test_migrations.py`](../../tests/test_migrations.py)
 
 ## Directives that no longer apply
 
