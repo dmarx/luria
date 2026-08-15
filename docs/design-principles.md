@@ -310,9 +310,9 @@ answers feel true is usually two switches wearing one name — split it.
 
 *v1 · shaped by [ADR-035](../record/decisions.d/ADR-035.md) · **Proposed***
 
-<a name="dp-tmp6o4c5"></a>
+<a name="dp-11"></a>
 
-## DP-tmp6o4c5. It's not mine, but I'll pick it up anyway
+## 11. It's not mine, but I'll pick it up anyway
 
 When you encounter debt — a stale comment, a drifted convention, a dead test, a
 number that collides, a guard nobody wired up — **fix it**, whether or not it
