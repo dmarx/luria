@@ -222,6 +222,11 @@ PLAIN: list[tuple[str, str, str, list[tuple[str, str]]]] = [
      "`luria lint` instead. Acknowledgement directives keep working under "
      "enforcement, because only unacknowledged rows ever reach a class.", [
         ("fail_on", "Warning classes promoted to failures."),
+        ("narrow_terms", "This project's own concrete nouns. A title in a "
+                         "scheme marked `titles_generalize` that names one is "
+                         "reported as `narrow-titles`. Luria ships none — the "
+                         "words are yours, and empty means the class never "
+                         "fires."),
     ]),
 ]
 

@@ -110,6 +110,13 @@ DEFAULTS: dict = {
     # promotion, because only unacknowledged rows ever reach a class.
     "lint": {
         "fail_on": [],
+        # This project's own concrete nouns, for the `narrow-titles` class.
+        # Luria ships NONE: the whole point of the check is that the words are
+        # yours, and a shipped list would be some other project's vocabulary
+        # wearing the authority of a default. Empty means the class never
+        # fires, which is the right behaviour for a project that has not
+        # thought about it (ADR-035's warn-first posture, one step further).
+        "narrow_terms": [],
     },
     # The published site (ADR-042). Every key is derivable from `issue_url`
     # for a GitHub project, so the conventional case needs no `[luria.site]`
@@ -194,6 +201,12 @@ class Scheme:
     # numbers in merge order and records each temporary code as a permanent
     # `aka:` alias.
     allocate: str = "filing"
+    # Whether a title in this scheme must avoid `[luria.lint] narrow_terms`.
+    # False everywhere by default, including for the shipped ADR scheme: a
+    # decision is *about* something specific and naming it is correct. A
+    # scheme whose documents claim to transfer — principles, values — is where
+    # this earns its keep.
+    titles_generalize: bool = False
 
     @property
     def view(self) -> Path:
@@ -532,6 +545,7 @@ class Config:
     journals: dict[str, Journal]
     stale_days: int
     fail_on: tuple[str, ...]            # warning classes promoted to failures
+    narrow_terms: tuple[str, ...]       # this project's nouns (narrow-titles)
     site: Site
     _raw: dict = field(default_factory=dict, repr=False)
 
@@ -694,6 +708,7 @@ def load(root: Path | None = None, text: str | None = None) -> Config:
                 spec.get("render", "index"),
                 root / spec["output"] if spec.get("output") else None,
                 spec.get("allocate", "filing"),
+                bool(spec.get("titles_generalize", False)),
             )
             for prefix, spec in raw["schemes"].items()
         },
@@ -734,6 +749,7 @@ def load(root: Path | None = None, text: str | None = None) -> Config:
         },
         stale_days=int(raw.get("stale_days", 90)),
         fail_on=tuple(raw["lint"]["fail_on"]),
+        narrow_terms=tuple(raw["lint"].get("narrow_terms", [])),
         site=_site(raw, root),
         _raw=raw,
     )
