@@ -42,7 +42,8 @@ import re
 import sys
 
 from . import adr_index as builder
-from . import adr_pending, badges, ci, doc_refs, journal, ref_status, remotes
+from . import (adr_pending, badges, ci, doc_refs, journal, narrow_titles,
+               ref_status, remotes)
 from .config import current
 
 # The closed status vocabulary (ADR-003). `Active` is the in-force state; the
@@ -267,7 +268,8 @@ def check_bare_refs(errors: list[str]) -> None:
 # hatch under enforcement — the dial changes the consequence, not the
 # accounting.
 FAILABLE = ("retired-citations", "unresolved-codes", "hand-written-urls",
-            "stale-directives", "pending-documents", "unlinted-files")
+            "legacy-spellings", "narrow-titles", "stale-directives",
+            "pending-documents", "unlinted-files")
 
 
 def status_sections() -> list[tuple[str, str, list[str]]]:
@@ -326,6 +328,17 @@ def status_sections() -> list[tuple[str, str, list[str]]]:
             "legacy-spellings",
             f"{len(legacy)} citation(s) in a concretized code's old spelling "
             "(`luria link --fix` upgrades them)", legacy))
+
+    # A title in a scheme that claims to transfer, spelled in this project's
+    # own nouns. Absent entirely unless the project supplies a vocabulary AND
+    # marks a scheme `titles_generalize` — luria ships neither.
+    narrow = narrow_titles.rows()
+    if narrow:
+        sections.append((
+            "narrow-titles",
+            f"{len(narrow)} title(s) name a project noun in a scheme whose "
+            "documents claim to transfer (`broad-ok:` acknowledges another "
+            "sense)", narrow))
 
     # A directive that silently does nothing is worse than no directive.
     stale = ref_status.stale_annotations(result, docs) + stale_urls

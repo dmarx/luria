@@ -106,6 +106,11 @@ dir = "record/principles.d"
 active = "Active"
 render = "document"
 output = "docs/design-principles.md"
+# Same exposure as the decisions, and it had the same gap: two concurrent
+# branches each took "the next free principle number" and both got the same
+# one. Merge allocation is what ADR-049 is for, and a scheme that renders as a
+# document is no less prone to it than one that renders as an index.
+allocate = "merge"
 
 # Other projects' records, cited from this one. A reference composes the prefix
 # with that project's own code — `SG-ADR-032`, `LU-ADR-013` — so the namespace
