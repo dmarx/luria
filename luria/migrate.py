@@ -73,16 +73,38 @@ class Pair:
     new: str                    # canonical new code, e.g. NEW-004
 
     @property
-    def parts(self) -> tuple[str, int, str, int | str]:
-        """`(old prefix, old number, new prefix, new tail)`.
+    def old_parts(self) -> tuple[str, int]:
+        """Prefix and number. The old side is always numeric: a document that
+        never had a number has nothing to migrate away from."""
+        return aliases_mod.split(self.old)
 
-        The new tail is an `int` for a rename and a temporary-code *string*
-        for a move (ADR-049): a moved document arrives provisional and is
-        numbered by the concretizer. The old side is always numeric — you
-        cannot migrate away from a code that was never assigned."""
-        op, on = aliases_mod.split(self.old)
-        np, raw = self.new.rsplit("-", 1)
-        return op, on, np, int(raw) if raw.isdigit() else raw
+    @property
+    def new_parts(self) -> tuple[str, str]:
+        """Prefix and the LITERAL new tail — `004`, or `tmp47fje`.
+
+        A string either way. The two spellings do not share a type: one is a
+        number carrying a padding convention, the other is an opaque identity
+        (ADR-049). An earlier `int | str` union pushed the ambiguity out to
+        every call site, which then had to test the type to learn which it
+        had — and the padding branch and the provisional branch are not the
+        same question."""
+        prefix, tail = self.new.rsplit("-", 1)
+        return prefix, tail
+
+    @property
+    def new_is_provisional(self) -> bool:
+        """A temporary code, awaiting `luria concretize`."""
+        return not self.new_parts[1].isdigit()
+
+    @property
+    def new_anchor_tail(self) -> str:
+        """How the tail is spelled inside an anchor: `#gp-4`, `#gp-tmp47fje`.
+
+        Anchors never pad — the generator emits the bare number — so a
+        numeric tail normalizes through `int` and a provisional one passes
+        through untouched."""
+        tail = self.new_parts[1]
+        return tail if self.new_is_provisional else str(int(tail))
 
 
 @dataclass
@@ -306,16 +328,20 @@ def sweep_text(text: str, plan: Plan, paths: bool = True) -> tuple[str, int]:
         return re.sub(pattern, guarded, text)
 
     def swap_pair(text: str, pair: Pair) -> str:
-        old_p, old_n, new_p, new_n = pair.parts
+        old_p, old_n = pair.old_parts
+        new_p, new_tail = pair.new_parts
 
         def code_repl(m: re.Match) -> str:
-            digits = m.group(2)
-            if isinstance(new_n, str):
-                # A temporary tail has no zero-padded form to preserve; the
+            sep, digits = m.group(1), m.group(2)
+            if pair.new_is_provisional:
+                # A temporary tail has no padded form to preserve; the
                 # concretizer rewrites it to a number later, everywhere.
-                return f"{new_p}{m.group(1)}{new_n}"
-            new_digits = f"{new_n:03d}" if digits != str(old_n) else str(new_n)
-            return f"{new_p}{m.group(1)}{new_digits}"
+                return f"{new_p}{sep}{new_tail}"
+            # Otherwise mirror the spelling the citation used: a padded
+            # reference stays padded, a bare one stays bare.
+            number = int(new_tail)
+            spelled = f"{number:03d}" if digits != str(old_n) else str(number)
+            return f"{new_p}{sep}{spelled}"
 
         text = swap(text,
                     rf"(?<![A-Za-z0-9-]){re.escape(old_p)}([- ])"
@@ -324,10 +350,10 @@ def sweep_text(text: str, plan: Plan, paths: bool = True) -> tuple[str, int]:
         # link target carries, and the `name="gp-4"` the render emits.
         text = swap(text,
                     rf"(?<=#){re.escape(old_p.lower())}-0*{old_n}(?!\d)",
-                    f"{new_p.lower()}-{new_n}")
+                    f"{new_p.lower()}-{pair.new_anchor_tail}")
         return swap(text,
                     rf"(?<=name=\"){re.escape(old_p.lower())}-0*{old_n}(?=\")",
-                    f"{new_p.lower()}-{new_n}")
+                    f"{new_p.lower()}-{pair.new_anchor_tail}")
 
     # Composed pairs first: `LU-OLD-013` must be rewritten whole before the
     # bare-code pattern reads `OLD-013` out of the middle of it.

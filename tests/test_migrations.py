@@ -164,6 +164,27 @@ def test_rename_scheme_end_to_end(tmp_path, monkeypatch, capsys):
     assert aliases.alias_map() == {"DP-001": "GP-001", "DP-004": "GP-004"}
 
 
+def test_a_rename_mirrors_each_citation_s_padding(tmp_path, monkeypatch):
+    """`DP-004` stays padded, `DP-4` stays bare, and the anchor stays bare.
+
+    The tail is one string with two spellings in play at once — the padded
+    filename form and the bare prose form — so a rewrite has to answer
+    "padded?" per citation rather than once per pair. Pinned because the
+    provisional-tail work touched exactly this branch."""
+    root = _premigration_project(tmp_path, monkeypatch)
+    page = root / "docs" / "padding.md"
+    page.write_text("Padded DP-004, bare DP-4, anchor "
+                    "[x](design-principles.md#dp-4).\n")
+    _git(root, "add", "-A")
+    _git(root, "-c", "user.email=t@t", "-c", "user.name=t", "commit",
+         "-qm", "padding")
+    migrate.run("0001")
+    out = page.read_text()
+    assert "Padded GP-004" in out, out
+    assert "bare GP-4," in out, out
+    assert "#gp-4)" in out, out
+
+
 def test_move_doc_lands_provisional_then_concretizes(tmp_path, monkeypatch):
     """A move arrives under a TEMPORARY code and is numbered afterwards.
 

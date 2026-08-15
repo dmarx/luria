@@ -16,3 +16,13 @@
   past `#adr-tmp47fje` — leaving a live link pointing at a heading that no
   longer existed. Generated views are re-derived and were never at risk; a
   hand-written or migration-written link was.
+
+- **`Pair` no longer returns a tail typed `int | str`.** The padded-number
+  spelling and the opaque temporary identity are not the same kind of value,
+  and collapsing them pushed the ambiguity out to every call site, which then
+  had to test the type to learn which it had. Replaced with `old_parts`,
+  `new_parts`, `new_is_provisional` and `new_anchor_tail`, so the padding
+  question and the provisional question are asked separately — they are
+  separate questions. A test now pins that a rename mirrors each citation's
+  own spelling: `DP-004` stays padded, `DP-4` stays bare, the anchor stays
+  bare.
