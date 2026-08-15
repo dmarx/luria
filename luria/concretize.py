@@ -94,6 +94,13 @@ def _rewrite_files(renames: list[tuple[str, str]]) -> int:
         text = new = path.read_text()
         for old, target in renames:
             new = new.replace(old, target)
+            # An anchor spells the code in lower case (`#adr-tmp47fje`,
+            # `name="adr-tmp47fje"`), which a case-sensitive replace walks
+            # straight past — leaving a live link pointing at a heading that
+            # no longer exists. Generated views are re-derived and so were
+            # never at risk; a hand-written or migration-written link is.
+            if (low := old.lower()) != old:
+                new = new.replace(low, target.lower())
         if new != text:
             path.write_text(new)
             touched += 1

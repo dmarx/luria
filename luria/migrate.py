@@ -60,7 +60,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from . import aliases as aliases_mod
-from . import doc_refs, remotes
+from . import doc_refs, new as new_mod, remotes
 from .config import current
 
 MIGRATIONS_DIR = "record/migrations.d"
@@ -73,10 +73,16 @@ class Pair:
     new: str                    # canonical new code, e.g. NEW-004
 
     @property
-    def parts(self) -> tuple[str, int, str, int]:
+    def parts(self) -> tuple[str, int, str, int | str]:
+        """`(old prefix, old number, new prefix, new tail)`.
+
+        The new tail is an `int` for a rename and a temporary-code *string*
+        for a move (ADR-049): a moved document arrives provisional and is
+        numbered by the concretizer. The old side is always numeric — you
+        cannot migrate away from a code that was never assigned."""
         op, on = aliases_mod.split(self.old)
-        np, nn = aliases_mod.split(self.new)
-        return op, on, np, nn
+        np, raw = self.new.rsplit("-", 1)
+        return op, on, np, int(raw) if raw.isdigit() else raw
 
 
 @dataclass
@@ -103,6 +109,10 @@ class Plan:
     # Supersede mode: (source path, new status line) + fresh copies to write.
     tombstones: list[tuple[Path, str]] = field(default_factory=list)
     copies: list[tuple[Path, Path, str, str]] = field(default_factory=list)
+    # Temporary tails this plan has already minted, per target prefix, so a
+    # second mint in the same run cannot repeat one — `_mint_tail` can only
+    # see what is on disk, and nothing has been written yet.
+    minted: dict[str, set[str]] = field(default_factory=dict)
 
 
 def _spec_path(ref: str) -> Path:
@@ -205,9 +215,20 @@ def _plan_move(plan: Plan, op: dict) -> None:
     path = source.documents().get(number)
     if path is None:
         raise SystemExit(f"luria migrate: {old_code} has no document")
-    new_number = max(target.documents(), default=0) + 1
-    new_code = target.code(new_number)
-    new_path = target.dir / target.filename(new_number)
+    # A moved document arrives under a TEMPORARY code, never a number
+    # (ADR-049). Every operation in a spec plans against the tree as it is
+    # now — nothing has moved yet — so "the next free number" is not a fact
+    # here any more than it is on a branch: two moves into one scheme both
+    # read the same highest number, and the second `git mv` would overwrite
+    # the first. The concretizer assigns the real numbers afterwards, at the
+    # serialization point, which is the only place that answer is true. It
+    # also stamps `formerly:`, so the alias the move needs comes for free.
+    seen = plan.minted.setdefault(target.prefix, set())
+    while (tail := new_mod._mint_tail(target)) in seen:
+        pass
+    seen.add(tail)
+    new_code = f"{target.prefix}-{tail}"
+    new_path = target.dir / f"{new_code}.md"
     if op.get("strategy") == "supersede":
         plan.copies.append((path, new_path, old_code, new_code))
         plan.tombstones.append((path, f"Superseded — by {new_code}"))
@@ -289,6 +310,10 @@ def sweep_text(text: str, plan: Plan, paths: bool = True) -> tuple[str, int]:
 
         def code_repl(m: re.Match) -> str:
             digits = m.group(2)
+            if isinstance(new_n, str):
+                # A temporary tail has no zero-padded form to preserve; the
+                # concretizer rewrites it to a number later, everywhere.
+                return f"{new_p}{m.group(1)}{new_n}"
             new_digits = f"{new_n:03d}" if digits != str(old_n) else str(new_n)
             return f"{new_p}{m.group(1)}{new_digits}"
 
