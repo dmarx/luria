@@ -1,6 +1,9 @@
 ---
-# Don't copy this file by hand — run `luria new adr`, which takes the next free
-# number and fills in the fields a machine can compute. The kinds are the
+# Don't copy this file by hand — run `luria new adr`, which assigns the
+# identity and fills in the fields a machine can compute. WHICH identity
+# depends on the scheme's `allocate` mode: `filing` (the default) takes the
+# next free number on the spot, `merge` mints a temporary code that
+# `luria concretize` numbers where merges serialize (ADR-049). The kinds are the
 # config: every scheme, fragment directory and journal in luria.toml is one, so
 # `luria new <kind>` works for a scheme the moment it is declared.
 #
