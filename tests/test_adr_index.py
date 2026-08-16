@@ -14,7 +14,8 @@ import re
 import sys
 from pathlib import Path
 
-# unresolved-ok-file: ADR-053, ADR-404 — fixture codes, deliberately not real
+# unresolved-ok-file: ADR-404 — fixture code, deliberately not real. ADR-404 was
+# here until the project's own sequence reached it; see ADR-014's closing note.
 REPO = Path(__file__).resolve().parents[1]
 
 from luria import adr_index as builder  # noqa: E402
@@ -25,8 +26,8 @@ rebase = builder.rebase_links
 
 
 def test_relative_targets_are_rebased():
-    assert rebase("see [ADR-053](adr-053-x.md)", "../") == \
-        "see [ADR-053](../adr-053-x.md)"
+    assert rebase("see [ADR-404](adr-404-x.md)", "../") == \
+        "see [ADR-404](../adr-404-x.md)"
     assert rebase("see [dp](../design-principles.md#13-a)", "../") == \
         "see [dp](../../design-principles.md#13-a)"
 
@@ -43,7 +44,7 @@ def test_absolute_and_anchor_targets_are_left_alone():
 def test_no_prefix_is_a_no_op():
     """README.md renders from the ADRs' own directory, so its rows are the
     unmodified text — that's what kept the ADR-004 migration byte-identical."""
-    text = "see [ADR-053](adr-053-x.md) and [#1](https://example.com/1)"
+    text = "see [ADR-404](adr-404-x.md) and [#1](https://example.com/1)"
     assert rebase(text, "") == text
 
 
