@@ -43,13 +43,14 @@ A reference the reader cannot follow: the code names no document in this record.
 - [`record/decisions.d/ADR-049.md:28`](../../record/decisions.d/ADR-049.md)
 - [`record/decisions.d/ADR-049.md:46`](../../record/decisions.d/ADR-049.md)
 
+### DP-017 — resolves to nothing (2 unmarked sites · 2 other mentions marked deliberate)
+
+- [`luria/migrate.py:152`](../../luria/migrate.py)
+- [`luria/migrate.py:408`](../../luria/migrate.py)
+
 ### ADR-000 — resolves to nothing (1 unmarked site)
 
 - [`tests/test_concretize.py:205`](../../tests/test_concretize.py)
-
-### DP-017 — resolves to nothing (1 unmarked site · 2 other mentions marked deliberate)
-
-- [`luria/migrate.py:152`](../../luria/migrate.py)
 
 ### DP-018 — resolves to nothing (1 unmarked site · 4 other mentions marked deliberate)
 

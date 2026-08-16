@@ -313,7 +313,8 @@ def _tracked_files() -> list[Path]:
 URL_RE = re.compile(r"\b[a-z][a-z0-9+.-]*://[^\s<>)\]\"']+", re.IGNORECASE)
 
 
-def sweep_text(text: str, plan: Plan, paths: bool = True) -> tuple[str, int]:
+def sweep_text(text: str, plan: Plan, paths: bool = True,
+               source: Path = doc_refs.ANY_MD) -> tuple[str, int]:
     """Every mapped spelling in one text, rewritten. Masks only what the
     mapping doesn't own: composed remote codes (another project's namespace)
     that the spec didn't explicitly claim via `remotes = [...]`, URLs for
@@ -329,8 +330,7 @@ def sweep_text(text: str, plan: Plan, paths: bool = True) -> tuple[str, int]:
         # they are the record's memory of this very operation, and of every
         # one before it. A later migration sweeping an earlier migration's
         # trail would corrupt exactly what makes aliases derivable.
-        spans += [m.span() for m in
-                  re.finditer(r"^formerly:\n(?:- .*\n)*", text, re.MULTILINE)]
+        spans += [m.span() for m in doc_refs.FORMERLY_RE.finditer(text)]
         if mask_urls:
             spans += [m.span() for m in URL_RE.finditer(text)]
         return spans
@@ -403,10 +403,47 @@ def sweep_text(text: str, plan: Plan, paths: bool = True) -> tuple[str, int]:
                 new_code)
         return text
 
+    def respell_relocated(text: str) -> str:
+        """A citation WORDED rather than spelled — `design-principles #17` in
+        a code comment — names a moved document as surely as `DP-017` does,
+        and both the code swap and the address swap walk straight past it: it
+        contains no code, and (unlinked) it points at no address.
+
+        The recognizer is the one the fixer already uses, so the two can't
+        disagree about what counts as a reference — `find_refs` is what turns
+        `design-principles #17` into a link in the first place. Only
+        *relocated* documents are respelled, and only the prose spellings: a
+        citation that already spells the code belongs to `swap_pair`, which
+        knows how to mirror padding."""
+        targets: dict[tuple[str, int], Pair] = {
+            (pair.old_parts[0].upper(), pair.old_parts[1]): pair
+            for pair in plan.mapping if pair.new in plan.relocated}
+        if not targets:
+            return text
+        out, cursor = [], 0
+        for ref in doc_refs.find_refs(text, source):
+            if ref.kind != "scheme" or ref.code:
+                continue
+            pair = targets.get((ref.prefix.upper(), ref.num))
+            if pair is None:
+                continue
+            prefix, number = pair.old_parts
+            if re.fullmatch(rf"{re.escape(prefix)}[- ]0*{number}",
+                            ref.text, re.IGNORECASE):
+                continue                 # a code spelling; swap_pair's job
+            out.append(text[cursor:ref.start])
+            out.append(pair.new)
+            cursor = ref.end
+            nonlocal count
+            count += 1
+        out.append(text[cursor:])
+        return "".join(out)
+
     # Before any swapping: a moved document's citations are matched by the
     # address they point at, and the code swap rewrites codes inside link
     # targets too — so running this later would leave nothing to match.
     text = unlink_relocated(text)
+    text = respell_relocated(text)
 
     # Composed pairs first: `LU-OLD-013` must be rewritten whole before the
     # bare-code pattern reads `OLD-013` out of the middle of it.
@@ -520,7 +557,8 @@ def apply(plan: Plan) -> tuple[int, int]:
             if doc_refs.unlinted(live, text):
                 continue
             new, count = sweep_text(text, plan,
-                                    paths=live not in plan.config_files)
+                                    paths=live not in plan.config_files,
+                                    source=live)
             if count:
                 live.write_text(new)
                 files += 1
@@ -534,9 +572,20 @@ def apply(plan: Plan) -> tuple[int, int]:
     # leaving it to a follow-up `luria link --fix` keeps the migration's
     # output clean on its own terms — a run that ends with dangling bare refs
     # is a run that half-finished.
+    #
+    # Over `doc_files()`, which is `luria link`'s own file set — NOT the
+    # tracked files the sweep walks. The two passes ask different questions.
+    # The sweep asks "does this text spell a code that moved?", which a source
+    # file answers as truthfully as a document does. Linking asks "should this
+    # reference be a hyperlink?", and for a `.ts` comment or a workflow YAML
+    # the answer is no: they are exempt from the hyperlink lint because code
+    # is quoted, not asserted. Running the fixer wider than the linter checks
+    # is how one migration rewrote 469 files nobody had asked it to touch,
+    # burying two moved documents in a diff of markdown links inside Python
+    # comments (#90).
     if plan.relocated:
         adrs, anchors = doc_refs.adr_paths(), doc_refs.dp_anchors()
-        for path in _tracked_files():
+        for path in doc_refs.doc_files():
             if not path.exists():
                 continue
             try:
@@ -592,7 +641,8 @@ def run(spec: str, dry_run: bool = False, commit: bool = False) -> None:
         would = 0
         for path in _tracked_files():
             try:
-                _, count = sweep_text(path.read_text(), plan)
+                _, count = sweep_text(path.read_text(), plan,
+                                      source=path)
             except (UnicodeDecodeError, OSError):
                 continue
             would += 1 if count else 0

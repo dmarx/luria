@@ -407,3 +407,81 @@ def test_a_worded_citation_of_a_moved_document_is_rebuilt(tmp_path,
     assert "design-principles.md#dp-4" not in out, out
     assert "#dp-4" not in out, "the vacated anchor must not survive anywhere"
     assert "VAL-tmp" in out, out
+
+
+def _worded_move_project(tmp_path, monkeypatch):
+    """The premigration project plus a SOURCE FILE that cites DP-4 two ways —
+    by code and in prose — and a spec that moves DP-4 into an index-rendered
+    scheme."""
+    root = _premigration_project(tmp_path, monkeypatch)
+    (root / "luria.toml").write_text(
+        (root / "luria.toml").read_text()
+        + '[luria.code]\nglobs = ["src/*.py"]\n'
+          '[luria.schemes.VAL]\ndir = "record/values.d"\n')
+    (root / "record" / "values.d").mkdir(parents=True)
+    (root / "src").mkdir()
+    (root / "src" / "engine.py").write_text(
+        "# Selection rides undo by decision (design-principles #4), not by\n"
+        "# accident. DP-4 is the claim; DP-1 is a different one.\n"
+        "SELECTION_RIDES_UNDO = True\n")
+    config.reset()
+    aliases.reset()
+    _git(root, "add", "-A")
+    _git(root, "-c", "user.email=t@t", "-c", "user.name=t", "commit",
+         "-qm", "src")
+    (root / "record" / "migrations.d" / "0002-worded-code.toml").write_text(
+        'title = "DP-4 becomes a value"\n\n'
+        '[[operations]]\nop = "move_doc"\ndoc = "DP-4"\nto = "VAL"\n')
+    return root
+
+
+def test_the_relink_pass_stops_where_the_hyperlink_lint_stops(tmp_path,
+                                                              monkeypatch):
+    """Rebuilding links must not reach files the linter never checks.
+
+    The sweep walks every tracked file, because "does this text spell a code
+    that moved?" is a question a `.py` comment answers as truthfully as a
+    document does. Linking is a different question — code is quoted, not
+    asserted, so a source file is exempt from the hyperlink lint — and running
+    the fixer wider than the linter checks turned one two-document move into a
+    469-file diff of markdown links inside Python comments."""
+    root = _worded_move_project(tmp_path, monkeypatch)
+    migrate.run("0002")
+    src = (root / "src" / "engine.py").read_text()
+    assert "](" not in src, f"no markdown links in a source file:\n{src}"
+    # DP-1 did not move, and stays exactly as the author left it.
+    assert "DP-1 is a different one" in src, src
+
+
+def test_a_worded_citation_in_code_follows_the_move(tmp_path, monkeypatch):
+    """A prose-spelled citation names the document as surely as the code does.
+
+    `design-principles #4` in a comment carries no code for the code swap to
+    catch and, unlinked, no address for the address swap to catch. It is
+    recognized by the same scanner that would have turned it into a link in a
+    document, so the sweep can respell it — and must, or the move leaves a
+    citation pointing at a document that is no longer there."""
+    root = _worded_move_project(tmp_path, monkeypatch)
+    migrate.run("0002")
+    src = (root / "src" / "engine.py").read_text()
+    assert "design-principles #4" not in src, src
+    assert "#4" not in src, "the vacated anchor number must not survive"
+    assert src.count("VAL-tmp") == 2, f"both spellings respelled:\n{src}"
+    assert "DP-1 is a different one" in src, "an unmoved code is left alone"
+
+
+def test_a_formerly_stamp_is_not_a_dangling_citation(tmp_path, monkeypatch):
+    """The alias a move writes must not be reported as a broken reference.
+
+    `formerly: DP-004` names a code that resolves to no document *because the
+    alias exists* — that is what the stamp is for. Counting it made every
+    migration hand back one fresh "resolves to no document" warning per moved
+    document, pointing at the files the migration had just written."""
+    root = _worded_move_project(tmp_path, monkeypatch)
+    migrate.run("0002")
+    config.reset()
+    aliases.reset()
+    moved = next((root / "record" / "values.d").glob("VAL-*.md"))
+    assert "formerly:" in moved.read_text(), moved.read_text()
+    assert "DP-004" not in ref_status.scan().dangling, \
+        "the stamp is a declaration, not a citation"
