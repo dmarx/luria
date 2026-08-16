@@ -135,6 +135,23 @@ class Plan:
     # second mint in the same run cannot repeat one — `_mint_tail` can only
     # see what is on disk, and nothing has been written yet.
     minted: dict[str, set[str]] = field(default_factory=dict)
+    # New codes whose citations must be REBUILT rather than re-spelled. Every
+    # `move_doc` qualifies, because a move always crosses schemes and a
+    # scheme's address is more than its code:
+    #
+    #   same render mode  — the directory changes (`src.d/X.md` → `dst.d/Y.md`)
+    #   different modes   — the whole shape changes (`page.md#anchor` ↔ `dir/Y.md`)
+    #
+    # Swapping the code inside the old link fixes the label and leaves the
+    # target pointing at a file that does not exist. So the sweep strips these
+    # links back to bare references and the fixer rebuilds them from the
+    # resolver, which is the one place that knows how a scheme is addressed.
+    relocated: set[str] = field(default_factory=set)
+    # Old address fragment → the code that answers for it now. The address is
+    # the anchor a document-rendered scheme gave the document (`#dp-17`) or the
+    # filename an index-rendered one did (`DP-017.md`), so a citation is found
+    # by where it POINTS rather than by how it is labelled.
+    old_addresses: dict[str, str] = field(default_factory=dict)
 
 
 def _spec_path(ref: str) -> Path:
@@ -255,6 +272,10 @@ def _plan_move(plan: Plan, op: dict) -> None:
         plan.copies.append((path, new_path, old_code, new_code))
         plan.tombstones.append((path, f"Superseded — by {new_code}"))
         return
+    plan.relocated.add(new_code)
+    plan.old_addresses[
+        f"#{old_prefix.lower()}-{number}" if source.render == "document"
+        else path.name] = new_code
     plan.mapping.append(Pair(old_code, new_code))
     plan.moves.append((path, new_path))
     plan.stamps[new_path] = f"{old_prefix}-{number}"
@@ -346,6 +367,11 @@ def sweep_text(text: str, plan: Plan, paths: bool = True) -> tuple[str, int]:
         text = swap(text,
                     rf"(?<![A-Za-z0-9-]){re.escape(old_p)}([- ])"
                     rf"(0*{old_n})(?!\d)", code_repl)
+        if pair.new in plan.relocated:
+            # The document MOVED, so its address is rebuilt below rather than
+            # re-spelled here. Rewriting the anchor now would bury the old
+            # address under the new code and leave nothing to match on.
+            return text
         # The two spellings of a machinery-authored anchor: the `#gp-4` a
         # link target carries, and the `name="gp-4"` the render emits.
         text = swap(text,
@@ -354,6 +380,33 @@ def sweep_text(text: str, plan: Plan, paths: bool = True) -> tuple[str, int]:
         return swap(text,
                     rf"(?<=name=\"){re.escape(old_p.lower())}-0*{old_n}(?=\")",
                     f"{new_p.lower()}-{pair.new_anchor_tail}")
+
+    def unlink_relocated(text: str) -> str:
+        """Any link AT a moved document's old address loses its target.
+
+        Matched on the ADDRESS, not the label: a citation may be worded
+        (`[design-principles #17](../design-principles.md#dp-17)`) rather than
+        spelled as the code, and those are exactly the ones a code-shaped
+        pattern walks past — leaving a live link to a document that moved.
+
+        The whole citation — label included — becomes the NEW CODE, bare, and
+        the fixer links it. Keeping the old label was the first attempt and it
+        undid itself: `[design-principles #17](…#dp-17)` stripped to
+        `design-principles #17`, whose bare `#17` the resolver reads as a
+        design-principle reference and re-linked straight back to the anchor
+        that had just been vacated. A stale label is not worth preserving at
+        the cost of resurrecting the address it names."""
+        for old_addr, new_code in sorted(plan.old_addresses.items()):
+            text = swap(
+                text,
+                rf"\[[^\]]*\]\([^)]*{re.escape(old_addr)}\)",
+                new_code)
+        return text
+
+    # Before any swapping: a moved document's citations are matched by the
+    # address they point at, and the code swap rewrites codes inside link
+    # targets too — so running this later would leave nothing to match.
+    text = unlink_relocated(text)
 
     # Composed pairs first: `LU-OLD-013` must be rewritten whole before the
     # bare-code pattern reads `OLD-013` out of the middle of it.
@@ -473,6 +526,28 @@ def apply(plan: Plan) -> tuple[int, int]:
                 files += 1
                 swept += count
     aliases_mod.reset()
+
+    # Rebuild the links the sweep dropped to bare references. Deliberately
+    # AFTER the moves and the alias reset, so the resolver sees the tree as it
+    # now is: a cross-render move changes how a document is addressed, and the
+    # resolver is the one place that knows how. Doing it here rather than
+    # leaving it to a follow-up `luria link --fix` keeps the migration's
+    # output clean on its own terms — a run that ends with dangling bare refs
+    # is a run that half-finished.
+    if plan.relocated:
+        adrs, anchors = doc_refs.adr_paths(), doc_refs.dp_anchors()
+        for path in _tracked_files():
+            if not path.exists():
+                continue
+            try:
+                text = path.read_text()
+            except (UnicodeDecodeError, OSError):
+                continue
+            if doc_refs.unlinted(path, text):
+                continue
+            linked, n = doc_refs.linkify(text, path, adrs, anchors)
+            if n:
+                path.write_text(linked)
     return files, swept
 
 
