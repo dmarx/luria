@@ -398,3 +398,49 @@ def test_title_and_summary_are_separate_columns(tmp_path, monkeypatch):
     assert "| Terse one |  |" in without, "no summary → an empty cell, not the title twice"
     assert builder.TABLE_HEAD.startswith("| # | Title | Summary | Status |")
     config.reset()
+
+
+def _rfc_project(tmp_path, monkeypatch):
+    """A project whose only index scheme is RFC, so the tag page has to name
+    something other than this package's own vocabulary."""
+    from luria import config
+    (tmp_path / "luria.toml").write_text(
+        '[luria]\nissue_url = "https://example.test/{n}"\n'
+        '[luria.schemes.RFC]\ndir = "record/rfcs.d"\noutput = "docs/rfcs"\n'
+        'active = "Active"\nrender = "index"\n')
+    d = tmp_path / "record" / "rfcs.d"
+    d.mkdir(parents=True)
+    (d / "RFC-001.md").write_text(
+        "---\nstatus: Active\ntitle: 'A proposal'\nversion: 1\n"
+        "tags:\n- network\ndate: '2026-01-01'\n---\n\n# RFC-001: A proposal\n")
+    (d / "tags.yaml").write_text(
+        "network:\n  label: Network\n"
+        "  blurb: routing and transport. HTTP and gRPC both live here\n")
+    monkeypatch.setenv("LURIA_ROOT", str(tmp_path))
+    config.reset()
+    return config.current().schemes["RFC"]
+
+
+def test_tag_page_names_its_own_scheme_not_decisions(tmp_path, monkeypatch):
+    """A project's RFC tag page should not be titled after this package's
+    decisions — the same rule DEFAULT_STUB already states for the index."""
+    scheme = _rfc_project(tmp_path, monkeypatch)
+    docs = builder.load_scheme(scheme)
+    page = builder.render_tag_page(
+        "network", {"label": "Network"}, docs, scheme)
+    assert "# RFCs tagged `network`" in page
+    assert "ADRs tagged" not in page
+    assert "1 of 1 RFC documents." in page
+    assert "decisions." not in page
+
+
+def test_tag_page_blurb_keeps_its_casing(tmp_path, monkeypatch):
+    """`str.capitalize()` lowercases everything after the first character, so
+    a blurb running to more than one sentence loses its capitals silently."""
+    scheme = _rfc_project(tmp_path, monkeypatch)
+    docs = builder.load_scheme(scheme)
+    meta = {"label": "Network",
+            "blurb": "routing and transport. HTTP and gRPC both live here"}
+    page = builder.render_tag_page("network", meta, docs, scheme)
+    assert "Routing and transport. HTTP and gRPC both live here." in page
+    assert "http and grpc" not in page
