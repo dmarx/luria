@@ -33,7 +33,7 @@ Document status is reported, not enforced
 
 A reference the reader cannot follow: the code names no document in this record. A typo, a number carried in from another project, and an illustrative code in an example all look identical from here — telling them apart takes a human, so this is a report, not an error.
 
-**3 codes unaccounted for.** Not listed: 49 mentions marked deliberate with an `unresolved-ok:` comment (same syntax and scopes as `inactive-ok:` above).
+**4 codes unaccounted for.** Not listed: 49 mentions marked deliberate with an `unresolved-ok:` comment (same syntax and scopes as `inactive-ok:` above).
 
 
 ### ADR-123 — resolves to nothing (4 unmarked sites · 2 other mentions marked deliberate)
@@ -46,6 +46,10 @@ A reference the reader cannot follow: the code names no document in this record.
 ### ADR-000 — resolves to nothing (1 unmarked site)
 
 - [`tests/test_concretize.py:205`](../../tests/test_concretize.py)
+
+### DP-017 — resolves to nothing (1 unmarked site · 2 other mentions marked deliberate)
+
+- [`luria/migrate.py:152`](../../luria/migrate.py)
 
 ### DP-018 — resolves to nothing (1 unmarked site · 4 other mentions marked deliberate)
 
