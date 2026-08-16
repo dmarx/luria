@@ -101,7 +101,6 @@ carries its prefix, so a second scheme is an entry here (ADR-006).
 | `output` | `Path \| None` | *unset* |
 | `allocate` | `str` | `"filing"` |
 | `titles_generalize` | `bool` | `False` |
-| `requires` | `tuple[str, ...]` | *unset* |
 
 ## Fragment directories — `[luria.fragments."dir"]`
 

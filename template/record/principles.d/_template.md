@@ -3,7 +3,7 @@
 # and fills in the fields a machine can compute. WHICH identity depends on the
 # scheme's `allocate` mode: `filing` (the default) takes the next free number
 # on the spot, `merge` mints a temporary code that `luria concretize` numbers
-# where merges serialize (ADR-049).
+# where merges serialize (FX-ADR-049).
 #
 # Numbering is sequential and permanent: a principle is cited by number ("per
 # DP-3"), so a number can be retired but never reused. The filename is the code

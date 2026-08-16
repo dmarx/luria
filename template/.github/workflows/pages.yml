@@ -1,4 +1,4 @@
-# Publish the record as a browsable site on GitHub Pages (ADR-042).
+# Publish the record as a browsable site on GitHub Pages (LU-ADR-042).
 #
 # `luria site` stages every page the record publishes — the decisions, the
 # principles document, the devlog books, the reports — with paths preserved,
