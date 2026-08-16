@@ -361,9 +361,9 @@ anything, and that restraint is what keeps the licence worth having.
 
 *v1 · origin: Carried in from strata-g, luria's first consumer, after a stretch in which almost every repair here was found by tripping over an unrelated one*
 
-<a name="dp-tmpprjho"></a>
+<a name="dp-12"></a>
 
-## DP-tmpprjho. One decision, one thing
+## 12. One decision, one thing
 
 **A decision with two unrelated halves is one nobody can cite half of.**
 
