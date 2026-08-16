@@ -336,8 +336,9 @@ def check_bare_refs(errors: list[str]) -> None:
 # hatch under enforcement — the dial changes the consequence, not the
 # accounting.
 FAILABLE = ("retired-citations", "unresolved-codes", "hand-written-urls",
-            "broken-targets", "legacy-spellings", "narrow-titles",
-            "stale-directives", "pending-documents", "unlinted-files")
+            "broken-targets", "inert-status", "legacy-spellings",
+            "narrow-titles", "stale-directives", "pending-documents",
+            "unlinted-files")
 
 
 def status_sections() -> list[tuple[str, str, list[str]]]:
@@ -396,6 +397,18 @@ def status_sections() -> list[tuple[str, str, list[str]]]:
             f"{len(dead)} relative link target(s) resolve to nothing from "
             "where the prose renders (`luria link --fix` spells code targets; "
             "`target-ok:` acknowledges a deliberate one)", dead))
+
+    # A status field where every record agrees is indistinguishable from no
+    # status field — and `active` is what `retired-citations` reads, so the
+    # build is green because nothing is being judged rather than because
+    # nothing is wrong (#104).
+    uniform = statuses.uniform_rows()
+    if uniform:
+        sections.append((
+            "inert-status",
+            f"{len(uniform)} scheme(s) file every record at one status, so "
+            "nothing there can ever be retired and the citation checks cannot "
+            "fire", uniform))
 
     # A citation still spelled with a concretized code's old temporary name
     # (ADR-040, ADR-049). The in-tree steady state is zero — the
