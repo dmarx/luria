@@ -229,6 +229,12 @@ class Scheme:
     # scheme whose documents claim to transfer — principles, values — is where
     # this earns its keep.
     titles_generalize: bool = False
+    # Frontmatter fields this scheme demands beyond the standard set. What
+    # makes a CROSS-SCHEME move safe to automate (ADR-040): `luria migrate`
+    # moves the file, and the document then fails lint until a human supplies
+    # what the target scheme's template would have prompted for. The machinery
+    # relocates a document; only a person can vouch that it belongs.
+    requires: tuple[str, ...] = ()
 
     @property
     def view(self) -> Path:
@@ -725,6 +731,7 @@ def load(root: Path | None = None, text: str | None = None) -> Config:
                 root / spec["output"] if spec.get("output") else None,
                 spec.get("allocate", "filing"),
                 bool(spec.get("titles_generalize", False)),
+                tuple(spec.get("requires", ())),
             )
             for prefix, spec in raw["schemes"].items()
         },

@@ -113,6 +113,17 @@ def check_frontmatter(errors: list[str]) -> None:
             if not (meta.get("tags") or []):
                 errors.append(f"{rel}: no `tags:` in frontmatter (see ADR-003)")
 
+            # Per-scheme requirements (ADR-040): the fields a scheme demands
+            # beyond the standard set — what makes a cross-scheme move safe to
+            # automate, because the moved document fails here until a human
+            # supplies what the target scheme's template would have prompted
+            # for. The machinery relocates; only a person vouches.
+            for field in scheme.requires:
+                if not meta.get(field):
+                    errors.append(
+                        f"{rel}: no `{field}:` in frontmatter — the "
+                        f"{scheme.prefix} scheme requires it (luria.toml)")
+
 
 def check_title(errors: list[str], rel: str, meta: dict, body: str) -> None:
     """`title:` is the source of truth, and the body's H1 repeats it.
