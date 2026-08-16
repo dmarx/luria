@@ -43,7 +43,7 @@ Four ground rules, terse enough to restate:
   link --fix` spell the target: record prose is rendered into views in
   *other directories*, so a target has to resolve from where the text
   lands, not where it lives — only the fixer knows that frame. Want prose
-  as the label? That's `[[ADR-001|a labeled wikilink]]`, still the fixer's
+  as the label? That's `[[FX-ADR-001|a labeled wikilink]]`, still the fixer's
   job. A hand-written target that looks right here is wrong somewhere.
 - **A guard that keeps catching you is a bug report about the workflow.**
   One catch is the net working; the same catch again means the hazard is
