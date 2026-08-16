@@ -197,26 +197,27 @@ def check_generated_index(errors: list[str]) -> None:
     """The index is generated (ADR-004) — verify it's current, rather than
     checking each document is mentioned, which a generated file can't fail."""
     cfg = current()
-    rendered = builder.outputs()
+    # Computed by the generator, not recomputed here: the rules for what
+    # counts as stale live in one place, so this check and `luria index
+    # --check` cannot answer differently. Only the wording is this file's.
+    report = builder.staleness()
     # This lint is usually read in a build log, where "run `luria index`" names
     # the one action that must not be taken here — putting the generator ahead
     # of this check makes it compare the generator's output against itself, and
     # it stops being able to fail (ADR-029). The remedy says so when it is
     # being read in CI.
     remedy = ci.regenerate_remedy()
-    for path, text in rendered.items():
-        if not path.exists() or path.read_text() != text:
-            errors.append(f"{cfg.rel(path)}: stale — {remedy}")
-    for path in builder.orphans(rendered):
+    for path in report.stale:
+        errors.append(f"{cfg.rel(path)}: stale — {remedy}")
+    for path in report.orphaned:
         errors.append(f"{cfg.rel(path)}: not something the generator wrote — "
                       "a view directory holds only generated files (ADR-021); "
                       f"{remedy}, or file the content as a source")
     # The README's badge counts are derived from the same frontmatter, so a
     # stale one is the same class of failure as a stale index (ADR-018).
-    readme = badges.readme()
-    if readme.exists() and badges.OPEN in (text := readme.read_text()) \
-            and badges.rewrite(text) != text:
-        errors.append(f"{cfg.rel(readme)}: badge counts are stale — {remedy}")
+    if report.badges:
+        errors.append(
+            f"{cfg.rel(report.badges)}: badge counts are stale — {remedy}")
 
 
 def check_wikilinks(errors: list[str]) -> None:

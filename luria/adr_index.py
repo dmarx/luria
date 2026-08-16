@@ -41,7 +41,9 @@ from __future__ import annotations
 import os.path
 import posixpath
 import re
+import subprocess
 import sys
+from dataclasses import dataclass
 from pathlib import Path
 
 import yaml
@@ -391,6 +393,38 @@ def orphans(rendered: dict[Path, str]) -> list[Path]:
             for p in sorted(d.glob("*.md")) if p not in rendered]
 
 
+def ignored(paths: list[Path]) -> set[Path]:
+    """The subset of `paths` that git is configured to ignore.
+
+    A generated view the project has gitignored is one it has decided not to
+    keep — `[luria.paths] reports = "build/doc-reports"` behind a CI artifact
+    upload is the shape that exists in the wild. The staleness check has
+    nothing to compare against there: a fresh clone never has the file, so
+    *missing* reads as *stale*, and the remedy the failure prints — regenerate
+    and commit the result — is the one thing `.gitignore` forbids. A check
+    that cannot be satisfied is not a check; it is a permanently red job that
+    teaches people to stop reading it, which is DP-1 wearing a green hat.
+
+    Only `--check` consults this. Writing is unaffected: `luria index` still
+    renders an ignored view, because *not committed* is not *not wanted* —
+    that report is precisely what the artifact upload publishes.
+
+    One `git check-ignore` for the whole set. Exit 1 means "nothing matched",
+    the ordinary answer; anything else (not a repo, no git on PATH) means we
+    cannot tell, and not-ignored is the answer that keeps checking."""
+    if not paths:
+        return set()
+    try:
+        out = subprocess.run(
+            ["git", "check-ignore", "--", *(str(p) for p in paths)],
+            cwd=current().root, capture_output=True, text=True)
+    except OSError:
+        return set()
+    if out.returncode not in (0, 1):
+        return set()
+    return {Path(line).resolve() for line in out.stdout.splitlines() if line}
+
+
 def _render_scheme(scheme) -> dict[Path, str]:
     docs = load_scheme(scheme)
     if scheme.render == "document":
@@ -428,6 +462,53 @@ def outputs() -> dict[Path, str]:
     return out
 
 
+@dataclass(frozen=True)
+class Staleness:
+    """Everything the staleness check has to say about the tree.
+
+    Three kinds, kept apart because each wants a different sentence: a view
+    that differs from what the generator would write, a file sitting in a view
+    directory the generator never wrote, and a README whose badge counts have
+    drifted."""
+    stale: list[Path]
+    orphaned: list[Path]
+    badges: Path | None
+
+    @property
+    def all(self) -> list[Path]:
+        return self.stale + self.orphaned + ([self.badges] if self.badges else [])
+
+    @property
+    def any(self) -> bool:
+        return bool(self.all)
+
+
+def staleness(rendered: dict[Path, str] | None = None) -> Staleness:
+    """The one answer `luria index --check` and `luria lint` both consume.
+
+    They used to compute it twice, in two files, from the same three rules —
+    which is the arrangement where a fix lands in one of them and the other
+    keeps failing. It did: the gitignore exemption below was written in
+    `--check` first, and `lint` went on rejecting the same tree.
+
+    A view the project gitignores is excluded from all three kinds. There is
+    no committed copy to compare against — see `ignored`."""
+    from . import badges as badges_mod
+    rendered = outputs() if rendered is None else rendered
+    loose = orphans(rendered)
+    skip = ignored(list(rendered) + loose)
+    readme = badges_mod.readme()
+    drifted = (readme.exists() and readme not in skip
+               and badges_mod.OPEN in (text := readme.read_text())
+               and badges_mod.rewrite(text) != text)
+    return Staleness(
+        stale=[p for p, text in rendered.items()
+               if p not in skip and (not p.exists() or p.read_text() != text)],
+        orphaned=[p for p in loose if p not in skip],
+        badges=readme if drifted else None,
+    )
+
+
 def run(check: bool = False) -> None:
     """Regenerate every view — the decision index and tag pages, the
     principles document, the devlog books, the status reports, the README
@@ -441,27 +522,18 @@ def run(check: bool = False) -> None:
             for p in journal.populate_created(j):
                 print(f"populated `created:` from the path in {current().rel(p)}")
 
-    rendered = outputs()
     if check:
-        stale = [p for p, text in rendered.items()
-                 if not p.exists() or p.read_text() != text]
-        # Anything in a view directory the generator didn't render is stale
-        # too — a tag page whose tag is gone, a book from an old granularity.
-        stale += orphans(rendered)
-        from . import badges
-        readme = badges.readme()
-        if readme.exists() and badges.OPEN in (text := readme.read_text()) \
-                and badges.rewrite(text) != text:
-            stale.append(readme)
-        if stale:
+        report = staleness()
+        if report.any:
             from . import ci
             print(f"stale ({ci.regenerate_remedy()}):", file=sys.stderr)
-            for p in sorted(stale):
+            for p in sorted(report.all):
                 print(f"  {current().rel(p)}", file=sys.stderr)
             raise SystemExit(1)
         print("luria index: current")
         return
 
+    rendered = outputs()
     cfg = current()
     for stale_file in orphans(rendered):
         stale_file.unlink()

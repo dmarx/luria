@@ -17,11 +17,14 @@ column — not by "today's date appears nowhere": a decision filed and still
 `Proposed` today legitimately puts today's date in the report, so that
 blunter assertion fails on a correct report exactly once per decision.
 """
+import shutil
+import subprocess
 from pathlib import Path
 
+import pytest
 from _scheme import decision
 
-from luria import adr_pending, ref_status, reports
+from luria import adr_index, adr_pending, config, lint, ref_status, reports
 
 REPO = Path(__file__).resolve().parents[1]
 
@@ -139,3 +142,114 @@ def test_reports_are_deterministic():
     a = reports.reference_status(), reports.pending_decisions()
     b = reports.reference_status(), reports.pending_decisions()
     assert a == b
+
+
+def _git(root, *args):
+    subprocess.run(["git", *args], cwd=root, check=True,
+                   capture_output=True, text=True)
+
+
+def test_a_gitignored_report_dir_is_not_stale(tmp_path, monkeypatch):
+    """`luria index --check` must not fail over a view the project ignores.
+
+    A project can point `[luria.paths] reports` at a build directory and
+    publish the result as a CI artifact instead of committing it — which is
+    the shape downstream had. A fresh clone then never has the file, so
+    *missing* read as *stale*, and the remedy the failure printed ("regenerate
+    and commit the result") is the one thing `.gitignore` forbids: the docs
+    job went red on every commit and stayed there.
+    """
+    (tmp_path / "docs" / "decisions").mkdir(parents=True)
+    (tmp_path / "luria.toml").write_text(
+        '[luria]\nissue_url = "https://example.test/issues/{n}"\n'
+        '[luria.paths]\nreports = "build/doc-reports"\n')
+    (tmp_path / "docs" / "design-principles.md").write_text(
+        "# Design principles\n\n## 1. First value\n\nBody.\n")
+    (tmp_path / ".gitignore").write_text("build/\n")
+    _git(tmp_path, "init", "-q")
+    _git(tmp_path, "add", "-A")
+    _git(tmp_path, "-c", "user.email=t@t", "-c", "user.name=t",
+         "commit", "-qm", "before")
+    monkeypatch.setenv("LURIA_ROOT", str(tmp_path))
+    config.reset()
+
+    adr_index.run()                            # writes every view, ignored ones too
+    assert (tmp_path / "build" / "doc-reports" /
+            "reference-status.md").exists(), "an ignored view is still written"
+    adr_index.run(check=True)                  # …and does not gate on them
+
+    shutil.rmtree(tmp_path / "build")          # the state of every fresh clone
+    adr_index.run(check=True)
+
+
+def test_a_tracked_report_dir_still_gates(tmp_path, monkeypatch):
+    """The exemption is `.gitignore`, not the reports directory.
+
+    A project that commits its reports — which is this repo's own layout —
+    must keep failing on a stale one, or the fix would have turned a real
+    check off for everybody to unstick one project.
+    """
+    (tmp_path / "docs" / "decisions").mkdir(parents=True)
+    (tmp_path / "luria.toml").write_text(
+        '[luria]\nissue_url = "https://example.test/issues/{n}"\n'
+        '[luria.paths]\nreports = "docs/reports"\n')
+    (tmp_path / "docs" / "design-principles.md").write_text(
+        "# Design principles\n\n## 1. First value\n\nBody.\n")
+    _git(tmp_path, "init", "-q")
+    _git(tmp_path, "add", "-A")
+    _git(tmp_path, "-c", "user.email=t@t", "-c", "user.name=t",
+         "commit", "-qm", "before")
+    monkeypatch.setenv("LURIA_ROOT", str(tmp_path))
+    config.reset()
+
+    adr_index.run()
+    adr_index.run(check=True)
+    (tmp_path / "docs" / "reports" / "reference-status.md").write_text("stale\n")
+    with pytest.raises(SystemExit):
+        adr_index.run(check=True)
+
+
+def test_lint_and_index_check_agree_about_staleness(tmp_path, monkeypatch):
+    """One rule set, two commands. They used to be two rule sets.
+
+    `luria index --check` and `luria lint`'s `check_generated_index` both
+    decided what "stale" means, from the same three rules written twice. The
+    gitignore exemption above went into the first one and `lint` went on
+    rejecting the identical tree — the fixer/linter split this package exists
+    to prevent, reproduced inside the package. They share `staleness()` now,
+    and this pins it from the outside: whatever one says about a tree, the
+    other says too.
+    """
+    (tmp_path / "docs" / "decisions").mkdir(parents=True)
+    (tmp_path / "luria.toml").write_text(
+        '[luria]\nissue_url = "https://example.test/issues/{n}"\n'
+        '[luria.paths]\nreports = "build/doc-reports"\n')
+    (tmp_path / "docs" / "design-principles.md").write_text(
+        "# Design principles\n\n## 1. First value\n\nBody.\n")
+    (tmp_path / ".gitignore").write_text("build/\n")
+    _git(tmp_path, "init", "-q")
+    _git(tmp_path, "add", "-A")
+    _git(tmp_path, "-c", "user.email=t@t", "-c", "user.name=t",
+         "commit", "-qm", "before")
+    monkeypatch.setenv("LURIA_ROOT", str(tmp_path))
+    config.reset()
+
+    def verdicts() -> tuple[bool, list[str]]:
+        try:
+            adr_index.run(check=True)
+            index_stale = False
+        except SystemExit:
+            index_stale = True
+        errors: list[str] = []
+        lint.check_generated_index(errors)
+        return index_stale, errors
+
+    adr_index.run()
+    shutil.rmtree(tmp_path / "build")
+    index_stale, errors = verdicts()
+    assert not index_stale and not errors, errors
+
+    # …and they agree the other way too, on a view that IS tracked.
+    (tmp_path / "docs" / "decisions" / "README.md").write_text("hand-edited\n")
+    index_stale, errors = verdicts()
+    assert index_stale and errors, "both must fail on a genuinely stale view"
