@@ -211,7 +211,12 @@ def test_move_doc_lands_provisional_then_concretizes(tmp_path, monkeypatch):
     assert len(landed) == 1, "the move lands provisional, never numbered"
     assert "formerly:\n- DP-4\n" in landed[0].read_text()
     assert not (root / "record" / "principles.d" / "DP-004.md").exists()
-    assert "Bare VAL-tmp" in (root / "docs" / "notes.md").read_text()
+    # DP renders as a document and VAL as an index, so the citation's SHAPE
+    # changed: `page.md#anchor` → `dir/CODE.md`. The sweep drops the stale
+    # link and the fixer rebuilds it from the resolver.
+    notes = (root / "docs" / "notes.md").read_text()
+    assert "(../record/values.d/VAL-tmp" in notes, notes
+    assert "design-principles.md#val" not in notes, "no link to the old view"
 
     _git(root, "add", "-A")
     _git(root, "-c", "user.email=t@t", "-c", "user.name=t", "commit",
@@ -224,8 +229,7 @@ def test_move_doc_lands_provisional_then_concretizes(tmp_path, monkeypatch):
     assert "- DP-4" in final and "- VAL-tmp" in final, \
         "both the migrated-from code and the provisional one stay resolvable"
     notes = (root / "docs" / "notes.md").read_text()
-    assert "Bare VAL-001" in notes
-    assert "#val-001" in notes, "the anchor follows the code, not just the label"
+    assert "[VAL-001](../record/values.d/VAL-001.md)" in notes, notes
     assert "val-tmp" not in notes, "no provisional spelling survives the sweep"
     assert "Fixture DP-018" in notes, "a fixture number is not in the mapping"
 
@@ -335,3 +339,37 @@ def test_provisional_is_decided_in_one_place(tmp_path, monkeypatch):
     assert migrate.Pair("DP-004", "VAL-tmp47fje").new_is_provisional
     assert not migrate.Pair("DP-004", "VAL-007").new_is_provisional
     assert not migrate.Pair("DP-004", "VAL-nonsense").new_is_provisional
+
+
+def test_a_same_render_move_keeps_its_links_untouched(tmp_path, monkeypatch):
+    """The unlink pass must fire ONLY when the shape actually changes.
+
+    Two index-rendered schemes address a document the same way, so a move
+    between them is a pure spelling swap — dropping and rebuilding those links
+    would be churn, and would quietly relink bare references the author left
+    bare on purpose elsewhere in the file."""
+    root = _premigration_project(tmp_path, monkeypatch)
+    (root / "luria.toml").write_text(
+        (root / "luria.toml").read_text()
+        + '[luria.schemes.SRC]\ndir = "record/src.d"\n'
+          '[luria.schemes.DST]\ndir = "record/dst.d"\n')
+    (root / "record" / "src.d").mkdir(parents=True)
+    (root / "record" / "dst.d").mkdir(parents=True)
+    (root / "record" / "src.d" / "SRC-001.md").write_text(
+        "---\nstatus: Active\ntitle: 'A thing'\ntags:\n- record\n"
+        "date: '2026-01-01'\n---\n\n# SRC-001: A thing\n\nBody.\n")
+    page = root / "docs" / "shapes.md"
+    page.write_text("See [SRC-001](../record/src.d/SRC-001.md).\n")
+    config.reset()
+    aliases.reset()
+    _git(root, "add", "-A")
+    _git(root, "-c", "user.email=t@t", "-c", "user.name=t", "commit",
+         "-qm", "shapes")
+    mig = root / "record" / "migrations.d" / "0002-same-shape.toml"
+    mig.write_text('title = "SRC-1 becomes a DST"\n\n'
+                   '[[operations]]\nop = "move_doc"\ndoc = "SRC-1"\n'
+                   'to = "DST"\n')
+    migrate.run("0002")
+    out = page.read_text()
+    assert "(../record/dst.d/DST-tmp" in out, out
+    assert "src.d" not in out, "the path follows the move"
