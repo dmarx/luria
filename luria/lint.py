@@ -44,7 +44,7 @@ import sys
 
 from . import adr_index as builder
 from . import (adr_pending, badges, ci, doc_refs, journal, link_targets,
-               narrow_titles, ref_status, remotes)
+               narrow_titles, ref_status, remotes, statuses)
 from .config import current
 
 # The closed status vocabulary (ADR-003). `Active` is the in-force state; the
@@ -111,6 +111,11 @@ def check_frontmatter(errors: list[str]) -> None:
                     f"{rel}: nonstandard status {status!r} (want: "
                     "Active|Proposed|Deferred|Superseded|Rejected, optional "
                     "' — note')")
+            elif statuses.undeclared(scheme, status):
+                errors.append(
+                    f"{rel}: status {status.split(' — ')[0]!r} is not one the "
+                    f"{scheme.prefix} scheme declares (see "
+                    f"{cfg.rel(scheme.statuses_yaml)})")
             if not (meta.get("tags") or []):
                 errors.append(f"{rel}: no `tags:` in frontmatter (see ADR-003)")
 
@@ -143,6 +148,17 @@ def check_title(errors: list[str], rel: str, meta: dict, body: str) -> None:
         errors.append(
             f"{rel}: `title:` and the body heading disagree — "
             f"{title!r} vs {heading!r}")
+
+
+def check_status_vocabulary(errors: list[str]) -> None:
+    """A `statuses.yaml` key outside ADR-003's five words.
+
+    Narrowing the vocabulary per scheme is the point; extending it is not, and
+    a file naming `Accepted` would render a legend and silence nothing — it
+    would look like it was working, which is the worst way for a config file to
+    be wrong."""
+    for scheme in current().schemes.values():
+        errors.extend(statuses.problems(scheme))
 
 
 def check_tag_groups(errors: list[str]) -> None:
@@ -455,6 +471,7 @@ def run() -> None:
     errors: list[str] = []
     check_docs_index(errors)
     check_frontmatter(errors)
+    check_status_vocabulary(errors)
     check_tag_groups(errors)
     check_generated_index(errors)
     check_journals(errors)

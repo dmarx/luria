@@ -280,6 +280,13 @@ def render_index(adrs: list[Adr], tags: list[tuple[str, dict]],
     scheme = scheme or current().schemes["ADR"]
     prefix = prefix_for(scheme, scheme.view)
     table = TABLE_HEAD + "\n".join(a.row(prefix) for a in adrs) + "\n"
+    # A declared status vocabulary explains the column it sits above. Rendered
+    # here rather than behind a stub placeholder: adopting `statuses.yaml`
+    # should be enough to make the meaning visible, and a legend that needs a
+    # second edit to appear is one that does not.
+    from . import statuses
+    if declared := statuses.legend(scheme):
+        table = declared + "\n" + table
     stub = scheme.stub
     prose = (stub.read_text() if stub.exists()
              else DEFAULT_STUB.replace(

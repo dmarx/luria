@@ -47,7 +47,7 @@ A reference the reader cannot follow: the code names no document in this record.
 
 ### ADR-123 — resolves to nothing (4 unmarked sites · 2 other mentions marked deliberate)
 
-- [`docs/adopting.md:189`](../adopting.md)
+- [`docs/adopting.md:222`](../adopting.md)
 - [`luria/concretize.py:19`](../../luria/concretize.py)
 - [`record/decisions.d/ADR-049.md:28`](../../record/decisions.d/ADR-049.md)
 - [`record/decisions.d/ADR-049.md:46`](../../record/decisions.d/ADR-049.md)
