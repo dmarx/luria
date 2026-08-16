@@ -190,6 +190,33 @@ def is_temp_tail(tail: str) -> bool:
 
 
 @dataclass(frozen=True)
+class TagGroup:
+    """A set of a scheme's tags that combine under a rule.
+
+    `tags.yaml` declares what a tag *means*; this declares which of them may
+    appear together, because some vocabularies are axes rather than piles. An
+    argument is sound or overreaching or invalid — exactly one — and saying so
+    in prose leaves it to be checked by nobody, which is how a rule becomes a
+    comment.
+
+    Opt-in per scheme: a scheme declaring no group is unconstrained, which is
+    every scheme that exists today."""
+
+    name: str
+    tags: frozenset[str]
+    # "any" (the default — the group is a label, not an axis), "at-most-one",
+    # or "exactly-one".
+    require: str = "any"
+    # Tags that forbid this whole group. `sound` excluding the failure modes
+    # is the motivating case: naming how an argument fails contradicts saying
+    # it does not.
+    excluded_by: frozenset[str] = frozenset()
+
+
+REQUIRE_RULES = ("any", "at-most-one", "exactly-one")
+
+
+@dataclass(frozen=True)
 class Scheme:
     """A family of referable documents — `ADR-012`, `RFC-7`, `SPEC-3`.
 
@@ -235,6 +262,10 @@ class Scheme:
     # what the target scheme's template would have prompted for. The machinery
     # relocates a document; only a person can vouch that it belongs.
     requires: tuple[str, ...] = ()
+    # Which of this scheme's tags may appear together (see `TagGroup`). Empty
+    # for every scheme that does not declare `[luria.schemes.X.tag_groups]`,
+    # which is the unconstrained behaviour every project has today.
+    tag_groups: tuple[TagGroup, ...] = ()
 
     @property
     def view(self) -> Path:
@@ -471,6 +502,30 @@ class Fragment:
     directory-of-fragments serves either reading order."""
     target: Path
     style: str = "append"
+
+
+def _tag_groups(prefix: str, raw: dict) -> tuple[TagGroup, ...]:
+    """Read a scheme's `[luria.schemes.X.tag_groups]` tables.
+
+    Validated here rather than at lint time: a misspelled rule is a config
+    error, and a config error that surfaces as "no violations" is the quiet
+    failure this whole feature exists to remove."""
+    groups = []
+    for name, spec in raw.items():
+        rule = str(spec.get("require", "any"))
+        if rule not in REQUIRE_RULES:
+            raise ValueError(
+                f"luria.toml: schemes.{prefix}.tag_groups.{name} has "
+                f"require = {rule!r}; expected one of {list(REQUIRE_RULES)}")
+        tags = frozenset(str(x) for x in spec.get("tags", ()))
+        if not tags:
+            raise ValueError(
+                f"luria.toml: schemes.{prefix}.tag_groups.{name} lists no "
+                f"tags, so it constrains nothing")
+        groups.append(TagGroup(
+            name=name, tags=tags, require=rule,
+            excluded_by=frozenset(str(x) for x in spec.get("excluded_by", ()))))
+    return tuple(groups)
 
 
 def _fragment(spec) -> Fragment:
@@ -732,6 +787,7 @@ def load(root: Path | None = None, text: str | None = None) -> Config:
                 spec.get("allocate", "filing"),
                 bool(spec.get("titles_generalize", False)),
                 tuple(spec.get("requires", ())),
+                _tag_groups(prefix, spec.get("tag_groups", {})),
             )
             for prefix, spec in raw["schemes"].items()
         },

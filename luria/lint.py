@@ -144,6 +144,45 @@ def check_title(errors: list[str], rel: str, meta: dict, body: str) -> None:
             f"{title!r} vs {heading!r}")
 
 
+def check_tag_groups(errors: list[str]) -> None:
+    """A scheme's tag groups, enforced (`[luria.schemes.X.tag_groups]`).
+
+    `tags.yaml` says what a tag means and nothing has ever said which may
+    appear together. For a vocabulary that is a pile of labels that is right;
+    for one that is an *axis* it leaves the rule to prose, and a rule checked
+    by nobody is a comment — the failure this package objects to everywhere
+    else.
+
+    Opt-in, like `requires` (ADR-040): a scheme declaring no group is
+    unconstrained, so this is silent for every record that predates it."""
+    cfg = current()
+    for scheme in cfg.schemes.values():
+        if not scheme.tag_groups:
+            continue
+        for path in [*scheme.documents().values(),
+                     *scheme.temp_documents().values()]:
+            meta, _ = builder.parse_frontmatter(path.read_text())
+            if not meta:
+                continue          # check_frontmatter already said so
+            rel = cfg.rel(path)
+            tags = {str(t) for t in (meta.get("tags") or [])}
+            for group in scheme.tag_groups:
+                present = sorted(tags & group.tags)
+                shown = ", ".join(sorted(group.tags))
+                if group.require == "exactly-one" and len(present) != 1:
+                    errors.append(
+                        f"{rel}: `{group.name}` wants exactly one of "
+                        f"{shown} — has {', '.join(present) or 'none'}")
+                elif group.require == "at-most-one" and len(present) > 1:
+                    errors.append(
+                        f"{rel}: `{group.name}` wants at most one of "
+                        f"{shown} — has {', '.join(present)}")
+                if present and (clash := sorted(tags & group.excluded_by)):
+                    errors.append(
+                        f"{rel}: {', '.join(clash)} excludes `{group.name}`, "
+                        f"but the document also has {', '.join(present)}")
+
+
 def check_journals(errors: list[str]) -> None:
     """A journal entry's path is derived from its `created:` timestamp, and the
     two have to agree — otherwise the ordering the whole scheme rests on says
@@ -403,6 +442,7 @@ def run() -> None:
     errors: list[str] = []
     check_docs_index(errors)
     check_frontmatter(errors)
+    check_tag_groups(errors)
     check_generated_index(errors)
     check_journals(errors)
     check_version_history(errors)
