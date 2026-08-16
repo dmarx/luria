@@ -13,7 +13,7 @@
 | 2026-08-08 | Proposed | [ADR-052](../../record/decisions.d/ADR-052.md) | 0 | 0 | The draft signal: a contribution that asks for a verdict, not a review |
 | 2026-08-08 | Proposed | [DP-010](../../record/principles.d/DP-010.md) | 0 | 0 | Defaults follow the failure mode: guards opt out, disclosures opt in |
 | 2026-08-16 | Proposed | [ADR-053](../../record/decisions.d/ADR-053.md) | 2 | 2 | The published version is derived from the release tag |
-| 2026-08-16 | Proposed | [ADR-056](../../record/decisions.d/ADR-056.md) | 1 | 1 | A scheme declares which statuses it uses and what they mean |
+| 2026-08-16 | Proposed | [ADR-056](../../record/decisions.d/ADR-056.md) | 2 | 2 | A scheme declares which statuses it uses and what they mean |
 | 2026-08-16 | Proposed | [ADR-054](../../record/decisions.d/ADR-054.md) | 0 | 0 | A scheme can constrain which of its tags combine |
 | 2026-08-16 | Proposed | [ADR-055](../../record/decisions.d/ADR-055.md) | 0 | 0 | A link target is checked from where the prose renders |
 | 2026-08-16 | Proposed | [ADR-057](../../record/decisions.d/ADR-057.md) | 0 | 0 | A scheme whose status never varies is reported |

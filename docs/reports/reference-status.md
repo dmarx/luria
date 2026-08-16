@@ -42,9 +42,10 @@ The published version is derived from the release tag
 
 A scheme declares which statuses it uses and what they mean
 
-1 citation in 1 file awaits a look.
+2 citations in 2 files await a look.
 
 - [`record/decisions.d/ADR-057.md:75`](../../record/decisions.d/ADR-057.md)
+- [`record/principles.d/DP-tmpprjho.md:10`](../../record/principles.d/DP-tmpprjho.md)
 
 ## Codes that resolve to no document
 
