@@ -5,7 +5,7 @@
 
 `Proposed` and `Deferred` both describe an open question. Neither says *since when*, and that is the signal: a decision proposed last week is pending; the same one a year later was either overdue or settled in code and never written back.
 
-**8 document(s) awaiting a decision.**
+**9 document(s) awaiting a decision.**
 
 | Open since | Status | Code | Cited | Unack. | Title |
 |---|---|---|--:|--:|---|
@@ -17,9 +17,10 @@
 | 2026-08-16 | Proposed | [ADR-054](../../record/decisions.d/ADR-054.md) | 0 | 0 | A scheme can constrain which of its tags combine |
 | 2026-08-16 | Proposed | [ADR-055](../../record/decisions.d/ADR-055.md) | 0 | 0 | A link target is checked from where the prose renders |
 | 2026-08-16 | Proposed | [ADR-057](../../record/decisions.d/ADR-057.md) | 0 | 0 | A scheme whose status never varies is reported |
+| 2026-08-16 | Proposed | [ADR-tmp0btsq](../../record/decisions.d/ADR-tmp0btsq.md) | 0 | 0 | Luria is a truth maintenance system, and should say so |
 
 The citation count is the second axis, and it flips the priority: an old proposal nothing references is a stalled idea worth closing, while an old proposal many files cite is a decision the codebase has already made and hasn't written down.
 
 This count and the reference-status report's will differ, and that is not an off-by-one. That report covers documents something actually **cites** and hasn't acknowledged; this one covers every **undecided** document. One here is missing from there for exactly one of two reasons: nothing cites it, or every citation carries an `inactive-ok` annotation.
 
-**Cited nowhere at all** (6): [ADR-041](../../record/decisions.d/ADR-041.md), [ADR-052](../../record/decisions.d/ADR-052.md), [DP-010](../../record/principles.d/DP-010.md), [ADR-054](../../record/decisions.d/ADR-054.md), [ADR-055](../../record/decisions.d/ADR-055.md), [ADR-057](../../record/decisions.d/ADR-057.md) — these are the cheapest to close, since nothing depends on the answer.
+**Cited nowhere at all** (7): [ADR-041](../../record/decisions.d/ADR-041.md), [ADR-052](../../record/decisions.d/ADR-052.md), [DP-010](../../record/principles.d/DP-010.md), [ADR-054](../../record/decisions.d/ADR-054.md), [ADR-055](../../record/decisions.d/ADR-055.md), [ADR-057](../../record/decisions.d/ADR-057.md), [ADR-tmp0btsq](../../record/decisions.d/ADR-tmp0btsq.md) — these are the cheapest to close, since nothing depends on the answer.

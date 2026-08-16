@@ -9,7 +9,7 @@ Every reference in the record is a claim — "this is why things are the way the
 
 Only an `Active` document is in force. `Proposed` and `Deferred` mean *not in force yet* — an open question, being cited as if it were settled — while `Superseded` and `Rejected` mean *no longer in force*, which is often a perfectly good thing to cite: history, or a rejection worth pointing at. Either way the citation should be deliberate, and this section lists the ones nobody has vouched for yet.
 
-**3 documents cited without acknowledgement.** Not listed: 36 citations someone has already vouched for with an `inactive-ok:` comment at the citing site.
+**3 documents cited without acknowledgement.** Not listed: 34 citations someone has already vouched for with an `inactive-ok:` comment at the citing site.
 
 To vouch for one, put the reason where the citation is — `inactive-ok:` covers its own line and the line below it, `inactive-ok-block:` its paragraph, `inactive-ok-file:` the whole page:
 
@@ -54,9 +54,8 @@ A reference the reader cannot follow: the code names no document in this record.
 **4 codes unaccounted for.** Not listed: 49 mentions marked deliberate with an `unresolved-ok:` comment (same syntax and scopes as `inactive-ok:` above).
 
 
-### ADR-123 — resolves to nothing (4 unmarked sites · 2 other mentions marked deliberate)
+### ADR-123 — resolves to nothing (3 unmarked sites · 2 other mentions marked deliberate)
 
-- [`docs/adopting.md:222`](../adopting.md)
 - [`luria/concretize.py:19`](../../luria/concretize.py)
 - [`record/decisions.d/ADR-049.md:28`](../../record/decisions.d/ADR-049.md)
 - [`record/decisions.d/ADR-049.md:46`](../../record/decisions.d/ADR-049.md)

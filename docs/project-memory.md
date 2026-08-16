@@ -1,211 +1,137 @@
-# Project memory: how a repo thinks
+# Project memory: how a repository thinks
 
-Half the collaborators on a modern codebase are stateless. They arrive with no
-memory, read some pages, work, and vanish. Unwritten knowledge is therefore
-re-derived at cost, per session, forever — the **rediscovery tax**.
+The doctrine behind the layout. What belongs in which layer, and why the layers
+are separate.
 
-Luria's answer is that **the project is its own memory**: the written record
-isn't a description of the collaboration, it *is* the next collaborator's mind,
-reconstituted from disk every session. That makes documentation quality
-compound, and it makes this page the boot sector. An agent file should point
-here; a session that reads only this page should file knowledge in the right
-place on its first try.
+## The problem
 
----
+A repository's memory is not in its documentation. It is in:
 
-## 1. The four layers
+- the arguments people had, and how they came out
+- the alternatives that were rejected, and why
+- the constraints discovered painfully and never written down
+- the things that were tried and failed
 
-| layer | holds | one-line test |
-|---|---|---|
-| [`record/principles.d/`](design-principles.md) | standing **values**, numbered, cited as "[DP-2](design-principles.md#dp-2)" instead of re-argued | *have we re-derived this reasoning more than once?* |
-| [`record/decisions.d/`](decisions/README.md) | a **choice among alternatives** at a point in time, one file each | *did we reject an alternative, or set a constraint a future edit could violate?* |
-| `record/changelog.d/` fragments | **what changed**, operator-facing, terse | *would someone running or using this notice?* |
-| `record/devlog.d/` entries | **how it went** — including failed approaches and wrong theories, which are the reusable part | *will a future debugger want the narrative?* |
+None of that survives in code, and almost none of it survives in a README. It
+lives in review threads, in chat scrollback, and in the heads of whoever was
+there. When those people leave, the project loses the ability to explain itself
+— and then re-litigates the same questions, badly, because the reasoning is gone
+but the conclusions remain.
 
-The links go to the *views* — the generated index, the assembled document —
-because that is where reading starts; the paths name the *sources*, because
-that is where filing happens. The split is the layout's one rule
-([DP-9](design-principles.md#dp-9), [ADR-021](../record/decisions.d/ADR-021.md)):
-`docs/` is the read surface, `record/` is the write surface, and the `.d`
-suffix marks each container you file into.
+An AI agent joining the project has *none* of it, ever. It sees the conclusions
+and nothing about why. That is why this matters more now than it did.
 
-The traffic rules between them are [ADR-001](../record/decisions.d/ADR-001.md): principles
-are durable but **not sacred**; a decision whose *choice* changes is superseded
-by adding a decision rather than by rewriting its body; a principle is added on
-the *second* re-derivation of the same reasoning.
+## Four layers
 
-The top two layers are one file each, in `record/principles.d/` and
-`record/decisions.d/`, with YAML frontmatter — `docs/design-principles.md` and the
-decision index are both **generated** from them
-([ADR-012](../record/decisions.d/ADR-012.md)). A principle's
-frontmatter carries a `version`, because principles are living documents: a
-value first stated about one artifact is a value nobody applies to the next one,
-so the honest move is to widen the wording and bump the version rather than
-write a second principle. It also carries `influenced_by`, naming the decisions
-whose experience produced it — the inverse of the usual direction, and the
-evidence that stops a principle reading as taste.
+Each answers a different question, ages differently, and is written at a
+different moment.
 
-**File in the same contribution as the work.** "Later" is a euphemism for never,
-and a fact filed while its context is loaded costs a paragraph — re-derived
-cold, it costs a session ([DP-8](design-principles.md#dp-8)).
+| Layer | Answers | Ages by | Written |
+|---|---|---|---|
+| **Principles** | what we value | revision | on the second re-derivation |
+| **Decisions** | what we chose, and what we rejected | supersession | when the choice is made |
+| **Changelog** | what changed, for a user | accumulation | per contribution |
+| **Devlog** | what happened, for us | never — it is dated | when something went wrong |
 
----
+They are separate because they age differently. A principle is a living document
+that gets *revised*: widen the wording, bump the version. A decision is a
+snapshot that gets *superseded*: the old one stays, intact and marked, because
+its reasoning is the record of why the new one was needed. Collapsing them
+produces a document that is either permanently stale or permanently
+unattributable.
 
-## 2. Nothing here is immutable — only un-silently revisable
+### Principles
 
-The rule that gets over-read is "never rewrite a decision's body". Read as
-*documents are frozen*, it makes the record brittle: a wrong sentence stays
-wrong because fixing it looks like tampering, and a decision gets retired over a
-bad paragraph.
+Standing values the decisions cite. Written down once so they can be referenced
+by number instead of re-argued.
 
-What the rule is actually protecting is narrower and more useful. **The
-objection is to *silent* revision** — to a record that can quietly change what
-it says it used to think. A change that announces itself is not that. So every
-layer is revisable, and each has a shape for saying so:
+**Add one on the second re-derivation of the same reasoning.** One instance is a
+decision; a pattern is a principle. Writing them in advance produces a list of
+platitudes nobody cites.
 
-| what happened | remedy | how a reader sees it |
-|---|---|---|
-| the **choice** changed | supersede: add a decision, retire the old one | two documents, and when the second replaced the first |
-| a **reason** was wrong, the choice stands | correct in place; bump `version`, add `history:` | one document at `v2`, and what `v1` got wrong |
-| a **value** widened or was reworded | same: `version` + `history:` | the principle, versioned, with what changed |
-| a **consequence** stopped being true | a later document records the new state | both, and the order they happened in |
+Each ends with an **origin note** naming the incident that earned it. This is
+not decoration: a rule whose evidence is missing reads as taste, and taste gets
+re-litigated by the next person with different taste.
 
-The rule of thumb for the ambiguous case: *would a reader who acted on the old
-version have done something different?* If yes, the choice changed — supersede.
-If they would have done the same thing for a worse reason, correct in place.
-That split is [ADR-019](../record/decisions.d/ADR-019.md).
+### Decisions
 
-<!-- inactive-ok-file: ADR-010, ADR-015 — this page names them as the supersession examples -->
+A choice among alternatives at a point in time. Write one when you rejected an
+alternative, chose a constraint, or made something a future edit could silently
+violate.
 
-### Luria's own record is the worked example
+The **alternatives considered** section is the highest-value part and the one
+most often skipped. It is what stops the decision being re-litigated, and what
+tells a future reader whether their new idea is actually new. A decision without
+it is a note.
 
-None of this is hypothetical here. Every row above has already happened in this
-repository, which is the point of the dogfooding clause in
-[ADR-009](../record/decisions.d/ADR-009.md) — a rule the project has never had to apply to
-itself is a rule nobody has tested:
+**One decision, one thing.** A record with two unrelated halves is one nobody
+can cite half of: the second half has no code, so nothing can point at it, and
+superseding the first silently retires reasoning nobody meant to withdraw.
 
-- **Choice changed.** [ADR-010](../record/decisions.d/ADR-010.md) named the project
-  `chester`; [ADR-011](../record/decisions.d/ADR-011.md) replaced it. Later,
-  [ADR-015](../record/decisions.d/ADR-015.md) was superseded by
-  [ADR-016](../record/decisions.d/ADR-016.md) *within hours* — a decision that lasted an
-  afternoon is exactly the kind whose reversal is worth being able to see.
-- **Reason wrong, choice stands.** [ADR-018](../record/decisions.d/ADR-018.md) is at `v2`.
-  It rejected an alternative by citing a decision that didn't apply; the
-  rejection survives on a better argument, and `history:` records both.
-- **Value reworded.** [DP-2](design-principles.md#dp-2) and
-  [DP-3](design-principles.md#dp-3) are both at `v2`. Each was first written
-  about a single artifact and failed to generalize until a second instance
-  forced it — which is the most useful thing either of them teaches, and it
-  only survives because the version is on the document.
-- **Consequence falsified.** [ADR-016](../record/decisions.d/ADR-016.md) states as a
-  consequence that a certain project's decisions are no longer cited anywhere.
-  [ADR-017](../record/decisions.d/ADR-017.md) made that false. [ADR-016](../record/decisions.d/ADR-016.md)'s body stands as
-  written and [ADR-017](../record/decisions.d/ADR-017.md) is where a reader learns the state changed back —
-  a consequence is an observation, and observations expire.
+**Supersede rather than edit** when the *choice* changes. Correct in place when
+only a reason was wrong, and bump the version with a history entry. The rule
+objects to silent revision, not to editing.
 
-The failure mode to avoid is not editing. It is editing **without leaving a
-trace**: a `history:` entry that doesn't say what the previous version claimed
-is a correction wearing an improvement's clothes.
+### Changelog
 
----
+What changed, reader-facing. One **fragment** per contribution, collected into
+the document on a cadence.
 
-## 3. Fragments and generated views
+Fragments exist because a single file every contribution must touch is a lock:
+every branch edits the same lines, every merge conflicts, and the conflict is
+never interesting. Hand out fragments; generate the view.
 
-`CHANGELOG.md`, the decision index, the principles document and similar
-assembled pages are **views**, built from fragments — never hand-edited, and the
-lint refuses hand edits.
+### Devlog
 
-Two kinds, and the difference is *whether the sources survive*
-([ADR-012](../record/decisions.d/ADR-012.md)). A **collected**
-view — the changelog — consumes its fragments: they are deleted, the view
-accumulates, and it can only ever be appended to. A **generated** view — the
-decision index, the principles document, the devlog — is a pure function of
-sources that persist, rebuilt from scratch every time, which is the only reason
-a stale one can be *detected*. Prefer generation where the data is derivable;
-there is then no collection step to forget.
+What actually happened. The failed approach, the trap, the thing that looked
+right for an hour. **The wrong theories are the point** — they are what stops
+the next person spending the same hour.
 
-The devlog is the case where that choice was got wrong first and corrected
-([ADR-020](../record/decisions.d/ADR-020.md)). It looked like a changelog and was collected
-like one, but a changelog entry is a claim about a release and a devlog entry is
-a **dated observation** — true when written, and still true. Consuming it throws
-away the only copy of something that never expires. So the devlog is a
-**journal**: entries are filed at their authoring timestamp
-(`record/devlog.d/2026/08/03/211926.md`) with `luria journal new "A title"`, they
-persist, and `docs/devlog/` is one generated book per month with a contents
-list built from the titles. The timestamp is also the ordering, so what the log
-says happened first is a property of the record rather than of the order the
-branches landed.
+A journal, not a scheme: entries are dated and historical, true about the day
+they were written and never retroactively wrong. Nothing in a devlog is ever
+superseded, because it was never a claim about the present.
 
-The reasoning is [DP-2](design-principles.md#dp-2): a file every contribution must
-append to is a *lock*. Concurrent branches collide in it contentlessly, and
-every hand-merge is a chance to drop someone's work. The fix is structural —
-each contribution owns a file nobody else writes, and the shared artifact is
-assembled on a cadence ([ADR-002](../record/decisions.d/ADR-002.md)).
+This is the layer that survives contact with the future best, and the one most
+often skipped because it feels like admitting things.
 
-Practical consequences: the answer to "which file do I edit?" is always *a
-fragment*; and generated pages can be linted against their sources, so drift is
-caught instead of discovered.
+## The two surfaces
 
----
+```
+record/    WRITE — hand-edited sources, one file per record
+docs/      READ  — indexes, tag pages, collected documents, reports
+```
 
-## 4. The drift doctrine
+A source directory holds things a writer files. A view directory holds pages a
+reader browses. The thing a reader opens is never the thing a writer edits, and
+a stale view is a lint failure rather than a quiet divergence.
 
-The most-earned lesson, [DP-3](design-principles.md#dp-3): **a hand-maintained
-projection of a source of truth will drift** — not as a risk but as a rate. The
-remedy ladder:
+The exception that proves it: a **stub** is the hand-written prose introducing a
+generated index. It lives on the write surface because it is written, and
+renders into the read surface with everything else — which is why a link written
+in a stub resolves from where the *index* lands.
 
-1. **Derive the projection.** Indices are generated from frontmatter. Drift
-   becomes impossible.
-2. **Guard the property, not the list.** Where a projection must stay code, a
-   test asserts the *invariant*, not the contents. A test that asserts "the list
-   contains these names" is the drifting list in a costume.
-3. **Choose the failure polarity** of any hand list that remains, and say so in
-   a comment: *fail-safe* or *fail-loud*. *Fail-stale* — the miss ships as
-   silently wrong behavior — is never acceptable, and it is the naive default.
+## How the record is revised
 
-The enforcement clause is [DP-6](design-principles.md#dp-6): **fire before
-trusting.** Every guard gets one deliberate sabotage run to prove it catches.
-Provisioned is not working.
+Four moves, and picking correctly is most of the skill:
 
----
+**Correct in place.** The choice stands, a reason was wrong. Bump `version:`,
+add a `history:` entry saying what the previous version claimed. Editing is
+fine; *silent* editing is not.
 
-## 5. The collaboration model, in the open
+**Supersede.** The choice changed. Add a new record, mark the old one
+`Superseded — by X`, leave its body intact. The old reasoning is why the new
+decision exists.
 
-**Culture must be compiled** ([DP-5](design-principles.md#dp-5)). A stateless
-collaborator can't be socialized, so a norm that exists only as prose is
-followed probabilistically. Norms that matter get walked up the ladder *prose →
-convention → mechanism → guarantee*. When you find yourself repeating a
-correction, that is the signal to walk the norm up a rung.
+**Reject.** It was wrong, and nothing replaces it. The body stays — a rejected
+record with a good refutation is more valuable than one that was never written.
 
-**No private brains** ([DP-7](design-principles.md#dp-7)). Agent files are legitimate
-as **bootloaders** — pointers to the shared record, plus harness mechanics no
-human needs — never as knowledge stores. The decision test: *would a new human
-hire need this?* Then it belongs in the shared docs, and the agent file links to
-it. This page is what the bootloader points at.
+**Defer.** You cannot settle it yet and something specific will settle it. Say
+what. `Deferred` is honest where `Proposed` forever is not.
 
----
+What is never a move: **deleting a record**, or editing one so it says something
+else. The point of a code is that a citation of it means something stable.
 
-## 6. Leaving knowledge behind: the checklist
+## The one-sentence version
 
-- [ ] `record/changelog.d/` fragment for anything an operator or user would notice.
-- [ ] `luria journal new "…"` if the work *taught* something — and record wrong
-      theories with why they were wrong; the dead ends are what the next
-      debugger needs most.
-- [ ] A decision if you rejected an alternative, chose a constraint, or made
-      something a future edit could silently violate. Cite principles by number.
-- [ ] A principle only on the *second* re-derivation of the same reasoning —
-      and when an existing one nearly covers it, **widen that one and bump its
-      `version`** rather than adding a neighbour it will be confused with.
-- [ ] In code, cite the record inline (`# ADR-004`, `# DP-3`): comments that
-      name their justification survive refactors that arguments don't.
-- [ ] If you built a guard or gate: note the sabotage run that fired it
-      ([DP-6](design-principles.md#dp-6)).
-
-## What keeps this true
-
-- `luria lint` in CI: generated views match their sources, frontmatter conforms,
-  references are followable.
-- Deterministic assembly — same inputs, same view, so drift between record and
-  view is mechanically checkable.
-- The reports ([ADR-035](../record/decisions.d/ADR-035.md)):
-  what cites a retired decision, and what has been undecided for how long.
+Write down what you decided and why; cite it where it does work; and when you
+change your mind, let the machine tell you what that costs.

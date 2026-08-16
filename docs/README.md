@@ -1,28 +1,47 @@
-# Luria docs
+# Luria documentation
 
-- [Project memory: how a repo thinks](project-memory.md) — the doctrine. Start
-  here; this is what an agent file should point at.
-- [Design principles](design-principles.md) — the standing values, numbered and
-  citable.
-- [Decisions](decisions/README.md) — the choices, with their alternatives.
-- [Configuration](configuration.md) — every `luria.toml` key, generated from
-  the config schema itself. Also the answer to "can it hold something other
-  than decisions?": schemes, fragment directories, journals and remotes are
-  families you name, and the record this repo keeps is one instantiation.
-- [Comment directives](directives.md) — the `inactive-ok` / `unexempt`
-  vocabulary and its scope rules.
-- [Development log](devlog/README.md) — the narrative: failed approaches, root
-  causes, and the traps worth not rediscovering. One book per month, generated
-  from the dated entries in `record/devlog.d/`.
-- Status reports — what the README's badges count, one page each:
-  [documents awaiting a decision](reports/pending-decisions.md) and
-  [retired documents still cited](reports/reference-status.md).
-- [Adopting Luria](adopting.md) — putting the record into a project that hasn't
-  got one, and [publishing it](adopting.md#publishing-the-record) as a site
-  with a citation graph.
+Luria is a **truth maintenance system for a repository's prose**. Records hold
+what you decided; citations link them; and retracting one propagates to
+everything that rested on it, as findings you can act on.
 
-Everything in this directory is for *reading* — the prose pages are authored,
-and the decisions index, principles document, devlog books and status reports
-are generated.
-Filing happens in [`record/`](../record/), whose `.d`-suffixed containers hold
-the sources ([ADR-021](../record/decisions.d/ADR-021.md)).
+If you are here to use it, go in this order.
+
+## Start
+
+| | |
+|---|---|
+| [Quickstart](quickstart.md) | fifteen minutes, ending in a real finding |
+| [Concepts](concepts.md) | the model — records, status, citations, propagation — and the prior art |
+| [Adopting](adopting.md) | bringing luria to a repository that already has history |
+
+## Reference
+
+| | |
+|---|---|
+| [CLI](cli.md) | every command, what it is for, and the CI wiring |
+| [Configuration](configuration.md) | every `luria.toml` key, generated from the schema |
+| [Directives](directives.md) | the acknowledgement vocabulary, and how to choose |
+| [Schemes](schemes.md) | designing record families beyond decisions |
+| [Python API](api.md) | using luria as a library, and adding your own checks |
+
+## Doctrine
+
+| | |
+|---|---|
+| [Project memory](project-memory.md) | the four layers, and what belongs in each |
+| [Design principles](design-principles.md) | the standing values, cited by number |
+
+## This project's own record
+
+Luria is maintained with luria, so these are both documentation and worked
+examples.
+
+| | |
+|---|---|
+| [Decisions](decisions/README.md) | every choice, its alternatives, its status |
+| [Devlog](devlog/README.md) | what went wrong, and the theories that failed |
+| [Pending decisions](reports/pending-decisions.md) | what is undecided, and since when |
+| [Reference status](reports/reference-status.md) | what cites something not in force |
+
+The reports are sometimes non-empty on purpose. A project whose own findings
+always read clean is one whose findings are not wired to anything.

@@ -1,21 +1,40 @@
-# Comment directives
+# Directives
 
-Several checks take instructions from the prose they check. They share one
-parser, one shape, and one scope rule
-([ADR-008](../record/decisions.d/ADR-008.md)).
+An acknowledgement is a comment that says *I know, and I mean it.*
+
+Findings exist to be resolved, and most of them are resolved by repair. Some are
+not: a record whose whole job is to name what was abandoned cites retired
+material correctly, and always will. Deleting the citation would be wrong;
+un-retiring the target would be worse. So there is a third answer.
+
+```markdown
+<!-- inactive-ok: ADR-012 — the decision this one replaces -->
+```
+
+This is what makes propagation survivable. In one project's first retraction
+wave, seventy findings appeared and forty-two of them were correct citations of
+retired material. Without a way to say so, the only route to a green build would
+have been to un-retire things — which is the one move that must never be how a
+build goes green.
+
+## The shape
 
 ```
 <name>[-block|-file]: <args> — <reason>
 ```
 
 The directive must **open its comment**, `# noqa`-style, and is read only from
-real comments: HTML comments in markdown (outside code), `COMMENT` tokens in
+real comments: HTML comments in markdown outside code, `COMMENT` tokens in
 Python, text after a comment marker elsewhere. An example inside a fence or a
-docstring is not a comment and does not fire — which is deliberate, and was
-learned four separate times.
+docstring is not a comment and does not fire — deliberate, and learned four
+separate times.
 
 **A directive is one line.** Arguments stop at the newline, so a comment that
 wraps loses everything after the break. Write a long list on one long line.
+
+**Write the reason.** It is not decoration. A suppression with no reason is
+indistinguishable from a suppression nobody thought about, and the next person
+cannot tell whether removing it is safe.
 
 ## Scope
 
@@ -32,191 +51,144 @@ so `-block` there means the block it *introduces* — the next one. That is the
 reading of "block", not an exception to it. A fenced code block counts as one
 block even when it contains blank lines.
 
-## `inactive-ok` — this reference is deliberate
+---
 
-Silences one reference to a retired (non-`Active`) document in the
-reference-status report ([ADR-035](../record/decisions.d/ADR-035.md)).
+## `inactive-ok` — this reference to a retired document is deliberate
 
-```
-<!-- inactive-ok: ADR-012 — the decision this one replaced -->
-<!-- inactive-ok-block: ADR-012 — every mention in this paragraph -->
+The main one. Silences a citation of a document that is not in force.
+
+```markdown
+<!-- inactive-ok: ADR-012 — the decision this one replaces -->
+<!-- inactive-ok-block: ADR-012, ADR-019 — every mention in this paragraph -->
 <!-- inactive-ok-file: ADR-012 — this page is that history -->
-// inactive-ok: ADR-028 — proposed, but this is what shipped
 ```
 
-Write the **full prefixed code**. A bare number is reported as a malformed
-annotation rather than assumed to be a decision, which is what lets one
-vocabulary serve more than one reference scheme
-([ADR-006](../record/decisions.d/ADR-006.md)).
+The annotation is **stale when it stops applying** — when the target comes back
+into force, or the citation goes away. A suppression that has outlived its
+reason is reported, which is the property that keeps a suppression from becoming
+a silence.
 
-Acknowledgements are **counted** in the report, not hidden — and one that stops
-applying (the document went `Active`, the reference moved) is reported in its
-own right. A suppression that rots silently is the thing acknowledgements exist
-to prevent.
+Foreign codes are never status-checked (luria cannot know what another
+repository has retired), so a code inside a URL needs no annotation. That, rather
+than a bare code, is how a foreign document should be named.
 
-## `unexempt` — lint this region anyway
+## `unresolved-ok` — this code deliberately resolves to nothing
 
-The inverse: put a region the linter skips by default back under it. Code blocks
-are exempt from the hyperlink lint because code is quoted, not asserted — but a
-snippet in the docs can be quasi-prose, citing decisions a reader should be able
-to follow.
+For illustrative codes: an example in documentation, a stand-in in a template,
+a number in a docstring that must not become a link.
 
-```
-<!-- unexempt-block: codeblock — the snippet below cites real decisions -->
-
-<!-- this fence is now linted -->
+```markdown
+<!-- unresolved-ok-file: ADR-919, ADR-157 — illustrative codes in the examples above -->
 ```
 
-Regions: `codeblock`, `inline-code`. An unknown region is reported, with the
-known vocabulary named.
+Prefer the alternative where you can. A registered `FX` remote prefix gives you
+fixture codes that *resolve by construction*, so a template can carry examples
+without an annotation per code, and without stealing a number from a live
+sequence.
 
-**The caveat is inherent, not a bug.** Markdown inside a fence renders
-literally, so the link the lint then demands shows as `[ADR-004](…)` in the
-sample. That is exactly the trade this directive exists to let an author make,
-per block, rather than being settled once for a whole corpus.
-
-## `unresolved-ok` — this code names nothing on purpose
-
-A cited code that resolves to no document is reported
-([ADR-014](../record/decisions.d/ADR-014.md)): it is a typo, another project's decision, or
-an illustrative code in an example, and only a human can tell which. This
-retires the third kind.
-
-```
-<!-- unresolved-ok: ADR-053 — a strata-g code, quoted as the worked example -->
-# unresolved-ok-file: ADR-019 ADR-163 — fixture codes, deliberately not real
-```
-
-It is `inactive-ok` with **the validity check inverted**, which is the part
-worth knowing. `inactive-ok` is malformed when it names a code that doesn't
-resolve — it would excuse nothing. `unresolved-ok` is malformed when it names
-one that *does*. Either way the annotation reports itself the day it stops
-applying, which is the property that keeps a suppression from becoming a
-silence.
-
-A code inside a URL is never a citation, so linking out to another project's
-decision needs no annotation at all — and that, rather than a bare code, is
-how a foreign document should be named.
+Inverted validity, like the others: the annotation is stale when the code starts
+resolving — which is exactly what happens the day somebody mints the number your
+example was borrowing.
 
 ## `url-ok` — this URL is deliberately hand-written
 
-A link whose label is a composed foreign code normally gets its URL
-*constructed* — from the remote's config, the lockfile, or the code-only
-convention ([ADR-016](../record/decisions.d/ADR-016.md)). When the
-construction cannot be right — the remote's principles are sections of one
-document, say, so there is no file to point at — the URL is written by hand,
-and the hand-written target is a projection frozen at writing time
-([DP-3](design-principles.md#dp-3)): if the remote later adopts a convention
-or the lockfile learns the real filename, nothing updates it. So each one is
-reported until acknowledged:
+A link whose label is a foreign code normally has its URL *constructed* from the
+remote's config. When construction cannot be right — the remote's principles are
+sections of one document, say, so there is no file to point at — the URL is
+written by hand, and a hand-written URL is frozen at writing time.
 
-```
+```markdown
 <!-- url-ok-block: SG-DP-18 — strata-g's principles are sections of one document -->
 
 [SG-DP-18](https://github.com/dmarx/strata-g/blob/main/docs/design-principles.md#18-the-affordance-is-the-contract)
 ```
 
-Same inverted validity as `unresolved-ok`: the annotation is stale when the
-link it covers *matches* the construction (or is gone), so a suppression
-reports itself the day it stops applying. A quoted link in backticks is a
-specimen, not a citation, and needs no annotation.
-
-Foreign codes only, deliberately ([ADR-022](../record/decisions.d/ADR-022.md)):
-a foreign code has exactly one constructed URL, so "differs" means something,
-while a local code has a family of legitimate targets and the same check would
-flag correct links until acknowledging became reflex. A project that wants
-stable absolute citations to its own record registers itself as a remote — as
-Luria does with `LU` — and gets the check instead of an exemption from it.
+Stale when the link starts matching what construction would produce.
 
 ## `target-ok` — this relative target deliberately resolves to nothing
 
-Every other directive here is about a **code**. This one is about the **path**
-wrapped around it, which is a different question and until recently an unasked
-one: `[ADR-035](../../record/decisions.d/ADR-035.md)` can name a document that
-exists while the path goes nowhere, and every code check passes.
+Every directive above is about a **code**. This one is about the **path** around
+it, which is a different question: `[ADR-035](../../record/decisions.d/ADR-035.md)`
+can name a document that exists while the path goes nowhere.
 
-The target is resolved from where the prose **renders**, not from where the
-file sits — a journal entry lives five directories deep in
-`record/reading.d/yyyy/mm/dd/` and is assembled into `docs/reading/`, so the
-two frames give different answers and only one of them is what a reader
-follows. This is the machine-checked half of the rule that says never
-hand-write a target: write the bare code and let `luria link --fix` spell it.
+Targets are resolved from where the prose **renders**, not from where the file
+sits. A journal entry five directories deep renders into the journal's output;
+the two frames give different answers, and only one is what a reader follows.
+This is the machine-checked half of *never hand-write a target*.
 
-A hand-written target is sometimes right anyway — a link into a build output
-that is generated but not committed, a path a downstream consumer creates — so
-it is reported until acknowledged, never an error on its own:
-
-```
+```markdown
 <!-- target-ok: build/report.html — written by CI, not committed -->
 
 The [coverage report](build/report.html) is published per run.
 ```
 
-The argument is the target as written, and the annotation is stale when the
-link it covers starts resolving (or goes away). Links to URLs, to root-anchored
-paths, to a heading in the same page, and targets carrying regex or
-format-template metacharacters are not paths this repo can check, so none is
-reported. A quoted link in backticks is a specimen, not a citation.
+Not checked at all: URLs, protocol-relative and root-anchored paths, same-page
+anchors, and targets carrying regex or format-template metacharacters — a
+`uid = "(\d{4})[.:](\d{4,5})"` in a config example is link-shaped by accident.
 
-Promote the class with `fail_on = ["broken-targets"]` once a project's targets
-are clean. The default is a warning because a wrong path is always wrong but is
-not mechanically fixable the way a bare code is
-([ADR-035](../record/decisions.d/ADR-035.md)).
+## `broad-ok` — this project noun is another sense of the word
 
-## `unlinted` — this document opts out of reference checking
+Only fires if you have supplied a vocabulary *and* marked a scheme
+`titles_generalize`. A principle stated about the artifact it was first noticed
+on is a principle nobody applies to the next artifact, so a transferable
+document's title is checked against your own local nouns.
 
-Every directive above is code-scoped: it excuses **one code**, and the
-`-file` suffix only widens where the excuse applies. This one is deliberately
-blunt — the whole document leaves the reference machinery (the bare-reference
-lint, wikilink handling, and the reference-status scan):
-
-```
-<!-- unlinted-file: — vendored page; its references are quotes, not claims -->
+```markdown
+<!-- broad-ok: overlay — a verb here, not the UI noun -->
 ```
 
-It is **file-scoped only**, because a narrower "don't read references here"
-already exists — that is what quoting a code in backticks does. A bare
-`unlinted:` or `unlinted-block:` governs nothing and is reported as such.
+## `unexempt` — check this region after all
 
-The price of bluntness is visibility: files carrying this directive are
-**counted and listed** in the
-[reference-status report](reports/reference-status.md), the same bargain an
-acknowledgement makes. The reports exist to converge on what nobody has
-considered, and a whole-file exemption is the one suppression they cannot
-converge past — so it must never be invisible.
+The inverse. Code spans and fenced blocks are skipped by the reference rules,
+because markdown showing a link is not writing one. Occasionally a fenced block
+genuinely does cite:
 
-Everything that isn't reference checking still applies: frontmatter, titles,
-the generated-view staleness gate, a journal's path-vs-`created:` agreement.
-
-## Fixture codes
-
-A document code used **as an example** should never come from the real
-sequence: the sequence eventually arrives, and the day it does, every
-specimen starts resolving and every `unresolved-ok` that excused one goes
-stale at once (this repository learned that when [ADR-032](../record/decisions.d/ADR-032.md) landed).
-
-So the `FX` prefix is registered as a remote whose every code resolves to
-this section:
-
-```toml
-[luria.remotes.FX]
-name = "fixtures"
-url  = "https://github.com/dmarx/luria/blob/main/docs/directives.md#fixture-codes"
+```markdown
+<!-- unexempt-block: codeblock -->
 ```
 
-Write `FX-ADR-032` or `FX-DP-9` in prose, tests or examples and it is a
-first-class reference — `luria link --fix` links it here, nothing reports it
-as dangling, and it can never collide with a real decision because it is not
-in the sequence. No directive needed, ever.
+Regions: `codeblock`, `inline-code`.
 
-One boundary: **directive arguments name local codes**, so `inactive-ok:`
-and `unresolved-ok:` still take `ADR-…`, never `FX-ADR-…` — the prefix is
-for *references*, not for the vocabulary that governs them.
+## `unlinted` — this document opts out entirely
 
-## Adding a sixth directive
+Deliberately blunt, and file-scoped by design. The whole document leaves the
+reference machinery: the bare-reference lint, wikilink handling, the status
+scan.
 
-A name, not a new syntax: parse it out of `luria.directives.find(...)`, validate
-its arguments with `directives.problems(...)`, and report the ones that no
-longer apply. The scope rules and the comment handling come free —
-`unresolved-ok` needed one inverted predicate, `url-ok` one comparison, and
-nothing else.
+```markdown
+<!-- unlinted-file: vendored from upstream; codes here are theirs, not ours -->
+```
+
+For a fixture-heavy or vendored page where a directive per code is maintenance
+without information. The price of bluntness is visibility: the reference report
+counts the files carrying it, so an exemption nobody sees is not how a report
+stops being a complete account.
+
+---
+
+## Wikilinks
+
+Not a directive, but the same idea from the other side. `[[ADR-012]]` is you
+asserting *this is a reference*, so both failure modes are violations with
+different remedies:
+
+- resolvable, not yet linked → run `luria link --fix`
+- unresolvable → an error the fixer cannot clear, because the request was
+  explicit. Fix the code or remove the brackets.
+
+`[[ADR-012|the caching decision]]` gives prose as the label. Still the fixer's
+job.
+
+## Choosing
+
+| Situation | Answer |
+|---|---|
+| the citation is wrong now | repair it — this is most findings |
+| the citation is *about* the retirement | `inactive-ok:` with the reason |
+| a code that must never resolve | `FX` fixture prefix; `unresolved-ok:` if you can't |
+| a path CI creates | `target-ok:` |
+| a whole vendored page | `unlinted-file:` |
+| you have not decided yet | leave it listed; a warning is not a failure |
+
+The last row is a real answer. An undecided finding belongs in the report and in
+the badge count, which is where undecided things go.
