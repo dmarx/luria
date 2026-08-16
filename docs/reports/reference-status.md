@@ -44,7 +44,7 @@ A scheme declares which statuses it uses and what they mean
 
 2 citations in 2 files await a look.
 
-- [`record/decisions.d/ADR-tmpkpjjo.md:73`](../../record/decisions.d/ADR-tmpkpjjo.md)
+- [`record/decisions.d/ADR-057.md:75`](../../record/decisions.d/ADR-057.md)
 - [`record/principles.d/DP-tmpprjho.md:10`](../../record/principles.d/DP-tmpprjho.md)
 
 ## Codes that resolve to no document
