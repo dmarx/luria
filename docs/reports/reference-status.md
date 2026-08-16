@@ -9,7 +9,7 @@ Every reference in the record is a claim — "this is why things are the way the
 
 Only an `Active` document is in force. `Proposed` and `Deferred` mean *not in force yet* — an open question, being cited as if it were settled — while `Superseded` and `Rejected` mean *no longer in force*, which is often a perfectly good thing to cite: history, or a rejection worth pointing at. Either way the citation should be deliberate, and this section lists the ones nobody has vouched for yet.
 
-**3 documents cited without acknowledgement.** Not listed: 34 citations someone has already vouched for with an `inactive-ok:` comment at the citing site.
+**4 documents cited without acknowledgement.** Not listed: 34 citations someone has already vouched for with an `inactive-ok:` comment at the citing site.
 
 To vouch for one, put the reason where the citation is — `inactive-ok:` covers its own line and the line below it, `inactive-ok-block:` its paragraph, `inactive-ok-file:` the whole page:
 
@@ -46,6 +46,14 @@ A scheme declares which statuses it uses and what they mean
 
 - [`record/decisions.d/ADR-057.md:75`](../../record/decisions.d/ADR-057.md)
 - [`record/principles.d/DP-012.md:12`](../../record/principles.d/DP-012.md)
+
+### [ADR-058](../../record/decisions.d/ADR-058.md) — Proposed
+
+Luria is a truth maintenance system, and should say so
+
+1 citation in 1 file awaits a look.
+
+- [`README.md:58`](../../README.md)
 
 ## Codes that resolve to no document
 
