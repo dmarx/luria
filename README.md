@@ -128,6 +128,7 @@ engine, pointed at a body of ideas instead of a codebase.
 | [Configuration](docs/configuration.md) | every `luria.toml` key, generated from the schema |
 | [Directives](docs/directives.md) | the acknowledgement vocabulary |
 | [Adopting](docs/adopting.md) | bringing luria to a repo that already has history |
+| [In practice](docs/in-practice.md) | three real records compared, and what drove each choice |
 | [Python API](docs/api.md) | using it as a library |
 | [Project memory](docs/project-memory.md) | the doctrine: four layers, and what goes where |
 | [Contributing](CONTRIBUTING.md) | how this repo works on itself |

@@ -13,6 +13,7 @@ If you are here to use it, go in this order.
 | [Quickstart](quickstart.md) | fifteen minutes, ending in a real finding |
 | [Concepts](concepts.md) | the model — records, status, citations, propagation — and the prior art |
 | [Adopting](adopting.md) | bringing luria to a repository that already has history |
+| [In practice](in-practice.md) | three real records compared — what varied, and what drove it |
 
 ## Reference
 

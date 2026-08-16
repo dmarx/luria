@@ -11,6 +11,9 @@
 - `docs/cli.md` — every command, and the CI wiring including the version-split
   trap.
 - `docs/api.md` — the Python surface, with stability marked.
+- `docs/in-practice.md` — the three existing records compared: luria itself,
+  strata-g, and a corpus project. What varied, what drove each choice, and
+  the short list of things all three do the same way.
 - `CONTRIBUTING.md`.
 
 ### Changed
