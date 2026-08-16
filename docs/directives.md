@@ -1,7 +1,8 @@
 # Comment directives
 
-Three checks take instructions from the prose they check. They share one parser,
-one shape, and one scope rule ([ADR-008](../record/decisions.d/ADR-008.md)).
+Several checks take instructions from the prose they check. They share one
+parser, one shape, and one scope rule
+([ADR-008](../record/decisions.d/ADR-008.md)).
 
 ```
 <name>[-block|-file]: <args> — <reason>
@@ -126,6 +127,41 @@ while a local code has a family of legitimate targets and the same check would
 flag correct links until acknowledging became reflex. A project that wants
 stable absolute citations to its own record registers itself as a remote — as
 Luria does with `LU` — and gets the check instead of an exemption from it.
+
+## `target-ok` — this relative target deliberately resolves to nothing
+
+Every other directive here is about a **code**. This one is about the **path**
+wrapped around it, which is a different question and until recently an unasked
+one: `[ADR-035](../../record/decisions.d/ADR-035.md)` can name a document that
+exists while the path goes nowhere, and every code check passes.
+
+The target is resolved from where the prose **renders**, not from where the
+file sits — a journal entry lives five directories deep in
+`record/reading.d/yyyy/mm/dd/` and is assembled into `docs/reading/`, so the
+two frames give different answers and only one of them is what a reader
+follows. This is the machine-checked half of the rule that says never
+hand-write a target: write the bare code and let `luria link --fix` spell it.
+
+A hand-written target is sometimes right anyway — a link into a build output
+that is generated but not committed, a path a downstream consumer creates — so
+it is reported until acknowledged, never an error on its own:
+
+```
+<!-- target-ok: build/report.html — written by CI, not committed -->
+
+The [coverage report](build/report.html) is published per run.
+```
+
+The argument is the target as written, and the annotation is stale when the
+link it covers starts resolving (or goes away). Links to URLs, to root-anchored
+paths, to a heading in the same page, and targets carrying regex or
+format-template metacharacters are not paths this repo can check, so none is
+reported. A quoted link in backticks is a specimen, not a citation.
+
+Promote the class with `fail_on = ["broken-targets"]` once a project's targets
+are clean. The default is a warning because a wrong path is always wrong but is
+not mechanically fixable the way a bare code is
+([ADR-035](../record/decisions.d/ADR-035.md)).
 
 ## `unlinted` — this document opts out of reference checking
 
