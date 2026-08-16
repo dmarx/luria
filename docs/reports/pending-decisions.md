@@ -5,7 +5,7 @@
 
 `Proposed` and `Deferred` both describe an open question. Neither says *since when*, and that is the signal: a decision proposed last week is pending; the same one a year later was either overdue or settled in code and never written back.
 
-**4 document(s) awaiting a decision.**
+**5 document(s) awaiting a decision.**
 
 | Open since | Status | Code | Cited | Unack. | Title |
 |---|---|---|--:|--:|---|
@@ -13,9 +13,10 @@
 | 2026-08-08 | Proposed | [ADR-052](../../record/decisions.d/ADR-052.md) | 0 | 0 | The draft signal: a contribution that asks for a verdict, not a review |
 | 2026-08-08 | Proposed | [DP-010](../../record/principles.d/DP-010.md) | 0 | 0 | Defaults follow the failure mode: guards opt out, disclosures opt in |
 | 2026-08-16 | Proposed | [ADR-053](../../record/decisions.d/ADR-053.md) | 4 | 4 | The published version is derived from the release tag |
+| 2026-08-16 | Proposed | [ADR-tmpl1j8m](../../record/decisions.d/ADR-tmpl1j8m.md) | 0 | 0 | A scheme can constrain which of its tags combine |
 
 The citation count is the second axis, and it flips the priority: an old proposal nothing references is a stalled idea worth closing, while an old proposal many files cite is a decision the codebase has already made and hasn't written down.
 
 This count and the reference-status report's will differ, and that is not an off-by-one. That report covers documents something actually **cites** and hasn't acknowledged; this one covers every **undecided** document. One here is missing from there for exactly one of two reasons: nothing cites it, or every citation carries an `inactive-ok` annotation.
 
-**Cited nowhere at all** (3): [ADR-041](../../record/decisions.d/ADR-041.md), [ADR-052](../../record/decisions.d/ADR-052.md), [DP-010](../../record/principles.d/DP-010.md) — these are the cheapest to close, since nothing depends on the answer.
+**Cited nowhere at all** (4): [ADR-041](../../record/decisions.d/ADR-041.md), [ADR-052](../../record/decisions.d/ADR-052.md), [DP-010](../../record/principles.d/DP-010.md), [ADR-tmpl1j8m](../../record/decisions.d/ADR-tmpl1j8m.md) — these are the cheapest to close, since nothing depends on the answer.
