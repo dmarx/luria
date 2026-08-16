@@ -135,3 +135,82 @@ def test_an_undeclared_status_is_not_reported_when_nothing_is_declared(
     _value(tmp_path, 1, "Rejected")
     assert not statuses.undeclared(_scheme(), "Rejected")
     assert statuses.declared(_scheme()) == {}
+
+
+# ── The inert-status report (#104) ──────────────────────────────────────
+
+def _values(root: Path, n: int, status: str = "Active") -> None:
+    for i in range(1, n + 1):
+        _value(root, i, status)
+
+
+def test_a_uniform_status_field_is_reported(tmp_path, monkeypatch):
+    """The finding: nothing here has ever been judged.
+
+    Worth catching because `active` is what `retired-citations` reads. A scheme
+    where nothing is ever retired has an enforcement mechanism that cannot
+    fire, and its green build says only that no one has looked."""
+    _project(tmp_path, monkeypatch)
+    _values(tmp_path, 12)
+    hit = statuses.uniform(_scheme())
+    assert hit == ("Active", 12)
+    assert "inert-status" in {n for n, _, _ in lint.status_sections()}
+
+
+def test_one_dissenting_record_clears_it(tmp_path, monkeypatch):
+    """The distinction is live as soon as anything varies. This is not a rule
+    about proportion — a corpus whose claims all survive is legitimate — so a
+    single retirement is enough to say a judgment is being made."""
+    _project(tmp_path, monkeypatch)
+    _values(tmp_path, 12)
+    _value(tmp_path, 12, "Rejected")
+    assert statuses.uniform(_scheme()) is None
+
+
+def test_a_trailing_note_does_not_look_like_variety(tmp_path, monkeypatch):
+    """`Superseded — by X` and `Superseded — by Y` are one status wearing two
+    strings. Comparing whole values would call that variety and clear a scheme
+    that has none."""
+    _project(tmp_path, monkeypatch)
+    for i in range(1, 13):
+        _value(tmp_path, i, f"Active — since revision {i}")
+    assert statuses.uniform(_scheme()) == ("Active", 12)
+
+
+def test_a_young_scheme_is_not_reported(tmp_path, monkeypatch):
+    """Below the floor, uniformity is evidence of nothing. Three records all in
+    force is a scheme someone started last week."""
+    _project(tmp_path, monkeypatch)
+    _values(tmp_path, 3)
+    assert statuses.uniform(_scheme()) is None
+
+
+def test_a_scheme_declaring_one_status_has_said_so_on_purpose(tmp_path,
+                                                              monkeypatch):
+    """The interesting interaction with #102. A project that declares exactly
+    one status has answered this question already, and reporting it would be
+    telling it off for doing the configuration right."""
+    _project(tmp_path, monkeypatch)
+    _declare(tmp_path, "Active:\n  blurb: in force\n")
+    _values(tmp_path, 12)
+    assert statuses.uniform(_scheme()) is None
+
+
+def test_a_document_rendered_scheme_is_exempt(tmp_path, monkeypatch):
+    """A design-principles page where every principle is in force is the
+    expected state, not a smell — principles are superseded by revision, and
+    `version:` carries that."""
+    _project(tmp_path, monkeypatch)
+    (tmp_path / "luria.toml").write_text(
+        '[luria]\nissue_url = "https://example.test/issues/{n}"\n'
+        '[luria.schemes.VP]\n'
+        'dir = "record/values.d"\n'
+        'render = "document"\n'
+        'output = "docs/values.md"\n')
+    config.reset()
+    _values(tmp_path, 12)
+    assert statuses.uniform(_scheme()) is None
+
+
+def test_the_class_is_failable(tmp_path, monkeypatch):
+    assert "inert-status" in lint.FAILABLE

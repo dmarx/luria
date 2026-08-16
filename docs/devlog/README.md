@@ -6,6 +6,7 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 
 ## Currently — [August 2026](2026-08.md)
 
+- [16 Aug 19:02 — The field was green because nobody was judging](2026-08.md#20260816190210)
 - [16 Aug 18:24 — The five words held; what they mean drifted](2026-08.md#20260816182420)
 - [16 Aug 16:51 — Ninety-nine dead links behind eleven clean lints](2026-08.md#20260816165105)
 - [12 Aug 06:02 — Dogfooding merge allocation, and finishing rung one](2026-08.md#20260812060240)
@@ -45,8 +46,8 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 
 ## All books
 
-36 entries across 1 book, newest first.
+37 entries across 1 book, newest first.
 
 | Book | Entries | First | Last |
 |---|--:|---|---|
-| [2026-08](2026-08.md) | 36 | 2026-08-03 | 2026-08-16 |
+| [2026-08](2026-08.md) | 37 | 2026-08-03 | 2026-08-16 |

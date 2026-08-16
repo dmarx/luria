@@ -107,3 +107,50 @@ def legend(scheme) -> str:
     return ("What the status column means in this scheme — the words are "
             "luria's, the meanings are this project's.\n\n"
             "| Status | | Means |\n|---|---|---|\n" + "\n".join(rows) + "\n")
+
+
+# Below the floor a uniform status is not evidence of anything: three records
+# that all happen to be in force is a young scheme, not an unused field.
+FLOOR = 10
+
+
+def uniform(scheme) -> tuple[str, int] | None:
+    """`(status, count)` when every record in the scheme shares one status.
+
+    A status field where every record agrees is indistinguishable from no
+    status field, and the difference matters because other machinery reads it:
+    `active` decides what counts as retired, and `retired-citations` fires off
+    that. A scheme in this state has an enforcement mechanism that cannot fire,
+    and the build is green *because* nothing is being judged (#104).
+
+    `None` below the floor, for a scheme rendered as one document (a
+    design-principles page where everything is in force is the expected state,
+    not a smell), and — the case worth stating — when the scheme declares a
+    vocabulary of exactly one status, which is a project saying so on purpose.
+    """
+    from . import adr_index
+    if scheme.render == "document":
+        return None
+    vocab = declared(scheme)
+    if len(vocab) == 1:
+        return None
+    found: list[str] = []
+    for path in [*scheme.documents().values(), *scheme.temp_documents().values()]:
+        meta, _ = adr_index.parse_frontmatter(path.read_text())
+        status = str((meta or {}).get("status", "")).strip()
+        if status:
+            found.append(status.split(" — ")[0].strip())
+    if len(found) < FLOOR or len(set(found)) != 1:
+        return None
+    return found[0], len(found)
+
+
+def uniform_rows() -> list[str]:
+    """One line per scheme whose status field carries no information."""
+    from .config import current
+    rows = []
+    for prefix, scheme in current().schemes.items():
+        if hit := uniform(scheme):
+            status, count = hit
+            rows.append(f"{prefix}: {count}/{count} at `{status}`")
+    return rows
