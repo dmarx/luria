@@ -9,7 +9,7 @@ Every reference in the record is a claim — "this is why things are the way the
 
 Only an `Active` document is in force. `Proposed` and `Deferred` mean *not in force yet* — an open question, being cited as if it were settled — while `Superseded` and `Rejected` mean *no longer in force*, which is often a perfectly good thing to cite: history, or a rejection worth pointing at. Either way the citation should be deliberate, and this section lists the ones nobody has vouched for yet.
 
-**1 document cited without acknowledgement.** Not listed: 36 citations someone has already vouched for with an `inactive-ok:` comment at the citing site.
+**2 documents cited without acknowledgement.** Not listed: 36 citations someone has already vouched for with an `inactive-ok:` comment at the citing site.
 
 To vouch for one, put the reason where the citation is — `inactive-ok:` covers its own line and the line below it, `inactive-ok-block:` its paragraph, `inactive-ok-file:` the whole page:
 
@@ -29,19 +29,37 @@ Document status is reported, not enforced
 - [`tests/test_prose_frontmatter.py:31`](../../tests/test_prose_frontmatter.py)
 - [`tests/test_prose_frontmatter.py:41`](../../tests/test_prose_frontmatter.py)
 
+### [ADR-053](../../record/decisions.d/ADR-053.md) — Proposed
+
+The published version is derived from the release tag
+
+4 citations in 2 files await a look.
+
+- [`record/decisions.d/ADR-014.md:89`](../../record/decisions.d/ADR-014.md)
+- [`tests/test_adr_index.py:28`](../../tests/test_adr_index.py)
+- [`tests/test_adr_index.py:29`](../../tests/test_adr_index.py)
+- [`tests/test_adr_index.py:46`](../../tests/test_adr_index.py)
+
 ## Codes that resolve to no document
 
 A reference the reader cannot follow: the code names no document in this record. A typo, a number carried in from another project, and an illustrative code in an example all look identical from here — telling them apart takes a human, so this is a report, not an error.
 
-**4 codes unaccounted for.** Not listed: 49 mentions marked deliberate with an `unresolved-ok:` comment (same syntax and scopes as `inactive-ok:` above).
+**9 codes unaccounted for.** Not listed: 37 mentions marked deliberate with an `unresolved-ok:` comment (same syntax and scopes as `inactive-ok:` above).
 
 
-### ADR-123 — resolves to nothing (4 unmarked sites · 2 other mentions marked deliberate)
+### ADR-123 — resolves to nothing (6 unmarked sites)
 
 - [`docs/adopting.md:189`](../adopting.md)
 - [`luria/concretize.py:19`](../../luria/concretize.py)
+- [`record/decisions.d/ADR-014.md:49`](../../record/decisions.d/ADR-014.md)
+- [`record/decisions.d/ADR-014.md:51`](../../record/decisions.d/ADR-014.md)
 - [`record/decisions.d/ADR-049.md:28`](../../record/decisions.d/ADR-049.md)
 - [`record/decisions.d/ADR-049.md:46`](../../record/decisions.d/ADR-049.md)
+
+### ADR-404 — resolves to nothing (2 unmarked sites)
+
+- [`tests/test_adr_index.py:170`](../../tests/test_adr_index.py)
+- [`tests/test_adr_index.py:172`](../../tests/test_adr_index.py)
 
 ### DP-017 — resolves to nothing (2 unmarked sites · 2 other mentions marked deliberate)
 
@@ -51,6 +69,22 @@ A reference the reader cannot follow: the code names no document in this record.
 ### ADR-000 — resolves to nothing (1 unmarked site)
 
 - [`tests/test_concretize.py:205`](../../tests/test_concretize.py)
+
+### ADR-099 — resolves to nothing (1 unmarked site · 1 other mention marked deliberate)
+
+- [`record/decisions.d/ADR-014.md:42`](../../record/decisions.d/ADR-014.md)
+
+### ADR-158 — resolves to nothing (1 unmarked site)
+
+- [`record/decisions.d/ADR-014.md:49`](../../record/decisions.d/ADR-014.md)
+
+### ADR-187 — resolves to nothing (1 unmarked site)
+
+- [`record/decisions.d/ADR-014.md:49`](../../record/decisions.d/ADR-014.md)
+
+### ADR-188 — resolves to nothing (1 unmarked site · 1 other mention marked deliberate)
+
+- [`record/decisions.d/ADR-014.md:49`](../../record/decisions.d/ADR-014.md)
 
 ### DP-018 — resolves to nothing (1 unmarked site · 4 other mentions marked deliberate)
 
@@ -64,4 +98,5 @@ A reference the reader cannot follow: the code names no document in this record.
 
 ## Directives that no longer apply
 
-None. Every annotation still governs something. ✅
+- record/decisions.d/ADR-014.md:26: annotation names ADR-053, which does resolve here
+- tests/test_adr_index.py:17: annotation names ADR-053, which does resolve here
