@@ -24,13 +24,14 @@ Checks (each one fails the build):
 It also prints WARNINGS, which by default never affect the exit code
 (ADR-035): references to retired documents, codes that resolve to no document
 at all, remote links whose URL is hand-written rather than constructed,
+relative link targets that resolve to nothing from where the prose renders,
 directives that no longer apply, and a count of undecided decisions. Citing a
 `Rejected` decision — or leaving one `Proposed`, or naming another project's
 LU-ADR-013 — is often right, so none is an error unless the project says so:
 a class named in `[luria.lint] fail_on` is promoted to a failure. Either way
 `luria reports` writes the full detail as markdown, and an `inactive-ok:` /
-`unresolved-ok:` / `url-ok:` comment acknowledges a deliberate one so only
-the unconsidered ones stay listed — acknowledged rows never fail.
+`unresolved-ok:` / `url-ok:` / `target-ok:` comment acknowledges a deliberate
+one so only the unconsidered ones stay listed — acknowledged rows never fail.
 
 Exit 0 when clean; exit 1 with one line per violation.
 """
@@ -42,8 +43,8 @@ import re
 import sys
 
 from . import adr_index as builder
-from . import (adr_pending, badges, ci, doc_refs, journal, narrow_titles,
-               ref_status, remotes)
+from . import (adr_pending, badges, ci, doc_refs, journal, link_targets,
+               narrow_titles, ref_status, remotes)
 from .config import current
 
 # The closed status vocabulary (ADR-003). `Active` is the in-force state; the
@@ -319,8 +320,8 @@ def check_bare_refs(errors: list[str]) -> None:
 # hatch under enforcement — the dial changes the consequence, not the
 # accounting.
 FAILABLE = ("retired-citations", "unresolved-codes", "hand-written-urls",
-            "legacy-spellings", "narrow-titles", "stale-directives",
-            "pending-documents", "unlinted-files")
+            "broken-targets", "legacy-spellings", "narrow-titles",
+            "stale-directives", "pending-documents", "unlinted-files")
 
 
 def status_sections() -> list[tuple[str, str, list[str]]]:
@@ -369,6 +370,17 @@ def status_sections() -> list[tuple[str, str, list[str]]]:
             f"{len(hand)} link(s) hand-written where a URL would be "
             "constructed (`url-ok:` acknowledges a deliberate one)", hand))
 
+    # A relative target that resolves to nothing from where the prose renders.
+    # The code checks above cannot see it: they verify that `ADR-035` names a
+    # document, not that the path someone typed around it goes anywhere (#100).
+    dead, stale_targets = link_targets.broken()
+    if dead:
+        sections.append((
+            "broken-targets",
+            f"{len(dead)} relative link target(s) resolve to nothing from "
+            "where the prose renders (`luria link --fix` spells code targets; "
+            "`target-ok:` acknowledges a deliberate one)", dead))
+
     # A citation still spelled with a concretized code's old temporary name
     # (ADR-040, ADR-049). The in-tree steady state is zero — the
     # concretizer's sweep is full — so a row here means an in-flight branch
@@ -392,7 +404,8 @@ def status_sections() -> list[tuple[str, str, list[str]]]:
             "sense)", narrow))
 
     # A directive that silently does nothing is worse than no directive.
-    stale = ref_status.stale_annotations(result, docs) + stale_urls
+    stale = ref_status.stale_annotations(result, docs) + stale_urls \
+        + stale_targets
     for path in doc_refs.doc_files():
         stale += doc_refs.directive_problems(path, path.read_text())
     if stale:

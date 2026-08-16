@@ -6,6 +6,7 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 
 ## Currently — [August 2026](2026-08.md)
 
+- [16 Aug 16:51 — Ninety-nine dead links behind eleven clean lints](2026-08.md#20260816165105)
 - [12 Aug 06:02 — Dogfooding merge allocation, and finishing rung one](2026-08.md#20260812060240)
 - [12 Aug 03:51 — Implementing merge allocation: aliases are the load-bearing half](2026-08.md#20260812035155)
 - [11 Aug 23:36 — Config-first adoption: replacement semantics and a config-driven init](2026-08.md#20260811233614)
@@ -43,8 +44,8 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 
 ## All books
 
-34 entries across 1 book, newest first.
+35 entries across 1 book, newest first.
 
 | Book | Entries | First | Last |
 |---|--:|---|---|
-| [2026-08](2026-08.md) | 34 | 2026-08-03 | 2026-08-12 |
+| [2026-08](2026-08.md) | 35 | 2026-08-03 | 2026-08-16 |
