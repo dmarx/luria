@@ -17,6 +17,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Tags, not just the tip: the version comes from `git describe`.
+          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -29,10 +32,13 @@ jobs:
       # saying 0.3.0, so `python -m build` produced a 0.3.0 wheel and PyPI
       # rejected it as a duplicate AFTER the release was already published.
       # `twine check` passes such a wheel happily; it validates metadata, not
-      # identity. This is the hand-maintained projection DP-5 warns about, and
-      # rung 2 is the remedy available without changing the build: guard the
-      # property. Deriving the version from the tag (hatch-vcs) is rung 1 and
-      # would need `fetch-depth: 0` on the checkout above.
+      # identity. This is the hand-maintained projection DP-5 warns about.
+      #
+      # Rung 1 has since landed: the version is derived from the tag by
+      # `hatch-vcs`, so there is one source rather than two, and the checkout
+      # above fetches tags for `git describe`. This assertion stays as rung 2 —
+      # deriving prevents the drift, the guard is what makes a recurrence loud
+      # rather than a PyPI rejection reached after the environment gate.
       - name: The built version is the released version
         if: github.event_name == 'release'
         env:
@@ -41,7 +47,7 @@ jobs:
           built=$(ls dist/*.whl | head -1 | sed -E 's/.*luria-([^-]+)-py3.*/\1/')
           echo "tag=$TAG built=$built"
           if [ "$built" != "${TAG#v}" ]; then
-            echo "::error::release tag $TAG but built luria-$built — bump the version in pyproject.toml" >&2
+            echo "::error::release tag $TAG but built luria-$built — the checkout is probably shallow, so git describe saw no tag" >&2
             exit 1
           fi
       # The wheel is smoke-tested the way a user meets it: installed cold,
