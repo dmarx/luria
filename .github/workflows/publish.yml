@@ -23,6 +23,27 @@ jobs:
       - run: pip install build twine
       - run: python -m build
       - run: twine check dist/*
+      # The version is written in two places — `pyproject.toml` and the git
+      # tag — and nothing made them agree. They drifted at the first
+      # opportunity: 0.4.0 was tagged and released against a tree still
+      # saying 0.3.0, so `python -m build` produced a 0.3.0 wheel and PyPI
+      # rejected it as a duplicate AFTER the release was already published.
+      # `twine check` passes such a wheel happily; it validates metadata, not
+      # identity. This is the hand-maintained projection DP-5 warns about, and
+      # rung 2 is the remedy available without changing the build: guard the
+      # property. Deriving the version from the tag (hatch-vcs) is rung 1 and
+      # would need `fetch-depth: 0` on the checkout above.
+      - name: The built version is the released version
+        if: github.event_name == 'release'
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          built=$(ls dist/*.whl | head -1 | sed -E 's/.*luria-([^-]+)-py3.*/\1/')
+          echo "tag=$TAG built=$built"
+          if [ "$built" != "${TAG#v}" ]; then
+            echo "::error::release tag $TAG but built luria-$built — bump the version in pyproject.toml" >&2
+            exit 1
+          fi
       # The wheel is smoke-tested the way a user meets it: installed cold,
       # scaffolding a project end to end. This is the guard against shipping
       # a `luria init` that only works from a checkout — the template's
