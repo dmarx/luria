@@ -56,6 +56,7 @@ record/                     the WRITE surface: every source, marked `.d`
     _template.md            copy this to make a decision
     README.stub             the index's prose; the index renders to docs/decisions/
     tags.yaml               tag order and blurbs
+    statuses.yaml           optional: which statuses this scheme uses, and what they mean
   principles.d/
     _template.md            copy this to make a principle
     README.stub             the document's prose; renders to docs/design-principles.md
@@ -67,6 +68,38 @@ record/                     the WRITE surface: every source, marked `.d`
   pages.yml                 publish the record as a site with a citation graph
 CLAUDE.md                   a bootloader section pointing at the above
 ```
+
+### Saying what a status means here
+
+The five status words are fixed — `Active`, `Proposed`, `Deferred`,
+`Superseded`, `Rejected` — because an open vocabulary drifted into thirty forms
+before [ADR-003](../record/decisions.d/ADR-003.md) closed it. What they *mean*
+is yours, and it differs by scheme: `Rejected` on a decision means considered
+and declined, while on a scheme recording a corpus's claims it can mean the
+corpus asserts this and it is wrong.
+
+Say so in a `statuses.yaml` beside the scheme's `tags.yaml`:
+
+```yaml
+Active:
+  label: Asserted
+  blurb: the record asserts this proposition
+Rejected:
+  label: Defeated
+  blurb: the corpus contains it and it is wrong
+```
+
+Two things follow. A record whose status the scheme does not declare fails the
+lint, so declaring is also *narrowing* — a scheme that never defers can say so
+and be held to it. And the meanings render above the index table, where a
+reader browsing the status column can see them without finding your decision
+record.
+
+Keys outside the five are an error. This narrows luria's vocabulary per scheme;
+it does not extend it. If you want a distinction the five words cannot carry,
+that is what `tags` are for — those are open by design.
+
+Declaring nothing keeps the default: all five words, no legend.
 
 The split is [LU-ADR-021](https://github.com/dmarx/luria/blob/main/record/decisions.d/ADR-021.md):
 you read in `docs/`, you file in `record/`, and a view directory holds only

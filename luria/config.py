@@ -292,6 +292,12 @@ class Scheme:
         return self.dir / "tags.yaml"
 
     @property
+    def statuses_yaml(self) -> Path:
+        """What this scheme's statuses mean. Optional; absent leaves the
+        closed vocabulary open to all five and renders no legend."""
+        return self.dir / "statuses.yaml"
+
+    @property
     def pattern(self):
         return re.compile(rf"\b{self.prefix}[- ](?P<num>\d{{1,4}})\b")
 
