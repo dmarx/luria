@@ -147,11 +147,11 @@ class Plan:
     # links back to bare references and the fixer rebuilds them from the
     # resolver, which is the one place that knows how a scheme is addressed.
     relocated: set[str] = field(default_factory=set)
-    # The address fragments a moved document USED to be reachable at — the
-    # anchor a document-rendered scheme gave it (`#dp-17`), or the filename an
-    # index-rendered one did (`DP-017.md`). Matched against link targets, so a
-    # citation is found by where it points rather than by how it is labelled.
-    old_addresses: set[str] = field(default_factory=set)
+    # Old address fragment → the code that answers for it now. The address is
+    # the anchor a document-rendered scheme gave the document (`#dp-17`) or the
+    # filename an index-rendered one did (`DP-017.md`), so a citation is found
+    # by where it POINTS rather than by how it is labelled.
+    old_addresses: dict[str, str] = field(default_factory=dict)
 
 
 def _spec_path(ref: str) -> Path:
@@ -273,9 +273,9 @@ def _plan_move(plan: Plan, op: dict) -> None:
         plan.tombstones.append((path, f"Superseded — by {new_code}"))
         return
     plan.relocated.add(new_code)
-    plan.old_addresses.add(
+    plan.old_addresses[
         f"#{old_prefix.lower()}-{number}" if source.render == "document"
-        else path.name)
+        else path.name] = new_code
     plan.mapping.append(Pair(old_code, new_code))
     plan.moves.append((path, new_path))
     plan.stamps[new_path] = f"{old_prefix}-{number}"
@@ -389,15 +389,18 @@ def sweep_text(text: str, plan: Plan, paths: bool = True) -> tuple[str, int]:
         spelled as the code, and those are exactly the ones a code-shaped
         pattern walks past — leaving a live link to a document that moved.
 
-        The label is kept and the link dropped, so the fixer rebuilds a coded
-        citation from the resolver. A worded label is lost in the process,
-        which is the honest trade: the alternative is a link whose words point
-        somewhere the reader will not find them."""
-        for old_addr in sorted(plan.old_addresses):
+        The whole citation — label included — becomes the NEW CODE, bare, and
+        the fixer links it. Keeping the old label was the first attempt and it
+        undid itself: `[design-principles #17](…#dp-17)` stripped to
+        `design-principles #17`, whose bare `#17` the resolver reads as a
+        design-principle reference and re-linked straight back to the anchor
+        that had just been vacated. A stale label is not worth preserving at
+        the cost of resurrecting the address it names."""
+        for old_addr, new_code in sorted(plan.old_addresses.items()):
             text = swap(
                 text,
-                rf"\[([^\]]*)\]\([^)]*{re.escape(old_addr)}\)",
-                lambda m: m.group(1))
+                rf"\[[^\]]*\]\([^)]*{re.escape(old_addr)}\)",
+                new_code)
         return text
 
     # Before any swapping: a moved document's citations are matched by the

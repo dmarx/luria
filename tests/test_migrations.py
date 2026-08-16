@@ -373,3 +373,37 @@ def test_a_same_render_move_keeps_its_links_untouched(tmp_path, monkeypatch):
     out = page.read_text()
     assert "(../record/dst.d/DST-tmp" in out, out
     assert "src.d" not in out, "the path follows the move"
+
+
+def test_a_worded_citation_of_a_moved_document_is_rebuilt(tmp_path,
+                                                          monkeypatch):
+    """A citation labelled in prose, not spelled as the code, still follows.
+
+    `[design-principles #17](../design-principles.md#dp-17)` is a live link to
+    an anchor the move just vacated, and a code-shaped pattern walks straight
+    past it. Worse, stripping it to its LABEL resurrects the problem: the bare
+    `#17` left behind is itself a design-principle reference, which the fixer
+    re-links to the address that was just vacated. The whole citation has to
+    become the new code."""
+    root = _premigration_project(tmp_path, monkeypatch)
+    (root / "luria.toml").write_text(
+        (root / "luria.toml").read_text()
+        + '[luria.schemes.VAL]\ndir = "record/values.d"\n')
+    (root / "record" / "values.d").mkdir(parents=True)
+    page = root / "docs" / "worded.md"
+    page.write_text(
+        "The fix ([design-principles #4](design-principles.md#dp-4)) held.\n")
+    config.reset()
+    aliases.reset()
+    _git(root, "add", "-A")
+    _git(root, "-c", "user.email=t@t", "-c", "user.name=t", "commit",
+         "-qm", "worded")
+    mig = root / "record" / "migrations.d" / "0002-worded.toml"
+    mig.write_text('title = "DP-4 becomes a value"\n\n'
+                   '[[operations]]\nop = "move_doc"\ndoc = "DP-4"\n'
+                   'to = "VAL"\n')
+    migrate.run("0002")
+    out = page.read_text()
+    assert "design-principles.md#dp-4" not in out, out
+    assert "#dp-4" not in out, "the vacated anchor must not survive anywhere"
+    assert "VAL-tmp" in out, out
