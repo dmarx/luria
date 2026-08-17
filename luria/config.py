@@ -266,6 +266,17 @@ class Scheme:
     # for every scheme that does not declare `[luria.schemes.X.tag_groups]`,
     # which is the unconstrained behaviour every project has today.
     tag_groups: tuple[TagGroup, ...] = ()
+    # Why this scheme's records all sharing one status is deliberate rather
+    # than a dead enforcement mechanism (#104). The `inert-status` check is the
+    # one judgment call in luria with no acknowledgement — every other has an
+    # `inactive-ok:`-style comment carrying a reason, and this finding is about
+    # a *scheme*, so it has no site to comment at. Setting this is that
+    # acknowledgement: the row stops being a finding and the reason renders in
+    # its place, so a reader still sees that nobody is being judged and why.
+    # A reason is mandatory for the same purpose it is mandatory in a
+    # directive — silence that carries no argument is indistinguishable from
+    # an oversight.
+    uniform_ok: str | None = None
 
     @property
     def view(self) -> Path:
@@ -794,6 +805,7 @@ def load(root: Path | None = None, text: str | None = None) -> Config:
                 bool(spec.get("titles_generalize", False)),
                 tuple(spec.get("requires", ())),
                 _tag_groups(prefix, spec.get("tag_groups", {})),
+                uniform_ok=(spec.get("uniform_ok") or None),
             )
             for prefix, spec in raw["schemes"].items()
         },

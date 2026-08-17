@@ -7,8 +7,8 @@
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/github/license/dmarx/luria)](LICENSE)
 <!-- luria:badges -->
-[![needs decision: 9](https://img.shields.io/badge/needs%20decision-9-orange)](docs/reports/pending-decisions.md)
-[![cited, not in force: 3](https://img.shields.io/badge/cited,%20not%20in%20force-3-orange)](docs/reports/reference-status.md)
+[![needs decision: 10](https://img.shields.io/badge/needs%20decision-10-orange)](docs/reports/pending-decisions.md)
+[![cited, not in force: 4](https://img.shields.io/badge/cited,%20not%20in%20force-4-orange)](docs/reports/reference-status.md)
 <!-- /luria:badges -->
 
 </div>
@@ -55,7 +55,7 @@ Luria is that, with three differences that make it usable by people:
 If you know the literature: a JTMS with linter-style suppressions, enforced in
 CI. Retraction is AGM contraction. The industrial cousin is requirements
 traceability with impact analysis. We say so plainly rather than inventing a
-word — the reasoning is in [ADR-tmp0btsq](record/decisions.d/ADR-tmp0btsq.md).
+word — the reasoning is in [ADR-058](record/decisions.d/ADR-058.md).
 
 ## Why bother
 

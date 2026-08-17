@@ -103,6 +103,7 @@ carries its prefix, so a second scheme is an entry here (ADR-006).
 | `titles_generalize` | `bool` | `False` |
 | `requires` | `tuple[str, ...]` | *unset* |
 | `tag_groups` | `tuple[TagGroup, ...]` | *unset* |
+| `uniform_ok` | `str \| None` | *unset* |
 
 ## Fragment directories — `[luria.fragments."dir"]`
 

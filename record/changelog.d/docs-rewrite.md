@@ -1,6 +1,6 @@
 ### Added
 
-- **[ADR-tmp0btsq](record/decisions.d/ADR-tmp0btsq.md): luria is a truth maintenance system, and should say so.**
+- **[ADR-058](record/decisions.d/ADR-058.md): luria is a truth maintenance system, and should say so.**
   Nobody could name the category, so every description reached for a new
   metaphor. The category exists and is from 1979. The documentation now leads
   with the mechanism — retract a premise, and the build names what rested on it

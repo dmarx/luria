@@ -410,6 +410,18 @@ def status_sections() -> list[tuple[str, str, list[str]]]:
             "nothing there can ever be retired and the citation checks cannot "
             "fire", uniform))
 
+    # Schemes whose uniformity a human has vouched for with `uniform_ok`. The
+    # fact is unchanged — nothing there is being judged — so it is still
+    # reported, as a note carrying its reason rather than as a finding. Same
+    # bargain `inactive-ok:` strikes at a citation site, and the class is
+    # deliberately absent from FAILABLE: a project cannot promote its own
+    # acknowledgement to a failure.
+    if acknowledged := statuses.acknowledged_rows():
+        sections.append((
+            "acknowledged-uniformity",
+            f"{len(acknowledged)} scheme(s) uniform by declaration "
+            "(`uniform_ok` in luria.toml)", acknowledged))
+
     # A citation still spelled with a concretized code's old temporary name
     # (ADR-040, ADR-049). The in-tree steady state is zero — the
     # concretizer's sweep is full — so a row here means an in-flight branch
