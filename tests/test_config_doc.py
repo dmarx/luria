@@ -123,7 +123,7 @@ def test_states_what_is_not_configurable():
     assert "LURIA_JOBS" in text and "LURIA_ROOT" in text
 
 
-# --- Where the reference renders (ADR-tmptfm6m) ---------------------------------
+# --- Where the reference renders (ADR-059) ---------------------------------
 #
 # The page is generated so it cannot drift from `config.py`. That argument
 # only holds where `config.py` is a file the reader can open, so the page
@@ -157,7 +157,7 @@ def test_the_record_description_is_a_view_in_both(project):
 
 
 def test_retire_removes_a_reference_luria_wrote(project):
-    """The upgrade path. Before ADR-tmptfm6m the page rendered into every adopting
+    """The upgrade path. Before ADR-059 the page rendered into every adopting
     project, so a bump leaves one behind that nothing will ever update."""
     stale = current().config_doc
     stale.parent.mkdir(parents=True, exist_ok=True)

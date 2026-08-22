@@ -542,7 +542,7 @@ def run(check: bool = False) -> None:
         for j in current().journals.values():
             for p in journal.populate_created(j):
                 print(f"populated `created:` from the path in {current().rel(p)}")
-        # One-time cleanup for a project upgrading past ADR-tmptfm6m, which stopped
+        # One-time cleanup for a project upgrading past ADR-059, which stopped
         # rendering the schema reference outside Luria's own tree.
         for p in config_doc.retire():
             print(f"removed {current().rel(p)} — the configuration reference "
