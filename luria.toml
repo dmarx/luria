@@ -1,16 +1,33 @@
+# Luria's own configuration — this repo runs its own machinery on its own
+# record, which is the only way the machinery gets exercised before a consumer
+# hits the bug (DP-6).
 [luria]
 issue_url = "https://github.com/dmarx/luria/issues/{n}"
 
+# The read/write boundary (ADR-021): `docs/` is where a reader browses —
+# prose plus every generated view — and `record/` is where a contributor
+# files — every source, each container carrying the `.d` suffix that marks
+# "fragments live here". Nothing under a view directory is hand-written.
 [luria.paths]
 docs = "docs"
 decisions = "record/decisions.d"
 design_principles = "docs/design-principles.md"
+# Committed views, not build artifacts, so the README badges land on the
+# report that explains their numbers (#35).
 reports = "docs/reports"
 
+# The changelog assembles in the release shape (ADR-028): each collection is a
+# dated batch inserted right after the marker, newest first — the reading
+# order a changelog owes its reader, where the narrative append style would
+# bury the latest release at the bottom.
 [luria.fragments."record/changelog.d"]
 file = "CHANGELOG.md"
 style = "changelog"
 
+# The devlog is a journal, not a fragment directory: its entries are dated
+# observations that stay true, so they persist and the books are generated from
+# them (ADR-020). A month is the right book size for this repo's rate; measure
+# yours before copying the number.
 [luria.journals.devlog]
 dir = "record/devlog.d"
 output = "docs/devlog"
@@ -21,11 +38,27 @@ archaeology, failed approaches, verification details, and the traps the next \
 person would otherwise rediscover. Generated from the entries in \
 `record/devlog.d/` — file one with `luria new`."""
 
+# The published site (ADR-042). `title`, `base_url` and `source_url` all
+# derive from `issue_url` above, so only the exclusion is here: `template/`
+# is the scaffold Luria hands to other projects, and its pages are a *sample*
+# record — published beside the real one they would read as a second, emptier
+# copy of this one, which is exactly the confusion DP-9 says a layout owes a
+# visitor protection from.
 [luria.site]
 exclude = ["template/**", "examples/**"]
+# The brainslug kit is the identity; the site wears it rather than the
+# generator's. `icon` is the vector master — the favicon is rasterized from it
+# at build time, so no derived PNG is committed here to drift out of step
+# (DP-3). `logo` replaces the site title in the sidebar, re-inked per theme
+# through the `--luria-ink` property the kit documents.
 icon = "assets/branding/luria-brainslug/luria_project_memory_icon.svg"
 logo = "assets/branding/luria-brainslug/luria_project_memory_lockup_horizontal.svg"
 
+# Paper and ink, from the kit's own two colours (#111111 / #F4F1E8), with the
+# neutrals stepped between them so the lockup sits on its own background
+# instead of floating on the generator's cooler white. The accent is the one
+# addition the monochrome kit doesn't supply: a muted teal, chosen to sit with
+# warm paper rather than fight it. Every text pair is above 6.5:1.
 [luria.site.theme.light]
 light = "#f4f1e8"
 lightgray = "#dcd5c3"
@@ -59,34 +92,69 @@ dir = "record/decisions.d"
 output = "docs/decisions"
 active = "Active"
 render = "index"
+# Numbers are assigned where merges serialize (ADR-049): `luria new adr`
+# mints a temporary code on the branch, and the merge-to-main docs job runs
+# `luria concretize`. This repo runs N concurrent agent branches — the
+# collision case the mechanism was built for — and is, as ever, its own
+# first consumer (ADR-009).
 allocate = "merge"
 
+# Principles are read as a whole, not browsed one at a time, so their view is a
+# document rather than a table (ADR-012). Same fragment convention either way.
 [luria.schemes.DP]
 dir = "record/principles.d"
 active = "Active"
 render = "document"
 output = "docs/design-principles.md"
+# Same exposure as the decisions, and it had the same gap: two concurrent
+# branches each took "the next free principle number" and both got the same
+# one. Merge allocation is what ADR-049 is for, and a scheme that renders as a
+# document is no less prone to it than one that renders as an index.
 allocate = "merge"
 
+# Other projects' records, cited from this one. A reference composes the prefix
+# with that project's own code — `SG-ADR-032`, `LU-ADR-013` — so the namespace
+# is explicit and nothing has to guess which project an unprefixed code meant
+# (ADR-016).
 
+# strata-g: the pilot this package was extracted from, and still the source of
+# most of its evidence. Its links resolve on the code-only convention, which is
+# what strata-g will use once its record is ported to Luria — until then they
+# are named-and-not-yet-followable, deliberately (ADR-017). `luria remotes
+# --check` reports them as unverifiable, because the repository is private.
 [luria.remotes.SG]
 name = "strata-g"
 repo = "dmarx/strata-g"
 ref  = "main"
 dir  = "docs/decisions"
 
+# Its principles are a document-rendered scheme — sections of one file, not
+# files — so DP codes construct a document anchor rather than a filename
+# (ADR-023). The anchor template stays on the default (`dp-{number}`), which
+# is right for current conventions and wrong for strata-g's legacy
+# heading-derived anchors: the one DP citation in this record therefore keeps
+# its `url-ok`, now excusing only the anchor.
 [luria.remotes.SG.schemes.DP]
 document = "docs/design-principles.md"
 
+# Luria itself, registered on purpose: it is what the `template/` scaffold
+# cites, so the remote machinery is exercised by this repo rather than only by
+# its tests. Public and already on the code-only convention, so `luria remotes
+# --check` verifies it for real.
 [luria.remotes.LU]
 name = "luria"
 repo = "dmarx/luria"
 ref  = "main"
 dir  = "record/decisions.d"
 
+# Dogfood for the document construction against a repository `luria remotes
+# --check` can actually verify: LU-DP-9 → …/docs/design-principles.md#dp-9.
 [luria.remotes.LU.schemes.DP]
 document = "docs/design-principles.md"
 
+# Fixture codes (#38): FX-ADR-032 is an example, resolvable by construction
+# to the note that says so — never a claim about this record, and never able
+# to collide with it, because it is not in the sequence.
 [luria.remotes.FX]
 name = "fixtures"
 url  = "https://github.com/dmarx/luria/blob/main/docs/directives.md#fixture-codes"

@@ -1,8 +1,22 @@
+# The shape a project has before it splits reading from writing: no `output`
+# anywhere, so each view renders beside the sources it is built from.
+#
+# This is what adoption looks like when you do NOT want to move files first
+# (LU-ADR-021). `decisions/README.md` is generated in place, next to the
+# decisions themselves.
 [luria]
 issue_url = "https://github.com/acme/monolith/issues/{n}"
 
 [luria.paths]
 docs = "docs"
 
+# No `output` key — and nothing for it to be inherited from, because a
+# declared `schemes` family replaces the shipped defaults rather than merging
+# into them (LU-ADR-047). The index lands in `decisions/`, beside the sources.
+#
+# This line used to read `output = "decisions"`, spelled out as a workaround:
+# under the old merge rule an omitted key inherited `docs/decisions` from the
+# default ADR entry, and the documented adoption path silently relocated your
+# index. The workaround is retired with the rule.
 [luria.schemes.ADR]
 dir = "decisions"

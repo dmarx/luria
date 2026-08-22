@@ -1,3 +1,32 @@
+# The record's own CI, in the recommended shape (LU-ADR-029). Three jobs:
+#
+#   docs-generate  regenerates the derived views (index, tag pages, books,
+#                  README badges, reference links) and commits them back as
+#                  the bot — derived documentation is built, not maintained,
+#                  and a view a human has to rebuild by hand will drift.
+#   docs-lint      gates what a generator cannot decide: unresolved
+#                  references, wikilinks that resolve to nothing, a title
+#                  disagreeing with its heading, stray files in a view
+#                  directory. It `needs:` docs-generate and reads the SHA it
+#                  output — a push made with GITHUB_TOKEN does not retrigger
+#                  workflows, so a lint anywhere else would keep a red earned
+#                  from the pre-regeneration commit and never clear it.
+#   collect        assembles changelog fragments on a cadence, never
+#                  per-merge (LU-ADR-002 — a per-merge bot commit races
+#                  in-flight rebases, reintroducing the conflict fragments
+#                  exist to remove).
+#
+# The staleness check inside `luria lint` stays meaningful with generation
+# automated: it now catches a generator that didn't run or couldn't push — on
+# a fork PR (read-only token) the generate action pushes nothing and outputs
+# the un-regenerated SHA, so the lint fails with the remedy instead of the
+# generate job dying on a 403.
+#
+# One caution for maintainers: GitHub skips a workflow run when the head
+# commit message carries its skip marker, in the first or last line, in any
+# of its five spellings — so a commit message *describing* the bot's commit
+# format can suppress its own CI run. Name the marker in prose; file contents
+# like this one are unaffected.
 name: Docs
 
 on:
@@ -5,6 +34,7 @@ on:
     branches: [main]
   pull_request:
   schedule:
+    # Weekly collection. Adjust to taste; the only wrong answer is "every merge".
     - cron: "0 9 * * 1"
   workflow_dispatch:
 
@@ -19,13 +49,22 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          # Same-repo PR: the head branch, so there is something to commit
+          # onto. Fork PR: that branch only exists in the fork — naming it
+          # fails the checkout before any push guard runs — so fall back to
+          # the default merge-commit checkout (empty ref). Push events: the
+          # pushed branch.
           ref: ${{ github.event_name != 'pull_request' && github.ref_name || (github.event.pull_request.head.repo.full_name == github.repository && github.head_ref || '') }}
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
       - id: generate
+        # Pin a released tag once you depend on this in anger.
         uses: dmarx/luria/actions/generate@main
         with:
+          # Assign real numbers to merge-allocated temporary codes
+          # (LU-ADR-049) — only where merges serialize, never on a pull
+          # request. Harmless if no scheme sets `allocate = "merge"`.
           concretize: ${{ github.event_name != 'pull_request' }}
 
   docs-lint:

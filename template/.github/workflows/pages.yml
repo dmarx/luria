@@ -1,3 +1,19 @@
+# Publish the record as a browsable site on GitHub Pages (LU-ADR-042).
+#
+# `luria site` stages every page the record publishes — the decisions, the
+# principles document, the devlog books, the reports — with paths preserved,
+# so the relative links `luria link --fix` already wrote keep resolving. The
+# composite action builds that vault with a pinned Quartz, which gives the
+# citations a graph and backlinks without anyone maintaining either.
+#
+# Before the first deploy succeeds, set Settings → Pages → Source to
+# "GitHub Actions". That is a repository setting; no file in the repository
+# can turn it on, and until it is on the `deploy` job fails with "Pages is
+# not enabled" while `build` stays green.
+#
+# Delete this file if you would rather not publish. Nothing else depends on
+# it — `luria site` is a build step, and the record it reads is the record
+# every other command reads.
 name: Pages
 
 on:
@@ -22,11 +38,14 @@ jobs:
         with:
           python-version: "3.12"
       - id: site
+        # Pin a released tag once you depend on this in anger.
         uses: dmarx/luria/actions/site@main
       - uses: actions/upload-pages-artifact@v3
         with:
           path: ${{ steps.site.outputs.path }}
 
+  # Separate from the build because it is the only job that needs to write:
+  # a pull request proves the site still builds and publishes nothing.
   deploy:
     if: github.event_name != 'pull_request'
     needs: build

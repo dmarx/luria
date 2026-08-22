@@ -1,0 +1,122 @@
+# Adopting Luria
+
+Putting a record into a project that already exists — and the CI that keeps
+it running without anyone's attention.
+
+## Scaffold
+
+```console
+$ pip install luria
+$ luria init --issue-url https://github.com/you/yourproject/issues
+```
+
+`init` writes only what is missing — an existing `docs/README.md`,
+`CLAUDE.md`, or `luria.toml` is skipped and reported, never overwritten —
+so it composes with whatever documentation you already have. If you keep
+your own `CLAUDE.md`, borrow the scaffolded shape: a short map pointing at
+the record's docs, plus an invitation to run `luria --help`, beats a copy
+of either.
+
+Then build the views and take stock:
+
+```console
+$ luria index
+$ luria lint
+```
+
+A fresh scaffold lints clean. From here the work is habits, not setup:
+file entries with `luria new` in the same branch as the work they
+describe, and let CI do the rest.
+
+## Shape the record to the project
+
+The scaffold ships decisions, principles, a changelog, and a devlog.
+None of that is fixed — the families in `luria.toml` are yours to name
+(see [project memory](project-memory.md) and the
+[configuration reference](configuration.md)). The `examples/` directory in
+the Luria repository holds four small, CI-tested configurations worth
+stealing from:
+
+- **collocated** — decisions living beside the docs, no `record/` split,
+  for a small project.
+- **rfcs-and-specs** — two schemes: RFCs rendered as an index, specs
+  concatenated into a single interfaces page.
+- **many-journals** — a devlog, an incident log, and meeting notes side by
+  side with different granularities.
+- **external-citations** — arXiv, Jira, and CVE identifiers as first-class
+  linted references via `uid` remotes.
+
+Two settings earn attention early:
+
+- `[luria.code] globs` — which *source files* are scanned for references.
+  A decision code in a code comment is the strongest form of the record's
+  claim (it is the stated reason the code is shaped that way), and scanning
+  makes it a checked claim.
+- `[luria.lint] fail_on` — which warning classes fail the build. Start
+  empty; promote a class once the report for it is clean and you want it
+  to stay that way.
+
+## CI
+
+`init` scaffolds two workflows built on composite actions published from
+the Luria repository. What they do, so you can rearrange them:
+
+### `docs.yml` — generate, then lint
+
+1. **`dmarx/luria/actions/generate`** runs `luria link --fix` and
+   `luria index`, commits any diff as `github-actions[bot]` with a
+   `[skip ci]` message, pushes, and outputs the resulting SHA. On a fork
+   PR it cannot push; it outputs the unregenerated SHA so the downstream
+   lint fails informatively instead of the job dying on a 403. With
+   `concretize: true` — pass it only on push-to-main runs, never on PRs —
+   it first runs `luria concretize`, assigning real numbers to any
+   merge-allocated temporary codes now that merges have serialized.
+2. **`dmarx/luria/actions/lint`** checks out that SHA, runs `luria lint`,
+   then writes the status reports and uploads them as an artifact whether
+   or not the lint passed.
+3. A scheduled job (weekly, in the scaffold) runs `luria collect --commit`
+   to assemble changelog fragments and pushes the result.
+
+The generate/lint split matters: a checking job that regenerates views
+in-place would be comparing its own output against itself. Generation
+commits; the check reads the commit.
+
+### `pages.yml` — publish the site
+
+**`dmarx/luria/actions/site`** runs `luria site`, then builds the staged
+vault with a pinned [Quartz](https://quartz.jzhao.xyz/) (v4 — bump the pin
+deliberately; the generated config targets its plugin API) and hands the
+HTML to `actions/upload-pages-artifact` / `actions/deploy-pages`.
+
+## The published site
+
+`luria site` stages every publishable markdown page at its repository
+path, which is what lets the record's ordinary relative links keep
+resolving with no second link-resolution system:
+
+- The root `README.md` becomes the landing page (and still answers to its
+  old name via an alias).
+- Each scheme document gets its code as an alias, so `/ADR-012` finds it.
+- A **record line** — status, version, filing date, issue, influences — is
+  injected under each document's title from its frontmatter.
+- Links to files that are not published (source code, for instance) are
+  retargeted to the repository on GitHub; images are staged alongside
+  their pages.
+- Readers get full-text search, backlinks on every page, and a local graph
+  of each document's neighbourhood — a record this cross-cited is a graph,
+  and the site shows it.
+
+Branding and colours come from `[luria.site]`: an icon, a logo (with an
+optional dark variant, or a single SVG re-inked per theme), and a
+light/dark palette. Every key defaults from `issue_url` for a GitHub
+project, so the conventional case needs no `[luria.site]` table at all.
+
+## Adopting into an agent workflow
+
+The record is as much for coding agents as for people: an agent that can
+run `luria --help`, read the generated views, and file entries with
+`luria new` inherits the project's memory instead of re-deriving it. The
+scaffolded `CLAUDE.md` encodes the working agreement — file fragments with
+the work, never hand-write link targets, treat a repeatedly-firing guard
+as a bug report about the workflow — and the lint enforces the parts a
+machine can check.

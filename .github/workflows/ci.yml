@@ -1,3 +1,10 @@
+# Luria runs its own machinery on its own record (ADR-009), so this workflow is
+# both the package's CI and the worked example the docs point at — including
+# the docs jobs, which use the SAME composite actions adopters get
+# (actions/generate, actions/lint), referenced by local path so a change to an
+# action is exercised by the pull request that makes it (ADR-029). The
+# template workflow `luria init` scaffolds is this shape with the actions
+# pinned remotely.
 name: CI
 
 on:
@@ -5,6 +12,8 @@ on:
     branches: [main]
   pull_request:
   schedule:
+    # Weekly fragment collection. The only wrong cadence is "every merge" — a
+    # per-merge bot commit races in-flight rebases (ADR-002).
     - cron: "0 9 * * 1"
   workflow_dispatch:
 
@@ -19,6 +28,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          # Same-repo PR: the head branch, so there is something to commit
+          # onto. Fork PR: that branch only exists in the fork — naming it
+          # fails the checkout before any push guard runs — so fall back to
+          # the default merge-commit checkout (empty ref).
           ref: ${{ github.event_name != 'pull_request' && github.ref_name || (github.event.pull_request.head.repo.full_name == github.repository && github.head_ref || '') }}
       - uses: actions/setup-python@v5
         with:
@@ -27,6 +40,8 @@ jobs:
         uses: ./actions/generate
         with:
           pip-spec: -e .
+          # Concretize only where merges serialize (ADR-049): the push-to-main
+          # run. A pull request's temporary codes are its normal state.
           concretize: ${{ github.event_name != 'pull_request' }}
 
   test:
@@ -40,6 +55,10 @@ jobs:
       - run: pip install -e ".[dev]"
       - run: python -m pytest tests -q
 
+  # `needs:` + the sha output is the load-bearing handoff: a push made with
+  # GITHUB_TOKEN does not retrigger workflows, so a lint reading any other
+  # commit would fail on staleness the bot just repaired — or, worse, never
+  # re-run to clear it.
   docs-lint:
     if: github.event_name != 'schedule'
     needs: docs-generate

@@ -1,3 +1,21 @@
+# The publishing third of the recommended docs workflow (ADR-029, ADR-042):
+# stage the record as a Quartz vault, build it, and hand the caller a
+# directory to upload. Like the generate and lint actions, this is the single
+# authoritative implementation — luria's own Pages workflow and the template
+# one both `uses:` it rather than restating the build.
+#
+# Caller contract:
+#   - Check out the repository first, and set up Python (actions/setup-python).
+#     Node is set up here, because the version is Quartz's requirement rather
+#     than the caller's choice.
+#   - Read the `path` output and hand it to actions/upload-pages-artifact.
+#   - Enable Pages on the repository with "GitHub Actions" as the source. That
+#     is a repository setting, not a file, and nothing in this action can do
+#     it — the first deploy fails with "Pages is not enabled" until it is.
+#
+# Quartz is pinned to a tag rather than tracked: a static site generator that
+# moves under you turns an unrelated merge into a broken publish, and the
+# config this action writes is written against one version's plugin API.
 name: luria site build
 description: >-
   Stage the record with `luria site` and build it with a pinned Quartz, into a
@@ -47,14 +65,33 @@ runs:
       shell: bash
       run: |
         set -euo pipefail
+        # The vault replaces Quartz's own sample content wholesale; leaving it
+        # would publish the generator's documentation alongside the record.
         rm -rf .quartz-build/content
         cp -r "$RUNNER_TEMP/luria-site/content" .quartz-build/content
         cp "$RUNNER_TEMP/luria-site/quartz.config.ts" .quartz-build/quartz.config.ts
         cp "$RUNNER_TEMP/luria-site/quartz.layout.ts" .quartz-build/quartz.layout.ts
         cp "$RUNNER_TEMP/luria-site/custom.scss" .quartz-build/quartz/styles/custom.scss
+        # Merged, not replaced: Quartz ships its own og-image and giscus files
+        # in here that the record has no opinion about.
         cp -r "$RUNNER_TEMP/luria-site/static/." .quartz-build/quartz/static/
         cd .quartz-build
         npm ci
+        # The favicon is rasterized here rather than committed, so a project
+        # points at the vector master it maintains and nothing derived from it
+        # can drift. `sharp` is Quartz's own dependency — reading an SVG and
+        # writing the `static/icon.png` that Head links and the Favicon
+        # emitter resizes into favicon.ico — so this adds nothing to install.
+        # Read the icon from the STAGING directory, never from the merged
+        # `quartz/static` — that one already holds Quartz's own `icon.png`,
+        # and asking the shell to choose between it and ours by globbing
+        # picks the stock one, since `icon.png` sorts before `icon.svg`.
+        #
+        # A loop rather than `ls … | head -1`: with `pipefail` set, `ls` on a
+        # pattern that matches nothing fails the whole pipeline and `set -e`
+        # ends the step — so a project that configures no icon would get a
+        # broken Pages build instead of the generator's default one (#73). An
+        # unmatched glob expands to itself here, which `-e` rejects.
         ICON=""
         for candidate in "$RUNNER_TEMP"/luria-site/static/icon.*; do
           if [ -e "$candidate" ]; then ICON="$candidate"; break; fi

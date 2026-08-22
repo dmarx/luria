@@ -1,3 +1,11 @@
+# Journals are a family, like schemes and remotes: you name them. Three here,
+# each at the granularity its rate deserves — measure yours rather than
+# copying these (LU-ADR-020).
+#
+# The test that decides journal vs fragment directory: do the sources
+# survive? A journal's entries are dated observations that stay true, so they
+# persist and the books are generated from them. A changelog fragment is
+# consumed when collected.
 [luria]
 issue_url = "https://github.com/acme/platform/issues/{n}"
 

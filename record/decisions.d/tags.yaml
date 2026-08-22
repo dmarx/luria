@@ -1,0 +1,14 @@
+# Decision tags — display name, blurb, and the order they appear in the index.
+# A tag used by a decision but missing here still renders (alphabetically,
+# after these) with no blurb, so adding a tag needs no code change — just use
+# it in a decision's frontmatter, and add it here when you want it ordered or
+# described.
+record:
+  label: The record
+  blurb: what the four layers hold, and the rules between them
+mechanism:
+  label: Mechanism
+  blurb: collectors, generators, the lint, the directive vocabulary
+process:
+  label: Process
+  blurb: how the machinery is adopted, run, and reported on

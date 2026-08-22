@@ -1,13 +1,31 @@
+"""Build a scheme directory with documents of chosen statuses.
+
+The tests that exercise retired-document reporting used to lean on whatever the
+corpus happened to contain, which made them silently weaker as the corpus
+changed — and impossible to write at all for a project (like this one) whose
+every decision is Active. A fixture states what it needs.
+"""
 from pathlib import Path
+
 from luria.config import current
 
-def decision(root: Path, number: int, status: str, title: str='A decision', summary: str='') -> Path:
-    scheme = current().schemes['ADR']
-    assert root == current().root, 'fixture root and LURIA_ROOT disagree'
-    path = scheme.dir / f'ADR-{number:03d}.md'
+
+def decision(root: Path, number: int, status: str, title: str = "A decision",
+             summary: str = "") -> Path:
+    """File a decision where the *current* config's ADR scheme reads them.
+
+    Derived rather than hardcoded, because the conventional location moved
+    once already (`docs/decisions` → `record/decisions.d`, ADR-021) and a
+    fixture that spells the path writes documents the scheme can't see —
+    every test downstream then passes on an empty corpus."""
+    scheme = current().schemes["ADR"]
+    assert root == current().root, "fixture root and LURIA_ROOT disagree"
+    path = scheme.dir / f"ADR-{number:03d}.md"
     path.parent.mkdir(parents=True, exist_ok=True)
-    front = [f'status: {status}', f'title: {title!r}', 'tags:', '- record', "date: '2026-01-01'"]
+    front = [f"status: {status}", f"title: {title!r}",
+             "tags:", "- record", "date: '2026-01-01'"]
     if summary:
-        front.append(f'summary: {summary!r}')
-    path.write_text('---\n' + '\n'.join(front) + f'\n---\n\n# ADR-{number:03d}: {title}\n\nBody.\n')
+        front.append(f"summary: {summary!r}")
+    path.write_text("---\n" + "\n".join(front) + "\n---\n\n"
+                    f"# ADR-{number:03d}: {title}\n\nBody.\n")
     return path

@@ -1,0 +1,31 @@
+# Architecture decision records
+
+A decision record is a **choice among alternatives at a point in time**. Write
+one when you rejected an alternative, chose a constraint, or made something a
+future edit could silently violate. Run `luria new adr`; it assigns the
+identity and scaffolds from [`_template.md`](../../record/decisions.d/_template.md).
+
+Values that decisions *cite* live in
+[design-principles.md](../../docs/design-principles.md) instead. The split, and why
+these are separate files, is [ADR-003](../../record/decisions.d/ADR-003.md).
+
+A decision whose **choice** changes is superseded by *adding* a decision and
+flipping the old one's status — not by rewriting its body. A record you can
+quietly rewrite can't be trusted about what you used to think.
+
+That is a rule about silence, not about editing. A decision whose choice stands
+but whose *reasoning* was wrong is corrected in place, with a `version` bump and
+a `history:` entry saying what the previous version claimed
+([ADR-019](../../record/decisions.d/ADR-019.md)). Nothing here is frozen; it is only
+un-silently revisable, and this record has worked examples of both
+([project memory §2](../../docs/project-memory.md)).
+
+<!-- GENERATED below this line by `luria index` — edit README.stub instead. -->
+
+## By tag
+
+{categories}
+
+## Chronological
+
+{table}

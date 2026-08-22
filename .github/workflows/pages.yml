@@ -1,3 +1,16 @@
+# Luria publishes its own record (ADR-009, ADR-042), using the same composite
+# action adopters get — referenced by local path so a change to the action is
+# exercised by the pull request that makes it (ADR-029).
+#
+# Build runs on every pull request and deploys on none: a site that stopped
+# building should fail the branch that broke it, not the merge. Deploy is a
+# separate job because it is the only one that needs `pages: write`, and the
+# smallest surface that can publish is the right one (the same reasoning as
+# the PyPI split in publish.yml).
+#
+# One repository setting is required and cannot live here: Settings → Pages →
+# Source must be "GitHub Actions". Until it is, `deploy` fails with "Pages is
+# not enabled" while `build` stays green.
 name: Pages
 
 on:
@@ -6,6 +19,8 @@ on:
   pull_request:
   workflow_dispatch:
 
+# A published page is the whole repository's markdown rendered; nothing in the
+# build needs to write anything back.
 permissions:
   contents: read
 
