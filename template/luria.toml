@@ -1,62 +1,25 @@
-# Luria configuration. Every key has a default, so the only one most projects
-# need is `issue_url` — without it, issue numbers stay bare rather than linking
-# somewhere wrong.
 [luria]
 issue_url = ""
 
-# The read/write boundary (LU-ADR-021): `docs/` is where a reader browses —
-# prose plus every generated view — and `record/` is where a contributor files.
-# The `.d` suffix on each container inside is the visual affordance that you
-# have crossed into the write domain: fragments live here, views render there.
 [luria.paths]
 docs = "docs"
 decisions = "record/decisions.d"
 design_principles = "docs/design-principles.md"
-# Committed views, not build artifacts, so the README badges land on
-# the report that explains their numbers.
 reports = "docs/reports"
 
-# Fragment directory → the file it is collected into. Links written in a
-# fragment resolve from the collected file's directory, not the fragment's
-# (ADR-005), so this mapping is load-bearing, not just bookkeeping. The
-# release shape — dated batches, newest first, right after the marker — is
-# `style = "changelog"` (ADR-028); spelled as a table:
-#
-#   [luria.fragments."record/changelog.d"]
-#   file  = "CHANGELOG.md"
-#   style = "changelog"
 [luria.fragments]
 "record/changelog.d" = "CHANGELOG.md"
 
-# A journal is the other half of the split: its entries are dated observations
-# that stay true, so they PERSIST and the books are generated from them, rather
-# than being consumed the way a changelog fragment is (ADR-020). Entries live at
-# `<dir>/yyyy/mm/dd/hhmmss.md` — file one with `luria journal new "A title"`.
-# `granularity` is year | month | day; pick it from how fast you actually write.
 [luria.journals.devlog]
 dir = "record/devlog.d"
 output = "docs/devlog"
 granularity = "month"
 title = "Development log"
 
-# Source files to scan for references to retired decisions. A decision number in
-# a code comment is the strongest form of the claim being checked — it is the
-# stated reason the code is shaped that way — so include the code you care about.
 [luria.code]
 globs = []
-# Dated records: true about the day they were written, forever. Scanning them
-# produces permanent, unactionable noise. Journals are covered automatically.
 historical = ["CHANGELOG.md"]
 
-# A referable document family: a prefix, a directory, the status that means "in
-# force", and how its view is rendered — `index` when the documents are browsed
-# and read one at a time, `document` when the set is read as a whole (ADR-012).
-# Add another (RFC, SPEC) as a third entry; nothing else needs to change.
-#
-# A declared family is yours entirely (LU-ADR-047): this file declares ADR and
-# DP, so this record has ADR and DP — delete one of these tables and the
-# scheme is gone, record and views alike. A family left undeclared keeps the
-# shipped default.
 [luria.schemes.ADR]
 dir = "record/decisions.d"
 output = "docs/decisions"
@@ -69,69 +32,18 @@ active = "Active"
 render = "document"
 output = "docs/design-principles.md"
 
-# Another project's record, cited from this one. `LU-ADR-013` then means that
-# project's ADR-013: the fixer links it, the lint demands it, and
-# `luria remotes` shows how each one resolves.
-#
-# `LU` is Luria itself, and the templates in this scaffold cite it — that is how
-# the reasoning behind a convention stays one click away without pasting URLs
-# into your own files. Delete it once you stop needing the pointers.
 [luria.remotes.LU]
 name = "luria"
 repo = "dmarx/luria"
 ref  = "main"
 dir  = "record/decisions.d"
 
-# A remote's code families can construct differently (LU-ADR-023): `dir` for
-# file-per-code schemes, `document` (+ optional `anchor`) for schemes whose
-# documents are sections of one page. The anchor defaults to `dp-{number}`,
-# the stable shape Luria's document render emits.
 [luria.remotes.LU.schemes.DP]
 document = "docs/design-principles.md"
 
-# Add your own the same way. A remote whose filenames carry title slugs needs
-# `luria remotes --refresh` once, to discover them into remotes.lock.json; one
-# that names files after their codes needs nothing.
 
-# Fixture codes (LU-ADR-034): write FX-ADR-032 in an example or a test and it
-# resolves to the note explaining the convention — never a claim about your
-# record, and never able to collide with it, because it is not in the sequence.
 [luria.remotes.FX]
 name = "fixtures"
 url  = "https://github.com/dmarx/luria/blob/main/docs/directives.md#fixture-codes"
 
-# The published site (LU-ADR-042), built by the Pages workflow in
-# `.github/workflows/pages.yml`. Everything here derives from `issue_url` for
-# a GitHub project — the title, the Pages URL, and the base a link falls back
-# to when it points at a repository file the site doesn't publish — so this
-# table is only needed to override one of them, or to keep a directory of
-# markdown out of the site.
-# [luria.site]
-# title      = "My project"
-# base_url   = "owner.github.io/repo"
-# source_url = "https://github.com/owner/repo/blob/HEAD"
-# exclude    = ["vendor/**"]
-#
-# Your artwork, if you have some. `icon` is the favicon and stays the VECTOR
-# master — the build rasterizes it, so nothing derived from it is committed
-# here to drift (LU-DP-3). `logo` replaces the site title in the sidebar, and
-# is baked once per theme; add `logo_dark` when the artwork can't invert
-# itself.
-# icon = "assets/brand/icon.svg"
-# logo = "assets/brand/lockup.svg"
-#
-# Any of Quartz's colour names — light, lightgray, gray, darkgray, dark,
-# secondary, tertiary, highlight, textHighlight. The ones you leave out stay
-# the generator's; one it doesn't know is refused by name.
-# [luria.site.theme.light]
-# light = "#f4f1e8"
-# dark  = "#111111"
-# [luria.site.theme.dark]
-# light = "#151412"
-# dark  = "#f4f1e8"
 
-# The enforcement dial (LU-ADR-035): status findings are warnings by default,
-# and a class named here fails `luria lint` instead. The acknowledgement
-# directives keep working under enforcement — only unacknowledged rows fail.
-# [luria.lint]
-# fail_on = ["retired-citations", "pending-documents"]

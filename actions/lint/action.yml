@@ -1,12 +1,3 @@
-# The checking half of the recommended docs workflow (ADR-029): the lint that
-# gates what a generator cannot decide, plus the status reports uploaded where
-# they can be read — which matters most when the lint failed.
-#
-# Caller contract: check out the SHA the generate action output (via `needs:`
-# on the generation job), and set up Python first. Without that handoff this
-# lint reads the pre-regeneration commit and fails on staleness the bot just
-# repaired — a push made with GITHUB_TOKEN does not retrigger workflows, so
-# that red never clears on its own.
 name: luria docs lint
 description: >-
   Run luria lint — unresolved references, wikilinks that resolve to nothing, a
@@ -33,10 +24,6 @@ runs:
       run: pip install ${{ inputs.pip-spec }}
     - shell: bash
       run: luria lint
-    # The reports are committed views written by `luria index` (#35), but the
-    # artifact regenerates them fresh: when the lint failed on staleness, the
-    # committed copies are exactly what can't be trusted. always() keeps them
-    # available when the lint failed, when they are most wanted.
     - if: ${{ always() }}
       shell: bash
       run: luria reports

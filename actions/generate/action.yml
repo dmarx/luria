@@ -1,22 +1,3 @@
-# The generation half of the recommended docs workflow (ADR-029): regenerate
-# luria's views, commit and push them as the bot, and hand the checking job the
-# SHA it must read. This action is the single authoritative implementation of
-# the commit/push/handoff logic — the template workflow and luria's own CI both
-# use it rather than restating it, because a restated copy of tricky logic is
-# the drift this package exists to prevent.
-#
-# Caller contract:
-#   - Check out the repository FIRST, with a fork-safe ref (see the template
-#     workflow: a fork PR's head branch does not exist in the base repository,
-#     so name it only for same-repo PRs and fall back to the default
-#     merge-commit checkout otherwise).
-#   - Grant the job `permissions: contents: write`; a fork PR's read-only
-#     token is detected and the push is skipped with a warning instead.
-#   - Set up Python before this action (actions/setup-python).
-#   - Give the DOWNSTREAM checking job `needs:` on this job and have it check
-#     out this action's `sha` output. A push made with GITHUB_TOKEN does not
-#     retrigger workflows, so a lint in a separate workflow would keep a red
-#     it can never clear.
 name: luria docs generate
 description: >-
   Regenerate luria's derived views (luria link --fix + luria index), commit and
@@ -67,10 +48,6 @@ runs:
     - id: commit
       shell: bash
       env:
-        # A fork PR's GITHUB_TOKEN is read-only; pushing would 403 on
-        # something that is not the contributor's fault. Skipping the commit
-        # leaves HEAD at the un-regenerated SHA, which is exactly what makes
-        # the staleness check downstream fire for forks.
         CAN_PUSH: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
         MSG: ${{ inputs.commit-message }}
       run: |
@@ -84,19 +61,12 @@ runs:
           git reset -q
         else
           git commit -m "$MSG"
-          # The branch may have moved since checkout; rebase this single
-          # generated commit on top rather than failing at the push.
           git pull --rebase origin "$(git rev-parse --abbrev-ref HEAD)"
           git push
         fi
         echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
-    # The generator itself is the thing that can still fail: stale immediately
-    # after regenerating means luria is broken or non-idempotent.
     - shell: bash
       run: luria index --check
-    # The trunk's guard (LU-ADR-049): where concretization runs, a temporary
-    # code surviving it means the concretizer is broken — fail here, at the
-    # serialization point, not in some later reader's checkout.
     - if: ${{ inputs.concretize == 'true' }}
       shell: bash
       run: luria concretize --check
