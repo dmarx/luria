@@ -126,6 +126,7 @@ engine, pointed at a body of ideas instead of a codebase.
 | [Schemes](docs/schemes.md) | record families beyond decisions |
 | [CLI reference](docs/cli.md) | every command and flag |
 | [Configuration](docs/configuration.md) | every `luria.toml` key, generated from the schema |
+| [The record](docs/record.md) | what *this* project configured, generated from `luria.toml` — the page every adopting project gets |
 | [Directives](docs/directives.md) | the acknowledgement vocabulary |
 | [Adopting](docs/adopting.md) | bringing luria to a repo that already has history |
 | [In practice](docs/in-practice.md) | three real records compared, and what drove each choice |

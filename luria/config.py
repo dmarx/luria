@@ -662,6 +662,33 @@ class Config:
         return self.docs / "configuration.md"
 
     @property
+    def record_doc(self) -> Path:
+        """Where the generated description of *this* project's record lands.
+
+        Distinct from `config_doc` because they answer different questions and
+        only one of them is about this repository: the reference is the schema
+        (identical wherever Luria is installed), this page is the shape a
+        particular project gave it."""
+        return self.docs / "record.md"
+
+    @property
+    def owns_schema(self) -> bool:
+        """True in the tree that *contains* the dataclasses the configuration
+        reference is a projection of.
+
+        The reference is generated rather than written so it cannot drift from
+        `config.py` — an argument that only holds where `config.py` is a file
+        the reader can open. Rendered into an adopting project it is a
+        vendored copy of somebody else's schema, carrying a stamp that tells
+        the reader to go edit a file they do not have, and going stale on
+        their next upgrade with nothing in their repository responsible for
+        it. So the page renders where its source lives, which is here (and in
+        a project that vendored the package rather than installing it — for
+        which the same argument holds, and the same file is present)."""
+        return (self.root / "luria" / "config.py").resolve() \
+            == Path(__file__).resolve()
+
+    @property
     def remotes_lock(self) -> Path:
         """Discovered code→filename maps for the remotes, checked in.
 
@@ -687,6 +714,11 @@ class Config:
         # filters on this method, so the bare-reference lint and the fixer
         # both leave it alone.
         if path == self.config_doc:
+            return True
+        # The record description, generated from this config for the same two
+        # reasons: a hand-written "how our record works" drifts, and the page
+        # is made of example codes.
+        if path == self.record_doc:
             return True
         for s in self.schemes.values():
             if s.render == "index" and (path == s.index_path
