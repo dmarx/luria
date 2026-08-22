@@ -1,4 +1,4 @@
 # Research notes
 
 - [Notes](notes/README.md)
-- [Configuration](configuration.md) — every `luria.toml` key, generated.
+- [The record](record.md) — what this project configured, generated.

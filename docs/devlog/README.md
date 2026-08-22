@@ -6,6 +6,7 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 
 ## Currently — [August 2026](2026-08.md)
 
+- [22 Aug 06:34 — The schema reference was somebody else's file in everybody else's repo](2026-08.md#20260822063442)
 - [16 Aug 19:30 — Four descriptions and no name](2026-08.md#20260816193000)
 - [16 Aug 19:02 — The field was green because nobody was judging](2026-08.md#20260816190210)
 - [16 Aug 18:24 — The five words held; what they mean drifted](2026-08.md#20260816182420)
@@ -47,8 +48,8 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 
 ## All books
 
-38 entries across 1 book, newest first.
+39 entries across 1 book, newest first.
 
 | Book | Entries | First | Last |
 |---|--:|---|---|
-| [2026-08](2026-08.md) | 38 | 2026-08-03 | 2026-08-16 |
+| [2026-08](2026-08.md) | 39 | 2026-08-03 | 2026-08-22 |

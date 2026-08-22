@@ -21,6 +21,7 @@ If you are here to use it, go in this order.
 |---|---|
 | [CLI](cli.md) | every command, what it is for, and the CI wiring |
 | [Configuration](configuration.md) | every `luria.toml` key, generated from the schema |
+| [The record](record.md) | what *this* project configured — the families it named, where entries are filed, what to type to add one |
 | [Directives](directives.md) | the acknowledgement vocabulary, and how to choose |
 | [Schemes](schemes.md) | designing record families beyond decisions |
 | [Python API](api.md) | using luria as a library, and adding your own checks |
