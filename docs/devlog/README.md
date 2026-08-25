@@ -6,6 +6,7 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 
 ## Currently — [August 2026](2026-08.md)
 
+- [24 Aug 20:51 — A guard for the one convention that has no escape](2026-08.md#20260824205117)
 - [22 Aug 06:34 — The schema reference was somebody else's file in everybody else's repo](2026-08.md#20260822063442)
 - [16 Aug 19:30 — Four descriptions and no name](2026-08.md#20260816193000)
 - [16 Aug 19:02 — The field was green because nobody was judging](2026-08.md#20260816190210)
@@ -48,8 +49,8 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 
 ## All books
 
-39 entries across 1 book, newest first.
+40 entries across 1 book, newest first.
 
 | Book | Entries | First | Last |
 |---|--:|---|---|
-| [2026-08](2026-08.md) | 39 | 2026-08-03 | 2026-08-22 |
+| [2026-08](2026-08.md) | 40 | 2026-08-03 | 2026-08-24 |

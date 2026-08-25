@@ -25,6 +25,14 @@ inputs:
   reports-path:
     description: Where `luria reports` writes — your luria.toml's `reports` path.
     default: docs/reports
+  skip-marker-range:
+    description: >-
+      Commit range scanned for skip markers written as prose — a message
+      *describing* the convention carries the marker and so suppresses its own
+      build. Empty string turns the check off. It needs history to read:
+      `actions/checkout` fetches depth 1 by default, so give the checkout a
+      `fetch-depth` that covers this range or the check has nothing to see.
+    default: HEAD~20..HEAD
 runs:
   using: composite
   steps:
@@ -40,6 +48,13 @@ runs:
     - if: ${{ always() }}
       shell: bash
       run: luria reports
+    # Independent of the lint's verdict, so `always()`: a suppressed build is
+    # worth reporting on the run that failed as much as on the one that
+    # passed. Warns and does not fail — the marker is legitimate on the
+    # commits that mean it, and only position distinguishes them.
+    - if: ${{ always() && inputs.skip-marker-range != '' }}
+      shell: bash
+      run: luria skip-markers --rev-range "${{ inputs.skip-marker-range }}"
     - if: ${{ always() && inputs.reports-artifact != '' }}
       uses: actions/upload-artifact@v4
       with:

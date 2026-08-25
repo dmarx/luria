@@ -116,6 +116,32 @@ Assemble fragment directories into their documents — a changelog from
 Fragments exist so the assembled file is not a lock every branch must touch.
 Collect on a cadence, not on every merge.
 
+## `luria skip-markers [--rev-range R] [--strict]`
+
+Report commits whose message carries a CI skip marker **in its body** — a
+message *describing* the convention contains the marker, and so tells the forge
+not to build the commit that describes it.
+
+Position is the whole rule, and it is what keeps this quiet enough to be worth
+running. A deliberate skip goes in the subject line or a trailer, which is where
+every tool that generates one puts it — the `generate` action's own
+`docs: regenerate views [skip ci]` included, which is why no author check is
+needed. A marker anywhere else was almost certainly prose.
+
+Prints nothing when there is nothing to say, warns rather than fails, and says
+nothing at all when it cannot read history — a depth-1 checkout is the ordinary
+case, and a build should not break on a checkout setting. `--strict` exits 1 for
+a project that wants it enforced.
+
+This is a backstop, not a fix: the run it warns on is a **later** one, because
+the suppressed commit's own run is precisely what did not happen. What it
+converts is silence into a message — and silence is the reason the failure is
+hard to spot, since a suppressed build is not a red check but *no* check, with
+the previous commit's green still on display.
+
+The `lint` action runs it; give that job's checkout a `fetch-depth` covering the
+range, or it has nothing to read.
+
 ## `luria init [--config PATH] [--dry-run] [--issue-url URL]`
 
 Scaffold the record a config declares. Never overwrites, so it is safe in a repo

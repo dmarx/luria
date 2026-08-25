@@ -17,6 +17,10 @@ Detection is deliberately crude — every CI sets `CI` — and it only ever
 changes what is *said*, never what is done: a false positive costs a sentence
 of advice, a false negative leaves today's behaviour. Nothing here gates a
 write or an exit code.
+
+The second question this module answers is the inverse: whether a commit
+message has accidentally told the forge **not to build**. See
+`prose_skip_marker` — same posture, nothing gated, only something said.
 """
 
 from __future__ import annotations
@@ -65,3 +69,114 @@ def regenerate_remedy(command: str = "luria index") -> str:
 # warning that is usually noise trains readers to skip warnings, the flaky-
 # guard dynamic this record already documents. The remedy above is the whole
 # surface: it fires only when a check has actually failed (ADR-029).
+
+
+# ── Skip markers written as prose ────────────────────────────────────────
+#
+# The forge skips a workflow run when the head commit's message carries one
+# of these. That is a useful convention and this package depends on it: the
+# generate action marks its own commits so a bot push opens no run.
+#
+# The hazard is that the convention has no escape: a message *describing* the
+# marker contains the marker, so writing about it suppresses the build for the
+# commit that writes about it. Observed in the wild, in a commit adopting this
+# very workflow, by an author who had read the warning first — which is the
+# evidence that a comment was not enough.
+#
+# GitHub documents the marker as honoured in the first or last line. Measured,
+# it is broader than that: a marker in the middle of a body suppressed every
+# workflow on the commit. So the position below is not a claim about what the
+# forge honours; it is a claim about what the AUTHOR meant.
+SKIP_MARKERS = ("[skip ci]", "[ci skip]", "[no ci]",
+                "[skip actions]", "[actions skip]")
+
+
+def prose_skip_marker(message: str) -> str | None:
+    """The skip marker this message carries in a *prose* position, or None.
+
+    The whole design is the position, and it is what keeps this quiet enough
+    to be worth having. Someone deliberately skipping a build puts the marker
+    where the convention puts it — the subject line, or a trailer at the end —
+    and every tool that generates one does the same, this package's own
+    generate action included. Someone *writing about* the convention lands it
+    in the middle of a paragraph.
+
+    So a marker in the first or last line is read as an instruction and passes
+    silently; one in the body is read as prose and is reported. That single
+    rule is why no author check is needed: the bot's `docs: regenerate views
+    [skip ci]` is one line, which is first and last at once, and never fires.
+
+    The failure being caught is unusually easy to miss, which is the argument
+    for catching it at all. A suppressed run is not a red build — it is *no*
+    build, and the pull request goes on displaying the previous commit's green
+    checks. Silence is indistinguishable from success unless someone thinks to
+    ask which commit the green belongs to.
+    """
+    lines = message.strip().splitlines()
+    # Two lines or fewer is all instruction position and no body.
+    for line in lines[1:-1]:
+        lowered = line.lower()
+        for marker in SKIP_MARKERS:
+            if marker in lowered:
+                return marker
+    return None
+
+
+def commits(rev_range: str) -> list[tuple[str, str]]:
+    """`(sha, message)` for each commit in the range, newest first.
+
+    Returns nothing when git cannot answer — a shallow checkout is the
+    ordinary case (`actions/checkout` fetches depth 1 by default), and a
+    guard that cannot see history has nothing to say. It must not turn that
+    into a failure: the build would break on a checkout setting rather than
+    on anything about the code.
+    """
+    import subprocess
+    try:
+        out = subprocess.run(
+            ["git", "log", "--format=%H%n%B%x00", rev_range],
+            capture_output=True, text=True, check=True).stdout
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        return []
+    found = []
+    for chunk in out.split("\0"):
+        chunk = chunk.strip("\n")
+        if not chunk:
+            continue
+        sha, _, message = chunk.partition("\n")
+        found.append((sha.strip(), message))
+    return found
+
+
+def run(rev_range: str = "HEAD~20..HEAD", strict: bool = False) -> None:
+    """Report commits that tell the forge not to build while meaning to talk
+    about it — a skip marker sitting in prose rather than in the subject or a
+    trailer (`prose_skip_marker`).
+
+    Prints nothing when there is nothing to say. That is deliberate and it is
+    the lesson this module already learned once: a warning printed on correct
+    runs trains readers to skip warnings, and the check that fires on every
+    green build is the one nobody reads on the red one.
+
+    Warns rather than fails by default, matching the record's posture
+    everywhere else; `--strict` promotes it for a project that wants the
+    build to stop.
+    """
+    import sys
+    hits = [(sha, marker)
+            for sha, message in commits(rev_range)
+            if (marker := prose_skip_marker(message))]
+    if not hits:
+        return
+    annotate = os.environ.get("GITHUB_ACTIONS", "").lower() == "true"
+    for sha, marker in hits:
+        text = (f"{sha[:8]} carries `{marker}` in its message body. If this "
+                f"commit was ever the tip of a push, its checks did not run "
+                f"— a suppressed run is not a red build, it is no build, and "
+                f"the previous commit's green stays on display. Write about "
+                f"the marker in prose, or move it to the subject line if the "
+                f"skip was meant.")
+        print(f"::warning::{text}" if annotate else f"luria: {text}",
+              file=sys.stderr)
+    if strict:
+        raise SystemExit(1)

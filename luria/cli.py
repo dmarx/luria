@@ -17,6 +17,7 @@ Two more exist for CI, which is their only regular caller:
 
     luria reports       write the status reports as markdown, for an artifact
     luria collect       assemble fragment directories into their views
+    luria skip-markers  commits whose message told the forge not to build
 
 Each command is a plain typed function (`<module>.run`), and Fire derives the
 flags and help from the signatures and docstrings — there is no argparse
@@ -31,8 +32,8 @@ the package.
 
 import fire
 
-from . import (adr_index, collect, concretize, init, link_refs, lint, migrate,
-               new, remotes, reports, site)
+from . import (adr_index, ci, collect, concretize, init, link_refs, lint,
+               migrate, new, remotes, reports, site)
 
 COMMANDS = {
     "lint": lint.run,
@@ -46,6 +47,7 @@ COMMANDS = {
     "init": init.run,
     "reports": reports.run,
     "collect": collect.run,
+    "skip-markers": ci.run,
 }
 
 # Run by CI on every push; runnable by hand, but nothing in the contributor
@@ -54,6 +56,7 @@ COMMANDS = {
 CI_COMMANDS = {
     "reports": ("luria.reports", "write the status reports as markdown"),
     "collect": ("luria.collect", "assemble fragments into their views"),
+    "skip-markers": ("luria.ci", "commits that suppressed their own build"),
 }
 
 

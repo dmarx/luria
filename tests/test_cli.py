@@ -12,7 +12,7 @@ from __future__ import annotations
 import subprocess
 import sys
 
-from luria import (adr_index, cli, collect, concretize, init, link_refs,
+from luria import (adr_index, ci, cli, collect, concretize, init, link_refs,
                    lint, migrate, new, remotes, reports, site)
 
 
@@ -22,7 +22,7 @@ def test_every_command_is_registered():
         "new": new.run, "concretize": concretize.run,
         "migrate": migrate.run, "remotes": remotes.run,
         "site": site.run, "init": init.run, "reports": reports.run,
-        "collect": collect.run,
+        "collect": collect.run, "skip-markers": ci.run,
     }
 
 
