@@ -348,9 +348,10 @@ def check_generated_index(errors: list[str]) -> None:
                       f"{remedy}, or file the content as a source")
     # The README's badge counts are derived from the same frontmatter, so a
     # stale one is the same class of failure as a stale index (ADR-018).
-    if report.badges:
+    if report.readme:
         errors.append(
-            f"{cfg.rel(report.badges)}: badge counts are stale — {remedy}")
+            f"{cfg.rel(report.readme)}: a generated region is stale — "
+            f"{remedy}")
 
 
 def check_wikilinks(errors: list[str]) -> None:

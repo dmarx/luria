@@ -203,20 +203,23 @@ And the record itself, dogfooded: [decisions](docs/decisions/README.md) ·
 
 ## Citing Luria
 
+<!-- luria:citation -->
 ```bibtex
 @software{marx_luria,
   author  = {Marx, David},
   title   = {Luria: project memory, kept honest by lint},
   url     = {https://github.com/dmarx/luria},
   license = {MIT},
-  year    = {2026},
 }
 ```
+<!-- /luria:citation -->
 
-Add `version = {...}` for the release you used; `pip show luria` prints it.
-There is no version pinned above on purpose — one here would be a
-hand-maintained copy of the release tag, which is the drift [DP-3](docs/design-principles.md#dp-3) names and
-[ADR-053](record/decisions.d/ADR-053.md) removed.
+Derived from [`CITATION.cff`](CITATION.cff) by `luria index`, which is also
+what GitHub reads for its *Cite this repository* button — so the two cannot
+disagree. Add `version = {...}` for the release you used; `pip show luria`
+prints it. Nothing pins one here, because a version written into a file by
+hand is a copy of the release tag, which is the drift [DP-3](docs/design-principles.md#dp-3) names and [ADR-053](record/decisions.d/ADR-053.md)
+removed.
 
 ## License
 
