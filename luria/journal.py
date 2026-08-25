@@ -95,7 +95,7 @@ class Entry:
 
 
 def read(path: Path) -> Entry | None:
-    meta, body = parse_frontmatter(path.read_text())
+    meta, body = parse_frontmatter(path.read_text(encoding="utf-8"))
     created = parse_created(meta.get("created")) or created_from_path(path)
     if created is None:
         return None
@@ -130,7 +130,7 @@ def populate_created(journal: Journal) -> list[Path]:
     for path in sorted(journal.dir.rglob("*.md")):
         if path.name == "_template.md":
             continue
-        text = path.read_text()
+        text = path.read_text(encoding="utf-8")
         meta, _ = parse_frontmatter(text)
         if parse_created(meta.get("created")) is not None:
             continue
@@ -146,7 +146,7 @@ def populate_created(journal: Journal) -> list[Path]:
             new_text = f"{head}\n{line}\n{rest}"
         else:
             new_text = f"---\n{line}\n---\n\n{text}"
-        path.write_text(new_text)
+        path.write_text(new_text, encoding="utf-8")
         fixed.append(path)
     return fixed
 
@@ -268,7 +268,7 @@ def new(journal: Journal, title: str, now: dt.datetime) -> Path:
         "---\n\n"
         "Write the entry here: what problem was solved, what the fix was, and\n"
         "what was found along the way — the failed approaches and the traps the\n"
-        "next person would otherwise rediscover.\n")
+        "next person would otherwise rediscover.\n", encoding="utf-8")
     return path
 
 

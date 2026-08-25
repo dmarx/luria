@@ -158,7 +158,7 @@ class Adr:
         # A merge-allocated document awaiting concretization (ADR-049): no
         # number yet, addressed by its temporary tail.
         self.tail = scheme.temp_of(path)
-        self.meta, body = parse_frontmatter(path.read_text())
+        self.meta, body = parse_frontmatter(path.read_text(encoding="utf-8"))
         # `title:` is the source of truth; the body's H1 is the fallback, so a
         # document written before the field existed — or in a project that
         # hasn't adopted it — still renders a title rather than a blank cell
@@ -251,7 +251,7 @@ def tag_order(adrs: list[Adr], scheme=None) -> list[tuple[str, dict]]:
     actually uses, alphabetically. Using a new tag must never require a code
     change — that's the whole point of pushing categories down onto the ADRs."""
     tags_file = scheme.tags_yaml if scheme else current().tags_yaml
-    declared = yaml.safe_load(tags_file.read_text()) if tags_file.exists() else {}
+    declared = yaml.safe_load(tags_file.read_text(encoding="utf-8")) if tags_file.exists() else {}
     declared = declared or {}
     used = {t for a in adrs for t in a.tags}
     ordered = [(t, declared[t] or {}) for t in declared if t in used]
@@ -288,7 +288,7 @@ def render_index(adrs: list[Adr], tags: list[tuple[str, dict]],
     if declared := statuses.legend(scheme):
         table = declared + "\n" + table
     stub = scheme.stub
-    prose = (stub.read_text() if stub.exists()
+    prose = (stub.read_text(encoding="utf-8") if stub.exists()
              else DEFAULT_STUB.replace(
                  "{title}", "Architecture decision records"
                  if scheme.prefix == "ADR" else f"{scheme.prefix} documents"))
@@ -334,13 +334,13 @@ def render_document(scheme, docs: list[Adr]) -> str:
     # A project that wrote a stub gets its own prose verbatim; one that hasn't
     # gets a heading named after its own scheme rather than after this
     # package's principles.
-    head = (stub.read_text() if stub.exists()
+    head = (stub.read_text(encoding="utf-8") if stub.exists()
             else DEFAULT_DOCUMENT_STUB.replace(
                 "{title}", f"{scheme.prefix} documents"))
     base = scheme.output.parent if scheme.output else scheme.dir
     parts = []
     for doc in docs:
-        body = parse_frontmatter(doc.path.read_text())[1].strip()
+        body = parse_frontmatter(doc.path.read_text(encoding="utf-8"))[1].strip()
         # Demote the fragment's own H1 to the assembled document's H2, and
         # renumber it into the reader's numbering rather than the file's code.
         label = doc.number if doc.number is not None else doc.code
@@ -525,13 +525,13 @@ def staleness(rendered: dict[Path, str] | None = None) -> Staleness:
     readme = badges_mod.readme()
     drifted = False
     if readme.exists() and readme not in skip:
-        text = readme.read_text()
+        text = readme.read_text(encoding="utf-8")
         drifted = ((badges_mod.OPEN in text and badges_mod.rewrite(text) != text)
                    or (citation_mod.OPEN in text
                        and citation_mod.rewrite(text) != text))
     return Staleness(
         stale=[p for p, text in rendered.items()
-               if p not in skip and (not p.exists() or p.read_text() != text)],
+               if p not in skip and (not p.exists() or p.read_text(encoding="utf-8") != text)],
         orphaned=[p for p in loose if p not in skip],
         readme=readme if drifted else None,
     )
@@ -573,7 +573,7 @@ def run(check: bool = False) -> None:
         stale_file.unlink()
     for p, text in rendered.items():
         p.parent.mkdir(parents=True, exist_ok=True)
-        p.write_text(text)
+        p.write_text(text, encoding="utf-8")
     # Name every scheme, not just the decisions: a project that adds one wants
     # to see it counted, and a scheme silently rendering nothing is the failure
     # this line exists to make visible (DP-1).
@@ -590,13 +590,13 @@ def run(check: bool = False) -> None:
     from . import citation
     readme = badges.readme()
     if readme.exists():
-        text = readme.read_text()
+        text = readme.read_text(encoding="utf-8")
         if badges.OPEN in text:
             text = badges.rewrite(text)
         if citation.OPEN in text:
             text = citation.rewrite(text)
-        if text != readme.read_text():
-            readme.write_text(text)
+        if text != readme.read_text(encoding="utf-8"):
+            readme.write_text(text, encoding="utf-8")
 
 
 if __name__ == "__main__":

@@ -54,7 +54,7 @@ def declared(scheme) -> dict[str, dict]:
     path = scheme.statuses_yaml
     if not path.exists():
         return {}
-    loaded = yaml.safe_load(path.read_text()) or {}
+    loaded = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
     return {k: (v or {}) for k, v in loaded.items()}
 
 
@@ -138,7 +138,7 @@ def uniform(scheme) -> tuple[str, int] | None:
         return None
     found: list[str] = []
     for path in [*scheme.documents().values(), *scheme.temp_documents().values()]:
-        meta, _ = adr_index.parse_frontmatter(path.read_text())
+        meta, _ = adr_index.parse_frontmatter(path.read_text(encoding="utf-8"))
         status = str((meta or {}).get("status", "")).strip()
         if status:
             found.append(status.split(" — ")[0].strip())
@@ -177,7 +177,7 @@ def acknowledged_rows() -> list[str]:
         found = []
         for path in [*scheme.documents().values(),
                      *scheme.temp_documents().values()]:
-            meta, _ = adr_index.parse_frontmatter(path.read_text())
+            meta, _ = adr_index.parse_frontmatter(path.read_text(encoding="utf-8"))
             status = str((meta or {}).get("status", "")).strip()
             if status:
                 found.append(status.split(" — ")[0].strip())

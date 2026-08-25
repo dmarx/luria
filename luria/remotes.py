@@ -135,7 +135,7 @@ def lock() -> dict[str, dict[str, str]]:
     if not path.exists():
         return {}
     try:
-        return json.loads(path.read_text()).get("remotes", {})
+        return json.loads(path.read_text(encoding="utf-8")).get("remotes", {})
     except (OSError, ValueError):
         return {}
 
@@ -147,7 +147,7 @@ def write_lock(found: dict[str, dict[str, str]]) -> Path:
                      "CI and offline checkouts resolve foreign references the "
                      "same way (ADR-016).",
          "remotes": {k: dict(sorted(v.items())) for k, v in sorted(found.items())}},
-        indent=2) + "\n")
+        indent=2) + "\n", encoding="utf-8")
     return path
 
 
@@ -215,7 +215,7 @@ def hand_links(files: list[Path] | None = None
     stale: list[str] = []
     for path in files if files is not None else ref_status.scanned_files():
         try:
-            text = path.read_text()
+            text = path.read_text(encoding="utf-8")
         except (OSError, UnicodeDecodeError):
             continue
         quoted = doc_refs.code_spans(text) if path.suffix == ".md" else []
@@ -353,7 +353,7 @@ def cited() -> dict[str, set[str]]:
         return found
     for path in ref_status.scanned_files():
         try:
-            text = path.read_text()
+            text = path.read_text(encoding="utf-8")
         except (OSError, UnicodeDecodeError):
             continue
         for ref in references(text):

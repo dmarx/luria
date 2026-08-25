@@ -488,15 +488,15 @@ def _stamp_formerly(path: Path, old_code: str) -> None:
     """Append `old_code` to the document's `formerly:` list, creating it
     after the opening `---` when absent. Appending, never replacing: a
     document moved twice carries both pasts."""
-    text = path.read_text()
+    text = path.read_text(encoding="utf-8")
     if not text.startswith("---\n"):
         raise SystemExit(f"luria migrate: {path} has no frontmatter to stamp")
     m = re.search(r"^formerly:\n((?:- .*\n)*)", text, flags=re.MULTILINE)
     if m:
-        path.write_text(text[:m.end()] + f"- {old_code}\n" + text[m.end():])
+        path.write_text(text[:m.end()] + f"- {old_code}\n" + text[m.end():], encoding="utf-8")
     else:
         head, rest = text.split("\n", 1)
-        path.write_text(f"{head}\nformerly:\n- {old_code}\n{rest}")
+        path.write_text(f"{head}\nformerly:\n- {old_code}\n{rest}", encoding="utf-8")
 
 
 def _git(args: list[str]) -> str:
@@ -521,21 +521,21 @@ def apply(plan: Plan) -> tuple[int, int]:
     for source, new_path, old_code, new_code in plan.copies:
         # The fresh copy speaks as the new code; the source keeps saying the
         # old one — it is the tombstone, and its body is history.
-        text = source.read_text().replace(old_code, new_code)
+        text = source.read_text(encoding="utf-8").replace(old_code, new_code)
         new_path.parent.mkdir(parents=True, exist_ok=True)
-        new_path.write_text(text)
+        new_path.write_text(text, encoding="utf-8")
     for source, status in plan.tombstones:
-        text = source.read_text()
+        text = source.read_text(encoding="utf-8")
         text = re.sub(r"^status: .*$", f"status: {status}", text,
                       count=1, flags=re.MULTILINE)
-        source.write_text(text)
+        source.write_text(text, encoding="utf-8")
     for config_file, old_header, new_header in plan.section_renames:
-        text = config_file.read_text()
+        text = config_file.read_text(encoding="utf-8")
         if old_header in text:
-            config_file.write_text(text.replace(old_header, new_header))
+            config_file.write_text(text.replace(old_header, new_header), encoding="utf-8")
     for config_file in plan.config_files:
         config_file.write_text(
-            config_paths_pass(config_file.read_text(), plan))
+            config_paths_pass(config_file.read_text(encoding="utf-8"), plan), encoding="utf-8")
     for stale_view in plan.removals:
         if stale_view.exists():
             _git(["rm", "-q", str(stale_view)])
@@ -550,7 +550,7 @@ def apply(plan: Plan) -> tuple[int, int]:
             if not live.exists():
                 continue
             try:
-                text = live.read_text()
+                text = live.read_text(encoding="utf-8")
             except (UnicodeDecodeError, OSError):
                 continue
             # `unlinted-file` declares every reference in the file a quote,
@@ -563,7 +563,7 @@ def apply(plan: Plan) -> tuple[int, int]:
                                     paths=live not in plan.config_files,
                                     source=live)
             if count:
-                live.write_text(new)
+                live.write_text(new, encoding="utf-8")
                 files += 1
                 swept += count
     aliases_mod.reset()
@@ -592,14 +592,14 @@ def apply(plan: Plan) -> tuple[int, int]:
             if not path.exists():
                 continue
             try:
-                text = path.read_text()
+                text = path.read_text(encoding="utf-8")
             except (UnicodeDecodeError, OSError):
                 continue
             if doc_refs.unlinted(path, text):
                 continue
             linked, n = doc_refs.linkify(text, path, adrs, anchors)
             if n:
-                path.write_text(linked)
+                path.write_text(linked, encoding="utf-8")
     return files, swept
 
 
@@ -627,8 +627,8 @@ def describe(plan: Plan) -> list[str]:
 def _blame_ignore(sha: str, title: str) -> None:
     path = current().root / BLAME_IGNORE
     stamp = f"# luria migrate: {title}\n{sha}\n"
-    path.write_text((path.read_text() if path.exists() else
-                     "# Commits git blame should read through.\n") + stamp)
+    path.write_text((path.read_text(encoding="utf-8") if path.exists() else
+                     "# Commits git blame should read through.\n") + stamp, encoding="utf-8")
 
 
 def run(spec: str, dry_run: bool = False, commit: bool = False) -> None:
@@ -636,7 +636,7 @@ def run(spec: str, dry_run: bool = False, commit: bool = False) -> None:
     path, filename or leading number). --dry-run prints the plan; --commit
     commits the result and appends it to .git-blame-ignore-revs."""
     spec_path = _spec_path(str(spec))
-    parsed = tomllib.loads(spec_path.read_text())
+    parsed = tomllib.loads(spec_path.read_text(encoding="utf-8"))
     title = parsed.get("title") or spec_path.stem
     plan = build_plan(parsed, title)
 
@@ -644,7 +644,7 @@ def run(spec: str, dry_run: bool = False, commit: bool = False) -> None:
         would = 0
         for path in _tracked_files():
             try:
-                _, count = sweep_text(path.read_text(), plan,
+                _, count = sweep_text(path.read_text(encoding="utf-8"), plan,
                                       source=path)
             except (UnicodeDecodeError, OSError):
                 continue

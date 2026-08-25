@@ -370,7 +370,7 @@ def retire() -> list[Path]:
     path = cfg.config_doc
     if cfg.owns_schema or not path.exists():
         return []
-    if MARKER not in path.read_text():
+    if MARKER not in path.read_text(encoding="utf-8"):
         return []
     path.unlink()
     return [path]
@@ -380,7 +380,7 @@ def write(out_dir: Path | None = None) -> list[Path]:
     rendered = outputs(out_dir)
     for path, text in rendered.items():
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(text)
+        path.write_text(text, encoding="utf-8")
     return sorted(rendered)
 
 

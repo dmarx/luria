@@ -51,7 +51,7 @@ def alias_map(cfg: Config | None = None) -> dict[str, str]:
     out: dict[str, str] = {}
     for scheme in cfg.schemes.values():
         for number, path in scheme.documents().items():
-            meta, _ = parse_frontmatter(path.read_text())
+            meta, _ = parse_frontmatter(path.read_text(encoding="utf-8"))
             for old in meta.get("formerly") or []:
                 old_code = canon(str(old))
                 if old_code is not None:

@@ -301,7 +301,7 @@ def shorthand_tables(text: str, schemes: str, journals: str) -> str:
 
 
 def _read(rel: str) -> str:
-    return (TEMPLATE / rel).read_text()
+    return (TEMPLATE / rel).read_text(encoding="utf-8")
 
 
 def _toml_text(into: Path, config_arg: str | None, issue_url: str,
@@ -319,14 +319,14 @@ def _toml_text(into: Path, config_arg: str | None, issue_url: str,
                 "luria init: --schemes/--journals extend the shipped "
                 "template; with --config the shape is already declared, so "
                 "add the tables to that file instead.")
-        return Path(config_arg).read_text()
+        return Path(config_arg).read_text(encoding="utf-8")
     if root_cfg.exists():
         if schemes or journals:
             raise SystemExit(
                 f"luria init: {CONFIG_NAME} already exists in {into}, so the "
                 "shape is already declared — add the tables to it rather "
                 "than passing --schemes/--journals.")
-        return root_cfg.read_text()
+        return root_cfg.read_text(encoding="utf-8")
     return template_config(into, issue_url, schemes, journals)
 
 
@@ -363,7 +363,7 @@ def _scheme_files(scheme: Scheme) -> dict[Path, str]:
             scheme.tags_yaml: _read("record/decisions.d/tags.yaml"),
         }
     if scheme.prefix == "DP" and scheme.render == "document":
-        return {scheme.dir / src.name: src.read_text()
+        return {scheme.dir / src.name: src.read_text(encoding="utf-8")
                 for src in sorted((TEMPLATE / "record/principles.d").glob("*"))
                 if src.is_file()}
     stub = (GENERIC_STUB_DOCUMENT if scheme.render == "document"
@@ -431,7 +431,7 @@ def plan(into: Path, config_arg: str | None = None,
     files[into / "CLAUDE.md"] = _read("CLAUDE.md")
     for wf in sorted((TEMPLATE / ".github").rglob("*")):
         if wf.is_file():
-            files[into / wf.relative_to(TEMPLATE)] = wf.read_text()
+            files[into / wf.relative_to(TEMPLATE)] = wf.read_text(encoding="utf-8")
     return sorted(files.items())
 
 
@@ -451,7 +451,7 @@ def write(into: Path, issue_url: str = "", dry_run: bool = False,
         if dry_run:
             continue
         dest.parent.mkdir(parents=True, exist_ok=True)
-        dest.write_text(content)
+        dest.write_text(content, encoding="utf-8")
     return written, skipped, kept
 
 
@@ -484,7 +484,7 @@ def config_run(into: str = None, issue_url: str = "", schemes: str = "",
             f"luria config: {dest} already exists — this writes a starting "
             f"config, and yours has already started. Add the tables by hand, "
             f"or pass --stdout to see what this would have written.")
-    dest.write_text(text)
+    dest.write_text(text, encoding="utf-8")
     print(dest)
     print("\nEdit it, then `luria init` to scaffold the shape it declares.")
 

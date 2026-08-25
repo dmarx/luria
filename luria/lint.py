@@ -63,7 +63,7 @@ def check_docs_index(errors: list[str]) -> None:
     index = cfg.docs / "README.md"
     if not index.exists():
         return
-    text = index.read_text()
+    text = index.read_text(encoding="utf-8")
     # Two kinds of directory are exempt. A *source* directory holds things a
     # writer files, not pages a reader browses — the thing a reader opens is
     # the view. A *view* directory is wholly generated and carries its own
@@ -98,7 +98,7 @@ def check_frontmatter(errors: list[str]) -> None:
         for path in [*scheme.documents().values(),
                      *scheme.temp_documents().values()]:
             rel = cfg.rel(path)
-            meta, body = builder.parse_frontmatter(path.read_text())
+            meta, body = builder.parse_frontmatter(path.read_text(encoding="utf-8"))
             if not meta:
                 errors.append(f"{rel}: no YAML frontmatter (see _template.md)")
                 continue
@@ -157,7 +157,7 @@ def check_references(errors: list[str]) -> None:
         for path in [*scheme.documents().values(),
                      *scheme.temp_documents().values()]:
             rel = cfg.rel(path)
-            meta, _ = builder.parse_frontmatter(path.read_text())
+            meta, _ = builder.parse_frontmatter(path.read_text(encoding="utf-8"))
             if not meta:
                 continue          # check_frontmatter already said so
             for ref in scheme.references:
@@ -244,7 +244,7 @@ def check_tag_groups(errors: list[str]) -> None:
             continue
         for path in [*scheme.documents().values(),
                      *scheme.temp_documents().values()]:
-            meta, _ = builder.parse_frontmatter(path.read_text())
+            meta, _ = builder.parse_frontmatter(path.read_text(encoding="utf-8"))
             if not meta:
                 continue          # check_frontmatter already said so
             rel = cfg.rel(path)
@@ -277,7 +277,7 @@ def check_journals(errors: list[str]) -> None:
             if path.name == "_template.md":
                 continue
             rel = cfg.rel(path)
-            meta, _ = builder.parse_frontmatter(path.read_text())
+            meta, _ = builder.parse_frontmatter(path.read_text(encoding="utf-8"))
             created = journal.parse_created(meta.get("created"))
             if created is None:
                 # An inferrable field names its own remedy (#33); one with no
@@ -309,7 +309,7 @@ def check_version_history(errors: list[str]) -> None:
     cfg = current()
     for scheme in cfg.schemes.values():
         for path in scheme.documents().values():
-            meta, _ = builder.parse_frontmatter(path.read_text())
+            meta, _ = builder.parse_frontmatter(path.read_text(encoding="utf-8"))
             version = int(meta.get("version", 1) or 1)
             history = meta.get("history") or []
             rel = cfg.rel(path)
@@ -361,7 +361,7 @@ def check_wikilinks(errors: list[str]) -> None:
     machinery cannot honour — which must be said, not skipped (DP-1)."""
     cfg = current()
     for path in doc_refs.doc_files():
-        text = path.read_text()
+        text = path.read_text(encoding="utf-8")
         for w in doc_refs.wikilinks(text, path):
             rel = cfg.rel(path)
             if w.target is None:
@@ -382,7 +382,7 @@ def check_bare_refs(errors: list[str]) -> None:
     adrs, anchors = doc_refs.adr_paths(), doc_refs.dp_anchors()
 
     def scan_one(path) -> list[str]:
-        text = path.read_text()
+        text = path.read_text(encoding="utf-8")
         # `rewritable_refs` is what the fixer would write — unresolvable codes,
         # self-references and rewrites the frontmatter wouldn't survive are
         # already excluded, so lint never demands something `--fix` won't do.
@@ -515,7 +515,7 @@ def status_sections() -> list[tuple[str, str, list[str]]]:
     stale = ref_status.stale_annotations(result, docs) + stale_urls \
         + stale_targets
     for path in doc_refs.doc_files():
-        stale += doc_refs.directive_problems(path, path.read_text())
+        stale += doc_refs.directive_problems(path, path.read_text(encoding="utf-8"))
     if stale:
         sections.append((
             "stale-directives",

@@ -271,7 +271,7 @@ def scan(files: list[Path] | None = None, docs: dict[str, Doc] | None = None) ->
     result = Scan()
     for path in files if files is not None else scanned_files():
         try:
-            text = path.read_text()
+            text = path.read_text(encoding="utf-8")
         except (OSError, UnicodeDecodeError):
             continue
         if doc_refs.unlinted(path, text):
