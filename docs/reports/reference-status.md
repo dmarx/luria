@@ -70,17 +70,9 @@ A scheme's template is a form, not a document
 
 A reference the reader cannot follow: the code names no document in this record. A typo, a number carried in from another project, and an illustrative code in an example all look identical from here — telling them apart takes a human, so this is a report, not an error.
 
-**2 codes unaccounted for.** Not listed: 56 mentions marked deliberate with an `unresolved-ok:` comment (same syntax and scopes as `inactive-ok:` above).
+**0 codes unaccounted for.** Not listed: 59 mentions marked deliberate with an `unresolved-ok:` comment (same syntax and scopes as `inactive-ok:` above).
 
-
-### ADR-123 — resolves to nothing (2 unmarked sites · 3 other mentions marked deliberate)
-
-- [`record/decisions.d/ADR-049.md:28`](../../record/decisions.d/ADR-049.md)
-- [`record/decisions.d/ADR-049.md:46`](../../record/decisions.d/ADR-049.md)
-
-### DP-018 — resolves to nothing (1 unmarked site · 4 other mentions marked deliberate)
-
-- [`record/decisions.d/ADR-040.md:42`](../../record/decisions.d/ADR-040.md)
+Every code resolves. ✅
 
 ## Files that opt out of reference checking
 
