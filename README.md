@@ -132,6 +132,8 @@ different tables. See [project memory](docs/project-memory.md) and the generated
 ## Documentation
 
 - [Quickstart](docs/quickstart.md) — from empty repository to linted record.
+- [Concepts](docs/concepts.md) — entries, citations, and the one operation
+  everything else is machinery around.
 - [Designing a record](docs/modeling.md) — what belongs in one, which family
   fits, when two kinds of entry are two schemes, and what the schema can be
   made to refuse.
