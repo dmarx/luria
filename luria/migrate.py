@@ -50,6 +50,9 @@ never swept: the spec's mapping is written in old spellings *on purpose* —
 it is the one artifact whose job is to remember them.
 """
 
+# unresolved-ok-file: DP-017 — a demonstration code in the comments below,
+# standing in for a moved document's old address
+
 from __future__ import annotations
 
 import re
