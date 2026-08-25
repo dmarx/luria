@@ -29,6 +29,7 @@ authors = [{ name = "dmarx" }]
 
 [project.urls]
 Homepage = "https://github.com/dmarx/luria"
+Documentation = "https://dmarx.github.io/luria/"
 Repository = "https://github.com/dmarx/luria"
 Issues = "https://github.com/dmarx/luria/issues"
 Changelog = "https://github.com/dmarx/luria/blob/main/CHANGELOG.md"

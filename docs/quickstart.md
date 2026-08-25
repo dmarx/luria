@@ -23,6 +23,16 @@ luria init → /home/you/yourproject
 wrote 18 file(s), skipped 0 existing.
 ```
 
+`luria init --dry-run` prints that same list and writes nothing, which is
+worth running first in a repository that already has history — this adds two
+GitHub Actions workflows and an agent context file, and seeing the list before
+it lands is cheaper than reading it back out of `git status`.
+
+`CLAUDE.md` is a short map pointing at the record's docs plus an invitation to
+run `luria --help`. Nothing in Luria depends on Claude or on any agent; the
+file is there because a coding agent that reads one file at the start of a
+session is a reader worth writing for, and it is safe to delete or rename.
+
 `init` never overwrites: a file that already exists is skipped and
 reported, so re-running it on a grown project is safe. It scaffolds the
 default record — decisions (`ADR`), design principles (`DP`), a changelog
@@ -130,7 +140,56 @@ findings — retired documents still cited, codes that resolve to nothing —
 which land in `docs/reports/` and can be promoted to failures per class
 with `[luria.lint] fail_on`.
 
-## 5. Wire up CI
+## 5. Break it on purpose
+
+Everything so far was setup. This is the part that pays for it.
+
+Suppose `docs/api.md` says why the code is shaped the way it is:
+
+```markdown
+We retry writes because ADR-001 requires at-least-once delivery.
+```
+
+Now the decision changes. File its successor, and retire the old one by
+editing one field — not by deleting it:
+
+```yaml
+status: 'Superseded — by ADR-002'
+```
+
+Nobody touched `docs/api.md`. It is now wrong, and the record says so:
+
+```console
+$ luria index && luria lint
+luria: 1 warning(s) — retired documents cited unacknowledged from current docs/code
+  ADR-001 is Superseded, cited 1× in 1 file(s) — Errors carry a machine-readable code
+
+$ luria reports
+docs/api.md:3
+```
+
+That is the whole mechanism: **one field moved, and a page nobody opened
+became a finding.** [ADR-001](../record/decisions.d/ADR-001.md) keeps its body and its reasoning — the record
+still knows what the project used to believe, and why.
+
+Two ways to close it, and the choice is the point:
+
+- **The citation is wrong.** Rewrite the sentence to cite `ADR-002`. Re-run,
+  and the finding is gone.
+- **The citation is deliberate** — the paragraph is about the history, or the
+  rejection is what you meant to point at. Say so where it happens:
+
+  ```markdown
+  <!-- inactive-ok: ADR-001 — the decision this section explains replacing -->
+  ```
+
+  The reason is mandatory, it lives at the citing site, and it goes stale on
+  its own if [ADR-001](../record/decisions.d/ADR-001.md) ever returns to force.
+
+What you must not do is nothing, silently. That is the state the whole tool
+exists to make impossible.
+
+## 6. Wire up CI
 
 `luria init` scaffolds two workflows using Luria's published composite
 actions:

@@ -3,6 +3,48 @@
 Putting a record into a project that already exists — and the CI that keeps
 it running without anyone's attention.
 
+## Whether this fits
+
+Worth answering before the scaffold, because the honest answers rule some
+projects out.
+
+**What makes it pay.** A record earns its keep when decisions get cited and
+then change. A project with a handful of choices nobody refers back to is
+paying the filing cost for a graph with no edges. The threshold is not size or
+age — it is whether anything ever says *because*.
+
+**What if nobody moves a status?** Then nothing propagates, and Luria
+degenerates into a documentation generator with a linter. That failure is
+detected rather than assumed: a scheme where every document shares one status
+is reported as `inert-status`, on the grounds that a green build then means
+only that nothing is being judged. If you expect never to retire anything, you
+do not need this.
+
+**What should stay ordinary prose?** Most of it. A getting-started guide, an
+API reference, a design sketch — none has an identity worth citing or a
+standing that can change, and putting them in a scheme buys nothing.
+[Designing a record](modeling.md#identity-standing-relation) is the test.
+
+**How much machinery does adoption add?** A scaffold is around twenty files:
+one directory and template per family, a stub per view, a docs index, an agent
+context file, and two GitHub Actions workflows. `luria init --dry-run` lists
+them before anything is written. The generated views grow with the record; the
+CI is two jobs, one of which commits regenerated views back.
+
+**What is GitHub-specific?** The shipped workflows and the Pages publishing
+path. The `issue_url` inference recognises GitHub and GitLab. Everything else
+— the record, the checks, the generated views, `luria site`'s output — is
+plain files and plain Git, and the CI is two ordinary jobs that any runner can
+express. A GitLab or self-hosted project writes its own workflow and loses
+nothing else.
+
+**What is most likely to change?** The two things this record is least settled
+about: how a scheme's view is named (`render = "index" | "document"` describes
+output where the choice is about reading), and the migration machinery, which
+has run on real records only a handful of times. Both are recorded as
+decisions rather than as intentions, so a change to either arrives as a
+superseding decision you can read.
+
 ## Scaffold
 
 ```console
@@ -37,8 +79,8 @@ The scaffold ships decisions, principles, a changelog, and a devlog.
 None of that is fixed — the families in `luria.toml` are yours to name
 (see [project memory](project-memory.md) and the
 [configuration reference](configuration.md)). The `examples/` directory in
-the Luria repository holds four small, CI-tested configurations worth
-stealing from:
+the Luria repository holds small, CI-tested configurations worth stealing
+from:
 
 - **collocated** — decisions living beside the docs, no `record/` split,
   for a small project.

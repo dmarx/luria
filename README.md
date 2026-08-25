@@ -8,61 +8,56 @@
 **A record of what your project knows — and of what it no longer believes.**
 
 Projects forget, and they forget *silently*. The wiki still renders. The
-decisions folder still has files in it. The status column still exists. Nothing
-announces that a convention drifted, that a rationale expired, or that the
-reasoning behind a constraint now points at a document somebody deleted.
+decisions folder still has files in it. Nothing announces that a rationale
+expired, or that the reasoning behind a constraint now points at a decision
+somebody reversed.
 
-A Luria record makes those questions answerable, because every entry in it has:
+Here is the whole idea. A page cites a decision by name:
 
-- **A name something can cite.** `ADR-012`, `RFC-7` — in prose, in a commit,
-  in a source comment. `luria link --fix` turns the bare code into a working
-  link; the lint reports codes that resolve to nothing, so a reference is a
-  claim that gets checked rather than a string that gets stale.
-- **A standing.** In force, proposed, superseded, rejected. Retiring something
-  is an edit to its status, never a deletion — so the record keeps what it
-  stopped believing, and can tell you when a live document is still citing it.
-- **Rules you declare instead of hope for.** Required fields, exactly one
-  primary category, what each status means *in this scheme*. The conventions
-  you would otherwise write in CONTRIBUTING become things that fail. Luria will
-  even tell you when a field has stopped carrying information — which is what a
-  status column looks like a year after anyone maintained it.
-- **A view that is generated.** Indexes, tag pages, journal books, status
-  reports. Built by `luria index`, never hand-edited, so what people read
-  cannot drift from what people file.
+```markdown
+We retry writes because ADR-012 requires at-least-once delivery.
+```
 
-Filing is cheap — `luria new` scaffolds the next entry with its identity
-already assigned — and the whole record publishes as a static site with
-backlinks and a local graph (`luria site`).
+Months later that decision is superseded — one field, in one file:
 
-Luria is also its own first user: this repository's record is scaffolded,
-generated and linted by the CLI it ships.
+```yaml
+status: 'Superseded — by ADR-013'
+```
+
+Nobody edited `docs/api.md`. It is now wrong, and it says so:
+
+```console
+$ luria lint
+luria: 1 warning(s) — retired documents cited unacknowledged from current docs/code
+  ADR-012 is Superseded, cited 1× in 1 file(s) — Writes are at-least-once
+
+$ luria reports
+docs/api.md:3
+```
+
+The old decision is not deleted; it keeps its body and its reasons. What
+changed is that everything resting on it became visible. Now fix the sentence,
+or say at the citing site why the citation is deliberate:
+
+```markdown
+<!-- inactive-ok: ADR-012 — the history this section is about -->
+```
+
+Either way the finding closes, and the reason it closed is written down.
+
+That operation is the product. The rest is machinery around it: identities
+worth citing, statuses that mean something, and views generated so they cannot
+drift from their sources.
 
 <!-- luria:badges -->
 [![needs decision: 0](https://img.shields.io/badge/needs%20decision-0-brightgreen)](docs/reports/pending-decisions.md)
 [![cited, not in force: 0](https://img.shields.io/badge/cited,%20not%20in%20force-0-brightgreen)](docs/reports/reference-status.md)
 <!-- /luria:badges -->
 
-## Kinds of record
-
-`ADR` is not in the code. It is a table in a config file, and so is
-everything else: schemes (documents with codes), journals (dated entries
-that persist), fragment directories (written now, assembled later), and
-remotes (someone else's namespace, cited by prefix). Name the tables and you
-have a different record on the same engine.
-
-- **Project memory** — decisions, principles, a changelog, a devlog. The
-  default, and what `luria init` writes.
-- **A research anthology** — one scheme of papers, another of the practices
-  drawn from them, each with its own status so a foundational paper and a
-  stale recommendation can disagree; arXiv identifiers linted and linked as
-  a `uid` remote.
-- **A standards registry** — proposals browsed as an index, the interfaces
-  they define concatenated into one page.
-- **An operations record** — an incident journal that is never revised
-  beside runbooks that are cited by name and go stale.
-
-[Designing a record](docs/modeling.md) is how to work out which of these
-your material is.
+📖 **[dmarx.github.io/luria](https://dmarx.github.io/luria/)** — this
+repository's own record, published by `luria site`. Searchable, with backlinks
+and a graph. Not a mirror of these docs: it is the output of one of the
+features, applied to the project that ships it.
 
 ## Install
 
@@ -75,8 +70,9 @@ Python 3.11+. Two runtime dependencies (PyYAML, fire).
 ## Sixty seconds
 
 ```console
-$ luria init --issue-url https://github.com/you/yourproject/issues
-$ luria index          # build the generated views
+$ luria init --dry-run                      # what would it add?
+$ luria init                                # issue_url comes from your remote
+$ luria index                               # build the generated views
 $ luria new --title "Switched the queue to at-least-once delivery"
 record/devlog.d/2026/08/22/143005.md
 $ luria new adr --title "Consumers must be idempotent"
@@ -86,7 +82,41 @@ luria: docs lint clean
 ```
 
 Edit the two files it printed, commit, and the record has begun. The
-[quickstart](docs/quickstart.md) walks the same path with explanations.
+[quickstart](docs/quickstart.md) walks the same path with explanations, and
+ends by superseding a decision so you see the finding land.
+
+## What a record holds
+
+A record is made of several kinds of material, and they are not the same kind
+of thing.
+
+**Referable documents** — decisions, principles, RFCs, whatever a project
+declares. These are the ones the operation above runs on:
+
+- **A name something can cite.** `ADR-012`, `RFC-7` — in prose, in a commit,
+  in a source comment. `luria link --fix` turns the bare code into a working
+  link; the lint reports codes that resolve to nothing, so a reference is a
+  claim that gets checked rather than a string that goes stale.
+- **A standing**, from a closed vocabulary: `Active`, `Proposed`, `Deferred`,
+  `Superseded`, `Rejected`. Retiring something is an edit to its status, never
+  a deletion.
+- **Rules you declare instead of hope for.** Required fields, exactly one
+  primary category, what each status means *in this scheme*. The conventions
+  you would otherwise write in CONTRIBUTING become things that fail. Luria will
+  even tell you when a status field has stopped carrying information, which is
+  what one looks like a year after anyone maintained it.
+
+**Journals** hold dated observations — true about the day they were written,
+never revised, so they carry no standing to change. **Fragment directories**
+hold pieces staged for a shared document, which is how a changelog stops being
+a file every branch has to touch. **Remotes** bring another project's codes,
+or arXiv ids, or ticket keys, into the same citation graph.
+
+Every view of any of them is generated by `luria index` and never hand-edited,
+so a generated page cannot drift from the sources it is built from.
+
+Luria is also its own first user: this repository's record is scaffolded,
+generated and linted by the CLI it ships.
 
 ## A note on files
 
@@ -123,6 +153,28 @@ directories and remote projects are *families* declared in `luria.toml` —
 a record made of RFCs, specs, and an incident log is the same engine with
 different tables. See [project memory](docs/project-memory.md) and the generated
 [configuration reference](docs/configuration.md).
+
+## Kinds of record
+
+`ADR` is not in the code. It is a table in a config file, and so is
+everything else: schemes (documents with codes), journals (dated entries
+that persist), fragment directories (written now, assembled later), and
+remotes (someone else's namespace, cited by prefix). Name the tables and you
+have a different record on the same engine.
+
+- **Project memory** — decisions, principles, a changelog, a devlog. The
+  default, and what `luria init` writes.
+- **A research anthology** — one scheme of papers, another of the practices
+  drawn from them, each with its own status so a foundational paper and a
+  stale recommendation can disagree; arXiv identifiers linted and linked as
+  a `uid` remote.
+- **A standards registry** — proposals browsed as an index, the interfaces
+  they define concatenated into one page.
+- **An operations record** — an incident journal that is never revised
+  beside runbooks that are cited by name and go stale.
+
+[Designing a record](docs/modeling.md) is how to work out which of these
+your material is.
 
 ## Documentation
 
