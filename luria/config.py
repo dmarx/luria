@@ -211,9 +211,36 @@ class TagGroup:
     # is the motivating case: naming how an argument fails contradicts saying
     # it does not.
     excluded_by: frozenset[str] = frozenset()
+    # True when membership came from the vocabulary's `primary_for` keys
+    # rather than an inline list. Carried so a reader of the generated record
+    # page can tell which file to edit.
+    derived: bool = False
 
 
 REQUIRE_RULES = ("any", "at-most-one", "exactly-one")
+
+
+@dataclass(frozen=True)
+class Reference:
+    """A frontmatter field that holds a code from a named scheme.
+
+        [luria.schemes.SOTA.references]
+        source = { scheme = "LIT", required = true }
+
+    `requires = ["source"]` already says the field must be there. What it
+    cannot say is what the field MEANS, and the gap is wider than it looks: a
+    required field is satisfied by any truthy value, so a practice citing a
+    decision as its evidence passes, and so does one citing the string "a
+    paper I read once". The rule the project was relying on — every practice
+    names the paper behind it — was enforced only in the sense that the field
+    was not blank.
+
+    Declaring the relationship instead makes four checks out of one: present,
+    shaped like a code, belonging to that scheme, resolving to a document
+    (ADR-060)."""
+    field: str
+    scheme: str
+    required: bool = True
 
 
 @dataclass(frozen=True)
@@ -266,6 +293,14 @@ class Scheme:
     # for every scheme that does not declare `[luria.schemes.X.tag_groups]`,
     # which is the unconstrained behaviour every project has today.
     tag_groups: tuple[TagGroup, ...] = ()
+    # Where this scheme's tag vocabulary lives. Unset means the collocated
+    # `tags.yaml` beside the sources, which is where it has always been. Set,
+    # two schemes can name ONE file and share a vocabulary instead of keeping
+    # a copy each (ADR-060).
+    tags_file: Path | None = None
+    # Frontmatter fields that hold a code from another scheme, by field name.
+    # `requires` says a field is present; this says what it means.
+    references: tuple[Reference, ...] = ()
 
     @property
     def view(self) -> Path:
@@ -289,7 +324,7 @@ class Scheme:
 
     @property
     def tags_yaml(self) -> Path:
-        return self.dir / "tags.yaml"
+        return self.tags_file or self.dir / "tags.yaml"
 
     @property
     def statuses_yaml(self) -> Path:
@@ -510,12 +545,47 @@ class Fragment:
     style: str = "append"
 
 
-def _tag_groups(prefix: str, raw: dict) -> tuple[TagGroup, ...]:
+def primary_tags(prefix: str, tags_path: Path) -> frozenset[str]:
+    """Terms this scheme may carry as a primary, from the vocabulary itself.
+
+    A tag says which schemes it is a primary for, where the tag is defined:
+
+        training-optimization:
+          label: Training optimization
+          primary_for: [LIT, SOTA]
+
+    Without this a shared vocabulary has to be restated as a `tags` list per
+    group, which is the same set of strings written a third and fourth time —
+    and the copies drift, because nothing relates them. Measured on the record
+    that motivated this: seven terms across four places, and the blurbs for
+    the same tag already disagreed between two of them (ADR-060)."""
+    if not tags_path.exists():
+        return frozenset()
+    try:
+        import yaml
+        declared = yaml.safe_load(tags_path.read_text()) or {}
+    except Exception:
+        return frozenset()
+    found = set()
+    for tag, meta in declared.items():
+        for named in (meta or {}).get("primary_for", ()) or ():
+            if str(named).upper() == prefix.upper():
+                found.add(str(tag))
+    return frozenset(found)
+
+
+def _tag_groups(prefix: str, raw: dict,
+                tags_path: Path | None = None) -> tuple[TagGroup, ...]:
     """Read a scheme's `[luria.schemes.X.tag_groups]` tables.
 
     Validated here rather than at lint time: a misspelled rule is a config
     error, and a config error that surfaces as "no violations" is the quiet
-    failure this whole feature exists to remove."""
+    failure this whole feature exists to remove.
+
+    A group that lists no `tags` derives its membership from the vocabulary's
+    `primary_for` keys. That is still validated eagerly — an empty derivation
+    is the same "constrains nothing" error as an empty list, and finding it at
+    load keeps the promise above."""
     groups = []
     for name, spec in raw.items():
         rule = str(spec.get("require", "any"))
@@ -524,14 +594,36 @@ def _tag_groups(prefix: str, raw: dict) -> tuple[TagGroup, ...]:
                 f"luria.toml: schemes.{prefix}.tag_groups.{name} has "
                 f"require = {rule!r}; expected one of {list(REQUIRE_RULES)}")
         tags = frozenset(str(x) for x in spec.get("tags", ()))
+        derived = False
+        if not tags and tags_path is not None:
+            tags = primary_tags(prefix, tags_path)
+            derived = bool(tags)
         if not tags:
             raise ValueError(
                 f"luria.toml: schemes.{prefix}.tag_groups.{name} lists no "
+                f"tags and no tag in {tags_path} names {prefix} in its "
+                f"`primary_for`, so it constrains nothing"
+                if tags_path is not None else
+                f"luria.toml: schemes.{prefix}.tag_groups.{name} lists no "
                 f"tags, so it constrains nothing")
         groups.append(TagGroup(
-            name=name, tags=tags, require=rule,
+            name=name, tags=tags, require=rule, derived=derived,
             excluded_by=frozenset(str(x) for x in spec.get("excluded_by", ()))))
     return tuple(groups)
+
+
+def _references(prefix: str, raw: dict) -> tuple[Reference, ...]:
+    """Read a scheme's `[luria.schemes.X.references]` table."""
+    found = []
+    for field, spec in raw.items():
+        if not isinstance(spec, dict) or not spec.get("scheme"):
+            raise ValueError(
+                f"luria.toml: schemes.{prefix}.references.{field} needs a "
+                f"`scheme` — it names which scheme's codes the field holds")
+        found.append(Reference(field=str(field),
+                               scheme=str(spec["scheme"]).upper(),
+                               required=bool(spec.get("required", True))))
+    return tuple(found)
 
 
 def _fragment(spec) -> Fragment:
@@ -728,6 +820,22 @@ class Config:
                 return True
         return any(path.parent == j.output for j in self.journals.values())
 
+    def is_template(self, path: Path) -> bool:
+        """A scheme's `_template.md` — a form, not a document.
+
+        Luria reads it to scaffold new entries, so its example codes are
+        illustrative by definition: a placeholder resolves to nothing, and a
+        realistic example is a real document that may not be in force. Both
+        were reported against the template itself on the record that
+        motivated this, which is a finding about a form nobody filed
+        (ADR-061).
+
+        Exempt from the CODE machinery only. A template's relative link
+        targets are still checked, because a broken path there is copied into
+        every document made from it."""
+        return path.name == "_template.md" and any(
+            path.parent == scheme.dir for scheme in self.schemes.values())
+
     def is_historical(self, path: Path) -> bool:
         """A dated record: true about the day it was written, and never
         updated to stay true. Scanning one for stale references produces
@@ -817,18 +925,7 @@ def load(root: Path | None = None, text: str | None = None) -> Config:
         fragments={k: _fragment(v) for k, v in raw["fragments"].items()},
         code_globs=tuple(raw["code"]["globs"]),
         historical=frozenset(root / p for p in raw["code"]["historical"]),
-        schemes={
-            prefix: Scheme(
-                prefix, root / spec["dir"], spec.get("active", "Active"),
-                spec.get("render", "index"),
-                root / spec["output"] if spec.get("output") else None,
-                spec.get("allocate", "filing"),
-                bool(spec.get("titles_generalize", False)),
-                tuple(spec.get("requires", ())),
-                _tag_groups(prefix, spec.get("tag_groups", {})),
-            )
-            for prefix, spec in raw["schemes"].items()
-        },
+        schemes=_schemes(raw["schemes"], root),
         remotes={
             prefix.upper(): Remote(
                 prefix.upper(),
@@ -870,6 +967,40 @@ def load(root: Path | None = None, text: str | None = None) -> Config:
         site=_site(raw, root),
         _raw=raw,
     )
+
+
+def _schemes(raw: dict, root: Path) -> dict[str, Scheme]:
+    """Every declared scheme, with the cross-scheme checks that need them all.
+
+    A reference naming a scheme that does not exist is a config error, and it
+    can only be caught once the whole family is known — so it happens here
+    rather than in `_references`, which sees one table at a time."""
+    schemes = {}
+    for prefix, spec in raw.items():
+        tags_file = root / spec["tags"] if spec.get("tags") else None
+        tags_path = tags_file or root / spec["dir"] / "tags.yaml"
+        schemes[prefix] = Scheme(
+            prefix=prefix,
+            dir=root / spec["dir"],
+            active=spec.get("active", "Active"),
+            render=spec.get("render", "index"),
+            output=root / spec["output"] if spec.get("output") else None,
+            allocate=spec.get("allocate", "filing"),
+            titles_generalize=bool(spec.get("titles_generalize", False)),
+            requires=tuple(spec.get("requires", ())),
+            tag_groups=_tag_groups(prefix, spec.get("tag_groups", {}),
+                                   tags_path),
+            tags_file=tags_file,
+            references=_references(prefix, spec.get("references", {})),
+        )
+    for prefix, scheme in schemes.items():
+        for ref in scheme.references:
+            if ref.scheme not in schemes:
+                raise ValueError(
+                    f"luria.toml: schemes.{prefix}.references.{ref.field} "
+                    f"names scheme {ref.scheme!r}, which is not declared "
+                    f"(have: {', '.join(sorted(schemes))})")
+    return schemes
 
 
 def _site(raw: dict, root: Path) -> Site:

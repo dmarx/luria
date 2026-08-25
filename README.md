@@ -38,8 +38,8 @@ Luria is also its own first user: this repository's record is scaffolded,
 generated and linted by the CLI it ships.
 
 <!-- luria:badges -->
-[![needs decision: 9](https://img.shields.io/badge/needs%20decision-9-orange)](docs/reports/pending-decisions.md)
-[![cited, not in force: 3](https://img.shields.io/badge/cited,%20not%20in%20force-3-orange)](docs/reports/reference-status.md)
+[![needs decision: 11](https://img.shields.io/badge/needs%20decision-11-orange)](docs/reports/pending-decisions.md)
+[![cited, not in force: 5](https://img.shields.io/badge/cited,%20not%20in%20force-5-orange)](docs/reports/reference-status.md)
 <!-- /luria:badges -->
 
 ## It is not only for decisions

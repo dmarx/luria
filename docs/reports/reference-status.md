@@ -9,7 +9,7 @@ Every reference in the record is a claim — "this is why things are the way the
 
 Only an `Active` document is in force. `Proposed` and `Deferred` mean *not in force yet* — an open question, being cited as if it were settled — while `Superseded` and `Rejected` mean *no longer in force*, which is often a perfectly good thing to cite: history, or a rejection worth pointing at. Either way the citation should be deliberate, and this section lists the ones nobody has vouched for yet.
 
-**3 documents cited without acknowledgement.** Not listed: 34 citations someone has already vouched for with an `inactive-ok:` comment at the citing site.
+**5 documents cited without acknowledgement.** Not listed: 34 citations someone has already vouched for with an `inactive-ok:` comment at the citing site.
 
 To vouch for one, put the reason where the citation is — `inactive-ok:` covers its own line and the line below it, `inactive-ok-block:` its paragraph, `inactive-ok-file:` the whole page:
 
@@ -29,6 +29,17 @@ Document status is reported, not enforced
 - [`tests/test_prose_frontmatter.py:31`](../../tests/test_prose_frontmatter.py)
 - [`tests/test_prose_frontmatter.py:41`](../../tests/test_prose_frontmatter.py)
 
+### [ADR-060](../../record/decisions.d/ADR-060.md) — Proposed
+
+Schemes declare their own shape — where the vocabulary lives, and what a field means
+
+4 citations in 2 files await a look.
+
+- [`luria/config.py:240`](../../luria/config.py)
+- [`luria/config.py:299`](../../luria/config.py)
+- [`luria/config.py:561`](../../luria/config.py)
+- [`luria/lint.py:145`](../../luria/lint.py)
+
 ### [ADR-053](../../record/decisions.d/ADR-053.md) — Proposed
 
 The published version is derived from the release tag
@@ -47,11 +58,19 @@ A scheme declares which statuses it uses and what they mean
 - [`record/decisions.d/ADR-057.md:75`](../../record/decisions.d/ADR-057.md)
 - [`record/principles.d/DP-012.md:12`](../../record/principles.d/DP-012.md)
 
+### [ADR-061](../../record/decisions.d/ADR-061.md) — Proposed
+
+A scheme's template is a form, not a document
+
+1 citation in 1 file awaits a look.
+
+- [`luria/config.py:831`](../../luria/config.py)
+
 ## Codes that resolve to no document
 
 A reference the reader cannot follow: the code names no document in this record. A typo, a number carried in from another project, and an illustrative code in an example all look identical from here — telling them apart takes a human, so this is a report, not an error.
 
-**4 codes unaccounted for.** Not listed: 50 mentions marked deliberate with an `unresolved-ok:` comment (same syntax and scopes as `inactive-ok:` above).
+**4 codes unaccounted for.** Not listed: 51 mentions marked deliberate with an `unresolved-ok:` comment (same syntax and scopes as `inactive-ok:` above).
 
 
 ### ADR-123 — resolves to nothing (3 unmarked sites · 2 other mentions marked deliberate)

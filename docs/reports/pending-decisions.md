@@ -5,7 +5,7 @@
 
 `Proposed` and `Deferred` both describe an open question. Neither says *since when*, and that is the signal: a decision proposed last week is pending; the same one a year later was either overdue or settled in code and never written back.
 
-**9 document(s) awaiting a decision.**
+**11 document(s) awaiting a decision.**
 
 | Open since | Status | Code | Cited | Unack. | Title |
 |---|---|---|--:|--:|---|
@@ -18,6 +18,8 @@
 | 2026-08-16 | Proposed | [ADR-055](../../record/decisions.d/ADR-055.md) | 0 | 0 | A link target is checked from where the prose renders |
 | 2026-08-16 | Proposed | [ADR-057](../../record/decisions.d/ADR-057.md) | 0 | 0 | A scheme whose status never varies is reported |
 | 2026-08-16 | Proposed | [ADR-058](../../record/decisions.d/ADR-058.md) | 0 | 0 | Luria is a truth maintenance system, and should say so |
+| 2026-08-24 | Proposed | [ADR-060](../../record/decisions.d/ADR-060.md) | 4 | 4 | Schemes declare their own shape — where the vocabulary lives, and what a field means |
+| 2026-08-24 | Proposed | [ADR-061](../../record/decisions.d/ADR-061.md) | 1 | 1 | A scheme's template is a form, not a document |
 
 The citation count is the second axis, and it flips the priority: an old proposal nothing references is a stalled idea worth closing, while an old proposal many files cite is a decision the codebase has already made and hasn't written down.
 
