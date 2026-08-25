@@ -50,6 +50,9 @@ never swept: the spec's mapping is written in old spellings *on purpose* —
 it is the one artifact whose job is to remember them.
 """
 
+# unresolved-ok-file: DP-017 — a demonstration code in the comments below,
+# standing in for a moved document's old address
+
 from __future__ import annotations
 
 import re
@@ -149,7 +152,7 @@ class Plan:
     relocated: set[str] = field(default_factory=set)
     # Old address fragment → the code that answers for it now. The address is
     # the anchor a document-rendered scheme gave the document (`#dp-17`) or the
-    # filename an index-rendered one did (`FX-DP-017.md`), so a citation is found
+    # filename an index-rendered one did (`DP-017.md`), so a citation is found
     # by where it POINTS rather than by how it is labelled.
     old_addresses: dict[str, str] = field(default_factory=dict)
 
@@ -405,7 +408,7 @@ def sweep_text(text: str, plan: Plan, paths: bool = True,
 
     def respell_relocated(text: str) -> str:
         """A citation WORDED rather than spelled — `design-principles #17` in
-        a code comment — names a moved document as surely as `FX-DP-017` does,
+        a code comment — names a moved document as surely as `DP-017` does,
         and both the code swap and the address swap walk straight past it: it
         contains no code, and (unlinked) it points at no address.
 

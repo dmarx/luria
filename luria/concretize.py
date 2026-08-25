@@ -16,7 +16,7 @@ committed (the same ordering the changelog collector trusts, for the same
 reason: a filename is not required to sort chronologically):
 
 1. the next free number is assigned and the file renamed to the numeric
-   shape (`FX-ADR-123.md`);
+   shape (`ADR-123.md`);
 2. every occurrence of the temporary code in current files is rewritten —
    which covers link labels and link targets in one pass, since the target
    is the code plus `.md`;
@@ -39,6 +39,9 @@ is git's guarantee, not the working tree's job.
 always wrong and mechanically fixable — run this command — so it fails
 outright, which is ADR-035's bar for a check that may fail a build.
 """
+
+# unresolved-ok-file: ADR-123 — a demonstration code in the docstring above,
+# standing in for the number a temporary code concretizes onto
 
 from __future__ import annotations
 
