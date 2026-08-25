@@ -14,14 +14,14 @@
 | 2026-08-08 | Proposed | [DP-010](../../record/principles.d/DP-010.md) | 0 | 0 | Defaults follow the failure mode: guards opt out, disclosures opt in |
 | 2026-08-16 | Proposed | [ADR-053](../../record/decisions.d/ADR-053.md) | 2 | 2 | The published version is derived from the release tag |
 | 2026-08-16 | Proposed | [ADR-056](../../record/decisions.d/ADR-056.md) | 2 | 2 | A scheme declares which statuses it uses and what they mean |
-| 2026-08-16 | Proposed | [ADR-058](../../record/decisions.d/ADR-058.md) | 1 | 1 | Luria is a truth maintenance system, and should say so |
 | 2026-08-16 | Proposed | [ADR-054](../../record/decisions.d/ADR-054.md) | 0 | 0 | A scheme can constrain which of its tags combine |
 | 2026-08-16 | Proposed | [ADR-055](../../record/decisions.d/ADR-055.md) | 0 | 0 | A link target is checked from where the prose renders |
-| 2026-08-16 | Proposed | [ADR-057](../../record/decisions.d/ADR-057.md) | 0 | 0 | A scheme whose status never varies is reported |
-| 2026-08-16 | Proposed | [ADR-059](../../record/decisions.d/ADR-059.md) | 0 | 0 | A scheme-level finding needs a scheme-level acknowledgement |
+| 2026-08-16 | Proposed | [ADR-058](../../record/decisions.d/ADR-058.md) | 0 | 0 | Luria is a truth maintenance system, and should say so |
+| 2026-08-24 | Proposed | [ADR-060](../../record/decisions.d/ADR-060.md) | 4 | 4 | Schemes declare their own shape — where the vocabulary lives, and what a field means |
+| 2026-08-24 | Proposed | [ADR-061](../../record/decisions.d/ADR-061.md) | 1 | 1 | A scheme's template is a form, not a document |
 
 The citation count is the second axis, and it flips the priority: an old proposal nothing references is a stalled idea worth closing, while an old proposal many files cite is a decision the codebase has already made and hasn't written down.
 
 This count and the reference-status report's will differ, and that is not an off-by-one. That report covers documents something actually **cites** and hasn't acknowledged; this one covers every **undecided** document. One here is missing from there for exactly one of two reasons: nothing cites it, or every citation carries an `inactive-ok` annotation.
 
-**Cited nowhere at all** (7): [ADR-041](../../record/decisions.d/ADR-041.md), [ADR-052](../../record/decisions.d/ADR-052.md), [DP-010](../../record/principles.d/DP-010.md), [ADR-054](../../record/decisions.d/ADR-054.md), [ADR-055](../../record/decisions.d/ADR-055.md), [ADR-057](../../record/decisions.d/ADR-057.md), [ADR-059](../../record/decisions.d/ADR-059.md) — these are the cheapest to close, since nothing depends on the answer.
+**Cited nowhere at all** (6): [ADR-041](../../record/decisions.d/ADR-041.md), [ADR-052](../../record/decisions.d/ADR-052.md), [DP-010](../../record/principles.d/DP-010.md), [ADR-054](../../record/decisions.d/ADR-054.md), [ADR-055](../../record/decisions.d/ADR-055.md), [ADR-058](../../record/decisions.d/ADR-058.md) — these are the cheapest to close, since nothing depends on the answer.

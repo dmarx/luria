@@ -1,0 +1,51 @@
+# A record whose content is not project meta-documentation.
+#
+# This is a research anthology: one scheme of papers, another of the practices
+# drawn from them. Two things make it work that a single scheme could not do.
+#
+# First, the two carry SEPARATE STATUSES and are allowed to disagree. A
+# foundational paper stays worth reading while a recommendation drawn from it
+# goes stale; a paper retired as uninteresting can still be the source of
+# something everybody does. Collapse them into one scheme and one status field
+# has to mean both things, so neither can be said.
+#
+# Second, the relationship between them is a CITATION the lint can follow, so
+# a live practice sourced from a retired paper is a reported finding rather
+# than something nobody could have noticed.
+[luria]
+issue_url = "https://github.com/acme/anthology/issues/{n}"
+
+# The evidence. `Rejected` here means the attic: retired from the reading
+# list, with the reason kept in the status note and the body left intact.
+[luria.schemes.LIT]
+dir      = "record/literature.d"
+output   = "docs/literature"
+render   = "index"
+requires = ["arxiv"]
+
+# The product. `requires` is the rule that this is an anthology of JUSTIFIED
+# practice: a recommendation with no paper behind it is an opinion, and the
+# lint says so rather than the CONTRIBUTING file.
+[luria.schemes.SOTA]
+dir      = "record/practices.d"
+output   = "docs/practices"
+render   = "index"
+requires = ["source"]
+
+# "Exactly one primary category" — the rule every tagged corpus states in
+# prose and then drifts away from. Tags outside this group stay free, so
+# secondary tags are unaffected.
+[luria.schemes.SOTA.tag_groups.primary_topic]
+require = "exactly-one"
+tags = ["optimization", "stability", "systems"]
+
+# arXiv is not a Luria record, and does not need to be: a `uid` pattern and a
+# URL template make `ARXIV-1412.6980` a resolvable, checked reference anywhere
+# in the record.
+[luria.remotes.ARXIV]
+name = "arXiv"
+uid  = "(\\d{4})[.:](\\d{4,5})(v\\d+)?"
+url  = "https://arxiv.org/abs/{1}.{2}"
+
+# No ADR or DP table, so this record has neither: a declared family replaces
+# the shipped defaults rather than merging into them.

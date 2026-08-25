@@ -36,10 +36,10 @@ defaults to remember:
 
 A blank line between a directive and what it governs therefore needs `-block`:
 
-    <!-- inactive-ok-block: ADR-061 --><!-- unexempt-block: codeblock -->
+    <!-- inactive-ok-block: ADR-159 --><!-- unexempt-block: codeblock -->
 
     ```python
-    # implements ADR-157, fixes the problem ADR-061 caused
+    # implements ADR-157, fixes the problem ADR-159 caused
     ```
 
 Written flush against the fence, with no blank line, the bare forms reach it —
@@ -54,7 +54,7 @@ elsewhere. An example inside a fence or a docstring is not a comment, and does
 not fire.
 """
 
-# unresolved-ok-file: ADR-157, ADR-061 — illustrative codes in the docstring above
+# unresolved-ok-file: ADR-157, ADR-159 — illustrative codes in the docstring above
 from __future__ import annotations
 
 import io

@@ -1,0 +1,12 @@
+# The five words are luria's; these meanings are this anthology's. Declaring
+# them narrows the vocabulary — a status outside this set now fails the lint —
+# and renders a legend above the index, where a reader is.
+Active:
+  label: In the anthology
+  blurb: worth reading, whether or not a practice was drawn from it
+Rejected:
+  label: Attic
+  blurb: retired with a reason, and the reason is kept
+Superseded:
+  label: Superseded
+  blurb: later work covers this better, and the note names it

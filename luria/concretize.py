@@ -40,6 +40,9 @@ always wrong and mechanically fixable — run this command — so it fails
 outright, which is ADR-035's bar for a check that may fail a build.
 """
 
+# unresolved-ok-file: ADR-123 — a demonstration code in the docstring above,
+# standing in for the number a temporary code concretizes onto
+
 from __future__ import annotations
 
 import re

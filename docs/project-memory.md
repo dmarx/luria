@@ -1,137 +1,313 @@
-# Project memory: how a repository thinks
+# Project memory
 
-The doctrine behind the layout. What belongs in which layer, and why the layers
-are separate.
+How Luria models a project's memory. The [quickstart](quickstart.md) shows
+the commands; this page explains the machine they drive.
 
-## The problem
+## Sources and views
 
-A repository's memory is not in its documentation. It is in:
+Everything in a Luria record divides into two kinds of file:
 
-- the arguments people had, and how they came out
-- the alternatives that were rejected, and why
-- the constraints discovered painfully and never written down
-- the things that were tried and failed
+- **Sources** are written by people: one small markdown file per entry,
+  filed under `record/`. A source is cheap to write, trivial to review in a
+  PR, and never conflicts with a neighbour, because every contribution is a
+  new file.
+- **Views** are written by `luria index`: the decision index and its tag
+  pages, the rendered principles document, journal books, the status
+  reports, the badge counts in the README. A view directory holds *only*
+  generated files — `luria lint` fails on a stale view and on a stray
+  hand-written file inside one, so a reader can trust that what they see
+  reflects the sources.
 
-None of that survives in code, and almost none of it survives in a README. It
-lives in review threads, in chat scrollback, and in the heads of whoever was
-there. When those people leave, the project loses the ability to explain itself
-— and then re-litigates the same questions, badly, because the reasoning is gone
-but the conclusions remain.
+The split is the whole trick. Contributors write into an append-only pile;
+readers get curated, cross-linked pages; and nothing depends on anyone
+remembering to keep the two in sync, because the lint remembers.
 
-An AI agent joining the project has *none* of it, ever. It sees the conclusions
-and nothing about why. That is why this matters more now than it did.
+## The four families
 
-## Four layers
+`luria.toml` declares what the record is made of, using four *families* of
+table. You name the entries, and the names become the vocabulary — nothing
+in the code spells `ADR`; it is simply the scheme this package ships as a
+default.
 
-Each answers a different question, ages differently, and is written at a
-different moment.
+### Schemes — referable documents
 
-| Layer | Answers | Ages by | Written |
-|---|---|---|---|
-| **Principles** | what we value | revision | on the second re-derivation |
-| **Decisions** | what we chose, and what we rejected | supersession | when the choice is made |
-| **Changelog** | what changed, for a user | accumulation | per contribution |
-| **Devlog** | what happened, for us | never — it is dated | when something went wrong |
-
-They are separate because they age differently. A principle is a living document
-that gets *revised*: widen the wording, bump the version. A decision is a
-snapshot that gets *superseded*: the old one stays, intact and marked, because
-its reasoning is the record of why the new one was needed. Collapsing them
-produces a document that is either permanently stale or permanently
-unattributable.
-
-### Principles
-
-Standing values the decisions cite. Written down once so they can be referenced
-by number instead of re-argued.
-
-**Add one on the second re-derivation of the same reasoning.** One instance is a
-decision; a pattern is a principle. Writing them in advance produces a list of
-platitudes nobody cites.
-
-Each ends with an **origin note** naming the incident that earned it. This is
-not decoration: a rule whose evidence is missing reads as taste, and taste gets
-re-litigated by the next person with different taste.
-
-### Decisions
-
-A choice among alternatives at a point in time. Write one when you rejected an
-alternative, chose a constraint, or made something a future edit could silently
-violate.
-
-The **alternatives considered** section is the highest-value part and the one
-most often skipped. It is what stops the decision being re-litigated, and what
-tells a future reader whether their new idea is actually new. A decision without
-it is a note.
-
-**One decision, one thing.** A record with two unrelated halves is one nobody
-can cite half of: the second half has no code, so nothing can point at it, and
-superseding the first silently retires reasoning nobody meant to withdraw.
-
-**Supersede rather than edit** when the *choice* changes. Correct in place when
-only a reason was wrong, and bump the version with a history entry. The rule
-objects to silent revision, not to editing.
-
-### Changelog
-
-What changed, reader-facing. One **fragment** per contribution, collected into
-the document on a cadence.
-
-Fragments exist because a single file every contribution must touch is a lock:
-every branch edits the same lines, every merge conflicts, and the conflict is
-never interesting. Hand out fragments; generate the view.
-
-### Devlog
-
-What actually happened. The failed approach, the trap, the thing that looked
-right for an hour. **The wrong theories are the point** — they are what stops
-the next person spending the same hour.
-
-A journal, not a scheme: entries are dated and historical, true about the day
-they were written and never retroactively wrong. Nothing in a devlog is ever
-superseded, because it was never a claim about the present.
-
-This is the layer that survives contact with the future best, and the one most
-often skipped because it feels like admitting things.
-
-## The two surfaces
-
-```
-record/    WRITE — hand-edited sources, one file per record
-docs/      READ  — indexes, tag pages, collected documents, reports
+```toml
+[luria.schemes.RFC]
+dir    = "record/rfcs.d"
+output = "docs/rfcs"
+render = "index"
 ```
 
-A source directory holds things a writer files. A view directory holds pages a
-reader browses. The thing a reader opens is never the thing a writer edits, and
-a stale view is a lint failure rather than a quiet divergence.
+A scheme is a family of documents with **codes**: `RFC-001`, `RFC-002`.
+Declaring the table above is everything it takes to make `RFC-7` a
+first-class reference — `luria new rfc` scaffolds the next number,
+`luria link --fix` writes its link, and the lint tracks every place it is
+cited.
 
-The exception that proves it: a **stub** is the hand-written prose introducing a
-generated index. It lives on the write surface because it is written, and
-renders into the read surface with everything else — which is why a link written
-in a stub resolves from where the *index* lands.
+Each document is one markdown file whose filename is its code and nothing
+else. The title lives in frontmatter, where correcting it costs an edit
+rather than a rename plus every inbound link:
 
-## How the record is revised
+```yaml
+---
+status: Proposed
+title: Consumers must be idempotent
+version: 1
+tags: [record]
+date: '2026-08-22'
+summary: >-
+  One paragraph for the index row — what this establishes, and what it
+  rejected.
+---
+```
 
-Four moves, and picking correctly is most of the skill:
+Schemes render one of two ways:
 
-**Correct in place.** The choice stands, a reason was wrong. Bump `version:`,
-add a `history:` entry saying what the previous version claimed. Editing is
-fine; *silent* editing is not.
+- `render = "index"` — a generated `README.md` table of every document,
+  plus one page per tag. Decisions read this way.
+- `render = "document"` — every entry concatenated into a single page at
+  `output`, each with a stable anchor. Design principles read this way: the
+  set is short enough to read whole, and a reference points at a section,
+  not a file.
 
-**Supersede.** The choice changed. Add a new record, mark the old one
-`Superseded — by X`, leave its body intact. The old reasoning is why the new
-decision exists.
+### Journals — dated entries that persist
 
-**Reject.** It was wrong, and nothing replaces it. The body stays — a rejected
-record with a good refutation is more valuable than one that was never written.
+```toml
+[luria.journals.devlog]
+dir         = "record/devlog.d"
+output      = "docs/devlog"
+granularity = "month"
+```
 
-**Defer.** You cannot settle it yet and something specific will settle it. Say
-what. `Deferred` is honest where `Proposed` forever is not.
+A journal entry is filed at `yyyy/mm/dd/hhmmss.md` and is true about the
+day it was written: never revised, and never expected to stay current. `luria index` renders the entries into **books** — one
+page per year, month, or day, with a contents list — plus an index of all
+books. Because sources persist and every entry is a fresh path, a journal
+is safe to write into without coordinating with anyone.
 
-What is never a move: **deleting a record**, or editing one so it says something
-else. The point of a code is that a citation of it means something stable.
+A project can run several — a devlog, an incident log, meeting notes — each
+with its own table, granularity and output.
 
-## The one-sentence version
+### Fragment directories — pieces assembled later
 
-Write down what you decided and why; cite it where it does work; and when you
-change your mind, let the machine tell you what that costs.
+```toml
+[luria.fragments."record/changelog.d"]
+file  = "CHANGELOG.md"
+style = "changelog"
+```
+
+The changelog problem: a shared file every PR appends to is a standing
+merge conflict. A fragment directory dissolves it — each contribution is a
+new file, and `luria collect` (typically a scheduled CI job) assembles the
+fragments into the target document at its `<!-- luria-insert-here -->`
+marker and deletes them. `style = "changelog"` groups a collection run
+under a dated heading; the default style appends bodies in the order the
+fragments entered git history.
+
+Fragments are the one *consumed* source: they exist to be collected.
+
+### Remotes — citing another project's record
+
+```toml
+[luria.remotes.LU]
+name = "luria"
+repo = "dmarx/luria"
+```
+
+A remote gives a foreign record a prefix, so `LU-ADR-013` cites a decision
+in another repository and says *whose* decision it is at the point of use.
+Luria constructs the URL by convention (a file named for the code in the
+remote's record directory), from a lockfile of discovered filenames
+(`luria remotes --refresh` writes `remotes.lock.json`, committed so CI and
+offline checkouts resolve identically), or from an explicit template.
+`luria remotes --check` HEAD-probes every cited URL and reports the ones
+that would 404 on a reader.
+
+The `uid` form generalises past Luria-shaped records entirely: give a
+remote a regex and a URL template and arXiv identifiers, Jira keys, or CVE
+numbers become linted, linkable references:
+
+```toml
+[luria.remotes.CVE]
+uid = "\\d{4}-\\d{4,7}"
+url = "https://nvd.nist.gov/vuln/detail/CVE-{uid}"
+```
+
+One rule follows from the family design: a *settings* table (`paths`,
+`code`, `lint`, `site`) merges key by key with the defaults, but a family
+you declare **replaces the shipped family whole**. A project that writes
+`[luria.schemes.RFC]` and nothing else has exactly one scheme; the default
+`ADR` is simply absent. Declare a family and it is yours entirely.
+
+## The five statuses
+
+Every scheme document carries a `status:` from a closed vocabulary —
+
+> `Active` · `Proposed` · `Deferred` · `Superseded` · `Rejected`
+
+— optionally followed by ` — a note` (`Superseded — by RFC-9`). The words
+are Luria's; what they *mean* for a scheme is the project's, declared per
+scheme: the `active` key names which status counts as **in force**, and an
+optional `statuses.yaml` beside the sources narrows the vocabulary and
+gives each status a legend line rendered above the index.
+
+Status is what makes the record more than a pile of prose. Only an in-force
+document is a safe thing to cite as justification; `Proposed` and
+`Deferred` are open questions, `Superseded` and `Rejected` are history. The
+reference machinery (below) leans on exactly this distinction.
+
+## Constraints
+
+Status says what is in force. **Constraints say what a document is allowed to
+be** — and they are how a record stops being a folder of markdown with a
+naming convention, because a convention nobody can break is a comment.
+
+All of them are opt-in and per scheme. A scheme that declares none behaves
+exactly as every scheme did before they existed.
+
+**Required fields.** Beyond `status:`, `title:` and `tags:`, a scheme can
+require fields of its own:
+
+```toml
+[luria.schemes.SOTA]
+requires = ["source"]
+```
+
+A document without `source:` now fails the lint. This is also what makes a
+cross-scheme move safe to automate: `luria migrate` relocates a file, and the
+document then fails until a human supplies what the destination scheme's
+template would have prompted for. The machinery moves it; only a person
+vouches that it belongs.
+
+**Tag rules.** `tags.yaml` says what a tag *means*; a tag group says which may
+appear together, because some vocabularies are an axis rather than a pile:
+
+```toml
+[luria.schemes.SOTA.tag_groups.primary_topic]
+require = "exactly-one"        # or "at-most-one", or "any"
+tags = ["training-optimization", "systems-optimization", "model-stability"]
+excluded_by = []               # tags that forbid this whole group
+```
+
+`exactly-one` is the "pick a primary category" rule, checked. Tags outside the
+group stay unconstrained, so secondary tags remain free. `excluded_by` covers
+the contradiction case — naming how an argument fails contradicts saying it
+holds.
+
+**Titles that generalise.** A principle stated about the one artifact it was
+noticed on is a principle nobody applies to the next one. That failure is
+quiet: the entry stays true and keeps rendering, and never gets cited.
+
+```toml
+[luria.schemes.DP]
+titles_generalize = true
+
+[luria.lint]
+narrow_terms = ["toolbar", "canvas", "queue"]
+```
+
+The vocabulary is your project's own concrete nouns — Luria ships none,
+because a shipped list would be some other project's vocabulary wearing the
+authority of a default. It fires on titles only, and fails open: a missed noun
+costs a review comment, where a false alarm would cost trust in the check.
+
+**Fields carrying no information.** Not configured, always on: a scheme where
+every document shares one status is reported as `inert-status`. A field every
+record agrees on is indistinguishable from no field, and the difference
+matters because other machinery reads it — `active` decides what counts as
+retired, and the retired-citation check fires off that. A scheme in that state
+has an enforcement mechanism that cannot fire, and the build is green
+*because* nothing is being judged.
+
+Which constraints to reach for, and when a rule is better expressed as a
+second scheme, is [designing a record](modeling.md).
+
+## Codes and links
+
+A code in prose — in a doc page, a record entry, a `README`, or a source
+comment covered by `[luria.code] globs` — is treated as a **claim**: this
+text says that document is why things are this way. Luria keeps the claims
+honest:
+
+- **Bare codes must become links.** `luria lint` flags a plain code in a
+  markdown file; `luria link --fix` rewrites it into a link. Never
+  hand-write the target: record prose is *rendered into views in other
+  directories*, so the correct relative path depends on where the text
+  lands, not where it lives — the fixer computes that frame, a human
+  reliably gets it wrong. Codes inside backticks or fenced blocks are
+  exempt; that is how you mention a code without citing it.
+- **Wikilinks label a reference.** `[[RFC-7]]` expands to a plain link;
+  `[[RFC-7|the delivery decision]]` uses your prose as the label. The
+  fixer expands both.
+- **Issue references.** With `issue_url` configured, `#123` links to the
+  tracker. A low number needs a cue word nearby (`issue`, `fixes`,
+  `closes`, …) so that prose like `principle #2` is not mistaken for a
+  ticket.
+- **Citations of retired documents are surfaced.** A reference to a
+  document that is not in force appears in the
+  [reference-status report](reports/reference-status.md) until a human
+  either fixes the text or vouches for the citation with an
+  [acknowledgement directive](directives.md) at the citing site.
+- **Codes that resolve to nothing are surfaced** the same way. A typo, a
+  number from another project and a deliberate example all look identical to
+  the machine, so telling them apart takes a person, and the finding is a
+  report and not a failure.
+
+These findings are warnings by default. A project that wants any class to
+fail the build promotes it with `[luria.lint] fail_on` — the dial between
+reported and enforced, per class, without ever silencing the account.
+
+## Numbering without collisions
+
+<!-- unresolved-ok: ADR-158 — an illustrative collision, not a citation -->
+Sequential numbers collide: two branches both file `ADR-158`, and one of
+them is renumbering after the merge. A scheme with `allocate = "merge"`
+sidesteps this — `luria new` mints a **temporary code**
+(`ADR-tmp3kf9x`), the work merges under it, and `luria concretize`,
+run where merges serialize (the push-to-main CI job), assigns the next real
+number and rewrites every reference in the repository.
+
+The old spelling is recorded in the document's `formerly:` list, so a
+temporary code in an unmerged branch, an old commit message, or a teammate's
+notes still resolves — the linter treats `formerly:` entries as aliases and
+upgrades leftover spellings when it can.
+
+## Superseding and correcting
+
+A record you cannot revise becomes a record you stop trusting. Two
+mechanisms keep revision honest:
+
+- **Versions.** Correcting a document means bumping `version:` and
+  appending a `history:` entry saying what changed — the lint refuses a
+  version bump with no account of itself.
+- **Migrations.** Renaming a scheme or moving documents between schemes is
+  a repository-wide rewrite, so it is executed from a committed spec
+  (`record/migrations.d/NNNN-*.toml`) by `luria migrate` — moves, reference
+  sweeps, `formerly:` stamps, and a `.git-blame-ignore-revs` entry so blame
+  reads through the rename. The spec stays in the repository afterward: its
+  mapping *is* the memory of the old names.
+
+## The status reports
+
+Some questions cannot fail a build because they need judgement. Those
+render as committed report pages under `docs/reports/`:
+
+- [Pending decisions](reports/pending-decisions.md) — every `Proposed` or
+  `Deferred` document, with age and citation count. An old proposal nothing
+  cites is a stalled idea worth closing; an old proposal many files cite is
+  a decision the codebase already made and never wrote down.
+- [Reference status](reports/reference-status.md) — citations of retired
+  documents, codes that resolve to nothing, and the acknowledgements that
+  keep either quiet on purpose.
+
+The README badge region (`luria index` maintains it between
+`<!-- luria:badges -->` markers) summarises both counts at a glance.
+
+## Where to go next
+
+- [Quickstart](quickstart.md) — do all of the above in ten minutes.
+- [CLI reference](cli.md) — the commands, flag by flag.
+- [Configuration reference](configuration.md) — every key, generated from
+  the schema.
+- [The record](record.md) — this project's own instantiation, generated
+  from its `luria.toml`.

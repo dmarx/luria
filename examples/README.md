@@ -1,6 +1,6 @@
 # Worked configurations
 
-Four complete projects, each one a different shape of record. They exist
+Five complete projects, each one a different shape of record. They exist
 because the alternative was prose: a `luria.toml` block in a guide is a claim
 nobody runs, and this repository's own founding observation is that every
 surface governed by prose alone had drifted.
@@ -16,6 +16,7 @@ believed at the time of writing.
 | [`collocated/`](collocated/) | no `output` anywhere — views render beside their sources, the shape a project has before it splits `docs/` from `record/` |
 | [`many-journals/`](many-journals/) | three journals at three granularities: a devlog, an incident log, a meeting log |
 | [`external-citations/`](external-citations/) | `uid` remotes — linted, linked citations to arXiv papers, Jira tickets and CVEs, none of which is a Luria record |
+| [`knowledge-base/`](knowledge-base/) | a record of *domain* content rather than project meta-documentation: two schemes that cite each other and carry separate statuses, with required fields and a one-primary-category rule |
 
 To run one by hand:
 

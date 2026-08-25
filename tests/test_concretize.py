@@ -7,6 +7,9 @@ commands — the pattern ADR-045 established, because the first hand-fired run
 of this machinery found a crash (`render_categories` formatting a number that
 temp docs don't have) that no unit test of the minter would have seen.
 """
+
+# unresolved-ok-file: ADR-000 — the assertion below matches on the string
+# `[ADR-0`, which the reference scanner reads as a code
 import re
 import subprocess
 from pathlib import Path

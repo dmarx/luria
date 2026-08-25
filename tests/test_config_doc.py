@@ -121,3 +121,64 @@ def test_states_what_is_not_configurable():
     text = config_doc.render()
     assert "## What is not configurable" in text
     assert "LURIA_JOBS" in text and "LURIA_ROOT" in text
+
+
+# --- Where the reference renders (ADR-059) ---------------------------------
+#
+# The page is generated so it cannot drift from `config.py`. That argument
+# only holds where `config.py` is a file the reader can open, so the page
+# renders where its source lives and nowhere else. Everything below is that
+# one rule, checked from both sides.
+
+def test_this_repo_owns_the_schema():
+    """The positive case has to be asserted somewhere, or the gate could be
+    stuck closed and every other test here would still pass."""
+    assert current().owns_schema
+
+
+def test_an_adopting_project_does_not_own_the_schema(project):
+    """A project that installed the package has no `luria/config.py` of its
+    own, so the reference would be a vendored copy of somebody else's file —
+    already a release out of date, with nothing in their repository
+    responsible for it."""
+    assert not current().owns_schema
+
+
+def test_the_reference_is_not_a_view_in_an_adopting_project(project):
+    from luria import adr_index
+    assert current().config_doc not in adr_index.outputs()
+
+
+def test_the_record_description_is_a_view_in_both(project):
+    """The other half of the split: the page that *is* about their project
+    renders everywhere, including here."""
+    from luria import adr_index
+    assert current().record_doc in adr_index.outputs()
+
+
+def test_retire_removes_a_reference_luria_wrote(project):
+    """The upgrade path. Before ADR-059 the page rendered into every adopting
+    project, so a bump leaves one behind that nothing will ever update."""
+    stale = current().config_doc
+    stale.parent.mkdir(parents=True, exist_ok=True)
+    stale.write_text(config_doc.render())
+    assert config_doc.retire() == [stale]
+    assert not stale.exists()
+
+
+def test_retire_leaves_a_page_the_project_wrote_itself(project):
+    """Deleting a file in somebody else's repository wants a better reason
+    than "we stopped writing it". The generator's marker is the proof, and
+    prose that happens to share the name is not ours to remove."""
+    theirs = current().config_doc
+    theirs.parent.mkdir(parents=True, exist_ok=True)
+    theirs.write_text("# Configuration\n\nHow *we* configure our deployment.\n")
+    assert config_doc.retire() == []
+    assert theirs.exists()
+
+
+def test_retire_never_touches_the_reference_where_it_belongs():
+    """Here, the page is the deliverable — a cleanup that removed it would be
+    a generator deleting its own output."""
+    assert config_doc.retire() == []
+    assert current().config_doc.exists()

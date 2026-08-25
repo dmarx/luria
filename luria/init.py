@@ -202,11 +202,12 @@ def _views(cfg: Config) -> str:
     for j in cfg.journals.values():
         lines.append(f"- [{j.title}]({rel(j.output / 'README.md')}) — the "
                      f"narrative, one book per {j.granularity}.")
-    lines.append("- [Configuration](configuration.md) — every `luria.toml` "
-                 "key, generated from Luria's own schema. Read it before "
-                 "assuming this record can only hold decisions: schemes, "
-                 "journals, fragment directories and remotes are families "
-                 "*this* project names.")
+    lines.append("- [The record](record.md) — what this project's record is "
+                 "made of and where each kind of entry is filed, generated "
+                 "from `luria.toml`. Read it before assuming this record can "
+                 "only hold decisions: schemes, journals, fragment "
+                 "directories and remotes are families *this* project "
+                 "names.")
     return "\n".join(lines)
 
 

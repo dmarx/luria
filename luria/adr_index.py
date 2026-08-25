@@ -459,7 +459,7 @@ def outputs() -> dict[Path, str]:
     pure function of the tree, so they run as parallel units. `pmap` returns
     in input order, which is what keeps the merged dict — and therefore the
     staleness diff — deterministic."""
-    from . import config_doc, journal, reports
+    from . import config_doc, journal, record_doc, reports
     from .parallel import pmap
     cfg = current()
     units = [lambda s=s: _render_scheme(s) for s in cfg.schemes.values()]
@@ -467,10 +467,16 @@ def outputs() -> dict[Path, str]:
     # The status reports render with everything else (#35), so the badges have
     # a committed page to land on and a stale report is a lint failure.
     units += [reports.outputs]
-    # The configuration reference is a projection of the config schema, so it
+    # The record description is a projection of *this* config's values, so
+    # naming a new scheme rewrites it on the next build.
+    units += [record_doc.outputs]
+    # The configuration reference is a projection of the config *schema*, so it
     # goes stale on a code change rather than a record change — which is
-    # exactly why it renders here instead of being written by hand.
-    units += [config_doc.outputs]
+    # exactly why it renders here instead of being written by hand. It renders
+    # only where that schema's source lives: elsewhere it is a vendored copy of
+    # another project's file, stale on their next upgrade (#114).
+    if cfg.owns_schema:
+        units += [config_doc.outputs]
     out: dict[Path, str] = {}
     for rendered in pmap(lambda u: u(), units):
         out.update(rendered)
@@ -532,10 +538,16 @@ def run(check: bool = False) -> None:
         # A journal entry filed without `created:` gets the field written from
         # its path before anything renders (#33) — a source repair, so it
         # belongs to write mode; `--check` must keep reading, not writing.
-        from . import journal
+        from . import config_doc, journal
         for j in current().journals.values():
             for p in journal.populate_created(j):
                 print(f"populated `created:` from the path in {current().rel(p)}")
+        # One-time cleanup for a project upgrading past ADR-059, which stopped
+        # rendering the schema reference outside Luria's own tree.
+        for p in config_doc.retire():
+            print(f"removed {current().rel(p)} — the configuration reference "
+                  "now renders only where its schema lives; this project's own "
+                  f"record is described in {current().rel(current().record_doc)}")
 
     if check:
         report = staleness()
