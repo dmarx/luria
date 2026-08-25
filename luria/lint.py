@@ -45,7 +45,7 @@ import sys
 from . import adr_index as builder
 from . import (adr_pending, badges, ci, doc_refs, journal, link_targets,
                narrow_titles, ref_status, remotes, statuses)
-from .config import current
+from .config import TEMP_TAIL, current
 
 # The closed status vocabulary (ADR-003). `Active` is the in-force state; the
 # rest are the ways a decision can be out of force, each meaning something a
@@ -129,6 +129,72 @@ def check_frontmatter(errors: list[str]) -> None:
                     errors.append(
                         f"{rel}: no `{field}:` in frontmatter — the "
                         f"{scheme.prefix} scheme requires it (luria.toml)")
+
+
+def check_references(errors: list[str]) -> None:
+    """Declared cross-scheme references (`[luria.schemes.X.references]`).
+
+    `requires` asks whether a field is there. This asks whether it means what
+    the scheme says it means, which is four questions: present, shaped like a
+    code, belonging to the named scheme, and resolving to a document.
+
+    The gap between those is not theoretical. Measured on the record that
+    motivated this, a field declared to hold a paper accepted a decision's
+    code and an arbitrary sentence, both silently — so the rule the whole
+    two-scheme split existed to enforce was enforced only in the sense that
+    the field was not blank (ADR-tmp90kpj)."""
+    cfg = current()
+    for scheme in cfg.schemes.values():
+        if not scheme.references:
+            continue
+        targets = {ref.scheme: cfg.schemes[ref.scheme]
+                   for ref in scheme.references}
+        known = {
+            prefix: ({t.code(n) for n in t.documents()}
+                     | {f"{prefix}-{tail}" for tail in t.temp_documents()})
+            for prefix, t in targets.items()
+        }
+        for path in [*scheme.documents().values(),
+                     *scheme.temp_documents().values()]:
+            rel = cfg.rel(path)
+            meta, _ = builder.parse_frontmatter(path.read_text())
+            if not meta:
+                continue          # check_frontmatter already said so
+            for ref in scheme.references:
+                raw = meta.get(ref.field)
+                if not raw:
+                    if ref.required:
+                        errors.append(
+                            f"{rel}: no `{ref.field}:` in frontmatter — the "
+                            f"{scheme.prefix} scheme declares it a "
+                            f"{ref.scheme} reference (luria.toml)")
+                    continue
+                code = _reference_code(str(raw))
+                if code is None:
+                    errors.append(
+                        f"{rel}: `{ref.field}: {raw}` is not a code — the "
+                        f"{scheme.prefix} scheme declares this field a "
+                        f"{ref.scheme} reference")
+                elif not code.startswith(f"{ref.scheme}-"):
+                    errors.append(
+                        f"{rel}: `{ref.field}: {code}` is not a "
+                        f"{ref.scheme} code — a {scheme.prefix} document's "
+                        f"`{ref.field}` names a {ref.scheme} document")
+                elif code not in known[ref.scheme]:
+                    errors.append(
+                        f"{rel}: `{ref.field}: {code}` resolves to no "
+                        f"{ref.scheme} document")
+
+
+# A reference field is data, not prose, so it holds a bare code — but the
+# fixer rewrites prose fields in place and a hand-edited file can carry a
+# link, so read the code out of either shape rather than demanding one.
+_REF_CODE_RE = re.compile(r"([A-Z]{2,}(?:-[A-Z]+)*-(?:\d{1,4}|" + TEMP_TAIL + r"))")
+
+
+def _reference_code(value: str) -> str | None:
+    m = _REF_CODE_RE.search(value.strip())
+    return m.group(1) if m else None
 
 
 def check_title(errors: list[str], rel: str, meta: dict, body: str) -> None:
@@ -486,6 +552,7 @@ def run() -> None:
     check_frontmatter(errors)
     check_status_vocabulary(errors)
     check_tag_groups(errors)
+    check_references(errors)
     check_generated_index(errors)
     check_journals(errors)
     check_version_history(errors)

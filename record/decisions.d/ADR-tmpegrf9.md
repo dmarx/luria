@@ -1,0 +1,87 @@
+---
+status: Proposed
+title: A scheme's template is a form, not a document
+version: 1
+tags:
+- mechanism
+date: '2026-08-24'
+summary: >-
+  `_template.md` is scaffolding the tool itself reads, so its example codes
+  are illustrative by definition — yet they were scanned as citations, and a
+  template using a realistic example reported a finding against itself.
+  Templates are now exempt from the code machinery and still checked for link
+  targets. Rejected: acknowledging it per project, which is a directive every
+  scheme has to carry forever.
+---
+
+# ADR-tmpegrf9: A scheme's template is a form, not a document
+
+## Context
+
+Every scheme directory holds a `_template.md` that `luria new` copies. It is
+not an entry in the record; it is the shape an entry takes, and the tool reads
+it rather than a reader.
+
+It was nonetheless scanned like a document, which put its author in a bind
+with no correct answer. A template illustrating citation syntax has to write
+*some* code:
+
+- A realistic example is a real document, and one that may not be in force —
+  a downstream record used a code that happened to be `Rejected`, so the
+  template generated a retired-citation finding against itself on every run.
+- A placeholder is a code that resolves to nothing, which is the
+  unresolved-codes finding instead.
+
+Both are true statements about a file nobody filed. The escape was a directive
+in each template:
+
+```markdown
+<!-- unresolved-ok-file: LIT-000 — the placeholder a new note replaces -->
+```
+
+That works, and it is a line every scheme in every project has to carry, to
+acknowledge a finding that was never about the record.
+
+## Decision
+
+A `_template.md` in a scheme's directory is exempt from the reference
+machinery: it is not a citing site, so nothing it names is counted as a
+citation, and no code in it needs to resolve.
+
+**Exempt from the code checks only.** Its relative link targets are still
+checked, because a broken path in a template is copied into every document
+made from it — and that failure is real, invisible, and multiplied.
+
+The distinction is between two questions that looked like one: *does this code
+name a document* (illustrative in a form, exempt) and *does this path go
+somewhere* (real everywhere, checked).
+
+## Alternatives considered
+
+- **Keep acknowledging it per project.** The status quo. It spends a
+  directive on every scheme forever to silence a finding that is always
+  wrong, which is the shape this record elsewhere calls a busy guard: the
+  hazard is upstream, and the fix is to remove what generates the mistake.
+- **Reserve a placeholder number per scheme** — treat `X-000` as never
+  allocated and always resolvable. Narrower, and it only covers the
+  placeholder case; a template quoting a realistic in-force example still
+  reports when that example is later retired, which is the harder half.
+- **Exempt templates from everything.** Simpler to implement and it drops
+  link-target checking, which is the one check a template genuinely needs.
+- **Move templates out of the scheme directory.** They are found by
+  convention and read by `luria new`; relocating them to fix a scanning
+  question would move a file readers expect to find beside the documents it
+  produces.
+
+## Consequences
+
+A template can now use a realistic example — a real code, in force or not —
+which is what makes a template teach. That is the point, and it is also the
+cost: a code in a template is no longer checked at all, so one naming a
+document that later disappears goes unreported. A template is copied by a
+command that fills in the frontmatter, and the resulting document is checked
+normally, so the error surfaces at the first use rather than never.
+
+Existing `unresolved-ok-file:` directives in templates become stale
+annotations and will be reported as such, which is the machinery telling
+projects to delete a line they no longer need.

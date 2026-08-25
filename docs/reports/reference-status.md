@@ -59,7 +59,7 @@ Luria is a truth maintenance system, and should say so
 
 A reference the reader cannot follow: the code names no document in this record. A typo, a number carried in from another project, and an illustrative code in an example all look identical from here — telling them apart takes a human, so this is a report, not an error.
 
-**4 codes unaccounted for.** Not listed: 49 mentions marked deliberate with an `unresolved-ok:` comment (same syntax and scopes as `inactive-ok:` above).
+**4 codes unaccounted for.** Not listed: 50 mentions marked deliberate with an `unresolved-ok:` comment (same syntax and scopes as `inactive-ok:` above).
 
 
 ### ADR-123 — resolves to nothing (3 unmarked sites · 2 other mentions marked deliberate)

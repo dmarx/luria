@@ -250,7 +250,8 @@ class Scan:
 def scanned_files() -> list[Path]:
     """Current-guidance docs + code. Order is stable so the report is."""
     cfg = current()
-    docs = [p for p in doc_refs.doc_files() if not cfg.is_historical(p)]
+    docs = [p for p in doc_refs.doc_files()
+            if not cfg.is_historical(p) and not cfg.is_template(p)]
     code: list[Path] = []
     for pattern in cfg.code_globs:
         code += [p for p in cfg.root.glob(pattern) if p.is_file()]
