@@ -5,6 +5,291 @@ Assembled from `changelog.d/` fragments on a cadence — never hand-edited
 
 <!-- luria-insert-here -->
 
+## 2026-08-25
+
+### Added
+
+- A design principle: **exempting a ledger from one matcher exempts it from
+  none of the others.** A mechanism that rewrites instances of a pattern
+  records what it rewrote, in the pattern's own spelling — so every matcher
+  for that pattern also matches its own ledger, and the exemptions do not
+  transfer between them.
+
+### Added
+
+- `uniform_ok` on a scheme: the acknowledgement `inert-status` never had.
+  Every other judgment call in luria can be answered where it is raised, but
+  that finding is about a *scheme* and a scheme has no line to comment on, so
+  a project whose uniformity was deliberate had no move. Set it — a mandatory
+  reason — and the scheme leaves `inert-status` for a new
+  `acknowledged-uniformity` section that still reports the count and status
+  and appends the reason. It lapses on its own when a second status appears,
+  and it cannot be promoted to a failure.
+
+### Changed
+
+- [ADR-057](record/decisions.d/ADR-057.md) is `Active` at version 2, having absorbed the acknowledgement. The
+  check and the reply to it are one decision restated, not two.
+
+### Added
+
+- A design principle: **meet the project where it is.** A project picks its
+  language, platform, forge and shape for reasons that have nothing to do with
+  keeping a record; the record arrives afterwards and should fit what it
+  finds. Held by being explicit in what the tool writes and forgiving in what
+  it assumes — and by asking what has been assumed and never written down,
+  since coupling to an environment rarely arrives as a decision.
+
+- A decision on how principles are worded: **write one as a value unless it
+  is actually a rule.** The test is whether it can be partly met. If it can,
+  the aspirational voice keeps the state a value spends most of its life in;
+  if the only outcomes are satisfied and violated, it is a rule and should
+  read like one. Two of the fourteen principles here are rules and keep their
+  voice. The question is now in the principle template.
+
+### Fixed
+
+- Every file the package reads or writes now names UTF-8 explicitly. Nothing
+  did before, so each one took the platform's preferred encoding — cp1252 on
+  a default Windows install, where `luria index` crashed writing a check mark
+  into a status report, and a tree written that way was then unreadable to
+  the same tool under `PYTHONUTF8=1`. Reproducible without Windows under
+  `LC_ALL=C`, which is how it is now tested.
+- The CLI reconfigures its output streams with `errors="replace"`, so a
+  terminal that cannot encode the arrow in `luria init → path` prints `?`
+  rather than a traceback. The console keeps its own encoding; only files are
+  unconditionally UTF-8.
+
+### Changed
+
+- The README leads with the mechanism firing. A page cites a decision, the
+  decision is superseded, and `luria lint` names the page nobody edited —
+  before any vocabulary is introduced. Install and the sixty-second
+  walkthrough follow; the families and the "ADR is not in the code" reveal
+  move after them.
+- The quickstart ends by breaking something on purpose: supersede a decision,
+  see the finding land, then close it by fixing the citation or acknowledging
+  it. `concepts.md` had promised this and the quickstart had never delivered
+  it — a self-checking system whose tutorial never catches anything.
+- `luria init --dry-run` is in the first-run path, and `CLAUDE.md` gets a
+  sentence saying what it is and that nothing depends on it.
+- The live record at dmarx.github.io/luria is linked from the README and
+  declared as `Documentation` in the package metadata.
+- `adopting.md` opens with what makes a record worth keeping, what happens if
+  statuses never move, what should stay ordinary prose, how much machinery
+  adoption adds, what is GitHub-specific, and what is least settled.
+
+- `CITATION.cff`, which GitHub reads for its "Cite this repository" button,
+  and a BibTeX block at the bottom of the README **derived from it** by
+  `luria index` — a new generated region alongside the badges, checked for
+  staleness by `luria lint`. Two hand-written copies of a citation is the
+  drift [DP-3](docs/design-principles.md#dp-3) names, and a citation is a bad thing to have two versions of:
+  the wrong one is the one that reaches somebody's bibliography.
+
+  No version in either. The version comes from the release tag, and writing
+  one into a file by hand is the copy [ADR-053](record/decisions.d/ADR-053.md) removed.
+
+### Fixed
+
+- The ontology said every entry has a name, a standing and declared rules.
+  Journals and fragments have none of those — a journal entry is identified by
+  when it was written and carries no status at all. `status` and citation
+  semantics now belong to **referable documents**, and the other families are
+  described as what they are.
+- "What people read cannot drift from what people file" claimed more than the
+  tool delivers. Hand-written prose drifts; what cannot is a generated view
+  from its sources. Scoped accordingly.
+- Two documents disagreed about how many worked configurations ship — one said
+  four, one said five, and the fifth had been added a day earlier. Neither
+  states a count now.
+- The README enumerated four statuses of the five in the closed vocabulary.
+- The prior-art section named Doyle, de Kleer, AGM and Dung without
+  references; they have DOIs now.
+
+### Fixed
+
+- `tests/test_prose_frontmatter.py` writes an `ADR-007.md` into a temporary
+  project as fixture data, and the number collides with this repository's own
+  [ADR-007](record/decisions.d/ADR-007.md), which is `Superseded` — so the scanner read five lines of fixture
+  data as citations of a retired decision. Acknowledged at file level with
+  what they actually are.
+
+  The reference-status report now reads clean in every section: nothing
+  cited unacknowledged, every code resolving, no stale annotations.
+
+### Added
+
+- `luria config` writes the `luria.toml` that `luria init` would have
+  written, and stops. The shorthand covers the two things projects usually
+  vary; anything else — a directory name, a narrowed status vocabulary, a tag
+  group — is an edit to the config, and making that edit *after* a scaffold
+  means moving directories the first run already created. Writing the config
+  first and scaffolding second avoids the migration. `--stdout` prints
+  instead, and works where a config already exists.
+
+### Documentation
+
+- `render = "index"` versus `render = "document"` is explained rather than
+  named. `modeling.md` gains the choice — one question about how the set is
+  read, with the two checks worth testing an answer against — and
+  `project-memory.md` gains a table of what each actually produces, including
+  that `output` means a directory in one and a file in the other.
+
+### Added
+
+- `luria init` infers `issue_url` from the `origin` remote when one is not
+  given, for hosts whose issue path is known (GitHub, GitLab), and reports
+  what it used. The value cascades — `[luria.site]` derives its title, Pages
+  URL and source base from it — so a repository with a remote scaffolds a
+  correct record with no configuration at all.
+
+### Added
+
+- `luria init --schemes` and `--journals`, for a project that wants the
+  shipped defaults plus a family or two:
+
+  ```console
+  $ luria init --schemes "RFC,SPEC:document" --journals "incidents:day"
+  ```
+
+  Each entry is `NAME` or `NAME:kind`, and the paths follow the prefix. The
+  shorthand is an argument rather than a stored format — what lands in
+  `luria.toml` is the ordinary commented table, so nothing reads it back and
+  the config looks like every other project's.
+
+### Added
+
+- `docs/concepts.md`, between the quickstart and the modeling guide: the
+  shortest complete account of the model — entries, citations, the status
+  field everything hangs off, what a finding is and how one is answered, and
+  the prior art the mechanism comes from. The page existed before the docs
+  rewrite and was dropped; the rewrite left a gap between "do the loop" and
+  "choose between the options", which this fills.
+
+### Changed
+
+- [ADR-058](record/decisions.d/ADR-058.md)'s rejection note no longer rests on the concepts page not existing,
+  since it does. The reason that survives is the one that mattered: the README
+  opens on what the record does rather than on what to call it.
+
+### Fixed
+
+- The README carried two badge blocks. The generator updates the first, so
+  the second had frozen at numbers three weeks stale. It was left behind when
+  the pitch rewrite inserted a new block above it.
+
+### Changed
+
+- The section introducing the four families is `## Kinds of record` rather
+  than `## It is not only for decisions`, which argued against an impression
+  the reader has no way to have formed.
+
+### Added
+
+- A scheme may name where its tag vocabulary lives — `tags = "record/topics.yaml"` —
+  so two schemes can share one file instead of keeping a copy each.
+- A tag may declare `primary_for: [LIT, SOTA]`, and a `tag_groups` entry that
+  lists no tags derives its membership from those keys. One vocabulary file
+  can now give two schemes different primaries without repeating the shared
+  part.
+- `[luria.schemes.X.references]` declares that a frontmatter field holds a
+  code from a named scheme. Where `requires` checked only that a field was
+  truthy, a declared reference checks that it is present, is a code, belongs
+  to that scheme, and resolves.
+
+### Changed
+
+- A scheme's `_template.md` is no longer scanned for code references. It is a
+  form the tool reads, not an entry in the record, so its example codes were
+  reported as citations — a template with a realistic example produced a
+  finding against itself. Link targets in templates are still checked.
+
+### Fixed
+
+- Nothing yet broken by this; all three additions are inert until declared.
+
+### Changed
+
+- Nine proposals adopted: [ADR-041](record/decisions.d/ADR-041.md), [ADR-052](record/decisions.d/ADR-052.md), [ADR-053](record/decisions.d/ADR-053.md), [ADR-054](record/decisions.d/ADR-054.md), [ADR-055](record/decisions.d/ADR-055.md),
+  [ADR-056](record/decisions.d/ADR-056.md), [ADR-060](record/decisions.d/ADR-060.md), [ADR-061](record/decisions.d/ADR-061.md) and [DP-010](docs/design-principles.md#dp-10). Each describes something the tree
+  already does; leaving them `Proposed` said the question was open when it
+  had been settled in code.
+- [ADR-058](record/decisions.d/ADR-058.md), which asked the README to call luria a truth maintenance system,
+  is `Rejected`. The README rewrite says what the record does in its own
+  terms, and the concepts page the decision also named no longer exists.
+
+### Documentation
+
+- A decision recording why the skip-marker checker was dropped: it cannot
+  fire when the marker is on a tip that stays the tip, which is the case that
+  does harm, and does fire on commits that suppressed nothing. Required
+  status checks in branch protection are the answer, and are not something
+  this package can ship.
+
+### Changed
+
+- Test fixtures that model a principles scheme now use a `VP` prefix over
+  `docs/values.md` rather than borrowing `DP`. A rename of the real scheme
+  would have swept them: `luria migrate` walks tracked source files on the
+  grounds that "a source file answers as truthfully as a document does", and
+  a fixture's codes are not claims about this record. Six test files, and the
+  `UP` remote's document-scheme fixtures with them.
+
+### Fixed
+
+- Five demonstration codes carried no acknowledgement, so they sat in the
+  unresolved-codes report indistinguishable from typos: `DP-017` in
+  `migrate.py`, `ADR-123` in `concretize.py` and again in [ADR-049](record/decisions.d/ADR-049.md)'s worked
+  collision example, `DP-018` in [ADR-040](record/decisions.d/ADR-040.md), and the `[ADR-0` string literal in
+  `test_concretize.py` that the scanner reads as a code. Each file now
+  carries an `unresolved-ok-file:` directive next to the reason. The report
+  reads "every code resolves" for the first time.
+
+### Added
+
+- `docs/modeling.md` — designing a record: what belongs in one, which family
+  fits which material, the rule for when two kinds of entry are two schemes,
+  what the schema can be made to refuse, and five worked shapes.
+- `docs/importing.md` — turning material that already exists as data into a
+  record, and what that transform surfaces.
+- `examples/knowledge-base/` — a record of domain content rather than project
+  meta-documentation: two schemes citing each other with separate statuses,
+  required fields, and a one-primary-category rule. Built and linted by CI
+  like the others.
+
+### Changed
+
+- The README leads with what a record *is* — entries with a name, a standing,
+  declared rules and generated views — rather than with the furniture it
+  ships with or the file format it happens to use. Markdown is demoted to an
+  implementation note explaining why plain files are chosen (participation)
+  and saying plainly that nothing in the model depends on them.
+- The README names four shapes a record can take.
+- `project-memory.md` gains a **Constraints** section. `requires`,
+  `tag_groups`, `titles_generalize` and `inert-status` previously appeared in
+  the prose docs only as names in the lint contract.
+- A register pass over `modeling.md` and `project-memory.md`: headers now
+  label their contents rather than stating verdicts or withholding them,
+  padded triads are cut to the number of things there actually are, and a
+  few staged constructions state their finding instead. Em-dash density is
+  left alone — this project's own prose runs 2.5 to 3.5 per 150 words, and
+  scrubbing that would make the docs less like the record they document.
+- `adopting.md` documents two CI hazards: another workflow committing to the
+  branch defeats the generate/lint handoff from outside, and a commit message
+  containing the skip marker suppresses its own run.
+
+### Changed
+
+- The hand-written documentation — README, CLAUDE.md, CONTRIBUTING, and
+  every prose page under `docs/` — was rewritten from scratch against a
+  deliberately stripped checkout, reorganized around five pages:
+  quickstart, project-memory, cli, directives, and adopting.
+
+### Removed
+
+- The docs pages `api.md`, `schemes.md`, and `in-practice.md`; their
+  subject matter is folded into the rewritten set.
+
 ## 2026-08-24
 
 ### Added
