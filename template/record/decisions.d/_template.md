@@ -3,7 +3,7 @@
 # identity and fills in the fields a machine can compute. WHICH identity
 # depends on the scheme's `allocate` mode: `filing` (the default) takes the
 # next free number on the spot, `merge` mints a temporary code that
-# `luria concretize` numbers where merges serialize (ADR-049). The kinds are the
+# `luria concretize` numbers where merges serialize (FX-ADR-049). The kinds are the
 # config: every scheme, fragment directory and journal in luria.toml is one, so
 # `luria new <kind>` works for a scheme the moment it is declared.
 #
@@ -18,7 +18,7 @@
 
 # Active | Proposed | Deferred | Superseded | Rejected, optionally " — <note>".
 # Supersede when the CHOICE changes: set the old one to
-# "Superseded — by [ADR-NNN](ADR-NNN.md)" and leave its body intact. When the
+# `Superseded — by [ADR-NNN](ADR-NNN.md)` and leave its body intact. When the
 # choice stands and only a REASON was wrong, correct this body in place and
 # bump `version:` below — the rule objects to silent revision, not to editing.
 status: Proposed

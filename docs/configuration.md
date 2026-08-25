@@ -101,6 +101,11 @@ carries its prefix, so a second scheme is an entry here (ADR-006).
 | `output` | `Path \| None` | *unset* |
 | `allocate` | `str` | `"filing"` |
 | `titles_generalize` | `bool` | `False` |
+| `requires` | `tuple[str, ...]` | *unset* |
+| `tag_groups` | `tuple[TagGroup, ...]` | *unset* |
+| `tags_file` | `Path \| None` | *unset* |
+| `references` | `tuple[Reference, ...]` | *unset* |
+| `uniform_ok` | `str \| None` | *unset* |
 
 ## Fragment directories — `[luria.fragments."dir"]`
 

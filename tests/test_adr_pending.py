@@ -114,15 +114,15 @@ def test_every_scheme_is_covered(project):
     (project / "luria.toml").write_text(
         '[luria]\nissue_url = "https://example.test/issues/{n}"\n'
         '[luria.schemes.ADR]\ndir = "docs/decisions"\n'
-        '[luria.schemes.DP]\ndir = "docs/principles"\n'
-        'render = "document"\noutput = "docs/design-principles.md"\n')
+        '[luria.schemes.VP]\ndir = "docs/values"\n'
+        'render = "document"\noutput = "docs/values.md"\n')
     from luria import config
     config.reset()
     decision(project, 1, "Proposed", "An open decision")
-    principles = project / "docs" / "principles"
-    principles.mkdir(parents=True, exist_ok=True)
-    (principles / "DP-002.md").write_text(
+    values = project / "docs" / "values"
+    values.mkdir(parents=True, exist_ok=True)
+    (values / "VP-002.md").write_text(
         "---\nstatus: Deferred\ntitle: 'An open value'\ntags:\n- record\n"
-        "date: '2026-01-01'\n---\n\n# DP-002: An open value\n")
+        "date: '2026-01-01'\n---\n\n# VP-002: An open value\n")
 
-    assert {r.code for r in pending.pending()} == {"ADR-001", "DP-002"}
+    assert {r.code for r in pending.pending()} == {"ADR-001", "VP-002"}

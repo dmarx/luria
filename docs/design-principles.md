@@ -308,7 +308,7 @@ and who pays?* If the project pays in missed defects, on-by-default. If
 the author pays in unwanted exposure, off-by-default. A switch where both
 answers feel true is usually two switches wearing one name — split it.
 
-*v1 · shaped by [ADR-035](../record/decisions.d/ADR-035.md) · **Proposed***
+*v1 · shaped by [ADR-035](../record/decisions.d/ADR-035.md)*
 
 <a name="dp-11"></a>
 
@@ -361,46 +361,61 @@ anything, and that restraint is what keeps the licence worth having.
 
 *v1 · origin: Carried in from strata-g, luria's first consumer, after a stretch in which almost every repair here was found by tripping over an unrelated one*
 
-<a name="dp-tmpqu8fy"></a>
+<a name="dp-12"></a>
 
-## DP-tmpqu8fy. The ledger looks like the prey: exempt it structurally, not incidentally
+## 12. One decision, one thing
 
-A mechanism that rewrites, flags, or retires instances of a pattern usually
-keeps a record of what it did — and that record is written in the pattern's
-own spelling. A migration's `formerly:` field names the old codes. A
-redirect map names the dead URLs. A suppression list names the warnings it
-suppresses. To every hunter of that pattern, the ledger is
-indistinguishable from prey.
+**A decision with two unrelated halves is one nobody can cite half of.**
 
-The failure is not hypothetical and not singular. On the day the record's
-first migration ran, three subsystems attacked the stamps it had just
-written, independently, each through its own mouth:
+Bundling is always cheaper at writing time. One record, one review, one merge —
+and the second half arrives free, because it was going to be written anyway.
+The cost lands later and never goes away.
 
-- the **sweep** rewrote the `formerly:` values into the new spelling —
-  erasing the map at its source, in the same operation that created it;
-- the **fixer**'s modernize pass did the same from the other side, turning
-  every alias into a self-reference on the live corpus;
-- the **scan** counted each stamp as a citation of the old code — every
-  migrated document warning about its own former name, forever.
+## What it costs
 
-Three mouths, three separate discoveries, one cause. That multiplicity is
-the point: exempting the ledger in one place does not exempt it anywhere
-else, because each consumer of the pattern matches it independently.
+**The second half has no code.** A citation is how this record is used: an
+argument names its premise, a module names the decision it implements, a lint
+message names the rule it enforces. Half a decision cannot be named, so the
+half that was cheap to add is the half nothing can point at — and a rule
+nothing points at is a rule nobody knows applies to them.
 
-So the exemption must be **structural**: a mask the hunter applies by rule
-(this span is the ledger, never touch it), stated where the hunting
-happens, with a test that fires it — a guard is trusted only once it has
-been seen to catch ([DP-6](design-principles.md#dp-6)). What does not count is **incidental**
-protection: an execution order that happens to write the ledger after the
-sweep, a file the glob happens to miss, a format the regex happens not to
-match. Incidental protection is real protection today and gone after the
-next refactor, and it fails silently — the ledger doesn't complain when
-eaten; it just stops being true, and everything derived from it (an alias
-map, a resolution table) degrades into self-reference.
+**Superseding withdraws more than intended.** A decision that changes gets
+superseded whole. If two choices share a record, retiring the one that aged out
+silently retires the one that did not, and the record now says nothing about a
+question it had answered. That is the failure the status vocabulary exists to
+prevent, reintroduced at a coarser grain.
 
-The test, when building anything that hunts a pattern: *does this system
-keep a record of the thing being hunted, and does that record spell the
-pattern?* If yes, the mask is part of the hunter's definition — written,
-tested, and named in the same breath as the hunt itself.
+**Alternatives stop being reconstructable.** The alternatives section is the
+highest-value part of a decision, and it only works when it is the alternatives
+to *one* choice. Two choices produce a cross-product, or — far more often — an
+alternatives section that silently covers whichever half the author found more
+interesting.
 
-*v1 · shaped by [ADR-040](../record/decisions.d/ADR-040.md) · **Proposed** · origin: The DP→GP migration's first live day: three subsystems — the migration sweep, the fixer's modernize pass, and the reference scan — each independently attacked the `formerly:` stamps the migration had just written, because the record of an old spelling is spelled exactly like the stale reference each of them hunts*
+## The test
+
+**Could the two halves have been decided differently?** If a project could
+adopt one and reject the other, they are two decisions, however naturally they
+arrived together.
+
+The tempting counterexample is the pair where one half motivated the other.
+That is exactly when to split, and it is worth being concrete: a feature was
+built to fix a defect, and a separate check would actually have *caught* that
+defect. Bundling them would have produced a record whose stated motivation was
+served by only one of its halves — and a reader asking "why does this check
+exist?" would find the answer to a different question.
+
+Splitting them also produced something bundling would have hidden. Building the
+second after the first landed revealed an exemption the second needed *because
+of* the first, which is a relationship that only exists between two things.
+
+## What this is not
+
+Not an argument for small decisions. A decision covering one choice can be long,
+and usually should be — the context, the alternatives and the consequences of a
+single choice are most of what makes a record worth keeping.
+
+Nor is it an argument against related decisions landing together. Ship them in
+one contribution if that is honest; give them separate codes so each can be
+cited, revisited, and retired on its own evidence.
+
+*v1 · shaped by [ADR-035](../record/decisions.d/ADR-035.md), [ADR-056](../record/decisions.d/ADR-056.md) · origin: Three splits in one session, each made for the same reason and none of them by rule: a lint check separated from the vocabulary it reads, two scheme audits written as two decisions rather than one, and a status feature split from the report that would have caught the bug motivating it. Each bundle would have been smaller to write and impossible to cite half of*

@@ -173,6 +173,16 @@ def _frontmatter_span(text: str) -> tuple[int, int] | None:
 # is what makes it true.
 PROSE_KEYS = ("summary", "origin")
 
+# A `formerly:` list is the record's memory of an address a document used to
+# answer to. Naming an old code there is what the alias IS — a declaration,
+# not a citation — so every scan that reads codes out of a file has to skip
+# it, and for two different reasons: a sweep that rewrote the list would
+# destroy the very trail the next migration derives its aliases from, and a
+# reference scan that counted it would report every migration as having left
+# a dangling reference behind (the document it names is, by construction, the
+# one carrying the list). One definition because it is one exclusion.
+FORMERLY_RE = re.compile(r"^formerly:\n(?:- .*\n)*", re.MULTILINE)
+
 PROSE_KEY_RE = re.compile(
     r"^(?:" + "|".join(PROSE_KEYS) + r"):", re.MULTILINE)
 NEXT_KEY_RE = re.compile(r"^(?=[A-Za-z_][\w-]*:|---[ \t]*$)", re.MULTILINE)

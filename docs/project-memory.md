@@ -1,211 +1,327 @@
-# Project memory: how a repo thinks
+# Project memory
 
-Half the collaborators on a modern codebase are stateless. They arrive with no
-memory, read some pages, work, and vanish. Unwritten knowledge is therefore
-re-derived at cost, per session, forever — the **rediscovery tax**.
+How Luria models a project's memory. The [quickstart](quickstart.md) shows
+the commands; this page explains the machine they drive.
 
-Luria's answer is that **the project is its own memory**: the written record
-isn't a description of the collaboration, it *is* the next collaborator's mind,
-reconstituted from disk every session. That makes documentation quality
-compound, and it makes this page the boot sector. An agent file should point
-here; a session that reads only this page should file knowledge in the right
-place on its first try.
+## Sources and views
 
+Everything in a Luria record divides into two kinds of file:
+
+- **Sources** are written by people: one small markdown file per entry,
+  filed under `record/`. A source is cheap to write, trivial to review in a
+  PR, and never conflicts with a neighbour, because every contribution is a
+  new file.
+- **Views** are written by `luria index`: the decision index and its tag
+  pages, the rendered principles document, journal books, the status
+  reports, the badge counts in the README. A view directory holds *only*
+  generated files — `luria lint` fails on a stale view and on a stray
+  hand-written file inside one, so a reader can trust that what they see
+  reflects the sources.
+
+The split is the whole trick. Contributors write into an append-only pile;
+readers get curated, cross-linked pages; and nothing depends on anyone
+remembering to keep the two in sync, because the lint remembers.
+
+## The four families
+
+`luria.toml` declares what the record is made of, using four *families* of
+table. You name the entries, and the names become the vocabulary — nothing
+in the code spells `ADR`; it is simply the scheme this package ships as a
+default.
+
+### Schemes — referable documents
+
+```toml
+[luria.schemes.RFC]
+dir    = "record/rfcs.d"
+output = "docs/rfcs"
+render = "index"
+```
+
+A scheme is a family of documents with **codes**: `RFC-001`, `RFC-002`.
+Declaring the table above is everything it takes to make `RFC-7` a
+first-class reference — `luria new rfc` scaffolds the next number,
+`luria link --fix` writes its link, and the lint tracks every place it is
+cited.
+
+Each document is one markdown file whose filename is its code and nothing
+else. The title lives in frontmatter, where correcting it costs an edit
+rather than a rename plus every inbound link:
+
+```yaml
 ---
+status: Proposed
+title: Consumers must be idempotent
+version: 1
+tags: [record]
+date: '2026-08-22'
+summary: >-
+  One paragraph for the index row — what this establishes, and what it
+  rejected.
+---
+```
 
-## 1. The four layers
+#### What each render produces
 
-| layer | holds | one-line test |
+Every scheme declares a `render`. Which one you want is a question about how
+the set is read — [designing a record](modeling.md#index-or-document) is that
+question. What each one *does*:
+
+| | `render = "index"` | `render = "document"` |
 |---|---|---|
-| [`record/principles.d/`](design-principles.md) | standing **values**, numbered, cited as "[DP-2](design-principles.md#dp-2)" instead of re-argued | *have we re-derived this reasoning more than once?* |
-| [`record/decisions.d/`](decisions/README.md) | a **choice among alternatives** at a point in time, one file each | *did we reject an alternative, or set a constraint a future edit could violate?* |
-| `record/changelog.d/` fragments | **what changed**, operator-facing, terse | *would someone running or using this notice?* |
-| `record/devlog.d/` entries | **how it went** — including failed approaches and wrong theories, which are the reusable part | *will a future debugger want the narrative?* |
+| the reading | one entry at a time, arrived at by a link | the whole set, in order |
+| `output` means | a **directory** the view renders into | the assembled **file** itself |
+| what is generated | `README.md`, a table of every entry, plus `tags/<tag>.md` per tag | one page, every body concatenated |
+| a citation lands on | the entry's own file — `ADR-012.md` | a section anchor — `design-principles.md#dp-3` |
+| `tags.yaml` | orders the index and titles the tag pages | unused; there are no tag pages |
+| `inert-status` | applies | exempt — every principle being in force is the expected state, not a dead field |
+| cited from a remote | `[luria.remotes.X.schemes.Y] dir = …` | `document = …`, with an optional `anchor` |
 
-The links go to the *views* — the generated index, the assembled document —
-because that is where reading starts; the paths name the *sources*, because
-that is where filing happens. The split is the layout's one rule
-([DP-9](design-principles.md#dp-9), [ADR-021](../record/decisions.d/ADR-021.md)):
-`docs/` is the read surface, `record/` is the write surface, and the `.d`
-suffix marks each container you file into.
+Watch `output`, which means something different in each: `docs/rfcs` for an
+index is a directory that will come to contain `README.md` and `tags/`, while
+`docs/interfaces.md` for a document is the page itself.
 
-The traffic rules between them are [ADR-001](../record/decisions.d/ADR-001.md): principles
-are durable but **not sacred**; a decision whose *choice* changes is superseded
-by adding a decision rather than by rewriting its body; a principle is added on
-the *second* re-derivation of the same reasoning.
+Unset, either render puts the view beside its sources — the collocated shape
+a project has before it splits `docs/` from `record/`.
 
-The top two layers are one file each, in `record/principles.d/` and
-`record/decisions.d/`, with YAML frontmatter — `docs/design-principles.md` and the
-decision index are both **generated** from them
-([ADR-012](../record/decisions.d/ADR-012.md)). A principle's
-frontmatter carries a `version`, because principles are living documents: a
-value first stated about one artifact is a value nobody applies to the next one,
-so the honest move is to widen the wording and bump the version rather than
-write a second principle. It also carries `influenced_by`, naming the decisions
-whose experience produced it — the inverse of the usual direction, and the
-evidence that stops a principle reading as taste.
+### Journals — dated entries that persist
 
-**File in the same contribution as the work.** "Later" is a euphemism for never,
-and a fact filed while its context is loaded costs a paragraph — re-derived
-cold, it costs a session ([DP-8](design-principles.md#dp-8)).
+```toml
+[luria.journals.devlog]
+dir         = "record/devlog.d"
+output      = "docs/devlog"
+granularity = "month"
+```
 
----
+A journal entry is filed at `yyyy/mm/dd/hhmmss.md` and is true about the
+day it was written: never revised, and never expected to stay current. `luria index` renders the entries into **books** — one
+page per year, month, or day, with a contents list — plus an index of all
+books. Because sources persist and every entry is a fresh path, a journal
+is safe to write into without coordinating with anyone.
 
-## 2. Nothing here is immutable — only un-silently revisable
+A project can run several — a devlog, an incident log, meeting notes — each
+with its own table, granularity and output.
 
-The rule that gets over-read is "never rewrite a decision's body". Read as
-*documents are frozen*, it makes the record brittle: a wrong sentence stays
-wrong because fixing it looks like tampering, and a decision gets retired over a
-bad paragraph.
+### Fragment directories — pieces assembled later
 
-What the rule is actually protecting is narrower and more useful. **The
-objection is to *silent* revision** — to a record that can quietly change what
-it says it used to think. A change that announces itself is not that. So every
-layer is revisable, and each has a shape for saying so:
+```toml
+[luria.fragments."record/changelog.d"]
+file  = "CHANGELOG.md"
+style = "changelog"
+```
 
-| what happened | remedy | how a reader sees it |
-|---|---|---|
-| the **choice** changed | supersede: add a decision, retire the old one | two documents, and when the second replaced the first |
-| a **reason** was wrong, the choice stands | correct in place; bump `version`, add `history:` | one document at `v2`, and what `v1` got wrong |
-| a **value** widened or was reworded | same: `version` + `history:` | the principle, versioned, with what changed |
-| a **consequence** stopped being true | a later document records the new state | both, and the order they happened in |
+The changelog problem: a shared file every PR appends to is a standing
+merge conflict. A fragment directory dissolves it — each contribution is a
+new file, and `luria collect` (typically a scheduled CI job) assembles the
+fragments into the target document at its `<!-- luria-insert-here -->`
+marker and deletes them. `style = "changelog"` groups a collection run
+under a dated heading; the default style appends bodies in the order the
+fragments entered git history.
 
-The rule of thumb for the ambiguous case: *would a reader who acted on the old
-version have done something different?* If yes, the choice changed — supersede.
-If they would have done the same thing for a worse reason, correct in place.
-That split is [ADR-019](../record/decisions.d/ADR-019.md).
+Fragments are the one *consumed* source: they exist to be collected.
 
-<!-- inactive-ok-file: ADR-010, ADR-015 — this page names them as the supersession examples -->
+### Remotes — citing another project's record
 
-### Luria's own record is the worked example
+```toml
+[luria.remotes.LU]
+name = "luria"
+repo = "dmarx/luria"
+```
 
-None of this is hypothetical here. Every row above has already happened in this
-repository, which is the point of the dogfooding clause in
-[ADR-009](../record/decisions.d/ADR-009.md) — a rule the project has never had to apply to
-itself is a rule nobody has tested:
+A remote gives a foreign record a prefix, so `LU-ADR-013` cites a decision
+in another repository and says *whose* decision it is at the point of use.
+Luria constructs the URL by convention (a file named for the code in the
+remote's record directory), from a lockfile of discovered filenames
+(`luria remotes --refresh` writes `remotes.lock.json`, committed so CI and
+offline checkouts resolve identically), or from an explicit template.
+`luria remotes --check` HEAD-probes every cited URL and reports the ones
+that would 404 on a reader.
 
-- **Choice changed.** [ADR-010](../record/decisions.d/ADR-010.md) named the project
-  `chester`; [ADR-011](../record/decisions.d/ADR-011.md) replaced it. Later,
-  [ADR-015](../record/decisions.d/ADR-015.md) was superseded by
-  [ADR-016](../record/decisions.d/ADR-016.md) *within hours* — a decision that lasted an
-  afternoon is exactly the kind whose reversal is worth being able to see.
-- **Reason wrong, choice stands.** [ADR-018](../record/decisions.d/ADR-018.md) is at `v2`.
-  It rejected an alternative by citing a decision that didn't apply; the
-  rejection survives on a better argument, and `history:` records both.
-- **Value reworded.** [DP-2](design-principles.md#dp-2) and
-  [DP-3](design-principles.md#dp-3) are both at `v2`. Each was first written
-  about a single artifact and failed to generalize until a second instance
-  forced it — which is the most useful thing either of them teaches, and it
-  only survives because the version is on the document.
-- **Consequence falsified.** [ADR-016](../record/decisions.d/ADR-016.md) states as a
-  consequence that a certain project's decisions are no longer cited anywhere.
-  [ADR-017](../record/decisions.d/ADR-017.md) made that false. [ADR-016](../record/decisions.d/ADR-016.md)'s body stands as
-  written and [ADR-017](../record/decisions.d/ADR-017.md) is where a reader learns the state changed back —
-  a consequence is an observation, and observations expire.
+The `uid` form generalises past Luria-shaped records entirely: give a
+remote a regex and a URL template and arXiv identifiers, Jira keys, or CVE
+numbers become linted, linkable references:
 
-The failure mode to avoid is not editing. It is editing **without leaving a
-trace**: a `history:` entry that doesn't say what the previous version claimed
-is a correction wearing an improvement's clothes.
+```toml
+[luria.remotes.CVE]
+uid = "\\d{4}-\\d{4,7}"
+url = "https://nvd.nist.gov/vuln/detail/CVE-{uid}"
+```
 
----
+One rule follows from the family design: a *settings* table (`paths`,
+`code`, `lint`, `site`) merges key by key with the defaults, but a family
+you declare **replaces the shipped family whole**. A project that writes
+`[luria.schemes.RFC]` and nothing else has exactly one scheme; the default
+`ADR` is simply absent. Declare a family and it is yours entirely.
 
-## 3. Fragments and generated views
+## The five statuses
 
-`CHANGELOG.md`, the decision index, the principles document and similar
-assembled pages are **views**, built from fragments — never hand-edited, and the
-lint refuses hand edits.
+Every scheme document carries a `status:` from a closed vocabulary —
 
-Two kinds, and the difference is *whether the sources survive*
-([ADR-012](../record/decisions.d/ADR-012.md)). A **collected**
-view — the changelog — consumes its fragments: they are deleted, the view
-accumulates, and it can only ever be appended to. A **generated** view — the
-decision index, the principles document, the devlog — is a pure function of
-sources that persist, rebuilt from scratch every time, which is the only reason
-a stale one can be *detected*. Prefer generation where the data is derivable;
-there is then no collection step to forget.
+> `Active` · `Proposed` · `Deferred` · `Superseded` · `Rejected`
 
-The devlog is the case where that choice was got wrong first and corrected
-([ADR-020](../record/decisions.d/ADR-020.md)). It looked like a changelog and was collected
-like one, but a changelog entry is a claim about a release and a devlog entry is
-a **dated observation** — true when written, and still true. Consuming it throws
-away the only copy of something that never expires. So the devlog is a
-**journal**: entries are filed at their authoring timestamp
-(`record/devlog.d/2026/08/03/211926.md`) with `luria journal new "A title"`, they
-persist, and `docs/devlog/` is one generated book per month with a contents
-list built from the titles. The timestamp is also the ordering, so what the log
-says happened first is a property of the record rather than of the order the
-branches landed.
+— optionally followed by ` — a note` (`Superseded — by RFC-9`). The words
+are Luria's; what they *mean* for a scheme is the project's, declared per
+scheme: the `active` key names which status counts as **in force**, and an
+optional `statuses.yaml` beside the sources narrows the vocabulary and
+gives each status a legend line rendered above the index.
 
-The reasoning is [DP-2](design-principles.md#dp-2): a file every contribution must
-append to is a *lock*. Concurrent branches collide in it contentlessly, and
-every hand-merge is a chance to drop someone's work. The fix is structural —
-each contribution owns a file nobody else writes, and the shared artifact is
-assembled on a cadence ([ADR-002](../record/decisions.d/ADR-002.md)).
+Status is what makes the record more than a pile of prose. Only an in-force
+document is a safe thing to cite as justification; `Proposed` and
+`Deferred` are open questions, `Superseded` and `Rejected` are history. The
+reference machinery (below) leans on exactly this distinction.
 
-Practical consequences: the answer to "which file do I edit?" is always *a
-fragment*; and generated pages can be linted against their sources, so drift is
-caught instead of discovered.
+## Constraints
 
----
+Status says what is in force. **Constraints say what a document is allowed to
+be** — and they are how a record stops being a folder of markdown with a
+naming convention, because a convention nobody can break is a comment.
 
-## 4. The drift doctrine
+All of them are opt-in and per scheme. A scheme that declares none behaves
+exactly as every scheme did before they existed.
 
-The most-earned lesson, [DP-3](design-principles.md#dp-3): **a hand-maintained
-projection of a source of truth will drift** — not as a risk but as a rate. The
-remedy ladder:
+**Required fields.** Beyond `status:`, `title:` and `tags:`, a scheme can
+require fields of its own:
 
-1. **Derive the projection.** Indices are generated from frontmatter. Drift
-   becomes impossible.
-2. **Guard the property, not the list.** Where a projection must stay code, a
-   test asserts the *invariant*, not the contents. A test that asserts "the list
-   contains these names" is the drifting list in a costume.
-3. **Choose the failure polarity** of any hand list that remains, and say so in
-   a comment: *fail-safe* or *fail-loud*. *Fail-stale* — the miss ships as
-   silently wrong behavior — is never acceptable, and it is the naive default.
+```toml
+[luria.schemes.SOTA]
+requires = ["source"]
+```
 
-The enforcement clause is [DP-6](design-principles.md#dp-6): **fire before
-trusting.** Every guard gets one deliberate sabotage run to prove it catches.
-Provisioned is not working.
+A document without `source:` now fails the lint. This is also what makes a
+cross-scheme move safe to automate: `luria migrate` relocates a file, and the
+document then fails until a human supplies what the destination scheme's
+template would have prompted for. The machinery moves it; only a person
+vouches that it belongs.
 
----
+**Tag rules.** `tags.yaml` says what a tag *means*; a tag group says which may
+appear together, because some vocabularies are an axis rather than a pile:
 
-## 5. The collaboration model, in the open
+```toml
+[luria.schemes.SOTA.tag_groups.primary_topic]
+require = "exactly-one"        # or "at-most-one", or "any"
+tags = ["training-optimization", "systems-optimization", "model-stability"]
+excluded_by = []               # tags that forbid this whole group
+```
 
-**Culture must be compiled** ([DP-5](design-principles.md#dp-5)). A stateless
-collaborator can't be socialized, so a norm that exists only as prose is
-followed probabilistically. Norms that matter get walked up the ladder *prose →
-convention → mechanism → guarantee*. When you find yourself repeating a
-correction, that is the signal to walk the norm up a rung.
+`exactly-one` is the "pick a primary category" rule, checked. Tags outside the
+group stay unconstrained, so secondary tags remain free. `excluded_by` covers
+the contradiction case — naming how an argument fails contradicts saying it
+holds.
 
-**No private brains** ([DP-7](design-principles.md#dp-7)). Agent files are legitimate
-as **bootloaders** — pointers to the shared record, plus harness mechanics no
-human needs — never as knowledge stores. The decision test: *would a new human
-hire need this?* Then it belongs in the shared docs, and the agent file links to
-it. This page is what the bootloader points at.
+**Titles that generalise.** A principle stated about the one artifact it was
+noticed on is a principle nobody applies to the next one. That failure is
+quiet: the entry stays true and keeps rendering, and never gets cited.
 
----
+```toml
+[luria.schemes.DP]
+titles_generalize = true
 
-## 6. Leaving knowledge behind: the checklist
+[luria.lint]
+narrow_terms = ["toolbar", "canvas", "queue"]
+```
 
-- [ ] `record/changelog.d/` fragment for anything an operator or user would notice.
-- [ ] `luria journal new "…"` if the work *taught* something — and record wrong
-      theories with why they were wrong; the dead ends are what the next
-      debugger needs most.
-- [ ] A decision if you rejected an alternative, chose a constraint, or made
-      something a future edit could silently violate. Cite principles by number.
-- [ ] A principle only on the *second* re-derivation of the same reasoning —
-      and when an existing one nearly covers it, **widen that one and bump its
-      `version`** rather than adding a neighbour it will be confused with.
-- [ ] In code, cite the record inline (`# ADR-004`, `# DP-3`): comments that
-      name their justification survive refactors that arguments don't.
-- [ ] If you built a guard or gate: note the sabotage run that fired it
-      ([DP-6](design-principles.md#dp-6)).
+The vocabulary is your project's own concrete nouns — Luria ships none,
+because a shipped list would be some other project's vocabulary wearing the
+authority of a default. It fires on titles only, and fails open: a missed noun
+costs a review comment, where a false alarm would cost trust in the check.
 
-## What keeps this true
+**Fields carrying no information.** Not configured, always on: a scheme where
+every document shares one status is reported as `inert-status`. A field every
+record agrees on is indistinguishable from no field, and the difference
+matters because other machinery reads it — `active` decides what counts as
+retired, and the retired-citation check fires off that. A scheme in that state
+has an enforcement mechanism that cannot fire, and the build is green
+*because* nothing is being judged.
 
-- `luria lint` in CI: generated views match their sources, frontmatter conforms,
-  references are followable.
-- Deterministic assembly — same inputs, same view, so drift between record and
-  view is mechanically checkable.
-- The reports ([ADR-035](../record/decisions.d/ADR-035.md)):
-  what cites a retired decision, and what has been undecided for how long.
+Which constraints to reach for, and when a rule is better expressed as a
+second scheme, is [designing a record](modeling.md).
+
+## Codes and links
+
+A code in prose — in a doc page, a record entry, a `README`, or a source
+comment covered by `[luria.code] globs` — is treated as a **claim**: this
+text says that document is why things are this way. Luria keeps the claims
+honest:
+
+- **Bare codes must become links.** `luria lint` flags a plain code in a
+  markdown file; `luria link --fix` rewrites it into a link. Never
+  hand-write the target: record prose is *rendered into views in other
+  directories*, so the correct relative path depends on where the text
+  lands, not where it lives — the fixer computes that frame, a human
+  reliably gets it wrong. Codes inside backticks or fenced blocks are
+  exempt; that is how you mention a code without citing it.
+- **Wikilinks label a reference.** `[[RFC-7]]` expands to a plain link;
+  `[[RFC-7|the delivery decision]]` uses your prose as the label. The
+  fixer expands both.
+- **Issue references.** With `issue_url` configured, `#123` links to the
+  tracker. A low number needs a cue word nearby (`issue`, `fixes`,
+  `closes`, …) so that prose like `principle #2` is not mistaken for a
+  ticket.
+- **Citations of retired documents are surfaced.** A reference to a
+  document that is not in force appears in the
+  [reference-status report](reports/reference-status.md) until a human
+  either fixes the text or vouches for the citation with an
+  [acknowledgement directive](directives.md) at the citing site.
+- **Codes that resolve to nothing are surfaced** the same way. A typo, a
+  number from another project and a deliberate example all look identical to
+  the machine, so telling them apart takes a person, and the finding is a
+  report and not a failure.
+
+These findings are warnings by default. A project that wants any class to
+fail the build promotes it with `[luria.lint] fail_on` — the dial between
+reported and enforced, per class, without ever silencing the account.
+
+## Numbering without collisions
+
+<!-- unresolved-ok: ADR-158 — an illustrative collision, not a citation -->
+Sequential numbers collide: two branches both file `ADR-158`, and one of
+them is renumbering after the merge. A scheme with `allocate = "merge"`
+sidesteps this — `luria new` mints a **temporary code**
+(`ADR-tmp3kf9x`), the work merges under it, and `luria concretize`,
+run where merges serialize (the push-to-main CI job), assigns the next real
+number and rewrites every reference in the repository.
+
+The old spelling is recorded in the document's `formerly:` list, so a
+temporary code in an unmerged branch, an old commit message, or a teammate's
+notes still resolves — the linter treats `formerly:` entries as aliases and
+upgrades leftover spellings when it can.
+
+## Superseding and correcting
+
+A record you cannot revise becomes a record you stop trusting. Two
+mechanisms keep revision honest:
+
+- **Versions.** Correcting a document means bumping `version:` and
+  appending a `history:` entry saying what changed — the lint refuses a
+  version bump with no account of itself.
+- **Migrations.** Renaming a scheme or moving documents between schemes is
+  a repository-wide rewrite, so it is executed from a committed spec
+  (`record/migrations.d/NNNN-*.toml`) by `luria migrate` — moves, reference
+  sweeps, `formerly:` stamps, and a `.git-blame-ignore-revs` entry so blame
+  reads through the rename. The spec stays in the repository afterward: its
+  mapping *is* the memory of the old names.
+
+## The status reports
+
+Some questions cannot fail a build because they need judgement. Those
+render as committed report pages under `docs/reports/`:
+
+- [Pending decisions](reports/pending-decisions.md) — every `Proposed` or
+  `Deferred` document, with age and citation count. An old proposal nothing
+  cites is a stalled idea worth closing; an old proposal many files cite is
+  a decision the codebase already made and never wrote down.
+- [Reference status](reports/reference-status.md) — citations of retired
+  documents, codes that resolve to nothing, and the acknowledgements that
+  keep either quiet on purpose.
+
+The README badge region (`luria index` maintains it between
+`<!-- luria:badges -->` markers) summarises both counts at a glance.
+
+## Where to go next
+
+- [Quickstart](quickstart.md) — do all of the above in ten minutes.
+- [CLI reference](cli.md) — the commands, flag by flag.
+- [Configuration reference](configuration.md) — every key, generated from
+  the schema.
+- [The record](record.md) — this project's own instantiation, generated
+  from its `luria.toml`.

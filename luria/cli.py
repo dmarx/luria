@@ -12,6 +12,8 @@
     luria remotes       other projects' records cited from this one
     luria site          stage the record as a Quartz vault, ready to build
     luria init          scaffold the record into a project that has none
+    luria config        write a starting luria.toml and stop, for editing
+                        before anything is scaffolded
 
 Two more exist for CI, which is their only regular caller:
 
@@ -44,6 +46,7 @@ COMMANDS = {
     "remotes": remotes.run,
     "site": site.run,
     "init": init.run,
+    "config": init.config_run,
     "reports": reports.run,
     "collect": collect.run,
 }

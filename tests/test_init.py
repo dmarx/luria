@@ -121,3 +121,18 @@ def test_generic_template_matches_new_entrys_contract(tmp_path, monkeypatch):
     text = new.new_entry("rfc", {}, None).read_text()
     assert "RFC-NNN" not in text
     assert "# RFC-001:" in text
+
+
+def test_generated_stub_placeholders_are_single_braced(tmp_path):
+    """A scaffolded stub is substituted by `str.replace`, not `str.format`, so
+    `{{categories}}` is not an escape — it is a literal brace wrapped around
+    the placeholder, and the index generator renders the pair verbatim.
+
+    The hand-shipped decisions stub uses single braces and was always right;
+    this pins the generated ones to the same spelling.
+    """
+    (tmp_path / "luria.toml").write_text(CUSTOM)
+    init.run(into=str(tmp_path))
+    stub = (tmp_path / "record" / "rfcs.d" / "README.stub").read_text()
+    assert "{categories}" in stub and "{table}" in stub
+    assert "{{" not in stub and "}}" not in stub

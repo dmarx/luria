@@ -14,7 +14,8 @@ import re
 import sys
 from pathlib import Path
 
-# unresolved-ok-file: ADR-053, ADR-404 — fixture codes, deliberately not real
+# unresolved-ok-file: ADR-404 — fixture code, deliberately not real. ADR-404 was
+# here until the project's own sequence reached it; see ADR-014's closing note.
 REPO = Path(__file__).resolve().parents[1]
 
 from luria import adr_index as builder  # noqa: E402
@@ -25,8 +26,8 @@ rebase = builder.rebase_links
 
 
 def test_relative_targets_are_rebased():
-    assert rebase("see [ADR-053](adr-053-x.md)", "../") == \
-        "see [ADR-053](../adr-053-x.md)"
+    assert rebase("see [ADR-404](adr-404-x.md)", "../") == \
+        "see [ADR-404](../adr-404-x.md)"
     assert rebase("see [dp](../design-principles.md#13-a)", "../") == \
         "see [dp](../../design-principles.md#13-a)"
 
@@ -43,7 +44,7 @@ def test_absolute_and_anchor_targets_are_left_alone():
 def test_no_prefix_is_a_no_op():
     """README.md renders from the ADRs' own directory, so its rows are the
     unmodified text — that's what kept the ADR-004 migration byte-identical."""
-    text = "see [ADR-053](adr-053-x.md) and [#1](https://example.com/1)"
+    text = "see [ADR-404](adr-404-x.md) and [#1](https://example.com/1)"
     assert rebase(text, "") == text
 
 
@@ -92,60 +93,60 @@ def test_every_generated_relative_link_resolves():
 # ── render = "document" (ADR-012) ────────────────────────────────────────
 
 
-def principle(root: Path, number: int, title: str, body: str = "Body.",
+def value(root: Path, number: int, title: str, body: str = "Body.",
               **front) -> Path:
-    path = root / "docs" / "principles" / f"DP-{number:03d}.md"
+    path = root / "docs" / "values" / f"VP-{number:03d}.md"
     path.parent.mkdir(parents=True, exist_ok=True)
     lines = ["status: Active", f"title: {title!r}", "tags:", "- record"]
     lines += [f"{k}: {v}" for k, v in front.items()]
     path.write_text("---\n" + "\n".join(lines) + "\n---\n\n"
-                    f"# DP-{number:03d}: {title}\n\n{body}\n")
+                    f"# VP-{number:03d}: {title}\n\n{body}\n")
     return path
 
 
-DP_SCHEME_ARGS = dict(active="Active", render="document")
+VP_SCHEME_ARGS = dict(active="Active", render="document")
 
 
-def dp_scheme(root: Path) -> Scheme:
-    return Scheme("DP", root / "docs" / "principles",
-                  output=root / "docs" / "design-principles.md",
-                  **DP_SCHEME_ARGS)
+def vp_scheme(root: Path) -> Scheme:
+    return Scheme("VP", root / "docs" / "values",
+                  output=root / "docs" / "values.md",
+                  **VP_SCHEME_ARGS)
 
 
 def render(root: Path) -> str:
-    scheme = dp_scheme(root)
+    scheme = vp_scheme(root)
     return builder.render_document(scheme, builder.load_scheme(scheme))
 
 
 def test_document_demotes_the_heading_and_renumbers(project):
-    principle(project, 3, "Fire before trusting")
+    value(project, 3, "Fire before trusting")
     out = render(project)
     assert "## 3. Fire before trusting" in out
-    assert "# DP-003" not in out
+    assert "# VP-003" not in out
 
 
 def test_document_emits_a_stable_anchor(project):
     """Keyed to the number, not the wording — a principle is a living document
     and its heading moves (ADR-012)."""
-    principle(project, 3, "Fire before trusting")
-    assert '<a name="dp-3"></a>' in render(project)
+    value(project, 3, "Fire before trusting")
+    assert '<a name="vp-3"></a>' in render(project)
 
 
 def test_document_strips_the_frontmatter(project):
-    principle(project, 1, "A value", **{"version": 2})
+    value(project, 1, "A value", **{"version": 2})
     out = render(project)
     assert "status: Active" not in out and "tags:" not in out
 
 
 def test_metadata_line_carries_version_and_origin(project):
-    principle(project, 1, "A value", **{"version": 2, "origin": "'An incident.'"})
+    value(project, 1, "A value", **{"version": 2, "origin": "'An incident.'"})
     assert "*v2 · origin: An incident*" in render(project)
 
 
 def test_a_retired_principle_says_so(project):
     """`Active` is the silent default; anything else is stated, because a
     principle nobody believes any more is exactly what a reader needs told."""
-    path = principle(project, 1, "A value")
+    path = value(project, 1, "A value")
     path.write_text(path.read_text().replace("status: Active", "status: Rejected"))
     assert "**Rejected**" in render(project)
 
@@ -159,15 +160,15 @@ def test_influenced_by_renders_as_a_followable_backlink(project):
     from luria.config import current
     from tests import _scheme
     _scheme.decision(project, 4, "Active")
-    principle(project, 1, "A value", influenced_by="[ADR-004]")
+    value(project, 1, "A value", influenced_by="[ADR-004]")
     target = os.path.relpath(current().schemes["ADR"].dir / "ADR-004.md",
-                             current().design_principles.parent)
+                             vp_scheme(project).output.parent)
     assert f"[ADR-004]({target})" in render(project)
 
 
 def test_an_unresolvable_backlink_stays_a_bare_code(project):
     """DP-1: say what can be said, rather than linking to nothing."""
-    principle(project, 1, "A value", influenced_by="[ADR-404]")
+    value(project, 1, "A value", influenced_by="[ADR-404]")
     out = render(project)
     assert "shaped by ADR-404" in out and "](" not in out.split("shaped by")[1]
 
@@ -177,17 +178,17 @@ def test_outputs_covers_every_scheme(project, monkeypatch):
     scheme the moment it is configured, with no second command to remember."""
     from tests import _scheme
     _scheme.decision(project, 1, "Active")
-    principle(project, 1, "A value")
+    value(project, 1, "A value")
     (project / "luria.toml").write_text(
         '[luria]\nissue_url = "https://example.test/issues/{n}"\n'
         '[luria.schemes.ADR]\ndir = "docs/decisions"\n'
-        '[luria.schemes.DP]\ndir = "docs/principles"\n'
-        'render = "document"\noutput = "docs/design-principles.md"\n')
+        '[luria.schemes.VP]\ndir = "docs/values"\n'
+        'render = "document"\noutput = "docs/values.md"\n')
     from luria import config
     config.reset()
 
     out = builder.outputs()
-    assert project / "docs" / "design-principles.md" in out
+    assert project / "docs" / "values.md" in out
     assert project / "docs" / "decisions" / "README.md" in out
 
 
@@ -398,3 +399,49 @@ def test_title_and_summary_are_separate_columns(tmp_path, monkeypatch):
     assert "| Terse one |  |" in without, "no summary → an empty cell, not the title twice"
     assert builder.TABLE_HEAD.startswith("| # | Title | Summary | Status |")
     config.reset()
+
+
+def _rfc_project(tmp_path, monkeypatch):
+    """A project whose only index scheme is RFC, so the tag page has to name
+    something other than this package's own vocabulary."""
+    from luria import config
+    (tmp_path / "luria.toml").write_text(
+        '[luria]\nissue_url = "https://example.test/{n}"\n'
+        '[luria.schemes.RFC]\ndir = "record/rfcs.d"\noutput = "docs/rfcs"\n'
+        'active = "Active"\nrender = "index"\n')
+    d = tmp_path / "record" / "rfcs.d"
+    d.mkdir(parents=True)
+    (d / "RFC-001.md").write_text(
+        "---\nstatus: Active\ntitle: 'A proposal'\nversion: 1\n"
+        "tags:\n- network\ndate: '2026-01-01'\n---\n\n# RFC-001: A proposal\n")
+    (d / "tags.yaml").write_text(
+        "network:\n  label: Network\n"
+        "  blurb: routing and transport. HTTP and gRPC both live here\n")
+    monkeypatch.setenv("LURIA_ROOT", str(tmp_path))
+    config.reset()
+    return config.current().schemes["RFC"]
+
+
+def test_tag_page_names_its_own_scheme_not_decisions(tmp_path, monkeypatch):
+    """A project's RFC tag page should not be titled after this package's
+    decisions — the same rule DEFAULT_STUB already states for the index."""
+    scheme = _rfc_project(tmp_path, monkeypatch)
+    docs = builder.load_scheme(scheme)
+    page = builder.render_tag_page(
+        "network", {"label": "Network"}, docs, scheme)
+    assert "# RFCs tagged `network`" in page
+    assert "ADRs tagged" not in page
+    assert "1 of 1 RFC documents." in page
+    assert "decisions." not in page
+
+
+def test_tag_page_blurb_keeps_its_casing(tmp_path, monkeypatch):
+    """`str.capitalize()` lowercases everything after the first character, so
+    a blurb running to more than one sentence loses its capitals silently."""
+    scheme = _rfc_project(tmp_path, monkeypatch)
+    docs = builder.load_scheme(scheme)
+    meta = {"label": "Network",
+            "blurb": "routing and transport. HTTP and gRPC both live here"}
+    page = builder.render_tag_page("network", meta, docs, scheme)
+    assert "Routing and transport. HTTP and gRPC both live here." in page
+    assert "http and grpc" not in page

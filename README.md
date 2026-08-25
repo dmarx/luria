@@ -1,293 +1,154 @@
-<div align="center">
+<p align="center">
+  <img src="assets/branding/luria-brainslug/luria_project_memory_lockup_horizontal.svg"
+       alt="Luria — project memory" width="480">
+</p>
 
-<img src="assets/branding/luria-brainslug/luria_project_memory_lockup_horizontal.svg" alt="luria"  height="240">
+# Luria
 
-[![CI](https://github.com/dmarx/luria/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/dmarx/luria/actions/workflows/ci.yml)
-[![the record, browsable](https://img.shields.io/badge/the%20record-browsable-6b7f9e)](https://dmarx.github.io/luria/)
-[![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue)](https://www.python.org/downloads/)
-[![License: MIT](https://img.shields.io/github/license/dmarx/luria)](LICENSE)
+**A record of what your project knows — and of what it no longer believes.**
+
+Projects forget, and they forget *silently*. The wiki still renders. The
+decisions folder still has files in it. The status column still exists. Nothing
+announces that a convention drifted, that a rationale expired, or that the
+reasoning behind a constraint now points at a document somebody deleted.
+
+A Luria record makes those questions answerable, because every entry in it has:
+
+- **A name something can cite.** `ADR-012`, `RFC-7` — in prose, in a commit,
+  in a source comment. `luria link --fix` turns the bare code into a working
+  link; the lint reports codes that resolve to nothing, so a reference is a
+  claim that gets checked rather than a string that gets stale.
+- **A standing.** In force, proposed, superseded, rejected. Retiring something
+  is an edit to its status, never a deletion — so the record keeps what it
+  stopped believing, and can tell you when a live document is still citing it.
+- **Rules you declare instead of hope for.** Required fields, exactly one
+  primary category, what each status means *in this scheme*. The conventions
+  you would otherwise write in CONTRIBUTING become things that fail. Luria will
+  even tell you when a field has stopped carrying information — which is what a
+  status column looks like a year after anyone maintained it.
+- **A view that is generated.** Indexes, tag pages, journal books, status
+  reports. Built by `luria index`, never hand-edited, so what people read
+  cannot drift from what people file.
+
+Filing is cheap — `luria new` scaffolds the next entry with its identity
+already assigned — and the whole record publishes as a static site with
+backlinks and a local graph (`luria site`).
+
+Luria is also its own first user: this repository's record is scaffolded,
+generated and linted by the CLI it ships.
+
 <!-- luria:badges -->
-[![needs decision: 3](https://img.shields.io/badge/needs%20decision-3-orange)](docs/reports/pending-decisions.md)
-[![cited, not in force: 1](https://img.shields.io/badge/cited,%20not%20in%20force-1-orange)](docs/reports/reference-status.md)
+[![needs decision: 0](https://img.shields.io/badge/needs%20decision-0-brightgreen)](docs/reports/pending-decisions.md)
+[![cited, not in force: 0](https://img.shields.io/badge/cited,%20not%20in%20force-0-brightgreen)](docs/reports/reference-status.md)
 <!-- /luria:badges -->
 
-</div>
+## Kinds of record
 
-<!-- WIP Banner -->
+`ADR` is not in the code. It is a table in a config file, and so is
+everything else: schemes (documents with codes), journals (dated entries
+that persist), fragment directories (written now, assembled later), and
+remotes (someone else's namespace, cited by prefix). Name the tables and you
+have a different record on the same engine.
 
-<!--
-A simple project memory framework based on time-tested change management principles.  
-A framework that accumulates priorities and constraints to steer collaborations.  
-A linter that guards the semantic integrity of inline references.  
-An evidence accumulator for ongoing process improvement.  
-A demonstration of inebriated README workshopping.  
-A linter that checks whether cited decisions still apply.  
-A linter for the premises your project still endorses.  
-A collateral damage containment field.  
-A Chesterton's Fence Eliminator.  
--->
+- **Project memory** — decisions, principles, a changelog, a devlog. The
+  default, and what `luria init` writes.
+- **A research anthology** — one scheme of papers, another of the practices
+  drawn from them, each with its own status so a foundational paper and a
+  stale recommendation can disagree; arXiv identifiers linted and linked as
+  a `uid` remote.
+- **A standards registry** — proposals browsed as an index, the interfaces
+  they define concatenated into one page.
+- **An operations record** — an incident journal that is never revised
+  beside runbooks that are cited by name and go stale.
 
-A linter that checks whether cited decisions still apply. Never ask "why are things this way?" again.
+[Designing a record](docs/modeling.md) is how to work out which of these
+your material is.
 
-Luria tracks and lints references to decision records to catch justifications (in docs or code) which reference evidence that the repository no longer endorses. 
-
----
-
-Luria encapsulates a collection of best practices you should probably be using anyway. Things like:
-
-* a daily activity journal to persist miscellaneous narrratives, observations, challenges, and learnings
-* a decision log that documents the context in which a decision was made and alternatives considered
-* formally identified guiding principles that have a demonstrable operational purpose and impact
-* a feedback loop to surface unwritten rules or principles which should be documented and formalized
-
-and a few things it may not even have occurred to you to set processes around, like:
-  
-* a mechanism for un-endorsing decisions
-* lineage tracking that facilitates identifying assumptions that are based on premises that are no longer endorsed
-* tools that facilitate translating (inert) good intentions into (actively interventional) mechanisms
-
-The consequence is that if you integrate luria into your project, the project itself will become its own living memory.
-
-If you're collaborating with LLMs: you can retire whatever dedicated memory plane they may be integrated with in favor of 
-just pointing them to your project's documentation instead. Like you would with any other collaborator.
-
-
-## How It Works
-
-Luria is comprised of four documentation subsystems ([ADR-001](record/decisions.d/ADR-001.md)) designed to reference one another, a linter for ensuring those references haven't gone stale, and some convenience tools ([ADR-020](record/decisions.d/ADR-020.md), [ADR-025](record/decisions.d/ADR-025.md)) for interfacing with the linter and documentation subsystems.
-
-Those four subsystems are the *shipped default*, not the machinery's fixed parts. A referable document family, a fragment directory, a journal and a foreign record are each a table you name in `luria.toml` — so a project can add RFCs, run a second journal, or lint citations to things that aren't Luria records at all, without touching code. The [configuration reference](docs/configuration.md) is generated from the schema and says what every dial does; [Adopting Luria](docs/adopting.md#shaping-the-record-to-your-project) has the worked examples.
-
-The heart and soul of luria is the **decision record**. If you take away nothing else from reading this: ADD SOME KIND OF DECISION LOG TO
-YOUR PROJECT. It is the best possible guard against [Chesterton's Fence](https://en.wikipedia.org/wiki/G._K._Chesterton#Chesterton's_Fence)
-problems which otherwise can be a recurring theme when working with LLMs. They also make it easier to only explain yourself once, since if
-the LLM feels inclined to relitigate anything it will find itself directed towards the documented reason things are the way they are.
-
-In Luria, decisions carry a state. Decisions can be Active, Proposed, Deferred, Rejected, or Superseded ([ADR-003](record/decisions.d/ADR-003.md)). Decisions influence things like code, documentation, and other decisions. When a decision influences something and the decision has been formally documented somewhere, this naturally encourages directly referencing those documents. Luria's linter standardizes the form these references take ([ADR-005](record/decisions.d/ADR-005.md)), and also checks that all referenced decisions are in an "active" state ([ADR-035](record/decisions.d/ADR-035.md)). If the linter discovers (unacknowledged) references to inactive decisions, it can raise warnings, generate reports, and/or fail CI until the unendorsed decisions are dealt with (or the references to them are annotated for the linter). 
-
-In addition to making decisions and authoring fragments, the user participates by promoting daily choices from the devlog into formally documented
-decisions, superseding old decisions with new ones, and distilling patterns that repeatedly appear in decisions into overarching principles.
-
-The norms that matter get walked up the ladder — prose → convention → mechanism → guarantee ([DP-5](docs/design-principles.md#dp-5)), and Luria instruments the rungs.
-
-### The four layers
-
-| layer | holds | test |
-|---|---|---|
-| design principles | standing **values**, numbered, citable and **versioned** | *have we re-derived this more than once?* |
-| decisions | a **choice among alternatives** at a point in time | *did we reject an alternative, or set a constraint?* |
-| changelog fragments | **what changed**, operator-facing | *would someone running this notice?* |
-| devlog entries | **how it went**, including the wrong theories | *will a future debugger want the narrative?* |
-
-Each contribution writes a *fragment* nobody else touches; the shared documents are **views** ([ADR-002](record/decisions.d/ADR-002.md), [ADR-020](record/decisions.d/ADR-020.md), [ADR-021](record/decisions.d/ADR-021.md)). 
-A file every contribution appends to is a lock, and its conflicts carry no information ([DP-2](docs/design-principles.md#dp-2)).
-
-The tree says which is which ([DP-9](docs/design-principles.md#dp-9),
-[ADR-021](record/decisions.d/ADR-021.md)): **you read in `docs/`, you file in
-`record/`**. Browsing lands on prose and generated views; the sources sit in
-`record/`'s `.d`-suffixed containers, arrived at by link or on purpose. A view
-directory holds only what the generator wrote — a hand edit there is a lint
-failure, not a plea in a comment.
-
-```
-docs/                     READ  — doctrine + every generated view
-record/decisions.d/       WRITE — one file per decision
-record/principles.d/      WRITE — one file per principle
-record/changelog.d/       WRITE — fragments, collected into /CHANGELOG.md
-record/devlog.d/          WRITE — journal entries, yyyy/mm/dd/hhmmss.md
-```
-
-Views come in two kinds, and the difference is whether the sources survive
-([ADR-012](record/decisions.d/ADR-012.md)). The changelog is **collected**: its
-fragments are consumed, so the view can only be appended to. The decision index,
-the principles document and the devlog are **generated** — a pure function of
-sources that persist, which is the only reason `luria lint` can tell you one has
-gone stale.
-
-The devlog is a **journal**: entries are filed at their authoring timestamp
-(`record/devlog.d/2026/08/03/211926.md`), never deleted, and rendered into one book per
-month with a generated contents list ([ADR-020](record/decisions.d/ADR-020.md)). A
-dated observation was true when it was written and stays true; consuming it
-throws away the only copy of something that never expires.
-
-
-## Motivation
-
-Are you using any form of "agentic AI"? You are probably doing it wrong. Luria's position is that most of the standard 
-practices of contemporary agentic programming are actually anti-patterns and should be treated as code smells rather 
-than development strategies to aspire towards. This is obviously pretty big talk, so I'm going to back it up by pointing
-my finger at the leader of the pack: Claude Code.
-
-Don't get me wrong: I love CC and use it all the time. I've barely written any code by hand myself in months because CC
-is just so damn good. But there are few ways in which I use CC which run directly counter to how the system is designed
-and how Anthropic recommends it be used.
-
-* I discourage CC from documenting memories privately (both in `.claude/` as well as `CLAUDE.md`)
-* I rarely use MCPs/skills.
-
-When Karpathy coined the phrase "Vibe Coding", he was talking specifically about the frame where you say "yes" to 
-everything the LLM suggests. I feel like today, "Vibe Coding" has come to mean any LLM-assisted coding. When I use
-CC, I am not "vibing" with the model. I am *collaborating* with it. I often need to interrupt it, reverse its decisions,
-propose alternatives and solutions it hasn't considered, grab the wheel and perform outright course corrections... 
-The Software Engineering world already has language that describes the situation where one developer writes most of the code
-while another looks over their shoulder providing feedback and guidance: it's called **pair programming**.
-
-Adopting the perspective that an LLM is just a non-human collaborator that we pair with, let's revisit practices like 
-"storing memories" and building entire control planes (i.e. MCPs) just for LLMs.
-
-* Imagine you had a coworker who every time they learned about a new edge case in the code, they document it in their own
-  private notes instead of simply extending the project's normal documentation. This is exactly what "memories" and `CLAUDE.md`
-  are. They are the LLMs private notes to itself. It's increasingly becoming the case where the most up-to-date documentation
-  for a project aren't in the project's docs, they're in `.claude/`, where no one but the LLM will see them. That means no one
-  else from the team can learn from them. It also means no one will put eyes on those notes to make sure they were actually
-  correct. If your LLM documents an incorrect policy or procedure in a memory and doesn't immediately announce to you that they
-  did so, do you have any process for even realizing that happened? Or will you just rely on the LLM doing the thing wrong
-  enough times that you'll realize it documented the wrong way to do things in its notes to itself?
-* Imagine you had a coworker who wrote a bunch of scripts and tools that they found useful for their own work. Convenience
-  functions for chaining multiple steps that often go together, ways for listing frequently relevant information. You pair with
-  this person, so if it's useful to them, it's probably useful to you to. Why should these things live in your coworker's private
-  toolbox instead of just putting them somewhere they can benefit the whole team? 
-
-Instead of "the agent's memory" being siloed for no reason, all knowledge relevant to a project can and should accumulate alongside it,
-in a manner where all contributors to the project can benefit from it and validate its correctness.
-
-Instead of "the agent's tools" being a whole separate toolkit, the agent can and should interact through the exact same control plane as
-any other user. Why maintain an interface for people and a separate interface for machines? If your answer is "humans like a UI" then fine,
-give them a UI: it can sit on top of a backend that your LLM accesses directly. If your answer is "I want to be able to control what
-my LLM has access to": that's what access control is for. Create a user principal for your agents and manage the scope of their access
-from that, like you would for any other collaborator.
-
-These are solved problems. "Memory" is one of them: we just need to shift our thinking from "agent memory" to "institutional memory".
-The tools for accumulating and curating institutional memory are **Change Management Processes**. Humans often consider processes to be
-an imposition because they take up time. LLMs move through processes and procedures extremely quickly, so they are unhampered by
-bureaucracy the way we are. The myriad processes in luria may seem like a big ask for a human collaborator. Well, yeah, they are. You (human)
-don't need to engage with them directly if you don't want to. If the LLM engages with the processes, that's probably good enough for both of you.
-
-LLMs aren't burdened by time constraints, they're burdened by being a perpetual newcomer with a limited 
-context length. The LLM is a collaborator who must be onboarded every time you interact with them. Front-load discoverability of
-relevant information in your project like you were expecting to onboard a bunch of inexperienced juniors who you don't want to bother you,
-and you've automatically rigged your project to make that information easily discoverable for an LLM as well. Conversely, if you force
-your LLM make the information it needs discoverable through the project's common documentation, you end up with strong onboarding material
-for free.
-
-Luria systematizes an opinionated collection of processes which implements a ratchet for accumulating empirical evidence and demonstrated solutions, shines a light on technical debt, and publishes lessons learned in a manner that facilitates their future influence on the project.
-
-
----
-
-A project's memory: the decisions, the principles, the changelog and the
-narrative log — kept where the next collaborator will find them, and kept honest
-by a lint.
-
-Half the collaborators on a modern codebase are stateless. They arrive with no
-memory, read some pages, work, and vanish. Unwritten knowledge is re-derived at
-cost, per session, forever. Luria is the machinery for a record that survives
-that: [project memory](docs/project-memory.md) is the doctrine, and this package
-is what stops it drifting.
+## Install
 
 ```
 pip install luria
-luria init --issue-url https://github.com/owner/repo/issues
-luria index && luria lint
 ```
 
-## The workflow
+Python 3.11+. Two runtime dependencies (PyYAML, fire).
 
-That three-line install above is the whole adoption story; after it, the
-commands map onto the life of a contribution:
+## Sixty seconds
 
-**Do the work, and file it while it's warm.** `luria new` drops a devlog
-entry at its timestamped path and prints it for your editor; `luria new adr`
-(or `dp`, `changelog`, or any scheme you configure) copies the template to
-the next free number with the date stamped. The CLI computes identity —
-numbers, timestamps, filenames — and content stays yours.
-
-**Let the machinery write the plumbing.** Reference a decision by typing
-`ADR-012` in prose and `luria link --fix` turns it into a hyperlink; `luria
-index` regenerates every view — the decision index and its tag pages, the
-principles document, the devlog books, the status reports, the README
-badges — from the frontmatter your fragments carry.
-
-**Check before you push.** `luria lint` is the only command that fails:
-structural drift, stale views, references nobody can follow. The status
-findings — retired decisions still cited, questions still undecided — print
-as warnings by default, and fail instead for any class your `fail_on`
-config promotes.
-
-The remainder is occasional or CI's: `luria remotes` shows how another
-project's cited record resolves (`--refresh` discovers its filenames into
-the lockfile), `luria reports` writes the status reports somewhere other
-than their committed home, and `luria collect` assembles changelog
-fragments on a release cadence.
-
-`luria --help` is the authoritative list, and every command takes `--help`.
-
-## Citing another project
-
-A record extracted from another project cites it constantly, and an unprefixed
-code can't mean both "ours" and "theirs". Register the remote once:
-
-```toml
-[luria.remotes.SG]
-repo = "dmarx/strata-g"
+```console
+$ luria init --issue-url https://github.com/you/yourproject/issues
+$ luria index          # build the generated views
+$ luria new --title "Switched the queue to at-least-once delivery"
+record/devlog.d/2026/08/22/143005.md
+$ luria new adr --title "Consumers must be idempotent"
+record/decisions.d/ADR-tmp3kf9x.md
+$ luria index && luria lint
+luria: docs lint clean
 ```
 
-and `SG-ADR-032` becomes a first-class reference — `luria link --fix` writes the
-URL, `luria lint` demands it, and `luria remotes --check` says whether it still
-resolves. A remote that names its files after their codes needs nothing else; one
-whose filenames carry title slugs gets `luria remotes --refresh` once, which
-discovers them into a committed lockfile so CI and offline checkouts resolve
-identically ([ADR-016](record/decisions.d/ADR-016.md)).
+Edit the two files it printed, commit, and the record has begun. The
+[quickstart](docs/quickstart.md) walks the same path with explanations.
 
-A citation can land before its URL does. Luria cites both `SG` (the pilot it was
-extracted from, whose filenames haven't been converted yet) and `LU` (itself,
-which the `luria init` scaffold points at). Naming the document is the durable
-half and works immediately; the URL improves when the remote does
-([ADR-017](record/decisions.d/ADR-017.md)).
+## A note on files
 
-## Why a lint
+A record is kept as plain text in your repository, one entry per file, and
+that is a deliberate implementation choice rather than the product. It is
+chosen for *participation*: a contributor — or a coding agent — edits a file,
+opens a pull request, and greps the result, with no application to run, no
+database to migrate, and no export to negotiate when they want their history
+back.
 
-Because the same audit result keeps recurring: **every documentation surface
-with an executable guard held; every surface governed by prose alone had
-drifted.** Not toward one wrong value — toward *variety*, which is worse,
-because a reader can't learn what the convention is.
+Markdown is what that looks like today and will likely stay the primary shape.
+Nothing in the model above depends on it. Identity, standing, declared rules
+and generated views are claims about a record, not about a file format.
 
-So the norms that matter get walked up the ladder — prose → convention →
-mechanism → guarantee ([DP-5](docs/design-principles.md#dp-5)) — and this
-package is the last rung.
+## The shape of it
 
-## Provenance
-
-Every rule here was earned in
-[strata-g](https://github.com/dmarx/strata-g), where the machinery was built and
-run before it was extracted. The principles and decisions name the incidents
-that produced them, because a rule whose evidence is missing reads as taste, and
-taste gets re-litigated ([ADR-009](record/decisions.d/ADR-009.md)).
-
-Luria runs its own machinery on its own record — the decision index and the
-principles document in this repo are both generated by `luria index`, and these
-files are linted by `luria lint`. That is not tidiness: it is how the first
-consumer to hit a bug is this repo.
-
-## Docs
-
-- [Project memory](docs/project-memory.md) — **humans** start here: the doctrine.
-- [Design principles](docs/design-principles.md) - **agents** start here: the constitution.
-- [Decisions](docs/decisions/README.md) - **contributors** start here: the history.
-- [Comment directives](docs/directives.md) - **power users** start here. — `inactive-ok`, `unexempt` 
-- [Configuration](docs/configuration.md) — **adopters** start here: every `luria.toml` key, generated from the schema.
-- [Worked configurations](examples/) — four complete projects in other shapes, each one run by CI.
-- [Adopting Luria](docs/adopting.md)
-
-
-## Citation
-
-```latex
-@software{marx2026luria,
-  author    = {Marx, David},
-  title     = {{Luria}: The norms that matter get walked up the ladder},
-  year      = {2026},
-  url       = {https://github.com/dmarx/luria},
-  note      = {Open-source software}
-}
 ```
+luria.toml            what this record is made of (all keys have defaults)
+record/               sources — one small file per entry, written by people
+  decisions.d/        ADR-001.md, ADR-002.md, …   (a "scheme")
+  principles.d/       DP-001.md, …                (another scheme)
+  devlog.d/           2026/08/22/143005.md        (a "journal")
+  changelog.d/        one fragment per change     (a "fragment directory")
+docs/                 the read surface — prose plus generated views
+  decisions/          index + tag pages    (GENERATED)
+  design-principles.md  one page, anchored (GENERATED)
+  devlog/             monthly books        (GENERATED)
+  reports/            status reports       (GENERATED)
+CHANGELOG.md          assembled from fragments by `luria collect`
+```
+
+None of the names above are hard-coded. Schemes, journals, fragment
+directories and remote projects are *families* declared in `luria.toml` —
+a record made of RFCs, specs, and an incident log is the same engine with
+different tables. See [project memory](docs/project-memory.md) and the generated
+[configuration reference](docs/configuration.md).
+
+## Documentation
+
+- [Quickstart](docs/quickstart.md) — from empty repository to linted record.
+- [Concepts](docs/concepts.md) — entries, citations, and the one operation
+  everything else is machinery around.
+- [Designing a record](docs/modeling.md) — what belongs in one, which family
+  fits, when two kinds of entry are two schemes, and what the schema can be
+  made to refuse.
+- [Project memory](docs/project-memory.md) — sources and views, schemes, journals,
+  fragments, remotes, statuses, constraints, and how references work.
+- [CLI reference](docs/cli.md) — every command and flag.
+- [Comment directives](docs/directives.md) — acknowledging a finding where
+  it happens instead of silencing the check.
+- [Adopting Luria](docs/adopting.md) — scaffolding an existing project,
+  wiring up CI, publishing the site.
+- [Importing an existing corpus](docs/importing.md) — when the material
+  already exists as data, and what the transform will surface.
+- [Configuration reference](docs/configuration.md) — generated from the
+  schema, every key with its default.
+
+And the record itself, dogfooded: [decisions](docs/decisions/README.md) ·
+[design principles](docs/design-principles.md) ·
+[development log](docs/devlog/README.md) ·
+[status reports](docs/reports/pending-decisions.md).
+
+## License
+
+[MIT](LICENSE).

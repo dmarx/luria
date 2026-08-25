@@ -211,7 +211,12 @@ def test_move_doc_lands_provisional_then_concretizes(tmp_path, monkeypatch):
     assert len(landed) == 1, "the move lands provisional, never numbered"
     assert "formerly:\n- DP-4\n" in landed[0].read_text()
     assert not (root / "record" / "principles.d" / "DP-004.md").exists()
-    assert "Bare VAL-tmp" in (root / "docs" / "notes.md").read_text()
+    # DP renders as a document and VAL as an index, so the citation's SHAPE
+    # changed: `page.md#anchor` → `dir/CODE.md`. The sweep drops the stale
+    # link and the fixer rebuilds it from the resolver.
+    notes = (root / "docs" / "notes.md").read_text()
+    assert "(../record/values.d/VAL-tmp" in notes, notes
+    assert "design-principles.md#val" not in notes, "no link to the old view"
 
     _git(root, "add", "-A")
     _git(root, "-c", "user.email=t@t", "-c", "user.name=t", "commit",
@@ -224,8 +229,7 @@ def test_move_doc_lands_provisional_then_concretizes(tmp_path, monkeypatch):
     assert "- DP-4" in final and "- VAL-tmp" in final, \
         "both the migrated-from code and the provisional one stay resolvable"
     notes = (root / "docs" / "notes.md").read_text()
-    assert "Bare VAL-001" in notes
-    assert "#val-001" in notes, "the anchor follows the code, not just the label"
+    assert "[VAL-001](../record/values.d/VAL-001.md)" in notes, notes
     assert "val-tmp" not in notes, "no provisional spelling survives the sweep"
     assert "Fixture DP-018" in notes, "a fixture number is not in the mapping"
 
@@ -335,3 +339,149 @@ def test_provisional_is_decided_in_one_place(tmp_path, monkeypatch):
     assert migrate.Pair("DP-004", "VAL-tmp47fje").new_is_provisional
     assert not migrate.Pair("DP-004", "VAL-007").new_is_provisional
     assert not migrate.Pair("DP-004", "VAL-nonsense").new_is_provisional
+
+
+def test_a_same_render_move_keeps_its_links_untouched(tmp_path, monkeypatch):
+    """The unlink pass must fire ONLY when the shape actually changes.
+
+    Two index-rendered schemes address a document the same way, so a move
+    between them is a pure spelling swap — dropping and rebuilding those links
+    would be churn, and would quietly relink bare references the author left
+    bare on purpose elsewhere in the file."""
+    root = _premigration_project(tmp_path, monkeypatch)
+    (root / "luria.toml").write_text(
+        (root / "luria.toml").read_text()
+        + '[luria.schemes.SRC]\ndir = "record/src.d"\n'
+          '[luria.schemes.DST]\ndir = "record/dst.d"\n')
+    (root / "record" / "src.d").mkdir(parents=True)
+    (root / "record" / "dst.d").mkdir(parents=True)
+    (root / "record" / "src.d" / "SRC-001.md").write_text(
+        "---\nstatus: Active\ntitle: 'A thing'\ntags:\n- record\n"
+        "date: '2026-01-01'\n---\n\n# SRC-001: A thing\n\nBody.\n")
+    page = root / "docs" / "shapes.md"
+    page.write_text("See [SRC-001](../record/src.d/SRC-001.md).\n")
+    config.reset()
+    aliases.reset()
+    _git(root, "add", "-A")
+    _git(root, "-c", "user.email=t@t", "-c", "user.name=t", "commit",
+         "-qm", "shapes")
+    mig = root / "record" / "migrations.d" / "0002-same-shape.toml"
+    mig.write_text('title = "SRC-1 becomes a DST"\n\n'
+                   '[[operations]]\nop = "move_doc"\ndoc = "SRC-1"\n'
+                   'to = "DST"\n')
+    migrate.run("0002")
+    out = page.read_text()
+    assert "(../record/dst.d/DST-tmp" in out, out
+    assert "src.d" not in out, "the path follows the move"
+
+
+def test_a_worded_citation_of_a_moved_document_is_rebuilt(tmp_path,
+                                                          monkeypatch):
+    """A citation labelled in prose, not spelled as the code, still follows.
+
+    `[design-principles #17](../design-principles.md#dp-17)` is a live link to
+    an anchor the move just vacated, and a code-shaped pattern walks straight
+    past it. Worse, stripping it to its LABEL resurrects the problem: the bare
+    `#17` left behind is itself a design-principle reference, which the fixer
+    re-links to the address that was just vacated. The whole citation has to
+    become the new code."""
+    root = _premigration_project(tmp_path, monkeypatch)
+    (root / "luria.toml").write_text(
+        (root / "luria.toml").read_text()
+        + '[luria.schemes.VAL]\ndir = "record/values.d"\n')
+    (root / "record" / "values.d").mkdir(parents=True)
+    page = root / "docs" / "worded.md"
+    page.write_text(
+        "The fix ([design-principles #4](design-principles.md#dp-4)) held.\n")
+    config.reset()
+    aliases.reset()
+    _git(root, "add", "-A")
+    _git(root, "-c", "user.email=t@t", "-c", "user.name=t", "commit",
+         "-qm", "worded")
+    mig = root / "record" / "migrations.d" / "0002-worded.toml"
+    mig.write_text('title = "DP-4 becomes a value"\n\n'
+                   '[[operations]]\nop = "move_doc"\ndoc = "DP-4"\n'
+                   'to = "VAL"\n')
+    migrate.run("0002")
+    out = page.read_text()
+    assert "design-principles.md#dp-4" not in out, out
+    assert "#dp-4" not in out, "the vacated anchor must not survive anywhere"
+    assert "VAL-tmp" in out, out
+
+
+def _worded_move_project(tmp_path, monkeypatch):
+    """The premigration project plus a SOURCE FILE that cites DP-4 two ways —
+    by code and in prose — and a spec that moves DP-4 into an index-rendered
+    scheme."""
+    root = _premigration_project(tmp_path, monkeypatch)
+    (root / "luria.toml").write_text(
+        (root / "luria.toml").read_text()
+        + '[luria.code]\nglobs = ["src/*.py"]\n'
+          '[luria.schemes.VAL]\ndir = "record/values.d"\n')
+    (root / "record" / "values.d").mkdir(parents=True)
+    (root / "src").mkdir()
+    (root / "src" / "engine.py").write_text(
+        "# Selection rides undo by decision (design-principles #4), not by\n"
+        "# accident. DP-4 is the claim; DP-1 is a different one.\n"
+        "SELECTION_RIDES_UNDO = True\n")
+    config.reset()
+    aliases.reset()
+    _git(root, "add", "-A")
+    _git(root, "-c", "user.email=t@t", "-c", "user.name=t", "commit",
+         "-qm", "src")
+    (root / "record" / "migrations.d" / "0002-worded-code.toml").write_text(
+        'title = "DP-4 becomes a value"\n\n'
+        '[[operations]]\nop = "move_doc"\ndoc = "DP-4"\nto = "VAL"\n')
+    return root
+
+
+def test_the_relink_pass_stops_where_the_hyperlink_lint_stops(tmp_path,
+                                                              monkeypatch):
+    """Rebuilding links must not reach files the linter never checks.
+
+    The sweep walks every tracked file, because "does this text spell a code
+    that moved?" is a question a `.py` comment answers as truthfully as a
+    document does. Linking is a different question — code is quoted, not
+    asserted, so a source file is exempt from the hyperlink lint — and running
+    the fixer wider than the linter checks turned one two-document move into a
+    469-file diff of markdown links inside Python comments."""
+    root = _worded_move_project(tmp_path, monkeypatch)
+    migrate.run("0002")
+    src = (root / "src" / "engine.py").read_text()
+    assert "](" not in src, f"no markdown links in a source file:\n{src}"
+    # DP-1 did not move, and stays exactly as the author left it.
+    assert "DP-1 is a different one" in src, src
+
+
+def test_a_worded_citation_in_code_follows_the_move(tmp_path, monkeypatch):
+    """A prose-spelled citation names the document as surely as the code does.
+
+    `design-principles #4` in a comment carries no code for the code swap to
+    catch and, unlinked, no address for the address swap to catch. It is
+    recognized by the same scanner that would have turned it into a link in a
+    document, so the sweep can respell it — and must, or the move leaves a
+    citation pointing at a document that is no longer there."""
+    root = _worded_move_project(tmp_path, monkeypatch)
+    migrate.run("0002")
+    src = (root / "src" / "engine.py").read_text()
+    assert "design-principles #4" not in src, src
+    assert "#4" not in src, "the vacated anchor number must not survive"
+    assert src.count("VAL-tmp") == 2, f"both spellings respelled:\n{src}"
+    assert "DP-1 is a different one" in src, "an unmoved code is left alone"
+
+
+def test_a_formerly_stamp_is_not_a_dangling_citation(tmp_path, monkeypatch):
+    """The alias a move writes must not be reported as a broken reference.
+
+    `formerly: DP-004` names a code that resolves to no document *because the
+    alias exists* — that is what the stamp is for. Counting it made every
+    migration hand back one fresh "resolves to no document" warning per moved
+    document, pointing at the files the migration had just written."""
+    root = _worded_move_project(tmp_path, monkeypatch)
+    migrate.run("0002")
+    config.reset()
+    aliases.reset()
+    moved = next((root / "record" / "values.d").glob("VAL-*.md"))
+    assert "formerly:" in moved.read_text(), moved.read_text()
+    assert "DP-004" not in ref_status.scan().dangling, \
+        "the stamp is a declaration, not a citation"

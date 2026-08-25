@@ -24,13 +24,14 @@ Checks (each one fails the build):
 It also prints WARNINGS, which by default never affect the exit code
 (ADR-035): references to retired documents, codes that resolve to no document
 at all, remote links whose URL is hand-written rather than constructed,
+relative link targets that resolve to nothing from where the prose renders,
 directives that no longer apply, and a count of undecided decisions. Citing a
 `Rejected` decision — or leaving one `Proposed`, or naming another project's
 LU-ADR-013 — is often right, so none is an error unless the project says so:
 a class named in `[luria.lint] fail_on` is promoted to a failure. Either way
 `luria reports` writes the full detail as markdown, and an `inactive-ok:` /
-`unresolved-ok:` / `url-ok:` comment acknowledges a deliberate one so only
-the unconsidered ones stay listed — acknowledged rows never fail.
+`unresolved-ok:` / `url-ok:` / `target-ok:` comment acknowledges a deliberate
+one so only the unconsidered ones stay listed — acknowledged rows never fail.
 
 Exit 0 when clean; exit 1 with one line per violation.
 """
@@ -42,9 +43,9 @@ import re
 import sys
 
 from . import adr_index as builder
-from . import (adr_pending, badges, ci, doc_refs, journal, narrow_titles,
-               ref_status, remotes)
-from .config import current
+from . import (adr_pending, badges, ci, doc_refs, journal, link_targets,
+               narrow_titles, ref_status, remotes, statuses)
+from .config import TEMP_TAIL, current
 
 # The closed status vocabulary (ADR-003). `Active` is the in-force state; the
 # rest are the ways a decision can be out of force, each meaning something a
@@ -110,8 +111,90 @@ def check_frontmatter(errors: list[str]) -> None:
                     f"{rel}: nonstandard status {status!r} (want: "
                     "Active|Proposed|Deferred|Superseded|Rejected, optional "
                     "' — note')")
+            elif statuses.undeclared(scheme, status):
+                errors.append(
+                    f"{rel}: status {status.split(' — ')[0]!r} is not one the "
+                    f"{scheme.prefix} scheme declares (see "
+                    f"{cfg.rel(scheme.statuses_yaml)})")
             if not (meta.get("tags") or []):
                 errors.append(f"{rel}: no `tags:` in frontmatter (see ADR-003)")
+
+            # Per-scheme requirements (ADR-040): the fields a scheme demands
+            # beyond the standard set — what makes a cross-scheme move safe to
+            # automate, because the moved document fails here until a human
+            # supplies what the target scheme's template would have prompted
+            # for. The machinery relocates; only a person vouches.
+            for field in scheme.requires:
+                if not meta.get(field):
+                    errors.append(
+                        f"{rel}: no `{field}:` in frontmatter — the "
+                        f"{scheme.prefix} scheme requires it (luria.toml)")
+
+
+def check_references(errors: list[str]) -> None:
+    """Declared cross-scheme references (`[luria.schemes.X.references]`).
+
+    `requires` asks whether a field is there. This asks whether it means what
+    the scheme says it means, which is four questions: present, shaped like a
+    code, belonging to the named scheme, and resolving to a document.
+
+    The gap between those is not theoretical. Measured on the record that
+    motivated this, a field declared to hold a paper accepted a decision's
+    code and an arbitrary sentence, both silently — so the rule the whole
+    two-scheme split existed to enforce was enforced only in the sense that
+    the field was not blank (ADR-060)."""
+    cfg = current()
+    for scheme in cfg.schemes.values():
+        if not scheme.references:
+            continue
+        targets = {ref.scheme: cfg.schemes[ref.scheme]
+                   for ref in scheme.references}
+        known = {
+            prefix: ({t.code(n) for n in t.documents()}
+                     | {f"{prefix}-{tail}" for tail in t.temp_documents()})
+            for prefix, t in targets.items()
+        }
+        for path in [*scheme.documents().values(),
+                     *scheme.temp_documents().values()]:
+            rel = cfg.rel(path)
+            meta, _ = builder.parse_frontmatter(path.read_text())
+            if not meta:
+                continue          # check_frontmatter already said so
+            for ref in scheme.references:
+                raw = meta.get(ref.field)
+                if not raw:
+                    if ref.required:
+                        errors.append(
+                            f"{rel}: no `{ref.field}:` in frontmatter — the "
+                            f"{scheme.prefix} scheme declares it a "
+                            f"{ref.scheme} reference (luria.toml)")
+                    continue
+                code = _reference_code(str(raw))
+                if code is None:
+                    errors.append(
+                        f"{rel}: `{ref.field}: {raw}` is not a code — the "
+                        f"{scheme.prefix} scheme declares this field a "
+                        f"{ref.scheme} reference")
+                elif not code.startswith(f"{ref.scheme}-"):
+                    errors.append(
+                        f"{rel}: `{ref.field}: {code}` is not a "
+                        f"{ref.scheme} code — a {scheme.prefix} document's "
+                        f"`{ref.field}` names a {ref.scheme} document")
+                elif code not in known[ref.scheme]:
+                    errors.append(
+                        f"{rel}: `{ref.field}: {code}` resolves to no "
+                        f"{ref.scheme} document")
+
+
+# A reference field is data, not prose, so it holds a bare code — but the
+# fixer rewrites prose fields in place and a hand-edited file can carry a
+# link, so read the code out of either shape rather than demanding one.
+_REF_CODE_RE = re.compile(r"([A-Z]{2,}(?:-[A-Z]+)*-(?:\d{1,4}|" + TEMP_TAIL + r"))")
+
+
+def _reference_code(value: str) -> str | None:
+    m = _REF_CODE_RE.search(value.strip())
+    return m.group(1) if m else None
 
 
 def check_title(errors: list[str], rel: str, meta: dict, body: str) -> None:
@@ -131,6 +214,56 @@ def check_title(errors: list[str], rel: str, meta: dict, body: str) -> None:
         errors.append(
             f"{rel}: `title:` and the body heading disagree — "
             f"{title!r} vs {heading!r}")
+
+
+def check_status_vocabulary(errors: list[str]) -> None:
+    """A `statuses.yaml` key outside ADR-003's five words.
+
+    Narrowing the vocabulary per scheme is the point; extending it is not, and
+    a file naming `Accepted` would render a legend and silence nothing — it
+    would look like it was working, which is the worst way for a config file to
+    be wrong."""
+    for scheme in current().schemes.values():
+        errors.extend(statuses.problems(scheme))
+
+
+def check_tag_groups(errors: list[str]) -> None:
+    """A scheme's tag groups, enforced (`[luria.schemes.X.tag_groups]`).
+
+    `tags.yaml` says what a tag means and nothing has ever said which may
+    appear together. For a vocabulary that is a pile of labels that is right;
+    for one that is an *axis* it leaves the rule to prose, and a rule checked
+    by nobody is a comment — the failure this package objects to everywhere
+    else.
+
+    Opt-in, like `requires` (ADR-040): a scheme declaring no group is
+    unconstrained, so this is silent for every record that predates it."""
+    cfg = current()
+    for scheme in cfg.schemes.values():
+        if not scheme.tag_groups:
+            continue
+        for path in [*scheme.documents().values(),
+                     *scheme.temp_documents().values()]:
+            meta, _ = builder.parse_frontmatter(path.read_text())
+            if not meta:
+                continue          # check_frontmatter already said so
+            rel = cfg.rel(path)
+            tags = {str(t) for t in (meta.get("tags") or [])}
+            for group in scheme.tag_groups:
+                present = sorted(tags & group.tags)
+                shown = ", ".join(sorted(group.tags))
+                if group.require == "exactly-one" and len(present) != 1:
+                    errors.append(
+                        f"{rel}: `{group.name}` wants exactly one of "
+                        f"{shown} — has {', '.join(present) or 'none'}")
+                elif group.require == "at-most-one" and len(present) > 1:
+                    errors.append(
+                        f"{rel}: `{group.name}` wants at most one of "
+                        f"{shown} — has {', '.join(present)}")
+                if present and (clash := sorted(tags & group.excluded_by)):
+                    errors.append(
+                        f"{rel}: {', '.join(clash)} excludes `{group.name}`, "
+                        f"but the document also has {', '.join(present)}")
 
 
 def check_journals(errors: list[str]) -> None:
@@ -197,26 +330,27 @@ def check_generated_index(errors: list[str]) -> None:
     """The index is generated (ADR-004) — verify it's current, rather than
     checking each document is mentioned, which a generated file can't fail."""
     cfg = current()
-    rendered = builder.outputs()
+    # Computed by the generator, not recomputed here: the rules for what
+    # counts as stale live in one place, so this check and `luria index
+    # --check` cannot answer differently. Only the wording is this file's.
+    report = builder.staleness()
     # This lint is usually read in a build log, where "run `luria index`" names
     # the one action that must not be taken here — putting the generator ahead
     # of this check makes it compare the generator's output against itself, and
     # it stops being able to fail (ADR-029). The remedy says so when it is
     # being read in CI.
     remedy = ci.regenerate_remedy()
-    for path, text in rendered.items():
-        if not path.exists() or path.read_text() != text:
-            errors.append(f"{cfg.rel(path)}: stale — {remedy}")
-    for path in builder.orphans(rendered):
+    for path in report.stale:
+        errors.append(f"{cfg.rel(path)}: stale — {remedy}")
+    for path in report.orphaned:
         errors.append(f"{cfg.rel(path)}: not something the generator wrote — "
                       "a view directory holds only generated files (ADR-021); "
                       f"{remedy}, or file the content as a source")
     # The README's badge counts are derived from the same frontmatter, so a
     # stale one is the same class of failure as a stale index (ADR-018).
-    readme = badges.readme()
-    if readme.exists() and badges.OPEN in (text := readme.read_text()) \
-            and badges.rewrite(text) != text:
-        errors.append(f"{cfg.rel(readme)}: badge counts are stale — {remedy}")
+    if report.badges:
+        errors.append(
+            f"{cfg.rel(report.badges)}: badge counts are stale — {remedy}")
 
 
 def check_wikilinks(errors: list[str]) -> None:
@@ -268,8 +402,9 @@ def check_bare_refs(errors: list[str]) -> None:
 # hatch under enforcement — the dial changes the consequence, not the
 # accounting.
 FAILABLE = ("retired-citations", "unresolved-codes", "hand-written-urls",
-            "legacy-spellings", "narrow-titles", "stale-directives",
-            "pending-documents", "unlinted-files")
+            "broken-targets", "inert-status", "legacy-spellings",
+            "narrow-titles", "stale-directives", "pending-documents",
+            "unlinted-files")
 
 
 def status_sections() -> list[tuple[str, str, list[str]]]:
@@ -318,6 +453,41 @@ def status_sections() -> list[tuple[str, str, list[str]]]:
             f"{len(hand)} link(s) hand-written where a URL would be "
             "constructed (`url-ok:` acknowledges a deliberate one)", hand))
 
+    # A relative target that resolves to nothing from where the prose renders.
+    # The code checks above cannot see it: they verify that `ADR-035` names a
+    # document, not that the path someone typed around it goes anywhere (#100).
+    dead, stale_targets = link_targets.broken()
+    if dead:
+        sections.append((
+            "broken-targets",
+            f"{len(dead)} relative link target(s) resolve to nothing from "
+            "where the prose renders (`luria link --fix` spells code targets; "
+            "`target-ok:` acknowledges a deliberate one)", dead))
+
+    # A status field where every record agrees is indistinguishable from no
+    # status field — and `active` is what `retired-citations` reads, so the
+    # build is green because nothing is being judged rather than because
+    # nothing is wrong (#104).
+    uniform = statuses.uniform_rows()
+    if uniform:
+        sections.append((
+            "inert-status",
+            f"{len(uniform)} scheme(s) file every record at one status, so "
+            "nothing there can ever be retired and the citation checks cannot "
+            "fire", uniform))
+
+    # Schemes whose uniformity a human has vouched for with `uniform_ok`. The
+    # fact is unchanged — nothing there is being judged — so it is still
+    # reported, as a note carrying its reason rather than as a finding. Same
+    # bargain `inactive-ok:` strikes at a citation site, and the class is
+    # deliberately absent from FAILABLE: a project cannot promote its own
+    # acknowledgement to a failure.
+    if acknowledged := statuses.acknowledged_rows():
+        sections.append((
+            "acknowledged-uniformity",
+            f"{len(acknowledged)} scheme(s) uniform by declaration "
+            "(`uniform_ok` in luria.toml)", acknowledged))
+
     # A citation still spelled with a concretized code's old temporary name
     # (ADR-040, ADR-049). The in-tree steady state is zero — the
     # concretizer's sweep is full — so a row here means an in-flight branch
@@ -341,7 +511,8 @@ def status_sections() -> list[tuple[str, str, list[str]]]:
             "sense)", narrow))
 
     # A directive that silently does nothing is worse than no directive.
-    stale = ref_status.stale_annotations(result, docs) + stale_urls
+    stale = ref_status.stale_annotations(result, docs) + stale_urls \
+        + stale_targets
     for path in doc_refs.doc_files():
         stale += doc_refs.directive_problems(path, path.read_text())
     if stale:
@@ -391,6 +562,9 @@ def run() -> None:
     errors: list[str] = []
     check_docs_index(errors)
     check_frontmatter(errors)
+    check_status_vocabulary(errors)
+    check_tag_groups(errors)
+    check_references(errors)
     check_generated_index(errors)
     check_journals(errors)
     check_version_history(errors)

@@ -1,10 +1,10 @@
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling", "hatch-vcs"]
 build-backend = "hatchling.build"
 
 [project]
 name = "luria"
-version = "0.3.0"
+dynamic = ["version"]
 description = "A project's memory: decisions, principles, changelog and devlog, kept honest by lint"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -53,3 +53,18 @@ packages = ["luria"]
 # Everything a wheel build or a vendoring user needs; the record itself stays
 # on GitHub — an sdist is a build input, not a browsing surface.
 include = ["luria", "template", "tests", "README.md", "LICENSE", "pyproject.toml"]
+
+# The version is derived from the release tag rather than written here, so the
+# two cannot drift. `hatch-vcs` reads `git describe`, which is why the publish
+# checkout fetches tags — at the default depth there is nothing to describe
+# against and the version would silently become a `0.1.dev…` fallback.
+#
+# The guard added in #93 stays: deriving the version stops the drift, and the
+# assertion is what makes a recurrence loud rather than a PyPI rejection after
+# the environment gate.
+[tool.hatch.version]
+source = "vcs"
+
+# No `[tool.hatch.build.hooks.vcs]` version file on purpose: nothing in the
+# package reads its own version, and writing one out would reintroduce exactly
+# the hand-maintained copy this removes.

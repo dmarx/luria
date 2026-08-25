@@ -1,4 +1,4 @@
-# The record's own CI, in the recommended shape (ADR-029). Three jobs:
+# The record's own CI, in the recommended shape (LU-ADR-029). Three jobs:
 #
 #   docs-generate  regenerates the derived views (index, tag pages, books,
 #                  README badges, reference links) and commits them back as
@@ -12,7 +12,7 @@
 #                  workflows, so a lint anywhere else would keep a red earned
 #                  from the pre-regeneration commit and never clear it.
 #   collect        assembles changelog fragments on a cadence, never
-#                  per-merge (ADR-002 — a per-merge bot commit races
+#                  per-merge (LU-ADR-002 — a per-merge bot commit races
 #                  in-flight rebases, reintroducing the conflict fragments
 #                  exist to remove).
 #

@@ -250,7 +250,8 @@ class Scan:
 def scanned_files() -> list[Path]:
     """Current-guidance docs + code. Order is stable so the report is."""
     cfg = current()
-    docs = [p for p in doc_refs.doc_files() if not cfg.is_historical(p)]
+    docs = [p for p in doc_refs.doc_files()
+            if not cfg.is_historical(p) and not cfg.is_template(p)]
     code: list[Path] = []
     for pattern in cfg.code_globs:
         code += [p for p in cfg.root.glob(pattern) if p.is_file()]
@@ -294,6 +295,13 @@ def scan(files: list[Path] | None = None, docs: dict[str, Doc] | None = None) ->
         # foreign document (ADR-009), and counting it as a local reference
         # would report every such link as dangling.
         text = _blank(text, [m.span() for m in URL_RE.finditer(text)])
+        # A `formerly:` entry names an address this document used to answer
+        # to — a code that resolves to nothing precisely BECAUSE the alias
+        # exists. Counting it made `luria migrate` hand back two fresh
+        # "resolves to no document" warnings for a two-document move, every
+        # time, pointing at the two files the migration had just written.
+        text = _blank(text, [m.span() for m in
+                             doc_refs.FORMERLY_RE.finditer(text)])
         # `LU-ADR-013` names the remote's decision 13, not this project's.
         # Blanking the composed span is what stops the local scheme pattern
         # reading a foreign code out of the middle of it (ADR-016) — but a

@@ -1,28 +1,55 @@
-# Luria docs
+# Luria documentation
 
-- [Project memory: how a repo thinks](project-memory.md) — the doctrine. Start
-  here; this is what an agent file should point at.
-- [Design principles](design-principles.md) — the standing values, numbered and
-  citable.
-- [Decisions](decisions/README.md) — the choices, with their alternatives.
-- [Configuration](configuration.md) — every `luria.toml` key, generated from
-  the config schema itself. Also the answer to "can it hold something other
-  than decisions?": schemes, fragment directories, journals and remotes are
-  families you name, and the record this repo keeps is one instantiation.
-- [Comment directives](directives.md) — the `inactive-ok` / `unexempt`
-  vocabulary and its scope rules.
-- [Development log](devlog/README.md) — the narrative: failed approaches, root
-  causes, and the traps worth not rediscovering. One book per month, generated
-  from the dated entries in `record/devlog.d/`.
-- Status reports — what the README's badges count, one page each:
-  [documents awaiting a decision](reports/pending-decisions.md) and
-  [retired documents still cited](reports/reference-status.md).
-- [Adopting Luria](adopting.md) — putting the record into a project that hasn't
-  got one, and [publishing it](adopting.md#publishing-the-record) as a site
-  with a citation graph.
+Luria keeps a record of what a project knows — decisions, principles, a
+changelog, a devlog, or whatever families the project declares. Every entry
+has a name something can cite, a standing that says whether it still holds,
+and rules the lint enforces; every view is generated from those entries.
 
-Everything in this directory is for *reading* — the prose pages are authored,
-and the decisions index, principles document, devlog books and status reports
-are generated.
-Filing happens in [`record/`](../record/), whose `.d`-suffixed containers hold
-the sources ([ADR-021](../record/decisions.d/ADR-021.md)).
+This page is the map. (`luria lint` checks that every page in `docs/` is
+listed here, so the map cannot silently rot.)
+
+## Using Luria
+
+- [Quickstart](quickstart.md) — install, scaffold, file, lint: the whole
+  loop in ten minutes.
+- [Concepts](concepts.md) — the shortest complete account: entries,
+  citations, the status field everything hangs off, and what a finding is.
+  Read after the quickstart.
+- [Designing a record](modeling.md) — what belongs in a record, which
+  family fits which material, when two kinds of entry are two schemes, and
+  what the schema can be made to refuse. Start here if the scaffolded
+  decisions-and-principles shape is not what your project needs.
+- [Project memory](project-memory.md) — sources and views; the four families (schemes,
+  journals, fragments, remotes); statuses; constraints; how references are
+  found, linked, and kept honest.
+- [CLI reference](cli.md) — every command, flag by flag.
+- [Comment directives](directives.md) — acknowledging a lint finding where
+  it happens, with the reason attached; also the fixture-code convention.
+- [Adopting Luria](adopting.md) — bringing the record to an existing
+  project, the CI wiring, and the published site.
+- [Importing an existing corpus](importing.md) — turning material that
+  already exists as data into a record, and what that surfaces.
+
+## Generated references
+
+Built by `luria index` — read them, don't edit them.
+
+- [Configuration](configuration.md) — the full `luria.toml` schema,
+  generated from the dataclasses that parse it: every key, type, and
+  default.
+- [The record](record.md) — the shape *this* project gave the machinery,
+  generated from its `luria.toml`: what families exist, where entries are
+  filed, and what to type to add one.
+
+## This project's record
+
+Luria's own memory, kept with the tool it ships:
+
+- [Decisions](decisions/README.md) — every architectural choice, with
+  status, tags, and alternatives.
+- [Design principles](design-principles.md) — the standing values, one
+  page, anchored for citation.
+- [Development log](devlog/README.md) — the narrative: root causes, failed
+  approaches, and the traps the next person would otherwise rediscover.
+- Status reports — [pending decisions](reports/pending-decisions.md) and
+  [reference status](reports/reference-status.md): what awaits a human eye.
