@@ -42,7 +42,7 @@ generated and linted by the CLI it ships.
 [![cited, not in force: 1](https://img.shields.io/badge/cited,%20not%20in%20force-1-orange)](docs/reports/reference-status.md)
 <!-- /luria:badges -->
 
-## It is not only for decisions
+## Kinds of record
 
 `ADR` is not in the code. It is a table in a config file, and so is
 everything else: schemes (documents with codes), journals (dated entries
@@ -63,11 +63,6 @@ have a different record on the same engine.
 
 [Designing a record](docs/modeling.md) is how to work out which of these
 your material is.
-
-<!-- luria:badges -->
-[![needs decision: 9](https://img.shields.io/badge/needs%20decision-9-orange)](docs/reports/pending-decisions.md)
-[![cited, not in force: 3](https://img.shields.io/badge/cited,%20not%20in%20force-3-orange)](docs/reports/reference-status.md)
-<!-- /luria:badges -->
 
 ## Install
 
