@@ -47,6 +47,38 @@ dated observation — true when written, still true, never updated. That is why
 its entries persist while a fragment's are consumed: the fragment exists to
 become part of something else, the journal entry exists as itself.
 
+## Index or document
+
+Every scheme declares a `render`, and the two words name the output rather
+than the question you are answering. The question is **how the set is read**.
+
+> Would somebody sit down and read all of these, in order, in one go?
+
+If yes, that is `render = "document"`. The entries concatenate into one page
+and each gets a stable anchor, so a citation points at a *section*. Design
+principles work this way: there are nine of them, they argue with each other,
+and reading the fourth without the third is worse than not reading either.
+
+If no — people arrive at one entry by following a link, and never read the
+set — that is `render = "index"`. The entries stay separate files and the view
+is a table of them plus a page per tag. Decisions work this way: there are
+sixty, nobody reads them end to end, and you get to one because something
+cited it.
+
+Two things follow from the reading, and both are worth checking your answer
+against:
+
+- **Count.** A set that grows past twenty or so stops being readable whole,
+  whatever its author intended. If you expect it to keep growing, it is an
+  index, and choosing `document` now means a migration later.
+- **How a citation should land.** `DP-3` taking a reader to a section of a
+  page they can then keep reading is the point of a document render. `ADR-012`
+  taking them to a file with its own context is the point of an index.
+
+The mechanical consequences — what gets generated, what `output` means, which
+checks apply — are in
+[project memory](project-memory.md#what-each-render-produces).
+
 ## When is it two schemes?
 
 The question that takes the most thought, and it has a usable rule:

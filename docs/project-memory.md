@@ -61,14 +61,28 @@ summary: >-
 ---
 ```
 
-Schemes render one of two ways:
+#### What each render produces
 
-- `render = "index"` — a generated `README.md` table of every document,
-  plus one page per tag. Decisions read this way.
-- `render = "document"` — every entry concatenated into a single page at
-  `output`, each with a stable anchor. Design principles read this way: the
-  set is short enough to read whole, and a reference points at a section,
-  not a file.
+Every scheme declares a `render`. Which one you want is a question about how
+the set is read — [designing a record](modeling.md#index-or-document) is that
+question. What each one *does*:
+
+| | `render = "index"` | `render = "document"` |
+|---|---|---|
+| the reading | one entry at a time, arrived at by a link | the whole set, in order |
+| `output` means | a **directory** the view renders into | the assembled **file** itself |
+| what is generated | `README.md`, a table of every entry, plus `tags/<tag>.md` per tag | one page, every body concatenated |
+| a citation lands on | the entry's own file — `ADR-012.md` | a section anchor — `design-principles.md#dp-3` |
+| `tags.yaml` | orders the index and titles the tag pages | unused; there are no tag pages |
+| `inert-status` | applies | exempt — every principle being in force is the expected state, not a dead field |
+| cited from a remote | `[luria.remotes.X.schemes.Y] dir = …` | `document = …`, with an optional `anchor` |
+
+Watch `output`, which means something different in each: `docs/rfcs` for an
+index is a directory that will come to contain `README.md` and `tags/`, while
+`docs/interfaces.md` for a document is the page itself.
+
+Unset, either render puts the view beside its sources — the collocated shape
+a project has before it splits `docs/` from `record/`.
 
 ### Journals — dated entries that persist
 

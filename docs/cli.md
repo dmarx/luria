@@ -47,8 +47,9 @@ seeds, a docs index, a `CLAUDE.md`, and CI workflows — into `INTO`
   $ luria init --schemes "RFC,SPEC:document" --journals "incidents:day"
   ```
 
-  Each entry is `NAME` or `NAME:kind` — `index` or `document` for a scheme,
-  `year`, `month` or `day` for a journal. Paths follow the prefix, so `RFC`
+  Each entry is `NAME` or `NAME:kind` — `index` or `document` for a scheme
+  ([which one?](modeling.md#index-or-document)), `year`, `month` or `day` for
+  a journal. Paths follow the prefix, so `RFC`
   gives `record/rfcs.d` rendered into `docs/rfcs`; rename them afterwards if
   the family is better called something other than what its codes spell.
 

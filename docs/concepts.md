@@ -107,8 +107,11 @@ reading: a guard nobody can answer is one people learn to skip.
 
 Four kinds of table in `luria.toml`, and none of their names is in the code:
 
-- **Schemes** — families of entries with codes (`ADR-012`, `RFC-7`). Rendered
-  as a browsable index, or concatenated into one document.
+- **Schemes** — families of entries with codes (`ADR-012`, `RFC-7`). Either
+  browsed one at a time through a generated index, or concatenated into a
+  single page when the set is short enough to read whole — that is the
+  `render` key, and [which one you want](modeling.md#index-or-document) is a
+  question about how the set is read rather than about the output.
 - **Journals** — dated entries that persist and are never revised, rendered
   into books.
 - **Fragment directories** — pieces written now and assembled later, which is
