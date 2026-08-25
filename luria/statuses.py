@@ -125,11 +125,13 @@ def uniform(scheme) -> tuple[str, int] | None:
 
     `None` below the floor, for a scheme rendered as one document (a
     design-principles page where everything is in force is the expected state,
-    not a smell), and — the case worth stating — when the scheme declares a
-    vocabulary of exactly one status, which is a project saying so on purpose.
+    not a smell), when the scheme declares a vocabulary of exactly one status,
+    which is a project saying so on purpose, and when the scheme sets
+    `uniform_ok` — the acknowledgement this finding lacked. See
+    `acknowledged_rows` for where that reason surfaces instead.
     """
     from . import adr_index
-    if scheme.render == "document":
+    if scheme.render == "document" or scheme.uniform_ok:
         return None
     vocab = declared(scheme)
     if len(vocab) == 1:
@@ -153,4 +155,33 @@ def uniform_rows() -> list[str]:
         if hit := uniform(scheme):
             status, count = hit
             rows.append(f"{prefix}: {count}/{count} at `{status}`")
+    return rows
+
+
+def acknowledged_rows() -> list[str]:
+    """One line per scheme whose uniformity a human has vouched for.
+
+    The counterpart to `uniform_rows`. An acknowledged scheme is still
+    uniform — nothing there is being judged, and the citation checks still
+    cannot fire — so the fact does not stop being true when someone explains
+    it. It stops being a *finding* and becomes a note, which is the same
+    bargain `inactive-ok:` strikes at a citation site: the reason is
+    mandatory, and it renders where the finding would have.
+    """
+    from .config import current
+    from . import adr_index
+    rows = []
+    for prefix, scheme in current().schemes.items():
+        if not scheme.uniform_ok:
+            continue
+        found = []
+        for path in [*scheme.documents().values(),
+                     *scheme.temp_documents().values()]:
+            meta, _ = adr_index.parse_frontmatter(path.read_text())
+            status = str((meta or {}).get("status", "")).strip()
+            if status:
+                found.append(status.split(" — ")[0].strip())
+        if len(found) >= FLOOR and len(set(found)) == 1:
+            rows.append(f"{prefix}: {len(found)}/{len(found)} at "
+                        f"`{found[0]}` — {scheme.uniform_ok}")
     return rows

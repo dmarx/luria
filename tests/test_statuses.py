@@ -214,3 +214,54 @@ def test_a_document_rendered_scheme_is_exempt(tmp_path, monkeypatch):
 
 def test_the_class_is_failable(tmp_path, monkeypatch):
     assert "inert-status" in lint.FAILABLE
+
+
+# --- uniform_ok: the acknowledgement `inert-status` lacked -----------------
+#
+# Every other judgment call in luria can be vouched for at the site that
+# raises it. `inert-status` is about a *scheme*, so it has no site — and until
+# `uniform_ok` a project whose uniformity was deliberate had no way to say so,
+# which left a warning firing on every run with no action that would ever quiet
+# it. A guard nobody can answer is one people learn to skip.
+
+
+def _uniform_project(root: Path, monkeypatch, ack: str | None) -> None:
+    _project(root, monkeypatch)
+    if ack:
+        text = (root / "luria.toml").read_text()
+        (root / "luria.toml").write_text(text + f'uniform_ok = "{ack}"\n')
+        config.reset()
+    for n in range(1, statuses.FLOOR + 1):
+        _value(root, n)
+
+
+def test_uniform_fires_without_the_acknowledgement(tmp_path, monkeypatch):
+    _uniform_project(tmp_path, monkeypatch, None)
+    assert statuses.uniform_rows() == [f"VP: {statuses.FLOOR}/{statuses.FLOOR} at `Active`"]
+    assert statuses.acknowledged_rows() == []
+
+
+def test_uniform_ok_moves_the_row_from_finding_to_note(tmp_path, monkeypatch):
+    _uniform_project(tmp_path, monkeypatch, "young record, nothing retired yet")
+    assert statuses.uniform_rows() == []
+    rows = statuses.acknowledged_rows()
+    assert len(rows) == 1
+    # The fact survives the acknowledgement — a reader still learns that
+    # nothing in this scheme is being judged, and now also why.
+    assert f"{statuses.FLOOR}/{statuses.FLOOR} at `Active`" in rows[0]
+    assert "young record, nothing retired yet" in rows[0]
+
+
+def test_acknowledgement_lapses_when_the_scheme_stops_being_uniform(
+        tmp_path, monkeypatch):
+    _uniform_project(tmp_path, monkeypatch, "young record, nothing retired yet")
+    _value(tmp_path, 3, status="Rejected")
+    assert statuses.acknowledged_rows() == []
+    assert statuses.uniform_rows() == []
+
+
+def test_a_project_cannot_promote_its_own_acknowledgement_to_a_failure():
+    # `acknowledged-uniformity` is deliberately absent from FAILABLE: naming
+    # it in `fail_on` is a dial set to a notch that does not exist, and the
+    # existing check says so rather than silently enforcing nothing.
+    assert "acknowledged-uniformity" not in lint.FAILABLE

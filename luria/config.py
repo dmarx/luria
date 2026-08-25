@@ -301,6 +301,17 @@ class Scheme:
     # Frontmatter fields that hold a code from another scheme, by field name.
     # `requires` says a field is present; this says what it means.
     references: tuple[Reference, ...] = ()
+    # Why this scheme's records all sharing one status is deliberate rather
+    # than a dead enforcement mechanism (#104). The `inert-status` check is the
+    # one judgment call in luria with no acknowledgement — every other has an
+    # `inactive-ok:`-style comment carrying a reason, and this finding is about
+    # a *scheme*, so it has no site to comment at. Setting this is that
+    # acknowledgement: the row stops being a finding and the reason renders in
+    # its place, so a reader still sees that nobody is being judged and why.
+    # A reason is mandatory for the same purpose it is mandatory in a
+    # directive — silence that carries no argument is indistinguishable from
+    # an oversight.
+    uniform_ok: str | None = None
 
     @property
     def view(self) -> Path:
@@ -992,6 +1003,7 @@ def _schemes(raw: dict, root: Path) -> dict[str, Scheme]:
                                    tags_path),
             tags_file=tags_file,
             references=_references(prefix, spec.get("references", {})),
+            uniform_ok=(spec.get("uniform_ok") or None),
         )
     for prefix, scheme in schemes.items():
         for ref in scheme.references:
