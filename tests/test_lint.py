@@ -66,17 +66,17 @@ def test_the_check_covers_every_scheme(project):
     (project / "luria.toml").write_text(
         '[luria]\nissue_url = "https://example.test/issues/{n}"\n'
         '[luria.schemes.ADR]\ndir = "docs/decisions"\n'
-        '[luria.schemes.DP]\ndir = "docs/principles"\n'
-        'render = "document"\noutput = "docs/design-principles.md"\n')
+        '[luria.schemes.VP]\ndir = "docs/values"\n'
+        'render = "document"\noutput = "docs/values.md"\n')
     from luria import config
     config.reset()
 
-    path = project / "docs" / "principles" / "DP-001.md"
+    path = project / "docs" / "values" / "VP-001.md"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text("---\nstatus: Active\ntitle: 'A value'\ntags:\n- record\n"
-                    "---\n\n# DP-001: A different value\n\nBody.\n")
+                    "---\n\n# VP-001: A different value\n\nBody.\n")
     errors = errors_for(project)
-    assert len(errors) == 1 and "DP-001.md" in errors[0]
+    assert len(errors) == 1 and "VP-001.md" in errors[0]
 
 
 # ── The journal's path agrees with its `created:` (ADR-020) ──────────────

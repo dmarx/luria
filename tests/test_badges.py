@@ -17,16 +17,16 @@ REPO = Path(__file__).resolve().parents[1]
 TWO_SCHEMES = (
     '[luria]\nissue_url = "https://example.test/issues/{n}"\n'
     '[luria.schemes.ADR]\ndir = "docs/decisions"\n'
-    '[luria.schemes.DP]\ndir = "docs/principles"\n'
-    'render = "document"\noutput = "docs/design-principles.md"\n'
+    '[luria.schemes.VP]\ndir = "docs/values"\n'
+    'render = "document"\noutput = "docs/values.md"\n'
 )
 
 
 def principle(root: Path, number: int, status: str, title: str = "A value") -> Path:
-    path = root / "docs" / "principles" / f"DP-{number:03d}.md"
+    path = root / "docs" / "values" / f"VP-{number:03d}.md"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(f"---\nstatus: {status}\ntitle: {title!r}\ntags:\n- record\n"
-                    f"date: '2026-01-01'\n---\n\n# DP-{number:03d}: {title}\n")
+                    f"date: '2026-01-01'\n---\n\n# VP-{number:03d}: {title}\n")
     return path
 
 
