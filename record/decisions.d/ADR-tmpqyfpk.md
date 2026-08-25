@@ -6,6 +6,9 @@ tags:
 - mechanism
 - process
 date: '2026-08-25'
+
+# The pull request this decision closes.
+issue: '#120'
 summary: >-
   A commit message describing the CI skip marker contains it, and so stops
   its own build. A checker was written for this and measured backwards: it
@@ -41,9 +44,10 @@ belong to the previous commit. Silence is indistinguishable from success
 unless someone asks which commit the green belongs to, and nobody asks that
 on a pull request that looks passing.
 
-A checker was written for it: report commits carrying a marker in the message
-*body*, on the theory that a deliberate skip goes in the subject or a trailer
-and prose lands in the middle. Wired into the lint action as a warning.
+A checker was written for it ([#120](https://github.com/dmarx/luria/issues/120)): report commits carrying a marker in the
+message *body*, on the theory that a deliberate skip goes in the subject or a
+trailer and prose lands in the middle. Wired into the lint action as a
+warning.
 
 Measured against the two incidents and a direct test, it is backwards.
 
@@ -52,9 +56,9 @@ that is the tip and stays the tip, no workflow runs — so nothing exists to run
 the check inside. Both incidents above were that shape. The checker would have
 been silent for both.
 
-**It fires when nothing is wrong.** A probe pushed two commits together: the
-first mentioning the marker in its body, the second clean and at the head. The
-runs fired normally. GitHub reads the head commit only, so a marker anywhere
+**It fires when nothing is wrong.** A probe ([#124](https://github.com/dmarx/luria/issues/124)) pushed two commits
+together: the first mentioning the marker in its body, the second clean and at
+the head. The runs fired normally. GitHub reads the head commit only, so a marker anywhere
 else is inert — and the checker would have reported that commit anyway. Its
 own message had to hedge (*"if this commit was ever the tip of a push"*),
 which is a warning admitting it does not know.
@@ -81,8 +85,8 @@ prose rather than writing it.
 
 ## Alternatives considered
 
-- **Ship the checker as a warning.** What this decision rejects, on the
-  measurements above. It is not that the check is imprecise; it is aimed at
+- **Ship the checker as a warning** ([#120](https://github.com/dmarx/luria/issues/120), closed by this decision). What it
+  rejects, on the measurements above. It is not that the check is imprecise; it is aimed at
   the wrong event. Detection that runs inside the thing that did not run
   cannot report that it did not run.
 - **A `commit-msg` hook that refuses a marker in a body.** Prevention rather
