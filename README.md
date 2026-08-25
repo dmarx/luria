@@ -201,6 +201,23 @@ And the record itself, dogfooded: [decisions](docs/decisions/README.md) ·
 [development log](docs/devlog/README.md) ·
 [status reports](docs/reports/pending-decisions.md).
 
+## Citing Luria
+
+```bibtex
+@software{marx_luria,
+  author  = {Marx, David},
+  title   = {Luria: project memory, kept honest by lint},
+  url     = {https://github.com/dmarx/luria},
+  license = {MIT},
+  year    = {2026},
+}
+```
+
+Add `version = {...}` for the release you used; `pip show luria` prints it.
+There is no version pinned above on purpose — one here would be a
+hand-maintained copy of the release tag, which is the drift [DP-3](docs/design-principles.md#dp-3) names and
+[ADR-053](record/decisions.d/ADR-053.md) removed.
+
 ## License
 
 [MIT](LICENSE).
