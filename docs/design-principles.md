@@ -475,9 +475,9 @@ matcher for the same pattern already exists, it needs its own.
 
 *v1 · shaped by [ADR-040](../record/decisions.d/ADR-040.md), [ADR-049](../record/decisions.d/ADR-049.md) · origin: The first migration's first live day: three subsystems attacked the `formerly:` stamps the migration had just written, independently, and each was found separately because fixing one taught nothing about the others*
 
-<a name="dp-tmp5669r"></a>
+<a name="dp-14"></a>
 
-## DP-tmp5669r. Meet the project where it is
+## 14. Meet the project where it is
 
 Aim to be usable by whatever project has something worth remembering. It
 picked its language, its operating system, its forge and its file layout for
@@ -532,4 +532,4 @@ no inference at all. Each of those is precision given up in exchange for
 reach — and reach is the point, because the projects that most need a memory
 are rarely the ones that look like yours.
 
-*v1 · shaped by ADR-tmp91qkk · origin: A Windows user ran `luria init` and then `luria index`, and got a stack trace writing a check mark into a status report. Nothing about their project was unusual. The tool had required a UTF-8-capable platform without ever saying so*
+*v1 · shaped by [ADR-064](../record/decisions.d/ADR-064.md) · origin: A Windows user ran `luria init` and then `luria index`, and got a stack trace writing a check mark into a status report. Nothing about their project was unusual. The tool had required a UTF-8-capable platform without ever saying so*

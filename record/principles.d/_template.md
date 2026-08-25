@@ -30,7 +30,7 @@ status: Active
 # the constraining voice is correct for it ("no silent refusal"). Stating a
 # value as a prohibition deletes the state it spends most of its life in;
 # softening a real rule into an aspiration makes a hard line look negotiable.
-# ADR-tmphi0lg.
+# ADR-065.
 title: The principle, stated as a claim you can disagree with
 
 # Principles are LIVING DOCUMENTS. Bump this whenever the principle's scope or
