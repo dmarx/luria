@@ -1,0 +1,138 @@
+---
+status: Proposed
+title: Schemes declare their own shape — where the vocabulary lives, and what a field means
+version: 1
+tags:
+- mechanism
+date: '2026-08-24'
+summary: >-
+  A record with two content schemes could express the schemes but not the
+  relationship between them or the vocabulary they shared, so both were
+  restated by hand: one twelve-term vocabulary written in four places, and a
+  citation rule that turned out to check only that a field was not blank. A
+  scheme may now name its `tags.yaml` and declare what its reference fields
+  hold. Rejected: scheme inheritance, which reduces the same lines without
+  saying anything.
+---
+
+# ADR-tmp90kpj: Schemes declare their own shape — where the vocabulary lives, and what a field means
+
+## Context
+
+An anthology of ML training practice adopted this package with four schemes:
+`LIT` (one note per paper), `SOTA` (one document per recommendation, citing
+the note it came from), plus `ADR` and `DP`. The scheme machinery handled that
+without complaint. Two things about the model had nowhere to go.
+
+**The shared vocabulary was written four times.** Twelve topic categories,
+seven of them carried by both content schemes. They appear in two
+`tag_groups` lists in `luria.toml`, and again with labels and blurbs in two
+`tags.yaml` files — roughly eighty lines of configuration for one twelve-term
+vocabulary. Nothing relates the four copies, so nothing noticed when they
+disagreed, and they already did before the migration merged: the same tag
+carried a different blurb in each scheme, written days apart by one author.
+
+That is this project's own founding observation happening inside this
+project's own configuration surface. `tags.yaml` exists so a browsing
+vocabulary is stated where it is defined; a second scheme wanting the same
+vocabulary had no way to say so.
+
+**The relationship between the schemes could not be stated at all.** The rule
+that justified splitting them — a practice names the paper behind it — was
+written as `requires = ["source"]`, and a design principle was written about
+it. Tested against the live record by editing one document and re-linting,
+`requires` enforces less than it appears to:
+
+| `source:` | result |
+|---|---|
+| `LIT-001` | passes — correct |
+| `ADR-001` | passes silently — a practice citing a decision as its evidence |
+| `'a paper I read once'` | passes silently — not a code at all |
+| `LIT-999` | a warning, from the generic dangling-code check |
+
+`requires` asks whether a field is truthy. It has no way to ask what the field
+means, so the rule the two-scheme split existed to enforce was enforced only
+in the sense that the field was not blank.
+
+## Decision
+
+Let a scheme say both things.
+
+**A scheme may name where its vocabulary lives**, so two schemes can share one
+file:
+
+```toml
+[luria.schemes.SOTA]
+tags = "record/topics.yaml"
+```
+
+**A tag may say which schemes carry it as a primary**, where the tag is
+defined — which removes the `tags` list from the group entirely, and lets one
+file give two schemes different primaries without repeating the shared part:
+
+```yaml
+training-optimization:
+  label: Training optimization
+  primary_for: [LIT, SOTA]
+generative-modeling:
+  label: Generative modeling
+  primary_for: [LIT]          # the reading list only
+```
+
+A group that lists no tags derives its membership from those keys. An inline
+list still wins where one is written, so nothing existing changes.
+
+**A scheme may declare what a reference field holds:**
+
+```toml
+[luria.schemes.SOTA.references]
+source = { scheme = "LIT", required = true }
+```
+
+Four checks where `requires` gave one: present, shaped like a code, belonging
+to the named scheme, and resolving to a document. A reference naming a scheme
+that is not declared is a config error, raised at load like the other family
+validations.
+
+## Alternatives considered
+
+- **Leave it as `requires` and document the limit.** Cheapest, and it leaves
+  a design principle in a downstream record asserting a guarantee the tool
+  does not provide. The gap is not a documentation gap; a field that accepts
+  any truthy value is not a citation.
+- **Validate reference fields with a regex per scheme.** A `pattern` key
+  would catch the arbitrary-sentence case and not the wrong-scheme case, and
+  it would put the scheme's own naming convention into a second place — which
+  is the duplication half of this decision, reintroduced on the other axis.
+- **Scheme inheritance or a defaults table.** Would also shrink the config —
+  our four schemes repeat `render`, `active`, and an `output` convention —
+  and it shrinks it without letting the config *say* anything it could not
+  say before. Duplication that a reader can see and check is not the problem
+  here; duplication that nothing relates is. Not doing it.
+- **Derive the vocabulary from usage.** Collect the tags documents actually
+  carry and skip the declaration. That is already the behaviour for
+  unlisted tags, and it cannot express "this term is a primary for that
+  scheme and not this one", which is the distinction being drawn.
+- **Generated backlinks in the same change.** A declared reference makes
+  "practices drawn from this paper" derivable, and the downstream record left
+  that out precisely because a hand-maintained list drifts. It is the obvious
+  next step and it is a rendering change rather than a configuration one, so
+  it is deliberately not here.
+
+## Consequences
+
+Both additions are opt-in and inert until declared. A scheme with no `tags`
+key reads the collocated file; a group with an inline list behaves as before;
+a scheme with no `references` table is unchanged.
+
+`requires` and `references` now overlap for the required case. That is worth
+being explicit about rather than deprecating one: `requires` is the right tool
+for a field that is simply mandatory (`arxiv:` on a paper note is not a
+reference to anything in the record), and `references` for a field that names
+a document. A field listed in both is checked twice and reports twice, which
+is noise — the configuration reference should say so.
+
+A shared vocabulary means one `tags.yaml` can be edited from two schemes'
+directories, which is a small loss: the file no longer sits beside the only
+documents that use it. That is the trade the duplication was buying, and the
+measured drift says it was not worth its price.
