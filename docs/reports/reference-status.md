@@ -9,7 +9,7 @@ Every reference in the record is a claim — "this is why things are the way the
 
 Only an `Active` document is in force. `Proposed` and `Deferred` mean *not in force yet* — an open question, being cited as if it were settled — while `Superseded` and `Rejected` mean *no longer in force*, which is often a perfectly good thing to cite: history, or a rejection worth pointing at. Either way the citation should be deliberate, and this section lists the ones nobody has vouched for yet.
 
-**6 documents cited without acknowledgement.** Not listed: 34 citations someone has already vouched for with an `inactive-ok:` comment at the citing site.
+**5 documents cited without acknowledgement.** Not listed: 34 citations someone has already vouched for with an `inactive-ok:` comment at the citing site.
 
 To vouch for one, put the reason where the citation is — `inactive-ok:` covers its own line and the line below it, `inactive-ok-block:` its paragraph, `inactive-ok-file:` the whole page:
 
@@ -62,24 +62,15 @@ A scheme declares which statuses it uses and what they mean
 
 A scheme's template is a form, not a document
 
-2 citations in 2 files await a look.
-
-- [`luria/config.py:831`](../../luria/config.py)
-- [`luria/directives.py:42`](../../luria/directives.py)
-
-### [ADR-058](../../record/decisions.d/ADR-058.md) — Proposed
-
-Luria is a truth maintenance system, and should say so
-
 1 citation in 1 file awaits a look.
 
-- [`README.md:58`](../../README.md)
+- [`luria/config.py:831`](../../luria/config.py)
 
 ## Codes that resolve to no document
 
 A reference the reader cannot follow: the code names no document in this record. A typo, a number carried in from another project, and an illustrative code in an example all look identical from here — telling them apart takes a human, so this is a report, not an error.
 
-**5 codes unaccounted for.** Not listed: 48 mentions marked deliberate with an `unresolved-ok:` comment (same syntax and scopes as `inactive-ok:` above).
+**4 codes unaccounted for.** Not listed: 51 mentions marked deliberate with an `unresolved-ok:` comment (same syntax and scopes as `inactive-ok:` above).
 
 
 ### ADR-123 — resolves to nothing (3 unmarked sites · 2 other mentions marked deliberate)
@@ -97,10 +88,6 @@ A reference the reader cannot follow: the code names no document in this record.
 
 - [`tests/test_concretize.py:205`](../../tests/test_concretize.py)
 
-### ADR-157 — resolves to nothing (1 unmarked site · 2 other mentions marked deliberate)
-
-- [`luria/directives.py:42`](../../luria/directives.py)
-
 ### DP-018 — resolves to nothing (1 unmarked site · 4 other mentions marked deliberate)
 
 - [`record/decisions.d/ADR-040.md:42`](../../record/decisions.d/ADR-040.md)
@@ -113,4 +100,4 @@ A reference the reader cannot follow: the code names no document in this record.
 
 ## Directives that no longer apply
 
-- luria/directives.py:57: annotation names ADR-061, which does resolve here
+None. Every annotation still governs something. ✅

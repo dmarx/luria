@@ -1,0 +1,12 @@
+# The same five words, meaning something different here. On a paper
+# `Rejected` means the attic; on a practice it means no longer believed.
+# Saying so per scheme is the point.
+Active:
+  label: Current practice
+  blurb: what you should do today, and the reason is one click away
+Deferred:
+  label: Not yet judged
+  blurb: probably right, not yet worth asserting
+Superseded:
+  label: Replaced
+  blurb: something newer does this better, and the record says what

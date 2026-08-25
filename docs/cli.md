@@ -1,182 +1,241 @@
 # CLI reference
 
-Every command takes `--help`, and `luria --help` lists what is available in your
-version. This page is the map and the reasoning; `--help` is the authority on
-flags.
+One binary, `luria`, dispatching to plain functions. Every command takes
+`--help`. Flags are shown GNU-style; the CLI (python-fire) also accepts
+`--flag=value` and positional forms.
 
-## The loop
-
-Four commands cover most days:
-
-```console
-$ luria new adr         # scaffold a record
-$ luria link --fix      # bare codes in prose become links
-$ luria index           # regenerate every view
-$ luria lint            # exit 1, one line per violation
-```
-
-`link --fix` before `index` before `lint`. In CI the order is enforced for you
-by the actions.
-
----
-
-## `luria lint`
-
-Check the record. Exit 0 when clean, 1 with one line per violation.
-
-Two kinds of output, and the difference matters:
-
-**Violations** always fail. A stale generated view, frontmatter that will not
-parse, a title that disagrees with its heading, a bare reference the fixer
-would link, a wikilink that resolves to nothing.
-
-**Warnings** never fail unless you ask. Citations of retired documents, codes
-that resolve to nothing, hand-written URLs, dead relative targets, stale
-directives, a scheme whose status never varies, a count of undecided documents.
-Each belongs to a named class:
-
-```toml
-[luria.lint]
-fail_on = ["retired-citations", "unresolved-codes"]
-```
-
-Promoting a class makes its *unacknowledged* rows fail. Acknowledged rows never
-fail, so the escape hatch survives enforcement — the dial changes the
-consequence, not the accounting.
-
-Start with everything reported. Promote a class the day your record is clean on
-it, and you will never have to declare bankruptcy on the whole thing at once.
-
-## `luria link [PATHS...]`
-
-Rewrite bare references as links. Without `--fix` it reports what would change.
-
-```console
-$ luria link --fix
-docs/scaling.md: 3 reference(s)
-linked 3 reference(s) in 47 file(s)
-```
-
-Handles local codes (`ADR-012`), foreign codes from declared remotes
-(`LU-ADR-013`), design principles (`DP-6`), issue numbers (`#42`), and wikilinks
-(`[[ADR-012]]`, `[[ADR-012|the caching decision]]`).
-
-**This is the only thing that should write a link target.** Record prose renders
-into views in other directories, so the correct depth depends on where the text
-*lands* — and only the fixer knows that frame. Write the bare code.
-
-It deliberately does not touch: codes inside backticks or fences (a specimen is
-not a citation), a code that resolves to nothing, self-references, and a low
-`#N` that might be a principle number rather than an issue.
-
-## `luria index [--check]`
-
-Regenerate every view from the frontmatter: scheme indexes and tag pages,
-document-rendered schemes, journal books, the status reports, the configuration
-reference, the README badges.
-
-`--check` exits 1 naming stale files instead of writing them — what CI runs when
-it wants to fail rather than fix.
-
-Never hand-edit a generated view. Edit the record and regenerate.
-
-## `luria new KIND [--title ... --status ... --tags ...]`
-
-Scaffold a record and print its path. `KIND` defaults to the journal; the others
-come from `luria.toml` — every scheme prefix, fragment directory and journal is
-a kind, so `luria new rfc` works the moment `[luria.schemes.RFC]` is declared.
-
-The field flags are conveniences. Content belongs in your editor.
-
-Which identity you get depends on the scheme's `allocate`: the next free number
-(default), or a temporary code that `luria concretize` numbers later.
-
-## `luria concretize [--check]`
-
-Assign real numbers to temporary codes and rewrite every citation of them.
-
-Run it **where merges serialize** — the push to the default branch — and never
-on a pull request, since concretizing on a branch is exactly the premature
-number claim temporary codes exist to avoid.
-
-`--check` exits 1 naming any temporary codes that exist. That is the trunk
-guard: a temp code on the default branch means this did not run.
-
-## `luria reports [--out DIR]`
-
-Write the status reports as markdown: what is pending, and what is cited but not
-in force. `luria index` does this too; the standalone command is for CI staging
-directories.
-
-## `luria collect [--dir D] [--commit]`
-
-Assemble fragment directories into their documents — a changelog from
-`record/changelog.d/`, a digest from wherever you put one.
-
-Fragments exist so the assembled file is not a lock every branch must touch.
-Collect on a cadence, not on every merge.
-
-## `luria init [--config PATH] [--dry-run] [--issue-url URL]`
-
-Scaffold the record a config declares. Never overwrites, so it is safe in a repo
-that already has files, and `--dry-run` lists what it would write.
-
-By default it scaffolds the detected root's own config, or the shipped template
-if there is none. `--config PATH` installs that file as `luria.toml` and
-scaffolds *its* shape — how you clone a record layout between projects.
-
-## `luria migrate SPEC [--dry-run] [--commit]`
-
-Execute a migration: rename a scheme, move documents between schemes, without
-losing the record's memory of where things were. `--dry-run` prints the plan;
-`--commit` commits the result and appends it to `.git-blame-ignore-revs` so the
-mechanical change does not bury authorship.
-
-## `luria remotes [--refresh] [--check]`
-
-How each configured remote's cited references resolve. `--refresh` discovers
-code→filename maps into the lockfile. `--check` HEADs every constructed URL —
-needs network, and is a report rather than a failure, because someone else's
-outage is not your build's problem.
-
-## `luria site [OUT]`
-
-Stage the record as a Quartz vault — `content/` plus config — ready for
-`npx quartz build`. A build step over the record as it stands; it changes
-nothing.
-
----
-
-## In CI
-
-```yaml
-jobs:
-  docs:
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with: { python-version: "3.12" }
-      - uses: dmarx/luria/actions/generate@main
-        with:
-          pip-spec: luria==0.5.0
-          concretize: ${{ github.event_name != 'pull_request' }}
-      - uses: dmarx/luria/actions/lint@main
-        with:
-          pip-spec: luria==0.5.0
-```
-
-`generate` regenerates and commits the views, so a contributor who forgets
-`luria index` does not fail the build for it. `lint` then checks the result.
-
-**Pin `pip-spec` on both, to the same version.** Taking the action from `@main`
-while the package comes from PyPI is a version split inside one dependency: CI
-generates with an older generator than your record is written against, reverts
-your committed views on every push, and the next contribution opens by resolving
-the same conflict.
-
-## Exit codes
-
-| Code | Meaning |
+| command | one line |
 |---|---|
-| 0 | clean, or warnings only |
-| 1 | at least one violation, or a `fail_on` class with unacknowledged rows |
+| [`luria init`](#luria-init) | scaffold a record into a repository |
+| [`luria new`](#luria-new) | file a new entry of any configured kind |
+| [`luria index`](#luria-index) | render every generated view |
+| [`luria link`](#luria-link) | turn bare codes and wikilinks into links |
+| [`luria lint`](#luria-lint) | enforce the record's invariants |
+| [`luria reports`](#luria-reports) | write the status reports |
+| [`luria collect`](#luria-collect) | assemble fragments into their target |
+| [`luria concretize`](#luria-concretize) | give temporary codes real numbers |
+| [`luria remotes`](#luria-remotes) | inspect and verify foreign references |
+| [`luria migrate`](#luria-migrate) | execute a rename/move spec |
+| [`luria site`](#luria-site) | stage the record as a publishable site |
+
+## luria init
+
+```
+luria init [INTO] [--issue-url URL] [--config FILE] [--dry-run]
+```
+
+Scaffolds the default record — templates, stubs, tag vocabulary, principle
+seeds, a docs index, a `CLAUDE.md`, and CI workflows — into `INTO`
+(default: the project root, found via `luria.toml`, then `.git`).
+
+- Existing files are **always skipped**, never overwritten; each is
+  reported. Re-running on a grown project is safe.
+- `--issue-url` seeds `issue_url` in the scaffolded `luria.toml`; append
+  `{n}` yourself or let init place it.
+- `--config FILE` scaffolds from your own `luria.toml` instead of the
+  shipped one — this is how you init a record made of RFCs rather than
+  ADRs. Refused if a `luria.toml` already exists (merge by hand instead).
+- `--dry-run` prints the plan and writes nothing.
+
+## luria new
+
+```
+luria new [KIND] [--title T] [--status S] [--summary S] [--tags a,b] [--name N]
+```
+
+Files one new entry and prints its path. `KIND` is any name the project's
+`luria.toml` gives the machinery, lower-cased:
+
+- a **scheme** prefix (`adr`, `rfc`, …) — scaffolds the next document from
+  the scheme's `_template.md`, with the number allocated (or a temporary
+  code minted, if the scheme allocates on merge) and today's date stamped;
+- a **journal** name (`devlog`, `incidents`, …) — creates
+  `dir/yyyy/mm/dd/hhmmss.md` stamped with the current time;
+- a **fragment** directory's short name (`changelog` for
+  `record/changelog.d`) — creates a timestamped fragment, or a named one
+  with `--name`;
+- `migration` — scaffolds a numbered migration spec in
+  `record/migrations.d/`.
+
+With no `KIND` and exactly one journal configured, the journal is the
+default — `luria new --title "…"` is the cheapest possible filing. The
+field flags (`--title`, `--status`, `--summary`, `--tags`) pre-fill the
+scaffolded frontmatter. The generated view of your own config lists every
+kind your project accepts (see [the record](record.md) for this one).
+
+## luria index
+
+```
+luria index [--check]
+```
+
+Renders every generated view from the sources: scheme indexes and tag
+pages (or the single concatenated page for `render = "document"` schemes),
+journal books, the status reports, the record and configuration reference
+pages, and the README badge region. Also deletes orphaned files from view
+directories and fills in missing `created:` frontmatter on journal entries
+whose path implies the timestamp.
+
+`--check` writes nothing and exits non-zero if any committed view differs
+from what would be generated — the staleness check CI runs. (Views listed
+in `.gitignore` are exempt: an uncommitted view cannot be stale.)
+
+## luria link
+
+```
+luria link [PATHS…] [--fix]
+```
+
+Finds every linkable reference in the given files (default: every
+non-generated markdown file the record knows about): bare codes
+(`ADR-012`, `DP-3`), temporary codes, remote codes (`LU-ADR-013`),
+issue numbers, and `[[wikilinks]]`. Prints per-file counts; with `--fix`,
+rewrites them into links whose relative targets are computed *for the
+directory where each piece of prose ultimately renders* — which is why
+hand-writing targets is the one thing the workflow forbids.
+
+References inside backticks, fences, existing links, HTML comments, and
+frontmatter (except designated prose fields) are left alone.
+
+## luria lint
+
+```
+luria lint
+```
+
+The contract, in two halves.
+
+**Violations** (exit 1), each with the file and line:
+
+- a scheme document without frontmatter, `status:`, `title:`, or `tags:`;
+  a status outside the vocabulary (`Active`, `Proposed`, `Deferred`,
+  `Superseded`, `Rejected`, optional ` — note`) or undeclared in the
+  scheme's `statuses.yaml`; a missing field the scheme `requires`;
+  a `title:` disagreeing with the body heading; tag-group rules
+  (`exactly-one`, `at-most-one`, `excluded_by`) broken
+- a `version:` above 1 with no `history:`, or history that ends on a
+  different version than the document claims
+- a journal entry with no derivable `created:`, or filed at a path its
+  timestamp says is wrong
+- a stale generated view, a stray file in a view directory, or stale badge
+  counts
+- a bare code or unexpanded wikilink that `luria link --fix` would rewrite,
+  or a wikilink that resolves to nothing
+- a docs page missing from the docs index (`docs/README.md`)
+
+**Warnings**, printed but passing — each is a judgement call, surfaced with
+its acknowledgement route (see [directives](directives.md)) and listed in
+full in the [reports](reports/reference-status.md):
+
+`retired-citations` · `unresolved-codes` · `hand-written-urls` ·
+`broken-targets` · `inert-status` · `legacy-spellings` · `narrow-titles` ·
+`stale-directives` · `pending-documents` · `unlinted-files`
+
+Any of those class names listed in `[luria.lint] fail_on` fails the build
+instead. Only unacknowledged findings ever reach a class, so
+acknowledgements keep working under enforcement.
+
+## luria reports
+
+```
+luria reports [--out DIR]
+```
+
+Writes the two status reports (default: the configured `reports` path,
+`docs/reports/`): **pending-decisions** — every `Proposed`/`Deferred`
+document with age and citation counts — and **reference-status** — retired
+documents cited unacknowledged, codes resolving to nothing, files opted
+out of checking, and directives that no longer apply. `luria index` writes
+these too; the standalone command exists for CI jobs that want only the
+reports.
+
+## luria collect
+
+```
+luria collect [DIR] [--commit]
+```
+
+For each configured fragment directory (or just `DIR`): read every
+fragment in the order it entered git history, insert the non-empty ones at
+the target's `<!-- luria-insert-here -->` marker (the `changelog` style
+adds a dated heading; the default appends), and delete the fragments.
+`--commit` stages and commits the result with `[skip ci]` — the shape a
+scheduled CI job wants.
+
+## luria concretize
+
+```
+luria concretize [--check]
+```
+
+For schemes with `allocate = "merge"`: assign each temporary code
+(`ADR-tmp3kf9x`) the next real number, rename the file, rewrite every
+reference in docs and scanned code, and record the old spelling under
+`formerly:` so stale spellings keep resolving. Run it where merges
+serialize — the push-to-main CI job — and never on a PR branch, which
+would re-create the collision the temporary codes exist to avoid.
+`--check` exits non-zero while any temporary code is pending.
+
+## luria remotes
+
+```
+luria remotes [--refresh] [--check]
+```
+
+Prints every foreign code the record cites, per remote, with the URL each
+resolves to and the evidence behind it (explicit template, discovered
+filename, or bare convention). `--refresh` re-discovers each remote's
+actual filenames via the GitHub API and writes `remotes.lock.json` —
+committed, so CI and offline checkouts resolve identically. `--check`
+HEAD-probes every cited URL and reports what a reader would find: broken,
+absent from the remote, or unverifiable because the repository is not
+readable anonymously.
+
+## luria migrate
+
+```
+luria migrate SPEC [--dry-run] [--commit]
+```
+
+Executes a migration spec from `record/migrations.d/` (`SPEC` can be a
+path, a filename, or a unique prefix like `0001`). Two operations:
+
+- `rename_scheme` — rename a prefix wholesale: files move (`git mv`),
+  every reference and anchor in the repository is swept to the new
+  spelling, config tables are renamed, and each moved document is stamped
+  `formerly:` with its old code.
+- `move_doc` — move one document into another scheme, where it gets a
+  temporary code for the next concretize.
+
+Either operation takes `strategy = "supersede"` to copy instead of move,
+leaving a tombstone (`Superseded — by …`) at the old code. `--dry-run`
+prints the full plan. `--commit` commits the sweep and appends the commit
+to `.git-blame-ignore-revs`, so blame reads through the rename. The spec
+itself is never swept: its mapping is the durable memory of the old names.
+
+## luria site
+
+```
+luria site [--out build/site]
+```
+
+Stages the record as a [Quartz](https://quartz.jzhao.xyz/) vault: every
+publishable page at its repository path (so all relative links keep
+working), a `record line` (status · version · filed · issue · influenced
+by) injected under each document's title, codes registered as aliases,
+README as the landing page, links to unpublished files redirected to the
+repository, and the theme/branding from `[luria.site]` rendered into
+Quartz config. The published site gets search, backlinks, and a local
+graph per page. The `actions/site` composite action builds the staged
+vault with a pinned Quartz for GitHub Pages — see [adopting](adopting.md).
+
+## Environment
+
+- `LURIA_ROOT` — overrides project-root discovery; how CI and the test
+  suite point a run at a tree that is not the working directory.
+- `LURIA_JOBS` — caps the thread pool used for rendering, scanning, and
+  URL probing. `LURIA_JOBS=1` is the deterministic escape hatch.
+
+Every module is also runnable standalone (`python -m luria.ref_status
+--all`) for projects that vendor a file rather than installing the
+package.

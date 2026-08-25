@@ -1,126 +1,58 @@
 # Contributing
 
-This repository uses luria on itself. That is not a demo — it is how the project
-is maintained, and it means a contribution here has one requirement most repos
-do not have: **the reasoning ships with the code.**
-
-## Before anything else
-
-Read [the design principles](docs/design-principles.md) in full. They are the
-standing values every choice here is judged against, and reviews cite them by
-number.
-
-Then [project memory](docs/project-memory.md), which is the doctrine behind the
-layout.
+Thanks for helping. Two things make this repository slightly unusual, and
+both are the point: it dogfoods its own record machinery, and the record
+is part of every contribution.
 
 ## The loop
 
 ```console
-$ git checkout -b your-branch
-$ pip install -e .
-# ... make the change ...
-$ luria new changelog                  # one fragment per contribution
-$ luria link --fix
-$ luria index
-$ luria lint
-$ python -m pytest tests -q
+$ pip install -e ".[dev]"
+$ python -m pytest tests -q     # what CI runs
+$ luria lint                    # also what CI runs
 ```
 
-`pytest tests -q` plus `luria lint` is exactly what CI runs.
+Work on a branch, open a pull request — nothing lands on `main` directly.
+CI regenerates the derived views on your branch (committing as
+`github-actions[bot]`), lints the result, and runs the tests.
 
-## Four ground rules
+## Every change ships its record entry
 
-**Work goes to a branch and a pull request, never straight to `main`.** The
-record is the deliverable, and it needs a chance to be read before it becomes
-what the project believes.
+Run `luria new` in the same branch as the work:
 
-**File the fragment in the same contribution as the work.** `luria new
-changelog`, and a devlog entry if anything went wrong on the way. A fact filed
-while its context is loaded costs a paragraph; re-derived cold, it costs a
-session. No user-facing change? Replace the fragment with a comment saying why —
-a stub collects to nothing, which keeps the rule enforceable without inventing
-an entry.
+- `luria new changelog` — a fragment describing the user-visible change.
+  Fragments are collected into `CHANGELOG.md` by a scheduled job; you
+  never edit that file directly.
+- `luria new --title "…"` — a devlog entry, for anything worth more than a
+  changelog line: the root cause, the approach that failed, the trap you
+  fell into.
+- `luria new adr --title "…"` — a decision document, when you chose
+  between real alternatives. It gets a temporary code (`ADR-tmpxxxxx`);
+  CI assigns the real number when the merge serializes on `main`, so
+  parallel branches never collide on one.
 
-**Never hand-write a link target.** Write the bare code — `ADR-035`, `DP-6`,
-`#57` — and let `luria link --fix` spell it. Record prose is rendered into views
-in other directories, so a target has to resolve from where the text lands, not
-where it lives, and only the fixer knows that frame. Want prose as the label?
-`[[ADR-035|the escalation ladder]]`, still the fixer's job. A hand-written
-target that looks right here is wrong somewhere.
+Cite decisions from code comments and docs by their bare code and run
+`luria link --fix` — never hand-write the link target.
 
-**A guard that keeps catching you is a bug report about the workflow.** One
-catch is the net working. The same catch again means the hazard is upstream — a
-practice, a missing affordance, an undocumented rule — and the fix is to remove
-what *generates* the mistake, not to keep thanking the net. Quiet guards are the
-goal; a busy one is compensating for something.
+## Changing the machinery
 
-## When a change needs a decision
+- Generated files (anything stamped `GENERATED`, plus `CHANGELOG.md` and
+  the README badge region) are never edited by hand. Change the sources or
+  the renderer, then `luria index`.
+- A new lint check must be **always wrong and mechanically fixable** to
+  fail the build; anything that needs human judgement becomes a *report*
+  with an acknowledgement directive
+  ([docs/directives.md](docs/directives.md)). Fire a new guard on a real
+  case before trusting it, and note the firing in the devlog.
+- The configuration reference is generated from the dataclasses in
+  `luria/config.py` — their docstrings are the schema documentation, so a
+  config change edits those docstrings, not `docs/configuration.md`.
+- `tests/test_examples.py` builds each directory under `examples/` in a
+  temporary tree and generates its views there; an example is a pinned,
+  CI-tested claim about what a configuration does.
 
-Most do not. Write one when you rejected an alternative, chose a constraint, or
-made something a future edit could silently violate.
+## Releases
 
-```console
-$ luria new adr
-```
-
-File it `Proposed` if it is genuinely open; `Active` if you are making the call
-and the PR is where it gets challenged. The template explains every field —
-read it once, then delete the parts you have internalised.
-
-**One decision, one thing.** If your change has two unrelated halves, that is
-two decisions and probably two PRs. A record with two halves is one nobody can
-cite half of.
-
-## Adding a check
-
-A new check joins the **lint** only if the violation is always wrong *and*
-mechanically fixable. Otherwise it is a **report** — a named class, warned by
-default, promotable through `[luria.lint] fail_on`.
-
-That distinction is load-bearing. A lint failure says "this is broken, here is
-the fix"; a report says "this needs a human". Getting it wrong in either
-direction is how a tool becomes something people route around.
-
-**Fire any new guard once before trusting it**, and say so in the devlog: what
-you broke, what the guard printed, what it printed after the repair. Provisioned
-is not working. A guard that has never fired is one nobody can distinguish from
-a guard that cannot.
-
-Point it at a real record, not only a fixture. The most useful bug reports this
-project has had came from running a new check against a downstream adoption and
-finding things the author of the check did not expect — including, twice, bugs
-in the shipped templates.
-
-## Tests
-
-Live in `tests/`, one file per subject. Two conventions worth knowing:
-
-**Every test states its own vocabulary.** A fixture that borrows a live
-sequence's prefix is the hazard the fixture-code rule exists for, so tests use
-`VP`, `NT` and similar rather than `ADR`.
-
-**Say why the test exists**, especially for the non-obvious ones. Several tests
-here exist because of a specific bug, and the docstring naming it is what stops
-a future tidy-up from deleting the guard along with the redundancy it looks
-like. The load-bearing ones say which refactor would break them.
-
-## What gets rejected in review
-
-- A change with no record fragment.
-- A hand-written link target.
-- A generated file edited by hand.
-- A new check that should have been a report.
-- A decision that bundles two choices.
-- A guard added without firing it once.
-
-None of these are style preferences. Each is a failure mode that has cost this
-project a session, and most have a decision record naming the incident.
-
-## Releasing
-
-Version comes from the git tag via `hatch-vcs`; there is no version string to
-edit. Tag, and the published package derives from it.
-
-`luria collect --commit` assembles the changelog fragments into `CHANGELOG.md`.
-It runs on a cadence rather than on every merge, so fragments accumulate between
-releases and the assembled file is not a lock every branch must touch.
+Versioning is from git tags (`hatch-vcs`). Publishing a GitHub release
+builds the wheel, verifies the built version matches the tag, smoke-tests
+`init → index → new → lint` in a clean venv, and uploads to PyPI.
