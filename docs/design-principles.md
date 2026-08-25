@@ -420,9 +420,9 @@ cited, revisited, and retired on its own evidence.
 
 *v1 · shaped by [ADR-035](../record/decisions.d/ADR-035.md), [ADR-056](../record/decisions.d/ADR-056.md) · origin: Three splits in one session, each made for the same reason and none of them by rule: a lint check separated from the vocabulary it reads, two scheme audits written as two decisions rather than one, and a status feature split from the report that would have caught the bug motivating it. Each bundle would have been smaller to write and impossible to cite half of*
 
-<a name="dp-tmpqu8fy"></a>
+<a name="dp-13"></a>
 
-## DP-tmpqu8fy. Exempting a ledger from one matcher exempts it from none of the others
+## 13. Exempting a ledger from one matcher exempts it from none of the others
 
 A mechanism that rewrites, flags or retires instances of a pattern usually
 keeps a record of what it did, and that record is written in the pattern's own
