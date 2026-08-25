@@ -7,6 +7,7 @@ One binary, `luria`, dispatching to plain functions. Every command takes
 | command | one line |
 |---|---|
 | [`luria init`](#luria-init) | scaffold a record into a repository |
+| [`luria config`](#luria-config) | write a starting `luria.toml`, without scaffolding |
 | [`luria new`](#luria-new) | file a new entry of any configured kind |
 | [`luria index`](#luria-index) | render every generated view |
 | [`luria link`](#luria-link) | turn bare codes and wikilinks into links |
@@ -64,6 +65,34 @@ seeds, a docs index, a `CLAUDE.md`, and CI workflows — into `INTO`
   exists (merge by hand instead), as are `--schemes`/`--journals`: where a
   config exists the shape is declared, and a flag should not edit it.
 - `--dry-run` prints the plan and writes nothing.
+
+## luria config
+
+```
+luria config [INTO] [--schemes S] [--journals J] [--issue-url URL] [--stdout]
+```
+
+Writes the `luria.toml` that `luria init` would have written, and stops.
+
+The shorthand covers the two things projects usually vary. A project that also
+wants a different directory, a narrowed status vocabulary or a tag group has to
+edit the config — and editing it *after* a scaffold means moving directories
+the first run already created. This is the order that avoids that:
+
+```console
+$ luria config --schemes "RFC,SPEC:document"
+luria.toml
+
+Edit it, then `luria init` to scaffold the shape it declares.
+$ $EDITOR luria.toml
+$ luria init
+```
+
+- Takes the same `--schemes`, `--journals` and `--issue-url` as `init`, and
+  infers the issue URL from the `origin` remote the same way.
+- **Refuses to overwrite.** A config that exists has already started.
+- `--stdout` prints instead of writing, which also works where a config
+  exists — looking is not writing.
 
 ## luria new
 

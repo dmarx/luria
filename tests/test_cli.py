@@ -22,7 +22,7 @@ def test_every_command_is_registered():
         "new": new.run, "concretize": concretize.run,
         "migrate": migrate.run, "remotes": remotes.run,
         "site": site.run, "init": init.run, "reports": reports.run,
-        "collect": collect.run,
+        "collect": collect.run, "config": init.config_run,
     }
 
 

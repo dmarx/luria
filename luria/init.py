@@ -327,6 +327,16 @@ def _toml_text(into: Path, config_arg: str | None, issue_url: str,
                 "shape is already declared — add the tables to it rather "
                 "than passing --schemes/--journals.")
         return root_cfg.read_text()
+    return template_config(into, issue_url, schemes, journals)
+
+
+def template_config(into: Path, issue_url: str = "", schemes: str = "",
+                    journals: str = "") -> str:
+    """The shipped template's config, with the issue URL filled in and the
+    shorthand expanded.
+
+    Shared by `luria init` and `luria config`, which differ only in what they
+    do with the result — scaffold from it, or hand it over to be edited."""
     text = _read(CONFIG_NAME)
     # The one key a conventional project still had to supply, and a repository
     # with an origin remote has already written it down somewhere else.
@@ -444,6 +454,39 @@ def write(into: Path, issue_url: str = "", dry_run: bool = False,
         dest.write_text(content)
     return written, skipped, kept
 
+
+
+def config_run(into: str = None, issue_url: str = "", schemes: str = "",
+               journals: str = "", stdout: bool = False) -> None:
+    """Write a starting `luria.toml` from the shorthand, and stop there.
+
+    The same file `luria init` would have written, without the scaffold. It
+    exists because the shorthand covers the two things projects usually vary
+    and nothing else: a project that also wants a different directory, a
+    narrowed status vocabulary or a tag group has to edit the config, and
+    doing that *after* a scaffold means moving directories the first run
+    already created.
+
+        luria config --schemes "RFC,SPEC:document"   # write it
+        $EDITOR luria.toml                           # change what you like
+        luria init                                   # scaffold that shape
+
+    Refuses to overwrite, like everything else here. `--stdout` prints instead
+    of writing, for a look before committing to one."""
+    into = (Path(into) if into else find_root()).resolve()
+    text = template_config(into, issue_url, schemes, journals)
+    if stdout:
+        print(text, end="")
+        return
+    dest = into / CONFIG_NAME
+    if dest.exists():
+        raise SystemExit(
+            f"luria config: {dest} already exists — this writes a starting "
+            f"config, and yours has already started. Add the tables by hand, "
+            f"or pass --stdout to see what this would have written.")
+    dest.write_text(text)
+    print(dest)
+    print("\nEdit it, then `luria init` to scaffold the shape it declares.")
 
 def run(into: str = None, issue_url: str = "", dry_run: bool = False,
         config: str = None, schemes: str = "", journals: str = "") -> None:

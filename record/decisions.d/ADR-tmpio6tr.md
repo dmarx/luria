@@ -71,6 +71,23 @@ issue URL is worse than an empty one: the empty string renders no link, while
 a wrong one renders a broken link on every entry that carries an issue, and
 nothing checks it because the value is a template rather than a reference.
 
+### Writing the config without scaffolding
+
+`luria config` writes the same file and stops. The shorthand covers the two
+things projects usually vary, and a project that also wants a different
+directory, a narrowed status vocabulary or a tag group has to edit the
+config — which after a scaffold means moving directories the first run
+already created.
+
+    luria config --schemes "RFC,SPEC:document"
+    $EDITOR luria.toml
+    luria init
+
+One builder sits behind both commands, so the file `config` writes is the
+file `init` would have. They differ only in what happens next, and a test
+pins that rather than trusting it: two commands that drift here would hand a
+project a shape neither of them described.
+
 ## Alternatives considered
 
 - **A compact form stored in `luria.toml`** — `schemes = ["RFC", "SPEC:document"]`
@@ -81,6 +98,15 @@ nothing checks it because the value is a template rather than a reference.
 - **A wizard.** Interactive prompts fit a scaffold run once, and they do not
   fit CI, an agent, or a README that wants to show the command that produced
   a project.
+- **`luria init --config-only` instead of a second command.** One place for
+  the flags, and it collides with the `--config` that already means *install
+  this file*: `--config-only` beside `--config` reads as a modifier of it.
+  Two verbs for two acts is the cheaper confusion.
+- **Making `luria init` idempotent enough that editing afterwards is fine.**
+  It already never overwrites, so re-running picks up new families — but a
+  renamed directory leaves the old one behind, populated, and the second run
+  cannot know it was a rename rather than a deletion. Ordering the two acts
+  avoids the question entirely.
 - **More flags, one per key** — `--rfc-dir`, `--rfc-render`. Scales with the
   schema rather than with what people actually vary, and the two things
   people vary are which families exist and how each renders.

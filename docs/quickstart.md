@@ -41,7 +41,16 @@ $ luria init --issue-url https://github.com/you/yourproject/issues \
              --schemes "RFC,SPEC:document" --journals "incidents:day"
 ```
 
-Same scaffold, three more families in it. Each entry is `NAME` or
+Same scaffold, three more families in it. If you want to change something the
+shorthand does not cover — a directory name, a status vocabulary, a tag group
+— write the config first and scaffold second, so nothing has to move:
+
+```console
+$ luria config --schemes "RFC,SPEC:document"
+$ $EDITOR luria.toml
+$ luria init
+```
+ Each entry is `NAME` or
 `NAME:kind`, and the tables land in `luria.toml` as ordinary commented TOML —
 nothing here is a format you have to keep.
 [Designing a record](modeling.md) is how to decide what you need; this is how

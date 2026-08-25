@@ -193,3 +193,73 @@ def test_an_explicit_url_wins(tmp_path):
     repo(tmp_path, "git@github.com:acme/widgets.git")
     cfg = scaffold(tmp_path, issue_url="https://example.test/bugs")
     assert cfg.issue_url == "https://example.test/bugs/{n}"
+
+
+# --- `luria config`: the file, without the scaffold ----------------------
+#
+# The shorthand covers the two things projects usually vary. A project that
+# also wants a different directory, a narrowed status vocabulary or a tag
+# group has to edit the config — and editing it after a scaffold means moving
+# directories the first run already made.
+
+def test_it_writes_the_config_and_nothing_else(tmp_path):
+    init.config_run(into=str(tmp_path), schemes="RFC")
+    assert (tmp_path / "luria.toml").exists()
+    assert not (tmp_path / "record").exists(), "no scaffold"
+    assert not (tmp_path / "docs").exists()
+
+
+def test_the_file_is_what_init_would_have_written(tmp_path, monkeypatch):
+    """One builder behind both commands. If they drift, a project that edits
+    the config and then inits gets a shape neither of them described."""
+    init.config_run(into=str(tmp_path), schemes="RFC:document",
+                    journals="incidents:day")
+    written = (tmp_path / "luria.toml").read_text()
+
+    other = tmp_path / "other"
+    other.mkdir()
+    planned = dict(init.plan(other, None, "", "RFC:document", "incidents:day"))
+    assert planned[other / "luria.toml"] == written
+
+
+def test_editing_it_then_initing_scaffolds_the_edit(tmp_path, monkeypatch):
+    """The flow this exists for: rename a directory before anything is
+    created, rather than moving it afterwards."""
+    init.config_run(into=str(tmp_path), schemes="RFC")
+    cfg_file = tmp_path / "luria.toml"
+    cfg_file.write_text(cfg_file.read_text().replace(
+        'dir    = "record/rfcs.d"', 'dir    = "record/proposals.d"'))
+
+    init.write(tmp_path)
+    config.reset()
+    assert config.load(tmp_path).schemes["RFC"].dir == \
+        tmp_path / "record" / "proposals.d"
+    assert (tmp_path / "record" / "proposals.d" / "_template.md").exists()
+    assert not (tmp_path / "record" / "rfcs.d").exists()
+
+
+def test_it_refuses_to_overwrite(tmp_path):
+    (tmp_path / "luria.toml").write_text('[luria]\nissue_url = ""\n')
+    with pytest.raises(SystemExit, match="already started"):
+        init.config_run(into=str(tmp_path))
+
+
+def test_stdout_prints_without_writing(tmp_path, capsys):
+    init.config_run(into=str(tmp_path), schemes="RFC", stdout=True)
+    assert "[luria.schemes.RFC]" in capsys.readouterr().out
+    assert not (tmp_path / "luria.toml").exists()
+
+
+def test_stdout_works_over_an_existing_config(tmp_path, capsys):
+    """Looking is not writing, so the refusal above does not apply — this is
+    how you see what the shorthand would have produced."""
+    (tmp_path / "luria.toml").write_text('[luria]\nissue_url = ""\n')
+    init.config_run(into=str(tmp_path), schemes="RFC", stdout=True)
+    assert "[luria.schemes.RFC]" in capsys.readouterr().out
+
+
+def test_it_infers_the_issue_url_too(tmp_path):
+    repo(tmp_path, "git@github.com:acme/widgets.git")
+    init.config_run(into=str(tmp_path))
+    assert 'issue_url = "https://github.com/acme/widgets/issues/{n}"' in \
+        (tmp_path / "luria.toml").read_text()
