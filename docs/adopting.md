@@ -45,6 +45,14 @@ stealing from:
   side with different granularities.
 - **external-citations** — arXiv, Jira, and CVE identifiers as first-class
   linted references via `uid` remotes.
+- **knowledge-base** — two schemes of *domain* content citing each other,
+  with required fields and a one-primary-category rule: a record that is not
+  project meta-documentation at all.
+
+Shaping the record is a design question before it is a configuration one —
+[designing a record](modeling.md) is the guide; if your material already
+exists as data, [importing an existing corpus](importing.md) covers the
+transform.
 
 Two settings earn attention early:
 
@@ -80,6 +88,39 @@ the Luria repository. What they do, so you can rearrange them:
 The generate/lint split matters: a checking job that regenerates views
 in-place would be comparing its own output against itself. Generation
 commits; the check reads the commit.
+
+Two hazards, both found by adopting this into a repository that already had
+generators of its own.
+
+**Anything else that commits to the branch defeats the handoff.** The lint
+reads the SHA generation produced; a second workflow that renders something
+and commits *after* it makes that SHA no longer the tip, and the branch now
+has a commit nothing checked. The symptom is a pull request showing green
+checks that belong to an earlier commit. If your repository already builds a
+README, a diagram, or a lockfile, fold it into the generate job — render
+without committing, and let the generate action's `git add -A` carry it into
+the one commit:
+
+```yaml
+- name: Render the README from its templates
+  run: |
+    pip install your-generator
+    your-generator build --commit=false
+- id: generate
+  uses: dmarx/luria/actions/generate@0.4.2
+```
+
+Give any bot commit you cannot fold in the skip marker of its own, for the
+reason below.
+
+**A commit message that contains the skip marker skips that commit's CI**,
+including when the message is merely *describing* the convention. Write about
+it in prose — "the skip marker", not the literal token — in commit messages,
+PR descriptions, and squash-merge bodies. This one is worth knowing precisely
+because of how it presents: not as a failing build but as *no* build, with
+the pull request still displaying the previous commit's green checks.
+Silence is indistinguishable from success unless you check which commit the
+green belongs to.
 
 ### `pages.yml` — publish the site
 

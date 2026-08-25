@@ -9,14 +9,20 @@ page in `docs/` is listed here, so the map cannot silently rot.)
 
 - [Quickstart](quickstart.md) — install, scaffold, file, lint: the whole
   loop in ten minutes.
+- [Designing a record](modeling.md) — what belongs in a record, which
+  family fits which material, when two kinds of entry are two schemes, and
+  what the schema can be made to refuse. Start here if the scaffolded
+  decisions-and-principles shape is not what your project needs.
 - [Project memory](project-memory.md) — sources and views; the four families (schemes,
-  journals, fragments, remotes); statuses; how references are found,
-  linked, and kept honest.
+  journals, fragments, remotes); statuses; constraints; how references are
+  found, linked, and kept honest.
 - [CLI reference](cli.md) — every command, flag by flag.
 - [Comment directives](directives.md) — acknowledging a lint finding where
   it happens, with the reason attached; also the fixture-code convention.
 - [Adopting Luria](adopting.md) — bringing the record to an existing
   project, the CI wiring, and the published site.
+- [Importing an existing corpus](importing.md) — turning material that
+  already exists as data into a record, and what that surfaces.
 
 ## Generated references
 

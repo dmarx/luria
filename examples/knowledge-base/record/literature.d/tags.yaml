@@ -1,0 +1,9 @@
+optimization:
+  label: Optimization
+  blurb: optimizers, schedules, batch size
+stability:
+  label: Stability
+  blurb: normalization, initialization, gradient handling
+systems:
+  label: Systems
+  blurb: hardware, kernels, memory

@@ -21,10 +21,11 @@ from pathlib import Path
 
 import pytest
 
-from luria import adr_index, config, doc_refs, lint
+from luria import adr_index, config, doc_refs, lint, statuses
 
 EXAMPLES = Path(__file__).resolve().parents[1] / "examples"
-NAMES = ["rfcs-and-specs", "collocated", "many-journals", "external-citations"]
+NAMES = ["rfcs-and-specs", "collocated", "many-journals", "external-citations",
+         "knowledge-base"]
 
 
 @pytest.fixture
@@ -141,6 +142,53 @@ def test_a_uid_remote_can_move_its_delimiter(example):
     indistinguishable."""
     example("external-citations")
     assert config.current().remotes["JIRA"].delim == ":"
+
+
+def test_two_schemes_can_disagree_about_the_same_work(example):
+    """The modeling case for splitting a scheme: a paper and a practice drawn
+    from it are separate claims, so each needs its own status. One scheme
+    means one status field, and then they cannot differ."""
+    root = example("knowledge-base")
+    cfg = config.current()
+
+    lit = adr_index.parse_frontmatter(
+        (root / "record" / "literature.d" / "LIT-002.md").read_text())[0]
+    sota = adr_index.parse_frontmatter(
+        (root / "record" / "practices.d" / "SOTA-002.md").read_text())[0]
+
+    # Same word, two schemes, two meanings — each declared where it applies.
+    assert lit["status"].startswith("Rejected")
+    assert sota["status"].startswith("Deferred")
+    assert set(statuses.declared(cfg.schemes["LIT"])) != \
+        set(statuses.declared(cfg.schemes["SOTA"]))
+
+
+def test_a_scheme_can_require_its_own_fields(example):
+    """`requires` is what makes "every practice cites a paper" a check rather
+    than a sentence in CONTRIBUTING."""
+    root = example("knowledge-base")
+    assert config.current().schemes["SOTA"].requires == ("source",)
+
+    doc = root / "record" / "practices.d" / "SOTA-001.md"
+    doc.write_text(doc.read_text().replace("source: LIT-001\n", ""))
+    errors = []
+    lint.check_frontmatter(errors)
+    assert any("no `source:`" in e for e in errors)
+
+
+def test_exactly_one_primary_category_is_enforced(example):
+    """The rule every tagged corpus states in prose and then drifts away
+    from. Eight lines of config, and the lint holds it."""
+    root = example("knowledge-base")
+    group, = config.current().schemes["SOTA"].tag_groups
+    assert group.require == "exactly-one"
+
+    doc = root / "record" / "practices.d" / "SOTA-001.md"
+    doc.write_text(doc.read_text().replace(
+        "tags:\n- optimization\n", "tags:\n- optimization\n- stability\n"))
+    errors = []
+    lint.check_tag_groups(errors)
+    assert any("wants exactly one" in e for e in errors)
 
 
 # --- the two limits, pinned ---------------------------------------------

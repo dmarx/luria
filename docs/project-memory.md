@@ -157,6 +157,72 @@ document is a safe thing to cite as justification; `Proposed` and
 `Deferred` are open questions, `Superseded` and `Rejected` are history. The
 reference machinery (below) leans on exactly this distinction.
 
+## Constraints: what a scheme refuses
+
+Status says what is in force. **Constraints say what a document is allowed to
+be** — and they are how a record stops being a folder of markdown with a
+naming convention, because a convention nobody can break is a comment.
+
+All of them are opt-in and per scheme. A scheme that declares none behaves
+exactly as every scheme did before they existed.
+
+**Required fields.** Beyond `status:`, `title:` and `tags:`, a scheme can
+demand its own:
+
+```toml
+[luria.schemes.SOTA]
+requires = ["source"]
+```
+
+A document without `source:` now fails the lint. This is also what makes a
+cross-scheme move safe to automate: `luria migrate` relocates a file, and the
+document then fails until a human supplies what the destination scheme's
+template would have prompted for. The machinery moves it; only a person
+vouches that it belongs.
+
+**Tag rules.** `tags.yaml` says what a tag *means*; a tag group says which may
+appear together, because some vocabularies are an axis rather than a pile:
+
+```toml
+[luria.schemes.SOTA.tag_groups.primary_topic]
+require = "exactly-one"        # or "at-most-one", or "any"
+tags = ["training-optimization", "systems-optimization", "model-stability"]
+excluded_by = []               # tags that forbid this whole group
+```
+
+`exactly-one` is the "pick a primary category" rule, checked. Tags outside the
+group stay unconstrained, so secondary tags remain free. `excluded_by` covers
+the contradiction case — naming how an argument fails contradicts saying it
+holds.
+
+**Titles that generalise.** A principle stated about the one artifact it was
+noticed on is a principle nobody applies to the next one. That failure is
+quiet: the entry stays true, keeps rendering, and simply never gets cited.
+
+```toml
+[luria.schemes.DP]
+titles_generalize = true
+
+[luria.lint]
+narrow_terms = ["toolbar", "canvas", "queue"]
+```
+
+The vocabulary is your project's own concrete nouns — Luria ships none,
+because a shipped list would be some other project's vocabulary wearing the
+authority of a default. It fires on titles only, and fails open: a missed noun
+costs a review comment, where a false alarm would cost trust in the check.
+
+**Fields carrying no information.** Not configured, always on: a scheme where
+every document shares one status is reported as `inert-status`. A field every
+record agrees on is indistinguishable from no field, and the difference
+matters because other machinery reads it — `active` decides what counts as
+retired, and the retired-citation check fires off that. A scheme in that state
+has an enforcement mechanism that cannot fire, and the build is green
+*because* nothing is being judged.
+
+Which constraints to reach for, and when a rule is better expressed as a
+second scheme, is [designing a record](modeling.md).
+
 ## Codes, references, and links
 
 A code in prose — in a doc page, a record entry, a `README`, or a source
