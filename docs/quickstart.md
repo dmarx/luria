@@ -30,6 +30,9 @@ fragment directory, a devlog — plus a `luria.toml` where all of that can be
 renamed, replaced, or extended. Every key has a default, so the file starts
 nearly empty.
 
+`--issue-url` is optional in a repository that has an `origin` remote on
+GitHub or GitLab: init reads it from there, and reports what it used.
+
 If you already know the record needs more than decisions and principles, say
 so here and skip the editing:
 

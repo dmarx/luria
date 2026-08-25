@@ -117,3 +117,79 @@ def test_shorthand_against_an_existing_config_is_refused(tmp_path):
 def test_an_empty_entry_is_ignored_not_guessed_at(tmp_path):
     cfg = scaffold(tmp_path, schemes="RFC,")
     assert set(cfg.schemes) == {"ADR", "DP", "RFC"}
+
+
+# --- the issue URL, inferred ---------------------------------------------
+#
+# `issue_url` was the one key a conventional project still had to supply, and
+# a repository with an origin remote has already written it down. It also
+# cascades: [luria.site] takes its title, Pages URL and source base from this
+# one value.
+
+import subprocess
+
+
+def repo(root, origin=None):
+    subprocess.run(["git", "init", "-q", str(root)], check=True)
+    if origin:
+        subprocess.run(["git", "-C", str(root), "remote", "add", "origin",
+                        origin], check=True)
+    return root
+
+
+@pytest.mark.parametrize("remote, expected", [
+    ("git@github.com:acme/widgets.git",
+     "https://github.com/acme/widgets/issues/{n}"),
+    ("https://github.com/acme/widgets.git",
+     "https://github.com/acme/widgets/issues/{n}"),
+    ("https://github.com/acme/widgets",
+     "https://github.com/acme/widgets/issues/{n}"),
+    ("ssh://git@github.com/acme/widgets.git",
+     "https://github.com/acme/widgets/issues/{n}"),
+    ("https://user@gitlab.com/grp/proj.git",
+     "https://gitlab.com/grp/proj/-/issues/{n}"),
+])
+def test_the_remote_shapes_all_parse(tmp_path, remote, expected):
+    """scp-like, https, and ssh:// — the three ways the same remote is
+    written, and `https` matches a bare hostname under the scp-like branch,
+    so the ordering of that alternation is load-bearing."""
+    assert init.infer_issue_url(repo(tmp_path, remote)) == expected
+
+
+@pytest.mark.parametrize("remote", [
+    "git@bitbucket.org:acme/widgets.git",           # host we cannot vouch for
+    "https://git.example.test/acme/widgets.git",    # self-hosted anything
+    "https://github.com/acme/widgets/extra/deep",   # not owner/repo
+])
+def test_an_unknown_shape_infers_nothing(tmp_path, remote):
+    """A wrong issue URL is worse than an empty one: it renders a link on
+    every entry carrying an issue, and each one 404s."""
+    assert init.infer_issue_url(repo(tmp_path, remote)) == ""
+
+
+def test_no_remote_and_no_repository_are_both_quiet(tmp_path):
+    assert init.infer_issue_url(repo(tmp_path / "a")) == ""
+    (tmp_path / "b").mkdir()
+    assert init.infer_issue_url(tmp_path / "b") == ""
+
+
+def test_the_inferred_url_reaches_the_config(tmp_path):
+    repo(tmp_path, "git@github.com:acme/widgets.git")
+    cfg = scaffold(tmp_path)
+    assert cfg.issue_url == "https://github.com/acme/widgets/issues/{n}"
+
+
+def test_it_cascades_into_the_site_settings(tmp_path):
+    """The reason this is worth inferring rather than prompting for: one
+    value, four settings."""
+    repo(tmp_path, "git@github.com:acme/widgets.git")
+    cfg = scaffold(tmp_path)
+    assert cfg.site.title == "widgets"
+    assert cfg.site.base_url == "acme.github.io/widgets"
+    assert cfg.site.source_url == "https://github.com/acme/widgets/blob/HEAD"
+
+
+def test_an_explicit_url_wins(tmp_path):
+    repo(tmp_path, "git@github.com:acme/widgets.git")
+    cfg = scaffold(tmp_path, issue_url="https://example.test/bugs")
+    assert cfg.issue_url == "https://example.test/bugs/{n}"

@@ -37,6 +37,7 @@ directories the project's own machinery doesn't know about.
 
 from __future__ import annotations
 
+import re
 import os
 from pathlib import Path
 
@@ -123,6 +124,69 @@ GENERIC_STUB_DOCUMENT = """\
 
 {principles}
 """
+
+
+# ── Inferring the issue URL from the git remote ──────────────────────────
+#
+# `issue_url` is the one key a conventional project still has to supply, and
+# for a repository with an origin remote it is already written down. Deriving
+# it also cascades: `[luria.site]` takes its title, its Pages URL and its
+# source base from this one value, so a project that never opens luria.toml
+# gets four correct settings from having a remote.
+#
+# Only hosts whose issue path is known. A wrong issue URL is worse than an
+# empty one — it renders a link on every decision that carries an issue, and
+# each one 404s — so an unrecognised host produces nothing and says so.
+ISSUE_PATHS = {
+    "github.com": "issues",
+    "gitlab.com": "-/issues",
+}
+
+# The scheme-bearing forms are tried FIRST: `https` matches a bare hostname
+# under the scp-like branch, so the obvious ordering silently reads
+# `https://github.com/o/r` as host `https` and path `/github.com/o/r`.
+_REMOTE_RE = re.compile(
+    r"""^(?:
+          https?://(?:[^@/]+@)?(?P<h2>[^/]+)/            # https://host/
+        | ssh://(?:[^@/]+@)?(?P<h3>[^/:]+)(?::\d+)?/     # ssh://git@host[:port]/
+        | (?:[^@/]+@)(?P<h1>[^/:]+):                     # git@host:
+        )
+        (?P<path>.+?)(?:\.git)?/?$
+    """, re.X)
+
+
+def _origin_url(into: Path) -> str:
+    """The `origin` remote, or "" — for any reason at all.
+
+    Not being in a repository is the ordinary case for `luria init`, and so is
+    having no origin yet. Neither is a problem worth a message, let alone a
+    failure: the key this feeds is optional."""
+    import subprocess
+    try:
+        done = subprocess.run(
+            ["git", "-C", str(into), "remote", "get-url", "origin"],
+            capture_output=True, text=True, timeout=5)
+    except (OSError, subprocess.SubprocessError):
+        return ""
+    return done.stdout.strip() if done.returncode == 0 else ""
+
+
+def infer_issue_url(into: Path) -> str:
+    """`https://github.com/owner/repo/issues/{n}` from the origin remote.
+
+    Empty when there is no remote, or when its host is not one whose issue
+    path this knows. Guessing at an unknown forge would put a broken link on
+    every entry that names an issue, which is a worse default than the empty
+    string it replaces."""
+    m = _REMOTE_RE.match(_origin_url(into))
+    if not m:
+        return ""
+    host = (m.group("h1") or m.group("h2") or m.group("h3") or "").lower()
+    path = m.group("path").strip("/")
+    segment = ISSUE_PATHS.get(host)
+    if not segment or path.count("/") != 1:
+        return ""
+    return f"https://{host}/{path}/{segment}/{{n}}"
 
 
 # ── Shorthand for a scaffold that is mostly the defaults ─────────────────
@@ -264,6 +328,9 @@ def _toml_text(into: Path, config_arg: str | None, issue_url: str,
                 "than passing --schemes/--journals.")
         return root_cfg.read_text()
     text = _read(CONFIG_NAME)
+    # The one key a conventional project still had to supply, and a repository
+    # with an origin remote has already written it down somewhere else.
+    issue_url = issue_url or infer_issue_url(into)
     if issue_url:
         text = text.replace(
             'issue_url = ""',
@@ -392,6 +459,9 @@ def run(into: str = None, issue_url: str = "", dry_run: bool = False,
     type once rather than a format anything reads back."""
     into = (Path(into) if into else find_root()).resolve()
     print(f"luria init → {into}")
+    if not issue_url and not config and not (into / CONFIG_NAME).exists():
+        if guessed := infer_issue_url(into):
+            print(f"  issue_url  {guessed}  (from the origin remote)")
     written, skipped, kept = write(into, issue_url, dry_run, config,
                                    schemes, journals)
     if not written and not skipped:

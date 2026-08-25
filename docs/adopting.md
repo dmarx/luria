@@ -10,6 +10,9 @@ $ pip install luria
 $ luria init --issue-url https://github.com/you/yourproject/issues
 ```
 
+`--issue-url` can be left out where `origin` points at GitHub or GitLab —
+init infers it, and with it the site's title, Pages URL and source base.
+
 `init` writes only what is missing — an existing `docs/README.md`,
 `CLAUDE.md`, or `luria.toml` is skipped and reported, never overwritten —
 so it composes with whatever documentation you already have. If you keep

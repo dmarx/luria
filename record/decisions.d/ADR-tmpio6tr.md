@@ -9,8 +9,9 @@ summary: >-
   A project that wants the defaults plus one scheme had to write the whole
   config, and three of a scheme table's four lines follow from its prefix.
   `--schemes`/`--journals` accept `NAME:kind` and expand into the ordinary
-  commented tables. Rejected: a compact form stored in luria.toml, which
-  would be a second grammar every reader has to learn.
+  commented tables, and `issue_url` is inferred from the origin remote where
+  the host is one whose issue path we know. Rejected: a compact form stored
+  in luria.toml, which would be a second grammar every reader has to learn.
 ---
 
 # ADR-tmpio6tr: Init takes shorthand and writes ordinary tables
@@ -54,6 +55,22 @@ shorthand extends the shipped template; where a project has a config the
 shape is its own decision, and a flag should not append to a file the project
 owns.
 
+### The one key that was left
+
+`issue_url` was still required of every project, and a repository with an
+`origin` remote has already written it down. Init reads it and reports what
+it used.
+
+The value cascades: `[luria.site]` derives its title, its Pages URL and the
+base a link falls back to from this one string, so a repository with a remote
+needs no configuration at all to scaffold a correct record.
+
+**Only hosts whose issue path is known** — GitHub and GitLab, which differ
+(`/issues/` against `/-/issues/`). Anything else infers nothing. A wrong
+issue URL is worse than an empty one: the empty string renders no link, while
+a wrong one renders a broken link on every entry that carries an issue, and
+nothing checks it because the value is a template rather than a reference.
+
 ## Alternatives considered
 
 - **A compact form stored in `luria.toml`** — `schemes = ["RFC", "SPEC:document"]`
@@ -70,6 +87,13 @@ owns.
 - **Shipping more example configs to copy.** `examples/` already does this
   and is the right home for a whole shape. It does not help the case here,
   which is one line's worth of difference from the default.
+- **Inferring the host's issue path from its name.** A self-hosted Gitea or
+  GitHub Enterprise uses `/issues/` and is indistinguishable from any other
+  domain. Guessing right most of the time is the wrong trade when being
+  wrong is silent and repeats on every entry.
+- **Prompting for the issue URL when it cannot be inferred.** Interactive
+  prompts do not fit CI, an agent, or a README showing the command that
+  produced a project — the same objection as the wizard above.
 - **Status quo.** Defensible — the config is small and well commented. It
   keeps the first five minutes of a new record spent editing TOML rather than
   filing an entry, which is the wrong first impression for a tool whose

@@ -32,7 +32,14 @@ seeds, a docs index, a `CLAUDE.md`, and CI workflows — into `INTO`
 - Existing files are **always skipped**, never overwritten; each is
   reported. Re-running on a grown project is safe.
 - `--issue-url` seeds `issue_url` in the scaffolded `luria.toml`; append
-  `{n}` yourself or let init place it.
+  `{n}` yourself or let init place it. **Left out, it is inferred from the
+  `origin` remote** — `git@github.com:acme/widgets.git` becomes
+  `https://github.com/acme/widgets/issues/{n}`, and init says so as it goes.
+  That one value also gives `[luria.site]` its title, its Pages URL and the
+  base a link falls back to, so a repository with a remote needs no
+  configuration at all. GitHub and GitLab are recognised; any other host
+  infers nothing, because a wrong issue URL renders a broken link on every
+  entry that carries an issue.
 - `--schemes` and `--journals` add families to the shipped shape, for a
   project that wants the defaults plus a little:
 
