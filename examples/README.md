@@ -1,6 +1,6 @@
 # Worked configurations
 
-Five complete projects, each one a different shape of record. They exist
+Complete projects, each one a different shape of record. They exist
 because the alternative was prose: a `luria.toml` block in a guide is a claim
 nobody runs, and this repository's own founding observation is that every
 surface governed by prose alone had drifted.

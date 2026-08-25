@@ -493,11 +493,14 @@ class Staleness:
     drifted."""
     stale: list[Path]
     orphaned: list[Path]
-    badges: Path | None
+    # The README, when either of its generated regions has drifted — the badge
+    # counts or the citation entry. One field because it is one file and one
+    # remedy; the message names which region.
+    readme: Path | None
 
     @property
     def all(self) -> list[Path]:
-        return self.stale + self.orphaned + ([self.badges] if self.badges else [])
+        return self.stale + self.orphaned + ([self.readme] if self.readme else [])
 
     @property
     def any(self) -> bool:
@@ -515,18 +518,22 @@ def staleness(rendered: dict[Path, str] | None = None) -> Staleness:
     A view the project gitignores is excluded from all three kinds. There is
     no committed copy to compare against — see `ignored`."""
     from . import badges as badges_mod
+    from . import citation as citation_mod
     rendered = outputs() if rendered is None else rendered
     loose = orphans(rendered)
     skip = ignored(list(rendered) + loose)
     readme = badges_mod.readme()
-    drifted = (readme.exists() and readme not in skip
-               and badges_mod.OPEN in (text := readme.read_text())
-               and badges_mod.rewrite(text) != text)
+    drifted = False
+    if readme.exists() and readme not in skip:
+        text = readme.read_text()
+        drifted = ((badges_mod.OPEN in text and badges_mod.rewrite(text) != text)
+                   or (citation_mod.OPEN in text
+                       and citation_mod.rewrite(text) != text))
     return Staleness(
         stale=[p for p, text in rendered.items()
                if p not in skip and (not p.exists() or p.read_text() != text)],
         orphaned=[p for p in loose if p not in skip],
-        badges=readme if drifted else None,
+        readme=readme if drifted else None,
     )
 
 
@@ -580,9 +587,16 @@ def run(check: bool = False) -> None:
     # are regenerated here rather than by a command someone has to remember
     # (ADR-018). A project with no badge region is left alone.
     from . import badges
+    from . import citation
     readme = badges.readme()
-    if readme.exists() and badges.OPEN in (text := readme.read_text()):
-        readme.write_text(badges.rewrite(text))
+    if readme.exists():
+        text = readme.read_text()
+        if badges.OPEN in text:
+            text = badges.rewrite(text)
+        if citation.OPEN in text:
+            text = citation.rewrite(text)
+        if text != readme.read_text():
+            readme.write_text(text)
 
 
 if __name__ == "__main__":

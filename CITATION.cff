@@ -1,0 +1,27 @@
+# The source for how this project is cited. GitHub reads it to render the
+# "Cite this repository" button; `luria index` derives the README's BibTeX
+# block from it, so the two cannot disagree.
+cff-version: 1.2.0
+message: If you use Luria, please cite it as below.
+title: "Luria: project memory, kept honest by lint"
+abstract: >-
+  A record of what a project knows and of what it no longer believes:
+  referable documents with citable identities and standing, generated views,
+  and a lint that reports every citation of something that has gone out of
+  force.
+type: software
+authors:
+  - family-names: Marx
+    given-names: David
+repository-code: https://github.com/dmarx/luria
+url: https://dmarx.github.io/luria/
+license: MIT
+keywords:
+  - project-memory
+  - architecture-decision-records
+  - documentation
+  - truth-maintenance
+# No `version:` or `date-released:`. The version is derived from the release
+# tag (ADR-053), and repeating it here would be the hand-maintained copy that
+# decision removed — stale on the next release, in the one file people paste
+# into bibliographies. Add the release you used to the entry you paste.
