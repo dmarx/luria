@@ -237,7 +237,7 @@ class Reference:
 
     Declaring the relationship instead makes four checks out of one: present,
     shaped like a code, belonging to that scheme, resolving to a document
-    (ADR-tmp90kpj)."""
+    (ADR-060)."""
     field: str
     scheme: str
     required: bool = True
@@ -296,7 +296,7 @@ class Scheme:
     # Where this scheme's tag vocabulary lives. Unset means the collocated
     # `tags.yaml` beside the sources, which is where it has always been. Set,
     # two schemes can name ONE file and share a vocabulary instead of keeping
-    # a copy each (ADR-tmp90kpj).
+    # a copy each (ADR-060).
     tags_file: Path | None = None
     # Frontmatter fields that hold a code from another scheme, by field name.
     # `requires` says a field is present; this says what it means.
@@ -558,7 +558,7 @@ def primary_tags(prefix: str, tags_path: Path) -> frozenset[str]:
     group, which is the same set of strings written a third and fourth time —
     and the copies drift, because nothing relates them. Measured on the record
     that motivated this: seven terms across four places, and the blurbs for
-    the same tag already disagreed between two of them (ADR-tmp90kpj)."""
+    the same tag already disagreed between two of them (ADR-060)."""
     if not tags_path.exists():
         return frozenset()
     try:
@@ -828,7 +828,7 @@ class Config:
         realistic example is a real document that may not be in force. Both
         were reported against the template itself on the record that
         motivated this, which is a finding about a form nobody filed
-        (ADR-tmpegrf9).
+        (ADR-061).
 
         Exempt from the CODE machinery only. A template's relative link
         targets are still checked, because a broken path there is copied into

@@ -142,7 +142,7 @@ def check_references(errors: list[str]) -> None:
     motivated this, a field declared to hold a paper accepted a decision's
     code and an arbitrary sentence, both silently — so the rule the whole
     two-scheme split existed to enforce was enforced only in the sense that
-    the field was not blank (ADR-tmp90kpj)."""
+    the field was not blank (ADR-060)."""
     cfg = current()
     for scheme in cfg.schemes.values():
         if not scheme.references:
