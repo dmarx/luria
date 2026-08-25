@@ -1,67 +1,75 @@
 ---
-status: Proposed
-title: 'The ledger looks like the prey: exempt it structurally, not incidentally'
+status: Active
+title: Exempting a ledger from one matcher exempts it from none of the others
 version: 1
 tags:
 - mechanism
 - craft
-date: '2026-08-08'
+date: '2026-08-25'
 influenced_by:
 - ADR-040
+- ADR-049
 origin: >-
-  The DP→GP migration's first live day: three subsystems — the migration
-  sweep, the fixer's modernize pass, and the reference scan — each
-  independently attacked the `formerly:` stamps the migration had just
-  written, because the record of an old spelling is spelled exactly like
-  the stale reference each of them hunts.
+  The first migration's first live day: three subsystems attacked the
+  `formerly:` stamps the migration had just written, independently, and each
+  was found separately because fixing one taught nothing about the others.
 summary: >-
-  Any mechanism that hunts a pattern will eventually hunt its own record of
-  that pattern, because the ledger is written in the prey's spelling — an
-  alias table names the old codes, a redirect map names the dead URLs, a
-  suppression file names the warnings. The exemption must be structural (a
-  mask the hunter applies by rule, with a test that fires it) and never
-  incidental (an ordering that happens to protect it, a format the pattern
-  happens to miss), because incidental protection is silently lost by the
-  next refactor. Three subsystems ate the same ledger in one day; each was
-  a separate discovery precisely because each hunter had its own mouth.
+  A mechanism that rewrites instances of a pattern usually records what it
+  rewrote, and that record is written in the pattern's own spelling — so
+  every matcher for that pattern also matches its own ledger. The exemptions
+  do not transfer: each matcher matches independently, so each needs its own
+  mask, stated where the matching happens and tested. Three subsystems ate
+  the same ledger in one day, and that they were three separate discoveries
+  is the claim rather than an accident of the story.
 ---
 
-# DP-tmpqu8fy: The ledger looks like the prey: exempt it structurally, not incidentally
+# DP-tmpqu8fy: Exempting a ledger from one matcher exempts it from none of the others
 
-A mechanism that rewrites, flags, or retires instances of a pattern usually
-keeps a record of what it did — and that record is written in the pattern's
-own spelling. A migration's `formerly:` field names the old codes. A
-redirect map names the dead URLs. A suppression list names the warnings it
-suppresses. To every hunter of that pattern, the ledger is
-indistinguishable from prey.
+A mechanism that rewrites, flags or retires instances of a pattern usually
+keeps a record of what it did, and that record is written in the pattern's own
+spelling. A migration's `formerly:` field names the old codes. An
+acknowledgement names the code it excuses. To anything matching that pattern,
+the record is indistinguishable from an instance of it.
 
-The failure is not hypothetical and not singular. On the day the record's
-first migration ran, three subsystems attacked the stamps it had just
-written, independently, each through its own mouth:
+On the day this record's first migration ran, three subsystems ate the stamps
+it had just written:
 
-- the **sweep** rewrote the `formerly:` values into the new spelling —
-  erasing the map at its source, in the same operation that created it;
+- the **sweep** rewrote the `formerly:` values into the new spelling, erasing
+  the map at its source, in the same operation that created it;
 - the **fixer**'s modernize pass did the same from the other side, turning
   every alias into a self-reference on the live corpus;
-- the **scan** counted each stamp as a citation of the old code — every
-  migrated document warning about its own former name, forever.
+- the **scan** counted each stamp as a citation of the old code, so every
+  migrated document warned about its own former name.
 
-Three mouths, three separate discoveries, one cause. That multiplicity is
-the point: exempting the ledger in one place does not exempt it anywhere
-else, because each consumer of the pattern matches it independently.
+Three separate discoveries, and that is the part worth keeping. Each
+subsystem matched the pattern on its own terms, so finding the first failure
+taught nothing about the second, and fixing the first protected nothing
+else. That is what makes this a principle
+rather than a bug report: **an exemption is a property of the matcher, not of
+the ledger**, and there is no place to put one where every matcher will see
+it.
 
-So the exemption must be **structural**: a mask the hunter applies by rule
-(this span is the ledger, never touch it), stated where the hunting
-happens, with a test that fires it — a guard is trusted only once it has
-been seen to catch ([DP-6](design-principles.md#dp-6)). What does not count is **incidental**
-protection: an execution order that happens to write the ledger after the
-sweep, a file the glob happens to miss, a format the regex happens not to
-match. Incidental protection is real protection today and gone after the
-next refactor, and it fails silently — the ledger doesn't complain when
-eaten; it just stops being true, and everything derived from it (an alias
-map, a resolution table) degrades into self-reference.
+So the mask belongs to the matcher's definition — written where the matching
+happens, and with a test that has seen it fire, because a guard is trusted
+only once it has been caught working ([DP-6](design-principles.md#dp-6)).
+What does not count is an execution order that happens to write the ledger
+after the sweep, a glob that happens to miss the file, or a format the regex
+happens not to match. Those are real protection today and gone after the next
+refactor, and they fail quietly: a ledger does not complain when it is eaten.
+It stops being true, and everything derived from it degrades into
+self-reference.
 
-The test, when building anything that hunts a pattern: *does this system
-keep a record of the thing being hunted, and does that record spell the
-pattern?* If yes, the mask is part of the hunter's definition — written,
-tested, and named in the same breath as the hunt itself.
+Applied here, in a subsystem that got it right. The reference scan blanks the
+span of any acknowledgement before counting citations, because
+`inactive-ok: ADR-012` names the very code the retired-citation check looks
+for —
+without the mask an annotation would excuse itself, and could never go stale.
+The mask matches the *shape* of a directive rather than the parsed directives,
+so that an example of one in the documentation is covered too. A code inside a
+URL gets the same treatment for the same reason. Three masks, one subsystem,
+each written next to the match it protects.
+
+The test, when building anything that matches a pattern: *does this system
+keep a record of what it matched, and is that record spelled the same way?*
+If so, the mask is part of the definition of the match — and if another
+matcher for the same pattern already exists, it needs its own.
