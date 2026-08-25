@@ -4,7 +4,7 @@
 
 Collectors, generators, the lint, the directive vocabulary.
 
-45 of 61 decisions. Back to the [full index](../README.md).
+46 of 62 decisions. Back to the [full index](../README.md).
 
 | # | Title | Summary | Status |
 |---|---|---|---|
@@ -53,3 +53,4 @@ Collectors, generators, the lint, the directive vocabulary.
 | [ADR-057](../../../record/decisions.d/ADR-057.md) | A scheme whose status never varies is reported | `active` is what `retired-citations` reads, so a scheme where nothing is ever retired has an enforcement mechanism that cannot fire — and its build is green because nothing is being judged rather than because nothing is wrong. Downstream that state cost thirteen green builds over a scheme with fifty-one records at one status, twenty-three of which its own bodies refuted. Reported, not failed: there is no correct proportion. Exempt below ten records, for a document-rendered scheme, and for a project that has declared exactly one status on purpose. | Proposed |
 | [ADR-060](../../../record/decisions.d/ADR-060.md) | Schemes declare their own shape — where the vocabulary lives, and what a field means | A record with two content schemes could express the schemes but not the relationship between them or the vocabulary they shared, so both were restated by hand: one twelve-term vocabulary written in four places, and a citation rule that turned out to check only that a field was not blank. A scheme may now name its `tags.yaml` and declare what its reference fields hold. Rejected: scheme inheritance, which reduces the same lines without saying anything. | Proposed |
 | [ADR-061](../../../record/decisions.d/ADR-061.md) | A scheme's template is a form, not a document | `_template.md` is scaffolding the tool itself reads, so its example codes are illustrative by definition — yet they were scanned as citations, and a template using a realistic example reported a finding against itself. Templates are now exempt from the code machinery and still checked for link targets. Rejected: acknowledging it per project, which is a directive every scheme has to carry forever. | Proposed |
+| [ADR-tmpqyfpk](../../../record/decisions.d/ADR-tmpqyfpk.md) | A suppressed build is branch protection's problem, not the lint's | A commit message describing the CI skip marker contains it, and so stops its own build. A checker was written for this and measured backwards: it cannot fire in the case that does harm, and does fire on commits that caused none. Required status checks answer the question that matters — does the commit being merged have a green check of its own — and no mechanism here can. Rejected: shipping the checker, and a commit-msg hook. | Active |
