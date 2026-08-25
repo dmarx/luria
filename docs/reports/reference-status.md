@@ -70,19 +70,13 @@ A scheme's template is a form, not a document
 
 A reference the reader cannot follow: the code names no document in this record. A typo, a number carried in from another project, and an illustrative code in an example all look identical from here — telling them apart takes a human, so this is a report, not an error.
 
-**4 codes unaccounted for.** Not listed: 51 mentions marked deliberate with an `unresolved-ok:` comment (same syntax and scopes as `inactive-ok:` above).
+**3 codes unaccounted for.** Not listed: 51 mentions marked deliberate with an `unresolved-ok:` comment (same syntax and scopes as `inactive-ok:` above).
 
 
-### ADR-123 — resolves to nothing (3 unmarked sites · 2 other mentions marked deliberate)
+### ADR-123 — resolves to nothing (2 unmarked sites · 2 other mentions marked deliberate)
 
-- [`luria/concretize.py:19`](../../luria/concretize.py)
 - [`record/decisions.d/ADR-049.md:28`](../../record/decisions.d/ADR-049.md)
 - [`record/decisions.d/ADR-049.md:46`](../../record/decisions.d/ADR-049.md)
-
-### DP-017 — resolves to nothing (2 unmarked sites · 2 other mentions marked deliberate)
-
-- [`luria/migrate.py:152`](../../luria/migrate.py)
-- [`luria/migrate.py:408`](../../luria/migrate.py)
 
 ### ADR-000 — resolves to nothing (1 unmarked site)
 

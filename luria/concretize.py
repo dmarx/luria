@@ -16,7 +16,7 @@ committed (the same ordering the changelog collector trusts, for the same
 reason: a filename is not required to sort chronologically):
 
 1. the next free number is assigned and the file renamed to the numeric
-   shape (`ADR-123.md`);
+   shape (`FX-ADR-123.md`);
 2. every occurrence of the temporary code in current files is rewritten —
    which covers link labels and link targets in one pass, since the target
    is the code plus `.md`;
