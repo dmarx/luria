@@ -21,7 +21,8 @@ One binary, `luria`, dispatching to plain functions. Every command takes
 ## luria init
 
 ```
-luria init [INTO] [--issue-url URL] [--config FILE] [--dry-run]
+luria init [INTO] [--issue-url URL] [--schemes S] [--journals J]
+           [--config FILE] [--dry-run]
 ```
 
 Scaffolds the default record — templates, stubs, tag vocabulary, principle
@@ -32,9 +33,28 @@ seeds, a docs index, a `CLAUDE.md`, and CI workflows — into `INTO`
   reported. Re-running on a grown project is safe.
 - `--issue-url` seeds `issue_url` in the scaffolded `luria.toml`; append
   `{n}` yourself or let init place it.
+- `--schemes` and `--journals` add families to the shipped shape, for a
+  project that wants the defaults plus a little:
+
+  ```console
+  $ luria init --schemes "RFC,SPEC:document" --journals "incidents:day"
+  ```
+
+  Each entry is `NAME` or `NAME:kind` — `index` or `document` for a scheme,
+  `year`, `month` or `day` for a journal. Paths follow the prefix, so `RFC`
+  gives `record/rfcs.d` rendered into `docs/rfcs`; rename them afterwards if
+  the family is better called something other than what its codes spell.
+
+  The shorthand is an argument, not a stored format: what it writes is the
+  ordinary commented table, so nothing reads it back and the config looks
+  like every other project's. It is additive — the template's own ADR and DP
+  tables stay, which is what keeps them alive given that a declared family
+  replaces the shipped one whole. Removing a default means deleting a table.
 - `--config FILE` scaffolds from your own `luria.toml` instead of the
-  shipped one — this is how you init a record made of RFCs rather than
-  ADRs. Refused if a `luria.toml` already exists (merge by hand instead).
+  shipped one — this is how you init a record with no ADR scheme at all,
+  rather than one with an extra family. Refused if a `luria.toml` already
+  exists (merge by hand instead), as are `--schemes`/`--journals`: where a
+  config exists the shape is declared, and a flag should not edit it.
 - `--dry-run` prints the plan and writes nothing.
 
 ## luria new

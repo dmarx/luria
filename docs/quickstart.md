@@ -30,6 +30,20 @@ fragment directory, a devlog — plus a `luria.toml` where all of that can be
 renamed, replaced, or extended. Every key has a default, so the file starts
 nearly empty.
 
+If you already know the record needs more than decisions and principles, say
+so here and skip the editing:
+
+```console
+$ luria init --issue-url https://github.com/you/yourproject/issues \
+             --schemes "RFC,SPEC:document" --journals "incidents:day"
+```
+
+Same scaffold, three more families in it. Each entry is `NAME` or
+`NAME:kind`, and the tables land in `luria.toml` as ordinary commented TOML —
+nothing here is a format you have to keep.
+[Designing a record](modeling.md) is how to decide what you need; this is how
+to type it once you have.
+
 ## 2. Build the views
 
 ```console

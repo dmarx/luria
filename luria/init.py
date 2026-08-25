@@ -125,11 +125,123 @@ GENERIC_STUB_DOCUMENT = """\
 """
 
 
+# ── Shorthand for a scaffold that is mostly the defaults ─────────────────
+#
+# The conventional scheme table is four lines, three of which follow from the
+# prefix: `record/rfcs.d`, `docs/rfcs`, rendered as an index. Typing them is
+# the boilerplate a new project meets first, and it is exactly the part with
+# no decision in it.
+#
+#     luria init --schemes "RFC,SPEC:document" --journals "incidents:day"
+#
+# The shorthand is an ARGUMENT, never a stored format. What lands in
+# `luria.toml` is the ordinary explicit table, commented like the rest of the
+# template — a config a reader cannot read is a worse trade than the typing it
+# saved, and every other part of this package reads that file rather than a
+# second grammar. ADR-048 plans the scaffold from configuration; this only
+# decides what the configuration says.
+
+RENDERS = ("index", "document")
+GRANULARITIES = ("year", "month", "day")
+
+
+def _slug(prefix: str) -> str:
+    """`RFC` → `rfcs`, the directory name a prefix implies.
+
+    Mechanical on purpose. The shipped schemes are named for what they hold
+    (`decisions.d`, `principles.d`) rather than for their codes, and a project
+    that wants that can edit one line — but guessing at it here would mean
+    guessing at what an RFC *is*, which this package has no opinion about."""
+    lower = prefix.lower()
+    return lower if lower.endswith("s") else lower + "s"
+
+
+def _spec(item: str, kinds: tuple, default: str, what: str) -> tuple:
+    """`NAME` or `NAME:kind`, validated at the point of typing.
+
+    Eagerly, and with the vocabulary in the message: a scaffold is run once,
+    usually by somebody meeting these words for the first time, so a silent
+    fallback would be discovered much later and by reading generated output.
+
+    `default` is passed rather than taken as the first of `kinds`, which is
+    the shape this had until a test caught it defaulting a journal to `year`.
+    The listing order is for the error message and the default is a fact about
+    the dataclass; tying them together made the second follow the first."""
+    name, _, kind = item.partition(":")
+    name, kind = name.strip(), (kind.strip() or default)
+    if not name:
+        raise SystemExit("luria init: empty name in --%ss" % what)
+    if kind not in kinds:
+        raise SystemExit(
+            "luria init: %s %r asks for %r; expected one of %s"
+            % (what, name, kind, ", ".join(kinds)))
+    return name, kind
+
+
+def _scheme_table(prefix: str, render: str) -> str:
+    slug = _slug(prefix)
+    output = "docs/%s.md" % slug if render == "document" else "docs/%s" % slug
+    reading = ("read as a whole, so its entries concatenate into one page"
+               if render == "document" else
+               "browsed one at a time, so its view is an index plus tag pages")
+    return (
+        "\n# %s — %s.\n"
+        "# The paths follow the prefix; rename them if this family is better\n"
+        "# called something other than what its codes spell.\n"
+        "[luria.schemes.%s]\n"
+        'dir    = "record/%s.d"\n'
+        'output = "%s"\n'
+        'render = "%s"\n' % (prefix, reading, prefix, slug, output, render))
+
+
+def _journal_table(name: str, granularity: str) -> str:
+    title = name.replace("-", " ").replace("_", " ").capitalize()
+    return (
+        "\n# %s — dated entries that persist and are never revised, collected\n"
+        "# into one book per %s.\n"
+        "[luria.journals.%s]\n"
+        'dir         = "record/%s.d"\n'
+        'output      = "docs/%s"\n'
+        'granularity = "%s"\n'
+        'title       = "%s"\n'
+        % (name, granularity, name, name, name, granularity, title))
+
+
+def shorthand_tables(text: str, schemes: str, journals: str) -> str:
+    """The template's config, plus one table per shorthand entry.
+
+    Additive by design. The template already declares ADR and DP, so appending
+    a third scheme keeps all three — which is what "mostly the defaults" has to
+    mean, given that a declared family replaces the shipped one whole
+    (ADR-047). Removing a default is deleting its table, which is an edit to a
+    file the user can now see."""
+    added = []
+    for item in (s for s in schemes.split(",") if s.strip()):
+        prefix, render = _spec(item, RENDERS, "index", "scheme")
+        prefix = prefix.upper()
+        if "[luria.schemes.%s]" % prefix in text:
+            raise SystemExit(
+                "luria init: the template already declares %s; drop it from "
+                "--schemes and edit the table it writes" % prefix)
+        added.append(_scheme_table(prefix, render))
+    for item in (s for s in journals.split(",") if s.strip()):
+        name, granularity = _spec(item, GRANULARITIES, "month", "journal")
+        if "[luria.journals.%s]" % name in text:
+            raise SystemExit(
+                "luria init: the template already declares the %s journal; "
+                "drop it from --journals and edit its table" % name)
+        added.append(_journal_table(name, granularity))
+    if not added:
+        return text
+    return text.rstrip("\n") + "\n" + "".join(added)
+
+
 def _read(rel: str) -> str:
     return (TEMPLATE / rel).read_text()
 
 
-def _toml_text(into: Path, config_arg: str | None, issue_url: str) -> str:
+def _toml_text(into: Path, config_arg: str | None, issue_url: str,
+               schemes: str = "", journals: str = "") -> str:
     """The config the scaffold is planned from, resolved in priority order."""
     root_cfg = into / CONFIG_NAME
     if config_arg:
@@ -138,8 +250,18 @@ def _toml_text(into: Path, config_arg: str | None, issue_url: str) -> str:
                 f"luria init: {CONFIG_NAME} already exists in {into} — "
                 "refusing to scaffold from a different config. Merge the two "
                 "by hand, then re-run without --config.")
+        if schemes or journals:
+            raise SystemExit(
+                "luria init: --schemes/--journals extend the shipped "
+                "template; with --config the shape is already declared, so "
+                "add the tables to that file instead.")
         return Path(config_arg).read_text()
     if root_cfg.exists():
+        if schemes or journals:
+            raise SystemExit(
+                f"luria init: {CONFIG_NAME} already exists in {into}, so the "
+                "shape is already declared — add the tables to it rather "
+                "than passing --schemes/--journals.")
         return root_cfg.read_text()
     text = _read(CONFIG_NAME)
     if issue_url:
@@ -147,7 +269,7 @@ def _toml_text(into: Path, config_arg: str | None, issue_url: str) -> str:
             'issue_url = ""',
             f'issue_url = "{issue_url.rstrip("/")}/{{n}}"'
             if "{n}" not in issue_url else f'issue_url = "{issue_url}"')
-    return text
+    return shorthand_tables(text, schemes, journals)
 
 
 def _scheme_files(scheme: Scheme) -> dict[Path, str]:
@@ -212,11 +334,12 @@ def _views(cfg: Config) -> str:
 
 
 def plan(into: Path, config_arg: str | None = None,
-         issue_url: str = "") -> list[tuple[Path, str]]:
+         issue_url: str = "", schemes: str = "",
+         journals: str = "") -> list[tuple[Path, str]]:
     """(destination, content) for everything the scaffold would write."""
     if not TEMPLATE.is_dir():                       # installed without data
         return []
-    toml_text = _toml_text(into, config_arg, issue_url)
+    toml_text = _toml_text(into, config_arg, issue_url, schemes, journals)
     cfg = load(into, text=toml_text)
 
     files: dict[Path, str] = {into / CONFIG_NAME: toml_text}
@@ -236,10 +359,11 @@ def plan(into: Path, config_arg: str | None = None,
 
 
 def write(into: Path, issue_url: str = "", dry_run: bool = False,
-          config: str | None = None) -> tuple[int, int, list[Path]]:
+          config: str | None = None, schemes: str = "",
+          journals: str = "") -> tuple[int, int, list[Path]]:
     written = skipped = 0
     kept: list[Path] = []
-    for dest, content in plan(into, config, issue_url):
+    for dest, content in plan(into, config, issue_url, schemes, journals):
         if dest.exists():
             print(f"  skip   {dest.relative_to(into)} (exists)")
             skipped += 1
@@ -255,14 +379,21 @@ def write(into: Path, issue_url: str = "", dry_run: bool = False,
 
 
 def run(into: str = None, issue_url: str = "", dry_run: bool = False,
-        config: str = None) -> None:
+        config: str = None, schemes: str = "", journals: str = "") -> None:
     """Scaffold the record a config declares (default: the detected root's
     own config, or the shipped template's). Never overwrites; --config PATH
     installs that file as luria.toml and scaffolds its shape; --dry-run lists
-    what would be written; --issue-url makes issue numbers linkable."""
+    what would be written; --issue-url makes issue numbers linkable.
+
+    --schemes and --journals extend the shipped template for a project that
+    wants the defaults plus a little: `--schemes "RFC,SPEC:document"`,
+    `--journals "incidents:day"`. Each entry becomes an ordinary commented
+    table in the luria.toml this writes, so the shorthand is something you
+    type once rather than a format anything reads back."""
     into = (Path(into) if into else find_root()).resolve()
     print(f"luria init → {into}")
-    written, skipped, kept = write(into, issue_url, dry_run, config)
+    written, skipped, kept = write(into, issue_url, dry_run, config,
+                                   schemes, journals)
     if not written and not skipped:
         print("  nothing to write — is the template directory installed?")
         raise SystemExit(1)
