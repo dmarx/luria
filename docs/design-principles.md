@@ -419,3 +419,58 @@ one contribution if that is honest; give them separate codes so each can be
 cited, revisited, and retired on its own evidence.
 
 *v1 · shaped by [ADR-035](../record/decisions.d/ADR-035.md), [ADR-056](../record/decisions.d/ADR-056.md) · origin: Three splits in one session, each made for the same reason and none of them by rule: a lint check separated from the vocabulary it reads, two scheme audits written as two decisions rather than one, and a status feature split from the report that would have caught the bug motivating it. Each bundle would have been smaller to write and impossible to cite half of*
+
+<a name="dp-tmpqu8fy"></a>
+
+## DP-tmpqu8fy. Exempting a ledger from one matcher exempts it from none of the others
+
+A mechanism that rewrites, flags or retires instances of a pattern usually
+keeps a record of what it did, and that record is written in the pattern's own
+spelling. A migration's `formerly:` field names the old codes. An
+acknowledgement names the code it excuses. To anything matching that pattern,
+the record is indistinguishable from an instance of it.
+
+On the day this record's first migration ran, three subsystems ate the stamps
+it had just written:
+
+- the **sweep** rewrote the `formerly:` values into the new spelling, erasing
+  the map at its source, in the same operation that created it;
+- the **fixer**'s modernize pass did the same from the other side, turning
+  every alias into a self-reference on the live corpus;
+- the **scan** counted each stamp as a citation of the old code, so every
+  migrated document warned about its own former name.
+
+Three separate discoveries, and that is the part worth keeping. Each
+subsystem matched the pattern on its own terms, so finding the first failure
+taught nothing about the second, and fixing the first protected nothing
+else. That is what makes this a principle
+rather than a bug report: **an exemption is a property of the matcher, not of
+the ledger**, and there is no place to put one where every matcher will see
+it.
+
+So the mask belongs to the matcher's definition — written where the matching
+happens, and with a test that has seen it fire, because a guard is trusted
+only once it has been caught working ([DP-6](design-principles.md#dp-6)).
+What does not count is an execution order that happens to write the ledger
+after the sweep, a glob that happens to miss the file, or a format the regex
+happens not to match. Those are real protection today and gone after the next
+refactor, and they fail quietly: a ledger does not complain when it is eaten.
+It stops being true, and everything derived from it degrades into
+self-reference.
+
+Applied here, in a subsystem that got it right. The reference scan blanks the
+span of any acknowledgement before counting citations, because
+`inactive-ok: ADR-012` names the very code the retired-citation check looks
+for —
+without the mask an annotation would excuse itself, and could never go stale.
+The mask matches the *shape* of a directive rather than the parsed directives,
+so that an example of one in the documentation is covered too. A code inside a
+URL gets the same treatment for the same reason. Three masks, one subsystem,
+each written next to the match it protects.
+
+The test, when building anything that matches a pattern: *does this system
+keep a record of what it matched, and is that record spelled the same way?*
+If so, the mask is part of the definition of the match — and if another
+matcher for the same pattern already exists, it needs its own.
+
+*v1 · shaped by [ADR-040](../record/decisions.d/ADR-040.md), [ADR-049](../record/decisions.d/ADR-049.md) · origin: The first migration's first live day: three subsystems attacked the `formerly:` stamps the migration had just written, independently, and each was found separately because fixing one taught nothing about the others*
