@@ -61,7 +61,7 @@ summary: >-
 ---
 ```
 
-A scheme renders one of two ways:
+Schemes render one of two ways:
 
 - `render = "index"` — a generated `README.md` table of every document,
   plus one page per tag. Decisions read this way.
@@ -80,16 +80,15 @@ granularity = "month"
 ```
 
 A journal entry is filed at `yyyy/mm/dd/hhmmss.md` and is true about the
-day it was written: it is never revised, never consumed, and never expected
-to stay current. `luria index` renders the entries into **books** — one
+day it was written: never revised, and never expected to stay current. `luria index` renders the entries into **books** — one
 page per year, month, or day, with a contents list — plus an index of all
 books. Because sources persist and every entry is a fresh path, a journal
 is safe to write into without coordinating with anyone.
 
-A project can run several: a devlog, an incident log, meeting notes — each
-its own table, granularity, and output.
+A project can run several — a devlog, an incident log, meeting notes — each
+with its own table, granularity and output.
 
-### Fragment directories — write now, assemble later
+### Fragment directories — pieces assembled later
 
 ```toml
 [luria.fragments."record/changelog.d"]
@@ -140,7 +139,7 @@ you declare **replaces the shipped family whole**. A project that writes
 `[luria.schemes.RFC]` and nothing else has exactly one scheme; the default
 `ADR` is simply absent. Declare a family and it is yours entirely.
 
-## Status: what is in force
+## The five statuses
 
 Every scheme document carries a `status:` from a closed vocabulary —
 
@@ -157,7 +156,7 @@ document is a safe thing to cite as justification; `Proposed` and
 `Deferred` are open questions, `Superseded` and `Rejected` are history. The
 reference machinery (below) leans on exactly this distinction.
 
-## Constraints: what a scheme refuses
+## Constraints
 
 Status says what is in force. **Constraints say what a document is allowed to
 be** — and they are how a record stops being a folder of markdown with a
@@ -167,7 +166,7 @@ All of them are opt-in and per scheme. A scheme that declares none behaves
 exactly as every scheme did before they existed.
 
 **Required fields.** Beyond `status:`, `title:` and `tags:`, a scheme can
-demand its own:
+require fields of its own:
 
 ```toml
 [luria.schemes.SOTA]
@@ -197,7 +196,7 @@ holds.
 
 **Titles that generalise.** A principle stated about the one artifact it was
 noticed on is a principle nobody applies to the next one. That failure is
-quiet: the entry stays true, keeps rendering, and simply never gets cited.
+quiet: the entry stays true and keeps rendering, and never gets cited.
 
 ```toml
 [luria.schemes.DP]
@@ -223,7 +222,7 @@ has an enforcement mechanism that cannot fire, and the build is green
 Which constraints to reach for, and when a rule is better expressed as a
 second scheme, is [designing a record](modeling.md).
 
-## Codes, references, and links
+## Codes and links
 
 A code in prose — in a doc page, a record entry, a `README`, or a source
 comment covered by `[luria.code] globs` — is treated as a **claim**: this
@@ -249,9 +248,10 @@ honest:
   [reference-status report](reports/reference-status.md) until a human
   either fixes the text or vouches for the citation with an
   [acknowledgement directive](directives.md) at the citing site.
-- **Codes that resolve to nothing are surfaced** the same way — a typo, a
-  number from another project, and a deliberate example look identical to
-  the machine, so telling them apart is a report, not an error.
+- **Codes that resolve to nothing are surfaced** the same way. A typo, a
+  number from another project and a deliberate example all look identical to
+  the machine, so telling them apart takes a person, and the finding is a
+  report and not a failure.
 
 These findings are warnings by default. A project that wants any class to
 fail the build promotes it with `[luria.lint] fail_on` — the dial between
@@ -272,7 +272,7 @@ temporary code in an unmerged branch, an old commit message, or a teammate's
 notes still resolves — the linter treats `formerly:` entries as aliases and
 upgrades leftover spellings when it can.
 
-## Revising the record
+## Superseding and correcting
 
 A record you cannot revise becomes a record you stop trusting. Two
 mechanisms keep revision honest:
@@ -287,7 +287,7 @@ mechanisms keep revision honest:
   reads through the rename. The spec stays in the repository afterward: its
   mapping *is* the memory of the old names.
 
-## Reports: what awaits a human
+## The status reports
 
 Some questions cannot fail a build because they need judgement. Those
 render as committed report pages under `docs/reports/`:

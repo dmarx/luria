@@ -6,7 +6,7 @@ of constraints, and nothing in the code spells `ADR` — it is simply the scheme
 the package ships with. This page is how to decide what *your* record is made
 of.
 
-## What belongs in a record
+## Identity, standing, relation
 
 Not all documentation is record material. Three properties separate the two,
 and material with all three is what this machinery is for:
@@ -24,9 +24,9 @@ overwriting it.
 other — and the relationships matter enough that you would want to be told
 when one dangles.
 
-A getting-started guide has none of these. It has no identity worth citing, no
-meaningful status, and nothing points at paragraph four. Leave it as prose in
-`docs/`; the lint will still check that your index links it.
+A getting-started guide has none of these. Nothing cites paragraph four of
+it, and it has no status worth tracking. Leave it as prose in `docs/`; the
+lint will still check that your index links it.
 
 ## Which family
 
@@ -58,8 +58,8 @@ A worked case. An anthology of ML training practice kept papers and
 recommendations in one structure, where each paper carried `attic` and
 `experimental` flags alongside a list of the recommendations drawn from it.
 Those flags are judgements about a *paper*; the recommendations are judgements
-about *practice*. One structure meant one status field, and the two claims
-could never disagree.
+about *practice*. One structure meant one status field, so the two claims could
+never disagree.
 
 They needed to. A foundational paper stays worth reading while one of the
 recommendations drawn from it goes stale — that is the normal life of a
@@ -83,7 +83,7 @@ dir      = "record/practices.d"
 requires = ["source"]     # a practice with no paper behind it is an opinion
 ```
 
-## What your statuses mean
+## Statuses in two schemes
 
 The five words are fixed — `Active`, `Proposed`, `Deferred`, `Superseded`,
 `Rejected` ([ADR-003](../record/decisions.d/ADR-003.md)). What they *mean* is per scheme, declared in a
@@ -92,19 +92,19 @@ The five words are fixed — `Active`, `Proposed`, `Deferred`, `Superseded`,
 In the anthology, `Rejected` means two different things in two schemes, and
 saying so is the point. On a paper it means the attic: retired from the
 reading list, with the reason kept. On a practice it means no longer believed.
-Same word, different claim, and a reader meeting either one sees which.
+One word, two claims; the index legend says which is meant.
 
-The useful test: **if you cannot say what each status means for this scheme,
-you may not need a status here.** Luria will eventually tell you — a scheme
-where every document shares one status is reported as `inert-status`, on the
-grounds that a field every record agrees on carries no information and is
-indistinguishable from no field at all.
+**If you cannot say what each status means for this scheme, you may not need
+a status here.** Luria will eventually tell you. A scheme where every document
+shares one status is reported as `inert-status`, on the grounds that a field
+every record agrees on tells you nothing and is indistinguishable from no
+field at all.
 
-That check earns its place. The anthology arrived with 119 recommendations all
-at one status, a schema advertising three, and two code branches that could
-provably never execute on the data. Nothing had failed; nothing could.
+The anthology arrived with 119 recommendations at one status, a schema
+advertising three, and two code branches that could provably never execute on
+the data. Nothing had failed; nothing could.
 
-## What the schema should refuse
+## Rules the config can enforce
 
 This is the part most easily missed, and it is where a record stops being a
 folder of markdown.
@@ -144,9 +144,9 @@ exactly as it did before they existed, so adding one later is a local change.
 
 ## Shapes
 
-Five records, sketched. Each is the same engine.
+Five shapes, all of them the same engine with different tables.
 
-**Project memory** — the default, and the one the scaffold writes.
+**Project memory.** The default, and what the scaffold writes.
 
 ```toml
 [luria.schemes.ADR]   # decisions, browsed as an index
@@ -155,7 +155,7 @@ Five records, sketched. Each is the same engine.
 [luria.fragments."record/changelog.d"]
 ```
 
-**A research anthology** — domain content, not project meta-documentation. Two
+**A research anthology.** Domain content, not project meta-documentation. Two
 content schemes that cite each other, and an external identifier namespace
 made citable.
 
@@ -199,7 +199,7 @@ observation. The relationship between them is the audit.
 None of these needed a plugin, and none of them is a special case in the code.
 A family is a table; the entries are yours to name.
 
-## When the record is fighting you
+## Four smells
 
 Four smells, each with a reading:
 
@@ -209,7 +209,8 @@ Four smells, each with a reading:
 - **You keep wanting a second status field.** That is the two-schemes signal,
   arriving as a schema request.
 - **Nothing ever cites these entries.** They may be a journal rather than a
-  scheme — dated observations, not referable claims.
+  scheme. A journal entry is a dated observation; nothing points at it by
+  name.
 - **A tag is on 80% of entries.** It is not a browsing axis, it is the name of
   the scheme.
 
