@@ -12,6 +12,9 @@ listed here, so the map cannot silently rot.)
 
 - [Quickstart](quickstart.md) — install, scaffold, file, lint: the whole
   loop in ten minutes.
+- [Concepts](concepts.md) — the shortest complete account: entries,
+  citations, the status field everything hangs off, and what a finding is.
+  Read after the quickstart.
 - [Designing a record](modeling.md) — what belongs in a record, which
   family fits which material, when two kinds of entry are two schemes, and
   what the schema can be made to refuse. Start here if the scaffolded
