@@ -5,38 +5,42 @@
 
 # Luria
 
-**Small markdown files that can be cited, carry a status, and are held to
-the rules you chose for them.**
+**A record of what your project knows — and of what it no longer believes.**
 
-Projects forget. The reason a module is shaped the way it is lives in a
-merged PR nobody rereads; the failed approach gets rediscovered a year
-later; the "temporary" workaround outlives the person who wrote it. Luria
-gives a repository a *record* — one small file per entry — and the machinery
-to keep that record readable, linked, and true:
+Projects forget, and they forget *silently*. The wiki still renders. The
+decisions folder still has files in it. The status column still exists. Nothing
+announces that a convention drifted, that a rationale expired, or that the
+reasoning behind a constraint now points at a document somebody deleted.
 
-- **Filing is cheap.** `luria new` scaffolds the next entry — a decision
-  with its number allocated, a devlog entry stamped with the minute, a
-  changelog fragment nobody will conflict on.
-- **Views are built, never edited.** `luria index` renders the record into
-  browsable pages — a decision index with tag pages, a principles document,
-  journal books, status reports — and `luria lint` fails when a committed
-  view has drifted from its sources.
-- **References are checked.** A code like `ADR-012` in prose or a source
-  comment is a claim. `luria link --fix` turns it into a working link;
-  the lint flags codes that resolve to nothing and citations of decisions
-  that are no longer in force.
-- **The rules are yours, and they hold.** A scheme can require its own
-  fields, demand exactly one primary category, and declare what each status
-  means for it. The conventions you would otherwise write in CONTRIBUTING —
-  *every entry cites a source*, *pick one category* — become things that
-  fail. Luria will even tell you when a field has stopped carrying
-  information, which is what a status column looks like after nobody has
-  maintained it for a year.
-- **The record can be published.** `luria site` stages the whole thing as a
-  static site with backlinks and a local graph, ready for GitHub Pages.
+A Luria record makes those questions answerable, because every entry in it has:
+
+- **A name something can cite.** `ADR-012`, `RFC-7` — in prose, in a commit,
+  in a source comment. `luria link --fix` turns the bare code into a working
+  link; the lint reports codes that resolve to nothing, so a reference is a
+  claim that gets checked rather than a string that gets stale.
+- **A standing.** In force, proposed, superseded, rejected. Retiring something
+  is an edit to its status, never a deletion — so the record keeps what it
+  stopped believing, and can tell you when a live document is still citing it.
+- **Rules you declare instead of hope for.** Required fields, exactly one
+  primary category, what each status means *in this scheme*. The conventions
+  you would otherwise write in CONTRIBUTING become things that fail. Luria will
+  even tell you when a field has stopped carrying information — which is what a
+  status column looks like a year after anyone maintained it.
+- **A view that is generated.** Indexes, tag pages, journal books, status
+  reports. Built by `luria index`, never hand-edited, so what people read
+  cannot drift from what people file.
+
+Filing is cheap — `luria new` scaffolds the next entry with its identity
+already assigned — and the whole record publishes as a static site with
+backlinks and a local graph (`luria site`).
 
 Luria is also its own first user: this repository's record is scaffolded,
 generated and linted by the CLI it ships.
+
+<!-- luria:badges -->
+[![needs decision: 9](https://img.shields.io/badge/needs%20decision-9-orange)](docs/reports/pending-decisions.md)
+[![cited, not in force: 3](https://img.shields.io/badge/cited,%20not%20in%20force-3-orange)](docs/reports/reference-status.md)
+<!-- /luria:badges -->
 
 ## It is not only for decisions
 
@@ -88,6 +92,19 @@ luria: docs lint clean
 
 Edit the two files it printed, commit, and the record has begun. The
 [quickstart](docs/quickstart.md) walks the same path with explanations.
+
+## A note on files
+
+A record is kept as plain text in your repository, one entry per file, and
+that is a deliberate implementation choice rather than the product. It is
+chosen for *participation*: a contributor — or a coding agent — edits a file,
+opens a pull request, and greps the result, with no application to run, no
+database to migrate, and no export to negotiate when they want their history
+back.
+
+Markdown is what that looks like today and will likely stay the primary shape.
+Nothing in the model above depends on it. Identity, standing, declared rules
+and generated views are claims about a record, not about a file format.
 
 ## The shape of it
 

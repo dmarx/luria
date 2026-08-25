@@ -1,9 +1,12 @@
 # Luria documentation
 
-Luria keeps a project's memory — decisions, principles, changelog, devlog —
-as small plain-markdown sources, rendered into linked views and held
-together by a lint. This page is the map. (`luria lint` checks that every
-page in `docs/` is listed here, so the map cannot silently rot.)
+Luria keeps a record of what a project knows — decisions, principles, a
+changelog, a devlog, or whatever families the project declares. Every entry
+has a name something can cite, a standing that says whether it still holds,
+and rules the lint enforces; every view is generated from those entries.
+
+This page is the map. (`luria lint` checks that every page in `docs/` is
+listed here, so the map cannot silently rot.)
 
 ## Using Luria
 
