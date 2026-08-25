@@ -22,6 +22,15 @@ status: Active
 
 # The claim, as it appears in the rendered document. Repeat it as the body's
 # `# DP-NNN:` heading; `luria lint` checks that the two agree.
+#
+# Voice: ask whether this can be PARTLY met. If it can, it is a value — write
+# it as an aspiration ("meet the project where it is"), or as an observation
+# with the remedy attached ("a hand-maintained projection will drift — derive
+# it"). If the only two states are satisfied and violated, it is a rule, and
+# the constraining voice is correct for it ("no silent refusal"). Stating a
+# value as a prohibition deletes the state it spends most of its life in;
+# softening a real rule into an aspiration makes a hard line look negotiable.
+# ADR-tmphi0lg.
 title: The principle, stated as a claim you can disagree with
 
 # Principles are LIVING DOCUMENTS. Bump this whenever the principle's scope or

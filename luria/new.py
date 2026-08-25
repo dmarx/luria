@@ -119,7 +119,7 @@ def new_scheme_doc(scheme, fields: dict[str, str]) -> Path:
 
     template = scheme.dir / TEMPLATE_NAME
     if template.exists():
-        text = template.read_text()
+        text = template.read_text(encoding="utf-8")
         # The template speaks of itself as `<PREFIX>-NNN`; the copy is a real
         # document, so the code is filled in everywhere the reader would see
         # a placeholder — the body heading included.
@@ -144,7 +144,7 @@ def new_scheme_doc(scheme, fields: dict[str, str]) -> Path:
 
     path = scheme.dir / f"{stem}.md"
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(text)
+    path.write_text(text, encoding="utf-8")
     return path
 
 
@@ -172,8 +172,8 @@ def new_fragment(dir_name: str, name: str | None) -> Path:
         path = frag_dir / f"{stamp}.md"
     template = frag_dir / TEMPLATE_NAME
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(template.read_text() if template.exists()
-                    else "### Changed\n\n- \n")
+    path.write_text(template.read_text(encoding="utf-8") if template.exists()
+                    else "### Changed\n\n- \n", encoding="utf-8")
     return path
 
 
@@ -214,7 +214,7 @@ def new_migration(fields: dict[str, str], name: str | None) -> Path:
     slug = name or re.sub(r"[^a-z0-9]+", "-", title.lower()).strip("-")
     path = mig_dir / f"{number}-{slug}.toml"
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(MIGRATION_TEMPLATE.format(number=number, title=title))
+    path.write_text(MIGRATION_TEMPLATE.format(number=number, title=title), encoding="utf-8")
     return path
 
 

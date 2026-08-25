@@ -137,9 +137,9 @@ def collect_dir(name: str, fragment) -> int:
     if not paths:
         return 0
     view = cfg.root / fragment.target
-    view.write_text(collect(view.read_text(), [p.read_text() for p in paths],
+    view.write_text(collect(view.read_text(encoding="utf-8"), [p.read_text(encoding="utf-8") for p in paths],
                             style=fragment.style,
-                            date=dt.date.today().isoformat()))
+                            date=dt.date.today().isoformat()), encoding="utf-8")
     for p in paths:
         p.unlink()
     print(f"Collected {len(paths)} fragment(s) from {name} "

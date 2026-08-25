@@ -26,14 +26,14 @@ def run(*paths: str, fix: bool = False) -> None:
 
     total = 0
     for path in files:
-        text = path.read_text()
+        text = path.read_text(encoding="utf-8")
         new, count = doc_refs.linkify(text, path, adrs, anchors)
         if not count:
             continue
         total += count
         print(f"{current().rel(path)}: {count} reference(s)")
         if fix:
-            path.write_text(new)
+            path.write_text(new, encoding="utf-8")
 
     verb = "linked" if fix else "would link"
     print(f"{verb} {total} reference(s) in {len(files)} file(s)")

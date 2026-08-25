@@ -117,13 +117,13 @@ def run(write: bool = False, check: bool = False) -> None:
               file=sys.stderr)
         return
 
-    if not path.exists() or OPEN not in path.read_text():
+    if not path.exists() or OPEN not in path.read_text(encoding="utf-8"):
         print(f"luria badges: no {OPEN} region in "
               f"{current().rel(path)} — add one where the badges belong:\n\n"
               f"  {OPEN}\n  {CLOSE}\n", file=sys.stderr)
         return
 
-    text = path.read_text()
+    text = path.read_text(encoding="utf-8")
     fresh = rewrite(text)
     if check:
         if fresh != text:
@@ -132,7 +132,7 @@ def run(write: bool = False, check: bool = False) -> None:
             raise SystemExit(1)
         print("luria badges: current")
         return
-    path.write_text(fresh)
+    path.write_text(fresh, encoding="utf-8")
     undecided, retired = counts()
     print(f"badges: needs decision {undecided}, cited not in force {retired}")
 

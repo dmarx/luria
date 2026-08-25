@@ -70,7 +70,7 @@ def broken(files: list[Path] | None = None) -> tuple[list[str], list[str]]:
     stale: list[str] = []
     for path in files if files is not None else doc_refs.doc_files():
         try:
-            text = path.read_text()
+            text = path.read_text(encoding="utf-8")
         except (OSError, UnicodeDecodeError):
             continue
         quoted = doc_refs.code_spans(text)

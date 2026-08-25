@@ -637,7 +637,7 @@ def dp_anchors() -> dict[int, str]:
     principles = current().design_principles
     if not principles.exists():
         return {}
-    for line in principles.read_text().splitlines():
+    for line in principles.read_text(encoding="utf-8").splitlines():
         if m := EXPLICIT_ANCHOR_RE.match(line):
             anchors[int(m.group(1))] = line.split('"')[1]
         elif m := HEADING_ANCHOR_RE.match(line):
@@ -689,7 +689,7 @@ def legacy_spellings() -> list[str]:
         if path in seen:
             continue
         seen.add(path)
-        text = path.read_text()
+        text = path.read_text(encoding="utf-8")
         # The `formerly:` block is where an old spelling is SUPPOSED to
         # persist — it is the alias record, not a citation.
         formerly = [m.span() for m in
@@ -722,7 +722,7 @@ def alias_number(scheme, tail: str) -> int | None:
     so nothing caches and nothing can go stale."""
     code = f"{scheme.prefix}-{tail}"
     for number, path in scheme.documents().items():
-        meta, _ = parse_frontmatter(path.read_text())
+        meta, _ = parse_frontmatter(path.read_text(encoding="utf-8"))
         if any(str(a).strip() == code for a in (meta.get("formerly") or [])):
             return number
     return None

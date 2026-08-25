@@ -574,7 +574,7 @@ def primary_tags(prefix: str, tags_path: Path) -> frozenset[str]:
         return frozenset()
     try:
         import yaml
-        declared = yaml.safe_load(tags_path.read_text()) or {}
+        declared = yaml.safe_load(tags_path.read_text(encoding="utf-8")) or {}
     except Exception:
         return frozenset()
     found = set()
@@ -913,7 +913,7 @@ def load(root: Path | None = None, text: str | None = None) -> Config:
     raw = DEFAULTS
     config_file = root / CONFIG_NAME
     if text is None and config_file.exists():
-        text = config_file.read_text()
+        text = config_file.read_text(encoding="utf-8")
     if text is not None:
         parsed = tomllib.loads(text)
         parsed = parsed.get("luria", parsed)

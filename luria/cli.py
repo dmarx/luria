@@ -31,6 +31,8 @@ same functions — useful when a project vendors one file instead of installing
 the package.
 """
 
+import sys
+
 import fire
 
 from . import (adr_index, collect, concretize, init, link_refs, lint, migrate,
@@ -60,7 +62,28 @@ CI_COMMANDS = {
 }
 
 
+def _survivable_console() -> None:
+    """Never let a console encoding turn output into a traceback.
+
+    Every file this package reads and writes is UTF-8 by construction, but the
+    *console* belongs to the platform: a Windows terminal at cp1252 cannot
+    encode the arrow in `luria init → path`, and the default behaviour is to
+    raise rather than to degrade. That turned a scaffold into a stack trace on
+    a machine where nothing was wrong (#112).
+
+    The stream keeps its own encoding — writing UTF-8 at a cp1252 console
+    would trade a crash for mojibake — and only its error handling changes, so
+    a character the console cannot show becomes `?` and the line still reads.
+    Set `PYTHONUTF8=1` for full fidelity."""
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            stream.reconfigure(errors="replace")
+        except (AttributeError, ValueError, OSError):
+            pass          # not a reconfigurable stream; nothing to protect
+
+
 def main() -> int:
+    _survivable_console()
     fire.Fire(COMMANDS, name="luria")
     return 0
 

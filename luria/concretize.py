@@ -94,7 +94,7 @@ def _rewrite_files(renames: list[tuple[str, str]]) -> int:
         if path in seen:
             continue
         seen.add(path)
-        text = new = path.read_text()
+        text = new = path.read_text(encoding="utf-8")
         for old, target in renames:
             new = new.replace(old, target)
             # An anchor spells the code in lower case (`#adr-tmp47fje`,
@@ -105,7 +105,7 @@ def _rewrite_files(renames: list[tuple[str, str]]) -> int:
             if (low := old.lower()) != old:
                 new = new.replace(low, target.lower())
         if new != text:
-            path.write_text(new)
+            path.write_text(new, encoding="utf-8")
             touched += 1
     return touched
 
@@ -144,7 +144,7 @@ def run(check: bool = False) -> None:
         # The tree-wide pass already rewrote this document's own heading and
         # cross-references; what remains is its identity — the filename —
         # and the alias that keeps the old name resolving forever.
-        dest.write_text(_record_alias(src.read_text(), old))
+        dest.write_text(_record_alias(src.read_text(encoding="utf-8"), old), encoding="utf-8")
         src.unlink()
         print(f"{old} → {new}")
 

@@ -86,7 +86,7 @@ def entry() -> str:
     if not src.exists():
         return ""
     try:
-        data = yaml.safe_load(src.read_text()) or {}
+        data = yaml.safe_load(src.read_text(encoding="utf-8")) or {}
     except yaml.YAMLError:
         return ""
     if not isinstance(data, dict):
@@ -133,7 +133,7 @@ def run(write: bool = False, check: bool = False) -> None:
     """Print, write, or check the README's citation region."""
     import sys
     target = readme()
-    if not target.exists() or OPEN not in (text := target.read_text()):
+    if not target.exists() or OPEN not in (text := target.read_text(encoding="utf-8")):
         print(f"luria citation: no {OPEN} region in README.md; nothing to do")
         return
     fresh = rewrite(text)
@@ -144,7 +144,7 @@ def run(write: bool = False, check: bool = False) -> None:
             raise SystemExit(1)
         return
     if write:
-        target.write_text(fresh)
+        target.write_text(fresh, encoding="utf-8")
         return
     print(region())
 

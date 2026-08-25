@@ -146,7 +146,7 @@ def reference_status(base: Path | None = None) -> str:
 
     stale = ref_status.stale_annotations(result, docs)
     for path in doc_refs.doc_files():
-        stale += doc_refs.directive_problems(path, path.read_text())
+        stale += doc_refs.directive_problems(path, path.read_text(encoding="utf-8"))
     out += ["## Directives that no longer apply", ""]
     out += ([f"- {line}" for line in sorted(stale)] if stale
             else ["None. Every annotation still governs something. ✅"])
@@ -215,7 +215,7 @@ def write(out_dir: Path | None = None) -> list[Path]:
     rendered = outputs(out_dir)
     for path, text in rendered.items():
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(text)
+        path.write_text(text, encoding="utf-8")
     return sorted(rendered)
 
 
