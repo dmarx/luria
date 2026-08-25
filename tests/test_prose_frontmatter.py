@@ -1,4 +1,10 @@
 """`origin:` is prose: references in it are linked and lint-checked."""
+
+# inactive-ok-file: ADR-007 — a fixture code, not a citation. The tests
+# below write an ADR-007.md into a temporary project and check that a bare
+# reference to it is linkified; the number collides with this repository's
+# own ADR-007, which is Superseded, so the scanner reads fixture data as a
+# citation of a retired decision.
 from pathlib import Path
 from luria import config, doc_refs
 
