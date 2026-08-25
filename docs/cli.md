@@ -7,6 +7,7 @@ One binary, `luria`, dispatching to plain functions. Every command takes
 | command | one line |
 |---|---|
 | [`luria init`](#luria-init) | scaffold a record into a repository |
+| [`luria config`](#luria-config) | write a starting `luria.toml`, without scaffolding |
 | [`luria new`](#luria-new) | file a new entry of any configured kind |
 | [`luria index`](#luria-index) | render every generated view |
 | [`luria link`](#luria-link) | turn bare codes and wikilinks into links |
@@ -21,7 +22,8 @@ One binary, `luria`, dispatching to plain functions. Every command takes
 ## luria init
 
 ```
-luria init [INTO] [--issue-url URL] [--config FILE] [--dry-run]
+luria init [INTO] [--issue-url URL] [--schemes S] [--journals J]
+           [--config FILE] [--dry-run]
 ```
 
 Scaffolds the default record — templates, stubs, tag vocabulary, principle
@@ -31,11 +33,66 @@ seeds, a docs index, a `CLAUDE.md`, and CI workflows — into `INTO`
 - Existing files are **always skipped**, never overwritten; each is
   reported. Re-running on a grown project is safe.
 - `--issue-url` seeds `issue_url` in the scaffolded `luria.toml`; append
-  `{n}` yourself or let init place it.
+  `{n}` yourself or let init place it. **Left out, it is inferred from the
+  `origin` remote** — `git@github.com:acme/widgets.git` becomes
+  `https://github.com/acme/widgets/issues/{n}`, and init says so as it goes.
+  That one value also gives `[luria.site]` its title, its Pages URL and the
+  base a link falls back to, so a repository with a remote needs no
+  configuration at all. GitHub and GitLab are recognised; any other host
+  infers nothing, because a wrong issue URL renders a broken link on every
+  entry that carries an issue.
+- `--schemes` and `--journals` add families to the shipped shape, for a
+  project that wants the defaults plus a little:
+
+  ```console
+  $ luria init --schemes "RFC,SPEC:document" --journals "incidents:day"
+  ```
+
+  Each entry is `NAME` or `NAME:kind` — `index` or `document` for a scheme
+  ([which one?](modeling.md#index-or-document)), `year`, `month` or `day` for
+  a journal. Paths follow the prefix, so `RFC`
+  gives `record/rfcs.d` rendered into `docs/rfcs`; rename them afterwards if
+  the family is better called something other than what its codes spell.
+
+  The shorthand is an argument, not a stored format: what it writes is the
+  ordinary commented table, so nothing reads it back and the config looks
+  like every other project's. It is additive — the template's own ADR and DP
+  tables stay, which is what keeps them alive given that a declared family
+  replaces the shipped one whole. Removing a default means deleting a table.
 - `--config FILE` scaffolds from your own `luria.toml` instead of the
-  shipped one — this is how you init a record made of RFCs rather than
-  ADRs. Refused if a `luria.toml` already exists (merge by hand instead).
+  shipped one — this is how you init a record with no ADR scheme at all,
+  rather than one with an extra family. Refused if a `luria.toml` already
+  exists (merge by hand instead), as are `--schemes`/`--journals`: where a
+  config exists the shape is declared, and a flag should not edit it.
 - `--dry-run` prints the plan and writes nothing.
+
+## luria config
+
+```
+luria config [INTO] [--schemes S] [--journals J] [--issue-url URL] [--stdout]
+```
+
+Writes the `luria.toml` that `luria init` would have written, and stops.
+
+The shorthand covers the two things projects usually vary. A project that also
+wants a different directory, a narrowed status vocabulary or a tag group has to
+edit the config — and editing it *after* a scaffold means moving directories
+the first run already created. This is the order that avoids that:
+
+```console
+$ luria config --schemes "RFC,SPEC:document"
+luria.toml
+
+Edit it, then `luria init` to scaffold the shape it declares.
+$ $EDITOR luria.toml
+$ luria init
+```
+
+- Takes the same `--schemes`, `--journals` and `--issue-url` as `init`, and
+  infers the issue URL from the `origin` remote the same way.
+- **Refuses to overwrite.** A config that exists has already started.
+- `--stdout` prints instead of writing, which also works where a config
+  exists — looking is not writing.
 
 ## luria new
 
