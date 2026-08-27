@@ -24,6 +24,7 @@ Checks (each one fails the build):
 It also prints WARNINGS, which by default never affect the exit code
 (ADR-035): references to retired documents, codes that resolve to no document
 at all, remote links whose URL is hand-written rather than constructed,
+pinned remote documents whose upstream content changed since it was endorsed,
 relative link targets that resolve to nothing from where the prose renders,
 directives that no longer apply, and a count of undecided decisions. Citing a
 `Rejected` decision — or leaving one `Proposed`, or naming another project's
@@ -403,9 +404,9 @@ def check_bare_refs(errors: list[str]) -> None:
 # hatch under enforcement — the dial changes the consequence, not the
 # accounting.
 FAILABLE = ("retired-citations", "unresolved-codes", "hand-written-urls",
-            "broken-targets", "inert-status", "legacy-spellings",
-            "narrow-titles", "stale-directives", "pending-documents",
-            "unlinted-files")
+            "broken-targets", "remote-drift", "inert-status",
+            "legacy-spellings", "narrow-titles", "stale-directives",
+            "pending-documents", "unlinted-files")
 
 
 def status_sections() -> list[tuple[str, str, list[str]]]:
@@ -453,6 +454,19 @@ def status_sections() -> list[tuple[str, str, list[str]]]:
             "hand-written-urls",
             f"{len(hand)} link(s) hand-written where a URL would be "
             "constructed (`url-ok:` acknowledges a deliberate one)", hand))
+
+    # A pinned remote document whose content moved on since a human endorsed
+    # it (#135). The observation is committed state (`luria remotes --refresh`
+    # writes it), so the comparison here is offline like every other check —
+    # and re-endorsing IS the acknowledgement, so no comment directive exists
+    # for this class: the remedy updates the lockfile, not the prose.
+    drifted = remotes.drift_lines()
+    if drifted:
+        sections.append((
+            "remote-drift",
+            f"{len(drifted)} content pin(s) out of step — upstream changed "
+            "since endorsement, or the pin outlived its citations "
+            "(`luria remotes --pin` re-endorses or prunes)", drifted))
 
     # A relative target that resolves to nothing from where the prose renders.
     # The code checks above cannot see it: they verify that `ADR-035` names a

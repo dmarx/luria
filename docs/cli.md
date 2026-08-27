@@ -236,7 +236,7 @@ would re-create the collision the temporary codes exist to avoid.
 ## luria remotes
 
 ```
-luria remotes [--refresh] [--check]
+luria remotes [--refresh] [--check] [--pin [CODE]]
 ```
 
 Prints every foreign code the record cites, per remote, with the URL each
@@ -247,6 +247,19 @@ committed, so CI and offline checkouts resolve identically. `--check`
 HEAD-probes every cited URL and reports what a reader would find: broken,
 absent from the remote, or unverifiable because the repository is not
 readable anonymously.
+
+`--pin` endorses remote *content*: it fetches each document, hashes it,
+and stores the hash in the same lockfile. A remote document has no status
+this project can read, but a change in its bytes is knowable — `--refresh`
+re-observes every pinned document, and `luria lint` reports each one whose
+content moved on since its endorsement (the `remote-drift` warning class,
+promotable via `fail_on`). Review the change, then
+`luria remotes --pin CODE` endorses it again. With no code, `--pin`
+endorses everything cited that has fetchable content and drops pins
+nothing cites any more. Only GitHub file constructions can be pinned: a
+`url` template or `uid` remote points at a rendered page whose markup
+churns under identical content, and the command says so rather than
+storing a hash that would drift on its own.
 
 ## luria migrate
 

@@ -49,6 +49,12 @@ Each acknowledgement covers findings at its own site only — that locality
 is the point. Vouching for one citation of a retired decision says nothing
 about the next one, which gets its own look and its own reason.
 
+One warning class carries no directive on purpose: `remote-drift` (a
+pinned remote document whose content changed upstream) is acknowledged by
+re-endorsing — `luria remotes --pin CODE` after reviewing the change —
+because the judgement lives in the lockfile, not in prose at a citation
+site.
+
 ## Mentioning a code without citing it
 
 Backticks are the lighter tool and usually the right one: a code inside
