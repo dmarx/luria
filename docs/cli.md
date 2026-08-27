@@ -254,9 +254,19 @@ this project can read, but a change in its bytes is knowable — `--refresh`
 re-observes every pinned document, and `luria lint` reports each one whose
 content moved on since its endorsement (the `remote-drift` warning class,
 promotable via `fail_on`). Review the change, then
-`luria remotes --pin CODE` endorses it again. With no argument, `--pin`
-endorses everything cited or flagged and drops pins nothing cites or
-flags any more.
+`luria remotes --pin CODE` endorses it again.
+
+Every pin has a registration — the thing that says it should exist, and
+whose removal retires it. `pin = true` on a remote (or one of its
+schemes) registers the whole code family: each cited reference is pinned
+automatically, and the lint reports any the lockfile has not endorsed
+yet. A `pin:` comment directive registers one arbitrary URL where it is
+cited. An explicit `--pin CODE` registers one ad-hoc pin, whose lockfile
+entry is its own registration. A bare `--pin` syncs the lockfile to the
+registrations — endorsing what is newly registered, re-observing what
+exists, dropping what nothing cites or flags — and it never re-endorses
+drifted content: that always takes the explicit command, so a scheduled
+sweep cannot quietly launder a drift finding.
 
 What gets hashed is the construction's *stable bytes*, not the page a
 reader lands on. A GitHub file construction qualifies on its own (the blob

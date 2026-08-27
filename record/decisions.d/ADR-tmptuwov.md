@@ -12,7 +12,10 @@ summary: >-
   is knowable is whether the cited bytes changed: `luria remotes --pin` stores
   a hash of the content a human endorses, `--refresh` records what upstream
   serves now, and the lint compares the two committed hashes offline — the
-  `remote-drift` warning class, cleared by re-endorsing after review.
+  `remote-drift` warning class, cleared by re-endorsing after review. A pin
+  is registered per source (`pin = true` on a remote or scheme), per URL (a
+  `pin:` flag where it is cited), or per code (an explicit `--pin`), and
+  removing the registration retires it.
   Rejected: fetching in the lint (a check that fails on a train), mirroring
   upstream status (a projection of somebody else's record), and hashing
   rendered pages (their markup churns under identical content — a remote
@@ -61,13 +64,26 @@ behind the abstract page a reader sees. Otherwise a GitHub file construction
 qualifies on its own, re-based onto `raw.githubusercontent.com` so the
 fetched bytes are the document rather than the page around it.
 
-A URL that is no foreign code at all — a spec, a dataset card — is pinned by
-flagging it where it is cited (`<!-- pin: https://… — why -->`) and running
-the same `--pin`. The flag is the registration, so removing it retires the
-pin: one that fires too often costs one deleted comment, and the URL goes
-back to being an ordinary, unwatched link. A pin whose code nothing cites —
-or whose flag is gone — is reported, and a bare `--pin` prunes it: committed
-state that governs nothing is the lockfile's version of a stale directive.
+Every pin has a **registration** — the thing that says it should exist, and
+whose removal retires it — and there is one kind per judgement site.
+`pin = true` in config, on a remote or one of its schemes, registers a whole
+code family: every cited reference is pinned automatically, and the lint
+reports any the lockfile has not endorsed yet, because the judgement "this
+record is knowledge we lean on" is made per source, not per citation. A
+`pin:` comment directive registers one arbitrary URL where it is cited
+(`<!-- pin: https://… — why -->`) — a spec, a dataset card, no code family
+behind it. An explicit `luria remotes --pin CODE` registers one ad-hoc pin,
+whose lockfile entry is its own registration. A bare `--pin` syncs the
+lockfile to the registrations, and a pin whose registration is gone — the
+config line deleted, the flag removed, the citation dropped — is reported
+and then pruned: committed state that governs nothing is the lockfile's
+version of a stale directive, and retiring a noisy pin costs one removal.
+
+One rule keeps the sweep honest: a bare `--pin` never moves an `endorsed`
+hash that upstream has drifted from. It records the observation (as
+`--refresh` would) and names the explicit command — otherwise one scheduled
+sweep would quietly launder every drift finding the lint was about to raise,
+and the human review the two-hash design exists to force would never happen.
 
 ## Alternatives considered
 

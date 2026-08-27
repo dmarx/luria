@@ -432,6 +432,11 @@ class RemoteScheme:
     # substitutions as `url`. Declared, not derived: only the project can vouch
     # that a URL serves content rather than a page around it (#135).
     pin_url: str = ""
+    # Content-pin every cited reference in this scheme (#135): `luria remotes
+    # --pin` endorses them all, and `luria lint` reports any cited code the
+    # lockfile has not endorsed yet — the endorsement is of the code family
+    # as a body of knowledge, not of one citation at a time.
+    pin: bool = False
 
     def anchor_for(self, number: int) -> str:
         template = self.anchor or f"{self.prefix.lower()}-{{number}}"
@@ -498,6 +503,13 @@ class Remote:
     # vouch that a URL is content-stable; unset, only a GitHub file
     # construction can be pinned.
     pin_url: str = ""
+    # Content-pin every cited reference to this remote (#135). Set here it
+    # covers the whole namespace; set on one of the remote's schemes, just
+    # that code family. Registration in config rather than per code, because
+    # the judgement is per source: a record this project leans on is endorsed
+    # as a body of knowledge, and one `luria remotes --pin` keeps the hashes
+    # current while `luria lint` reports what is cited but not yet endorsed.
+    pin: bool = False
     schemes: dict[str, RemoteScheme] = field(default_factory=dict)
 
     @property
@@ -574,6 +586,18 @@ class Remote:
         m = re.fullmatch(self.uid, code)
         groups = m.groups() if m else ()
         return template.format(code, *groups, uid=code, prefix=self.prefix)
+
+    def auto_pin(self, code: str) -> bool:
+        """Whether config declares this code's content pinned (#135).
+
+        `pin = true` on the remote covers its whole namespace; on one of its
+        schemes, that code family. Declared per source rather than per
+        citation, because that is where the judgement lives: a record this
+        project leans on is endorsed as a body of knowledge."""
+        if self.pin:
+            return True
+        scheme = None if self.uid else self.scheme_for(code)
+        return bool(scheme and scheme.pin)
 
 
 @dataclass(frozen=True)
@@ -989,6 +1013,7 @@ def load(root: Path | None = None, text: str | None = None) -> Config:
                 delim=spec.get("delim", "-"),
                 uid=spec.get("uid", ""),
                 pin_url=spec.get("pin_url", ""),
+                pin=bool(spec.get("pin", False)),
                 schemes={
                     s.upper(): RemoteScheme(
                         s.upper(),
@@ -997,6 +1022,7 @@ def load(root: Path | None = None, text: str | None = None) -> Config:
                         anchor=sub.get("anchor", ""),
                         url=sub.get("url", ""),
                         pin_url=sub.get("pin_url", ""),
+                        pin=bool(sub.get("pin", False)),
                     )
                     for s, sub in spec.get("schemes", {}).items()
                 },

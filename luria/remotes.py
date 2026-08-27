@@ -551,6 +551,8 @@ def run(refresh: bool = False, check: bool = False,
                 note += ("  [pinned]"
                          if entry.get("seen") == entry.get("endorsed")
                          else "  [pinned — changed upstream]")
+            elif remote.auto_pin(code):
+                note += "  [awaiting pin — `luria remotes --pin`]"
             print(f"  {code}  {target or 'NO SUCH DOCUMENT'}{note if target else ''}")
 
     if url_pinned := pins.url_state():

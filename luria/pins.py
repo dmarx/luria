@@ -15,11 +15,17 @@ same reason those do (ADR-016): CI, an offline checkout and a laptop have to
 answer "did this change?" the same way, so the network work happens in
 explicit commands whose output is committed, and the lint only ever reads.
 
-Not every load-bearing citation is a foreign code — a spec, a dataset card, a
-blog post the design leans on. An arbitrary URL is pinned by flagging it where
-it is cited (`<!-- pin: https://… — why it matters -->`, see `flagged_urls`)
-and running the same `--pin`; deleting the flag retires the pin, so one that
-fires too often costs one removed comment.
+Every pin has a REGISTRATION — the thing that says it should exist, and whose
+removal retires it. Three kinds, one per judgement site: `pin = true` in
+config (on a remote or one of its schemes) registers a whole code family, so
+each cited reference is pinned automatically and the lint reports any the
+lockfile has not endorsed yet; a `pin:` comment directive registers one
+arbitrary URL where it is cited (`<!-- pin: https://… — why it matters -->`,
+see `flagged_urls`) — a spec, a dataset card, a post the design leans on; and
+an explicit `luria remotes --pin CODE` registers one ad-hoc pin, for which
+the lockfile entry itself is the registration. A bare `--pin` syncs the
+lockfile to the registrations; deleting one — the config line, the comment,
+the entry — retires its pins, so one that fires too often costs one removal.
 
 Where stable bytes live
 -----------------------
@@ -192,10 +198,15 @@ def endorse(requested: tuple[str, ...]) -> None:
     """Endorse remote content: fetch each document, store its hash (#135).
 
     With arguments — codes or flagged URLs — endorse exactly those, which is
-    also how a reviewed change is endorsed again. With none, endorse every
-    cited code with stable bytes to fetch and every `pin:`-flagged URL, and
-    drop pins nothing cites or flags any more, so the committed state keeps
-    describing the record that exists."""
+    also the ONLY way a drifted pin is endorsed again. With none, sync the
+    lockfile to what is registered: every cited code the config declares
+    pinned (`pin = true` on a remote or one of its schemes), every existing
+    pin that is still cited, and every `pin:`-flagged URL — and drop pins
+    nothing cites or flags any more, so the committed state keeps describing
+    the record that exists. A bare run never moves an `endorsed` hash that
+    upstream has drifted from: it records the observation and names the
+    explicit command, because a scheduled sweep must not quietly launder the
+    findings the lint was about to raise."""
     cfg = current()
     pinned = _copy(state())
     url_pinned = {u: dict(e) for u, e in url_state().items()}
@@ -224,8 +235,13 @@ def endorse(requested: tuple[str, ...]) -> None:
             targets.append(parsed)
     else:
         refs = remotes.cited()
-        targets = [(cfg.remotes[prefix], code) for prefix in sorted(refs)
-                   for code in sorted(refs[prefix])]
+        for prefix in sorted(refs):
+            remote = cfg.remotes[prefix]
+            for code in sorted(refs[prefix]):
+                # Registered by config, or already pinned (an explicit `--pin
+                # CODE` once made the lockfile entry its own registration).
+                if remote.auto_pin(code) or code in pinned.get(prefix, {}):
+                    targets.append((remote, code))
         for prefix in list(pinned):
             remote = cfg.remotes.get(prefix)
             delim = remote.delim if remote else "-"
@@ -239,6 +255,7 @@ def endorse(requested: tuple[str, ...]) -> None:
             if url not in flagged:
                 del url_pinned[url]
                 print(f"{url}: no `pin:` directive flags it — pin dropped")
+    explicit = bool(requested)
     for remote, code in targets:
         composed = f"{remote.prefix}{remote.delim}{code}"
         url = stable_url(remote, code)
@@ -250,15 +267,22 @@ def endorse(requested: tuple[str, ...]) -> None:
                       else "it names no document there")
             print(f"{composed}: not pinned — {reason}", file=sys.stderr)
             continue
-        _endorse_one(composed, url, pinned.setdefault(remote.prefix, {}), code)
+        _endorse_one(composed, url, pinned.setdefault(remote.prefix, {}),
+                     code, explicit)
     for url in url_targets:
-        _endorse_one(url, url, url_pinned, url)
+        _endorse_one(url, url, url_pinned, url, explicit)
     path = remotes.write_lock(pinned=pinned, urls=url_pinned)
     print(f"wrote {cfg.rel(path)}")
 
 
-def _endorse_one(label: str, url: str, into: dict, key: str) -> None:
-    """Fetch one document's stable bytes and record the endorsement."""
+def _endorse_one(label: str, url: str, into: dict, key: str,
+                 explicit: bool) -> None:
+    """Fetch one document's stable bytes and record the endorsement.
+
+    A change since the last endorsement is endorsed only by an explicit act:
+    a bulk run records it as `seen` — the same observation `--refresh` makes
+    — and says which command endorses it, so drift always crosses a human's
+    desk before the record vouches for it again."""
     body, why = remotes._fetch_bytes(url)
     if why:
         tail = "" if url == label else f" ({url})"
@@ -266,6 +290,11 @@ def _endorse_one(label: str, url: str, into: dict, key: str) -> None:
         return
     digest = content_hash(body)
     entry = into.get(key)
+    if entry and entry.get("endorsed") != digest and not explicit:
+        into[key] = {"endorsed": entry["endorsed"], "seen": digest}
+        print(f"{label}: changed since endorsed — kept for review; "
+              f"`luria remotes --pin {label}` endorses the change")
+        return
     told = ("unchanged" if entry and entry.get("endorsed") == digest
             else "endorsed again" if entry else "pinned")
     into[key] = {"endorsed": digest, "seen": digest}
@@ -320,10 +349,32 @@ def drift_lines() -> list[str]:
     pinned = state()
     url_pinned = url_state()
     flagged, _ = flagged_urls()
-    if not pinned and not url_pinned and not flagged:
+    declaring = any(r.pin or any(s.pin for s in r.schemes.values())
+                    for r in cfg.remotes.values())
+    if not pinned and not url_pinned and not flagged and not declaring:
         return []
     refs = remotes.cited()
     lines: list[str] = []
+    # Cited references the config declares pinned but the lockfile has not
+    # endorsed — the scheme-level counterpart of a flagged, unendorsed URL.
+    for prefix in sorted(refs):
+        remote = cfg.remotes.get(prefix)
+        if remote is None:
+            continue
+        for code in sorted(refs[prefix]):
+            if not remote.auto_pin(code) or code in pinned.get(prefix, {}):
+                continue
+            composed = f"{prefix}{remote.delim}{code}"
+            if stable_url(remote, code):
+                lines.append(
+                    f"{composed}: cited in a source configured to pin "
+                    "(`pin = true`), but never endorsed — "
+                    "`luria remotes --pin` fetches and endorses it")
+            else:
+                lines.append(
+                    f"{composed}: configured to pin, but nothing knows "
+                    "where its stable bytes live — a `pin_url` template "
+                    "on the remote declares it")
     for prefix, entries in sorted(pinned.items()):
         remote = cfg.remotes.get(prefix)
         delim = remote.delim if remote else "-"

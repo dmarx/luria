@@ -164,8 +164,10 @@ def test_a_pin_nothing_cites_is_reported(project):
     assert len(lines) == 1 and "nothing cites it" in lines[0]
 
 
-def test_bare_pin_endorses_the_cited_and_prunes_the_rest(project, monkeypatch):
-    with_remote(project)
+def test_bare_pin_syncs_to_the_declared_remote_and_prunes_the_rest(project, monkeypatch):
+    """`pin = true` on a remote registers its whole namespace: a bare
+    `--pin` endorses every cited code, and drops pins nothing cites."""
+    with_remote(project, "pin = true\n")
     cite(project, "per UP-ADR-032 upstream\n")
     remotes.write_lock(pinned={"UP": {"ADR-999": {
         "endorsed": "sha256:old", "seen": "sha256:old"}}})
@@ -174,6 +176,83 @@ def test_bare_pin_endorses_the_cited_and_prunes_the_rest(project, monkeypatch):
     pinned = pinfile(project)["pins"]["UP"]
     assert set(pinned) == {"ADR-032"}
     assert pinned["ADR-032"]["endorsed"] == pins.content_hash(b"current")
+
+
+def test_bare_pin_leaves_unregistered_citations_alone(project, monkeypatch):
+    """No config flag, no directive, no existing entry — nothing registers a
+    pin, so a bare sweep must not invent one."""
+    with_remote(project)
+    cite(project, "per UP-ADR-032 upstream\n")
+    serve(monkeypatch, b"current")
+    pins.endorse(())
+    assert pinfile(project).get("pins", {}) == {}
+
+
+def test_an_existing_pin_is_its_own_registration(project, monkeypatch):
+    """An explicit `--pin CODE` once made the entry; a bare sweep keeps
+    re-observing it while it is cited, declaration or none."""
+    with_remote(project)
+    cite(project, "per UP-ADR-032 upstream\n")
+    serve(monkeypatch, b"v1")
+    pins.endorse(("UP-ADR-032",))
+    serve(monkeypatch, b"v1")
+    pins.endorse(())
+    assert pinfile(project)["pins"]["UP"]["ADR-032"]["endorsed"] \
+        == pins.content_hash(b"v1")
+
+
+def test_a_scheme_level_declaration_scopes_the_registration(project, monkeypatch):
+    """`pin = true` on one scheme covers that code family and no other."""
+    with_remote(project, '[luria.remotes.UP.schemes.RFC]\n'
+                         'dir = "docs/rfcs"\npin = true\n')
+    cite(project, "per UP-RFC-7 and UP-ADR-032\n")
+    serve(monkeypatch, b"body")
+    pins.endorse(())
+    pinned = pinfile(project)["pins"]["UP"]
+    assert set(pinned) == {"RFC-007"}
+
+
+def test_a_declared_citation_never_endorsed_is_reported(project):
+    """The scheme-level counterpart of a flagged, unendorsed URL: the config
+    says pinned, the lockfile says nothing, and silence would make the
+    declaration decorative (DP-1)."""
+    with_remote(project, "pin = true\n")
+    cite(project, "per UP-ADR-032 upstream\n")
+    lines = pins.drift_lines()
+    assert len(lines) == 1
+    assert "UP-ADR-032" in lines[0] and "never endorsed" in lines[0]
+
+
+def test_a_declared_but_unpinnable_citation_names_the_remedy(project):
+    """`pin = true` on a remote with no stable-bytes construction cannot be
+    honoured — the row says so and names `pin_url`, instead of demanding a
+    `--pin` that would refuse."""
+    with_remote(project, ARXIV.replace("[luria.remotes.ARXIV]\n",
+                                       "[luria.remotes.ARXIV]\npin = true\n"))
+    cite(project, "see ARXIV-2403.05530\n")
+    lines = pins.drift_lines()
+    assert len(lines) == 1 and "pin_url" in lines[0]
+
+
+def test_a_bare_sweep_never_launders_drift(project, monkeypatch, capsys):
+    """The whole point of the two hashes is that drift crosses a human's
+    desk. A scheduled bare `--pin` records the observation; only the
+    explicit command endorses the change."""
+    with_remote(project, "pin = true\n")
+    cite(project, "per UP-ADR-032 upstream\n")
+    serve(monkeypatch, b"v1")
+    pins.endorse(("UP-ADR-032",))
+    serve(monkeypatch, b"v2")
+    pins.endorse(())
+    capsys.readouterr()
+    entry = pinfile(project)["pins"]["UP"]["ADR-032"]
+    assert entry["endorsed"] == pins.content_hash(b"v1")
+    assert entry["seen"] == pins.content_hash(b"v2")
+    assert pins.drift_lines() != []
+    pins.endorse(("UP-ADR-032",))
+    assert pinfile(project)["pins"]["UP"]["ADR-032"]["endorsed"] \
+        == pins.content_hash(b"v2")
+    assert pins.drift_lines() == []
 
 
 def test_re_endorsing_clears_the_drift(project, monkeypatch):

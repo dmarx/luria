@@ -152,6 +152,16 @@ dir  = "record/decisions.d"
 [luria.remotes.LU.schemes.DP]
 document = "docs/design-principles.md"
 
+# The cited decisions are content-pinned as a body of knowledge (#135):
+# `luria remotes --pin` endorses each cited LU-ADR reference by hash, and
+# after a `--refresh` the lint reports any that changed on main since its
+# endorsement. Decisions are the right family for this — a merged ADR
+# rarely changes, so a change is signal. The DP scheme stays unpinned
+# deliberately: its codes resolve into one assembled document, so any edit
+# to any principle would flag every pinned anchor at once.
+[luria.remotes.LU.schemes.ADR]
+pin = true
+
 # Fixture codes (#38): FX-ADR-032 is an example, resolvable by construction
 # to the note that says so — never a claim about this record, and never able
 # to collide with it, because it is not in the sequence.

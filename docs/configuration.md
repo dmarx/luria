@@ -218,6 +218,7 @@ pin_url = "https://arxiv.org/e-print/{1}.{2}"
 | `delim` | `str` | `"-"` |
 | `uid` | `str` | *unset* |
 | `pin_url` | `str` | *unset* |
+| `pin` | `bool` | `False` |
 | `schemes` | `dict[str, RemoteScheme]` | *unset* |
 
 ## Per-scheme remote construction — `[luria.remotes.X.schemes.Y]`
@@ -253,6 +254,7 @@ overrides both and takes {code}, {number} and {prefix}.
 | `anchor` | `str` | *unset* |
 | `url` | `str` | *unset* |
 | `pin_url` | `str` | *unset* |
+| `pin` | `bool` | `False` |
 
 ## The site — `[luria.site]`
 

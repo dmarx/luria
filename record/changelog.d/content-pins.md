@@ -16,6 +16,13 @@
   (`<!-- pin: https://… — why it matters -->`) and run `luria remotes
   --pin`. The flag is the registration — deleting it retires the pin, so a
   pin that fires too often costs one removed comment.
+- `pin = true` on a remote (or one of its schemes) registers a whole code
+  family: every cited reference is pinned by a bare `luria remotes --pin`,
+  and the lint reports any not yet endorsed. A bare `--pin` syncs the
+  lockfile to what is registered — config declarations, `pin:` flags,
+  existing pins — and never re-endorses drifted content: that always takes
+  the explicit `--pin CODE`, so a scheduled sweep cannot quietly launder a
+  drift finding. This repo registers its own cited `LU-ADR` references.
 
 ### Fixed
 

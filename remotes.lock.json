@@ -3,9 +3,57 @@
   "remotes": {},
   "pins": {
     "LU": {
+      "ADR-001": {
+        "endorsed": "sha256:b1a929761608533452164471b7f81cd539c7f81edc0a3fa71f3fe943c391742d",
+        "seen": "sha256:b1a929761608533452164471b7f81cd539c7f81edc0a3fa71f3fe943c391742d"
+      },
+      "ADR-002": {
+        "endorsed": "sha256:3da6da9511fce6bdfa5fe43658d3615551eba0e00dc4ccd8533f46187cfd68a6",
+        "seen": "sha256:3da6da9511fce6bdfa5fe43658d3615551eba0e00dc4ccd8533f46187cfd68a6"
+      },
+      "ADR-004": {
+        "endorsed": "sha256:3985eb138fb6ecc30188d297cc5c92c6293e53be70045be05cf6ef46dbf638d0",
+        "seen": "sha256:3985eb138fb6ecc30188d297cc5c92c6293e53be70045be05cf6ef46dbf638d0"
+      },
+      "ADR-012": {
+        "endorsed": "sha256:65909d6942c8e368580bcd39e63cb40dab549dcac1b69c07c6d5ebfc8e7fe679",
+        "seen": "sha256:65909d6942c8e368580bcd39e63cb40dab549dcac1b69c07c6d5ebfc8e7fe679"
+      },
       "ADR-013": {
         "endorsed": "sha256:c0bb893537f19922c5c379706fd7522c24ddd869c0a87204c0bc7b774c24bdd0",
         "seen": "sha256:c0bb893537f19922c5c379706fd7522c24ddd869c0a87204c0bc7b774c24bdd0"
+      },
+      "ADR-019": {
+        "endorsed": "sha256:ab21532c5dc662624453dcd9deefbb7b59db32772b7475c4637a5f0b534090f9",
+        "seen": "sha256:ab21532c5dc662624453dcd9deefbb7b59db32772b7475c4637a5f0b534090f9"
+      },
+      "ADR-020": {
+        "endorsed": "sha256:ea5680b56c85e77541ad559a44b0afb0ff07454e7c9d1e6ac9996bc5e337e07d",
+        "seen": "sha256:ea5680b56c85e77541ad559a44b0afb0ff07454e7c9d1e6ac9996bc5e337e07d"
+      },
+      "ADR-021": {
+        "endorsed": "sha256:d7ad32614c2e639fe00406c9ebc1d201cc16ec2e3aa8dbf7c5a6046b28a87d10",
+        "seen": "sha256:d7ad32614c2e639fe00406c9ebc1d201cc16ec2e3aa8dbf7c5a6046b28a87d10"
+      },
+      "ADR-029": {
+        "endorsed": "sha256:d5d06e8bac77f76405a89df6551c59e2076435fed5baf8d3a145b8cde8d4ee3c",
+        "seen": "sha256:d5d06e8bac77f76405a89df6551c59e2076435fed5baf8d3a145b8cde8d4ee3c"
+      },
+      "ADR-037": {
+        "endorsed": "sha256:a6b948b93180435644294d76e45f694aa3c5371d41f63e7367b66b4046aab2c1",
+        "seen": "sha256:a6b948b93180435644294d76e45f694aa3c5371d41f63e7367b66b4046aab2c1"
+      },
+      "ADR-042": {
+        "endorsed": "sha256:0f7632a9c2b086caca27ebb34351dcbdabc4c995c6dae4db6bb45ebbff918805",
+        "seen": "sha256:0f7632a9c2b086caca27ebb34351dcbdabc4c995c6dae4db6bb45ebbff918805"
+      },
+      "ADR-048": {
+        "endorsed": "sha256:ddf5c25476d0bbab68dfa9c7b08139164a0090be7a00d635c53498575dcc79ed",
+        "seen": "sha256:ddf5c25476d0bbab68dfa9c7b08139164a0090be7a00d635c53498575dcc79ed"
+      },
+      "ADR-049": {
+        "endorsed": "sha256:a90407eeb41be3fb7e3d70f8c0ec166e01353b3e6fb2f47546c3c3ccdc288acf",
+        "seen": "sha256:a90407eeb41be3fb7e3d70f8c0ec166e01353b3e6fb2f47546c3c3ccdc288acf"
       }
     }
   }
