@@ -477,12 +477,18 @@ BLOB_URL_RE = re.compile(r"https://github\.com/([^/]+/[^/]+)/blob/([^/#]+)/(.+)"
 def raw_url(remote: Remote, code: str) -> str:
     """The URL whose bytes ARE the document, or "" when there isn't one.
 
-    Only a GitHub file construction qualifies. A `url` template or a uid
-    remote points at a rendered page — arXiv's abstract, a Jira ticket —
-    whose markup churns under identical content, so a hash of it would drift
-    on its own schedule and the pin would cry wolf. The anchor a document
-    scheme appends is dropped: a fragment selects nothing server-side, and
-    the endorsement covers the document the anchor lands in."""
+    A declared `pin_url` template wins: only the project can vouch that a
+    URL is content-stable, so the declaration is the strongest evidence
+    there is (#135). Otherwise a GitHub file construction qualifies on its
+    own. Anything else — a `url` template, a uid remote — points at a
+    rendered page (arXiv's abstract, a Jira ticket) whose markup churns
+    under identical content, so a hash of it would drift on its own
+    schedule and the pin would cry wolf. The anchor a document scheme
+    appends is dropped: a fragment selects nothing server-side, and the
+    endorsement covers the document the anchor lands in."""
+    declared = remote.pin_link(code)
+    if declared:
+        return declared
     m = BLOB_URL_RE.fullmatch(link(remote, code).split("#")[0])
     if not m:
         return ""
@@ -533,8 +539,9 @@ def pin_codes(requested: tuple[str, ...]) -> None:
         composed = f"{remote.prefix}{remote.delim}{code}"
         url = raw_url(remote, code)
         if not url:
-            reason = ("the construction is not a GitHub file, so there are "
-                      "no stable bytes to hash" if link(remote, code)
+            reason = ("the construction is not a GitHub file, so nothing "
+                      "here knows where its stable bytes live — a `pin_url` "
+                      "template on the remote declares it" if link(remote, code)
                       else "it names no document there")
             print(f"{composed}: not pinned — {reason}", file=sys.stderr)
             continue

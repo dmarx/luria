@@ -471,6 +471,41 @@ def test_a_url_template_has_no_stable_bytes_to_pin(project):
     assert remotes.raw_url(config.current().remotes["ARXIV"], "2403.05530") == ""
 
 
+def test_a_declared_pin_url_makes_a_uid_remote_pinnable(project):
+    """`url` is where a reader lands; `pin_url` is what a pin hashes. The
+    declaration takes the same substitutions, so arXiv's immutable e-print
+    stands behind the abstract page a reader sees."""
+    with_remote(project, ARXIV + 'pin_url = "https://arxiv.org/e-print/{1}.{2}"\n')
+    remote = config.current().remotes["ARXIV"]
+    assert remotes.raw_url(remote, "2403.05530") == (
+        "https://arxiv.org/e-print/2403.05530")
+    # …and the reader's link is untouched by the declaration.
+    assert remotes.link(remote, "2403.05530") == (
+        "https://arxiv.org/abs/2403.05530")
+
+
+def test_a_declared_pin_url_wins_over_the_github_rebase(project):
+    """The project's declaration is the strongest evidence there is — a
+    remote that mirrors its record somewhere stabler than the repo can say
+    so, and the construction steps aside."""
+    with_remote(project, 'pin_url = "https://mirror.test/{code}.md"\n')
+    remote = config.current().remotes["UP"]
+    assert remotes.raw_url(remote, "ADR-032") == "https://mirror.test/ADR-032.md"
+
+
+def test_a_scheme_level_pin_url_scopes_the_declaration(project):
+    with_remote(project,
+        '[luria.remotes.UP.schemes.VP]\n'
+        'url = "https://up.example/values/{number}"\n'
+        'pin_url = "https://up.example/raw/values-{number}.txt"\n')
+    remote = config.current().remotes["UP"]
+    assert remotes.raw_url(remote, "VP-18") == (
+        "https://up.example/raw/values-18.txt")
+    # The other schemes stay on the GitHub construction.
+    assert remotes.raw_url(remote, "ADR-032").startswith(
+        "https://raw.githubusercontent.com/o/r/")
+
+
 def test_pin_stores_the_endorsed_hash(project, monkeypatch):
     with_remote(project)
     serve(monkeypatch, b"the decision, as endorsed")

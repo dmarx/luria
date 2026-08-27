@@ -428,6 +428,10 @@ class RemoteScheme:
     document: str = ""
     anchor: str = ""
     url: str = ""
+    # Where this scheme's *stable bytes* live, for content pins — same
+    # substitutions as `url`. Declared, not derived: only the project can vouch
+    # that a URL serves content rather than a page around it (#135).
+    pin_url: str = ""
 
     def anchor_for(self, number: int) -> str:
         template = self.anchor or f"{self.prefix.lower()}-{{number}}"
@@ -463,6 +467,13 @@ class Remote:
         [luria.remotes.ARXIV]
         uid = "(\\d{4})[.:](\\d{4,5})"
         url = "https://arxiv.org/abs/{1}.{2}"   # {0} or {uid} is the whole tail
+
+    A `pin_url` template names where the remote's *stable bytes* live, which
+    is what lets `luria remotes --pin` endorse content that has no GitHub
+    file behind it (#135) — arXiv's e-print archive is the paper where its
+    abstract page is a rendering:
+
+        pin_url = "https://arxiv.org/e-print/{1}.{2}"
     """
     prefix: str
     repo: str = ""
@@ -479,6 +490,14 @@ class Remote:
     # below. Set, the tail is an opaque identifier: matched exactly, never
     # normalised, constructed only through the `url` template.
     uid: str = ""
+    # Where this remote's stable bytes live, for content pins (#135) — same
+    # substitutions as `url`. `url` is where a *reader* lands; this is what a
+    # pin *hashes*, and they differ whenever the reader's page is a rendering
+    # (an arXiv abstract, a ticket view) whose markup churns under identical
+    # content. Declared rather than derived, because only the project can
+    # vouch that a URL is content-stable; unset, only a GitHub file
+    # construction can be pinned.
+    pin_url: str = ""
     schemes: dict[str, RemoteScheme] = field(default_factory=dict)
 
     @property
@@ -512,11 +531,7 @@ class Remote:
         a title-slug name; and the code-only convention (ADR-013), which is
         right whenever the remote follows it."""
         if self.uid:
-            if not self.url:
-                return ""
-            m = re.fullmatch(self.uid, code)
-            groups = m.groups() if m else ()
-            return self.url.format(code, *groups, uid=code, prefix=self.prefix)
+            return self._format(self.url, code)
         prefix, number = code.rsplit("-", 1)
         number = int(number)
         scheme = self.scheme_for(code)
@@ -533,6 +548,32 @@ class Remote:
         if not self.repo:
             return ""
         return f"{self.base()}/{filename or code + '.md'}"
+
+    def pin_link(self, code: str) -> str:
+        """Where this code's stable bytes live, by declaration — "" when no
+        `pin_url` covers it. The declared counterpart of `link()`: the same
+        substitutions, answering "what does a pin hash" where `link()` answers
+        "where does a reader land" (#135)."""
+        if self.uid:
+            return self._format(self.pin_url, code)
+        prefix, number = code.rsplit("-", 1)
+        scheme = self.scheme_for(code)
+        if scheme is not None and scheme.pin_url:
+            return scheme.pin_url.format(code=code, number=int(number),
+                                         prefix=prefix)
+        if self.pin_url:
+            return self.pin_url.format(code=code, number=int(number),
+                                       prefix=prefix)
+        return ""
+
+    def _format(self, template: str, code: str) -> str:
+        """A uid template, fed the whole tail as {0}/{uid} and its capture
+        groups by position (ADR-024)."""
+        if not template:
+            return ""
+        m = re.fullmatch(self.uid, code)
+        groups = m.groups() if m else ()
+        return template.format(code, *groups, uid=code, prefix=self.prefix)
 
 
 @dataclass(frozen=True)
@@ -947,6 +988,7 @@ def load(root: Path | None = None, text: str | None = None) -> Config:
                 url=spec.get("url", ""),
                 delim=spec.get("delim", "-"),
                 uid=spec.get("uid", ""),
+                pin_url=spec.get("pin_url", ""),
                 schemes={
                     s.upper(): RemoteScheme(
                         s.upper(),
@@ -954,6 +996,7 @@ def load(root: Path | None = None, text: str | None = None) -> Config:
                         document=sub.get("document", ""),
                         anchor=sub.get("anchor", ""),
                         url=sub.get("url", ""),
+                        pin_url=sub.get("pin_url", ""),
                     )
                     for s, sub in spec.get("schemes", {}).items()
                 },
