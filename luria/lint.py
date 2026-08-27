@@ -527,7 +527,7 @@ def status_sections() -> list[tuple[str, str, list[str]]]:
 
     # A directive that silently does nothing is worse than no directive.
     stale = ref_status.stale_annotations(result, docs) + stale_urls \
-        + stale_targets
+        + stale_targets + pins.flag_problems()
     for path in doc_refs.doc_files():
         stale += doc_refs.directive_problems(path, path.read_text(encoding="utf-8"))
     if stale:

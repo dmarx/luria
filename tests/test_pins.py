@@ -88,7 +88,7 @@ def test_a_scheme_level_pin_url_scopes_the_declaration(project):
 def test_pin_stores_the_endorsed_hash(project, monkeypatch):
     with_remote(project)
     serve(monkeypatch, b"the decision, as endorsed")
-    pins.pin_codes(("UP-ADR-032",))
+    pins.endorse(("UP-ADR-032",))
     entry = pinfile(project)["pins"]["UP"]["ADR-032"]
     digest = pins.content_hash(b"the decision, as endorsed")
     assert entry == {"endorsed": digest, "seen": digest}
@@ -100,7 +100,7 @@ def test_pin_survives_a_refresh_and_vice_versa(project, monkeypatch):
     with_remote(project)
     lockfile(project, {"ADR-032": "adr-032-x.md"})
     serve(monkeypatch, b"v1")
-    pins.pin_codes(("UP-ADR-032",))
+    pins.endorse(("UP-ADR-032",))
     assert pinfile(project)["remotes"]["UP"] == {"ADR-032": "adr-032-x.md"}
     remotes.write_lock({"UP": {"ADR-033": "ADR-033.md"}})
     assert pinfile(project)["pins"]["UP"]["ADR-032"]["endorsed"] \
@@ -112,7 +112,7 @@ def test_refresh_moves_seen_and_never_endorsed(project, monkeypatch):
     records the observation, and the committed diff carries the drift."""
     with_remote(project)
     serve(monkeypatch, b"v1")
-    pins.pin_codes(("UP-ADR-032",))
+    pins.endorse(("UP-ADR-032",))
     serve(monkeypatch, b"v2")
     assert pins.refresh_seen() == ["UP-ADR-032"]
     entry = pinfile(project)["pins"]["UP"]["ADR-032"]
@@ -125,7 +125,7 @@ def test_an_unreachable_document_keeps_its_last_observation(project, monkeypatch
     would report drift that never happened."""
     with_remote(project)
     serve(monkeypatch, b"v1")
-    pins.pin_codes(("UP-ADR-032",))
+    pins.endorse(("UP-ADR-032",))
     monkeypatch.setattr(remotes, "_fetch_bytes",
                         lambda url: (b"", "unreachable (URLError)"))
     assert pins.refresh_seen() == []
@@ -170,7 +170,7 @@ def test_bare_pin_endorses_the_cited_and_prunes_the_rest(project, monkeypatch):
     remotes.write_lock(pinned={"UP": {"ADR-999": {
         "endorsed": "sha256:old", "seen": "sha256:old"}}})
     serve(monkeypatch, b"current")
-    pins.pin_codes(())
+    pins.endorse(())
     pinned = pinfile(project)["pins"]["UP"]
     assert set(pinned) == {"ADR-032"}
     assert pinned["ADR-032"]["endorsed"] == pins.content_hash(b"current")
@@ -182,11 +182,11 @@ def test_re_endorsing_clears_the_drift(project, monkeypatch):
     with_remote(project)
     cite(project, "per UP-ADR-032 upstream\n")
     serve(monkeypatch, b"v1")
-    pins.pin_codes(("UP-ADR-032",))
+    pins.endorse(("UP-ADR-032",))
     serve(monkeypatch, b"v2")
     pins.refresh_seen()
     assert pins.drift_lines() != []
-    pins.pin_codes(("UP-ADR-032",))
+    pins.endorse(("UP-ADR-032",))
     assert pins.drift_lines() == []
 
 
@@ -203,3 +203,99 @@ def test_remote_drift_can_be_promoted_to_a_failure(project, monkeypatch, capsys)
     capsys.readouterr()
     assert any("failing: `fail_on`" in e for e in errors)
     assert any("UP-ADR-032" in e for e in errors)
+
+
+# ── Arbitrary URL pins (`pin:`) ──────────────────────────────────────────
+
+
+FLAGGED = ("<!-- pin: https://spec.test/v1.html — the spec this implements -->\n"
+           "We follow [the spec](https://spec.test/v1.html).\n")
+
+
+def test_a_pin_flag_registers_a_cited_url(project):
+    """Not every load-bearing citation is a foreign code — the flag lives
+    where the URL is cited, same scopes as every directive."""
+    cite(project, FLAGGED)
+    flagged, problems = pins.flagged_urls()
+    assert flagged == {"https://spec.test/v1.html"} and problems == []
+
+
+def test_a_flag_does_not_satisfy_itself(project):
+    """The URL inside the directive's own comment must not count as the
+    citation it governs — otherwise a flag whose link was deleted could
+    never report itself stale."""
+    cite(project, "<!-- pin: https://spec.test/v1.html — nothing here -->\n")
+    flagged, problems = pins.flagged_urls()
+    assert flagged == set()
+    assert len(problems) == 1 and "appears nowhere" in problems[0]
+
+
+def test_a_flag_naming_a_code_is_redirected(project):
+    """A foreign code needs no flag — `--pin CODE` already covers it — and a
+    directive that looks armed while doing nothing is the quiet failure the
+    problems report exists for (DP-1)."""
+    with_remote(project)
+    cite(project, "<!-- pin: UP-ADR-032 — wrong tool -->\nSee UP-ADR-032.\n")
+    flagged, problems = pins.flagged_urls()
+    assert flagged == set()
+    assert len(problems) == 1 and "not a URL" in problems[0]
+
+
+def test_bare_pin_endorses_flagged_urls_and_prunes_unflagged(project, monkeypatch):
+    cite(project, FLAGGED)
+    remotes.write_lock(urls={"https://old.test/gone.html": {
+        "endorsed": "sha256:aaa", "seen": "sha256:aaa"}})
+    serve(monkeypatch, b"the spec body")
+    pins.endorse(())
+    urls = pinfile(project)["urls"]
+    assert set(urls) == {"https://spec.test/v1.html"}
+    assert urls["https://spec.test/v1.html"]["endorsed"] \
+        == pins.content_hash(b"the spec body")
+
+
+def test_an_unflagged_url_is_refused(project, monkeypatch, capsys):
+    """The flag is the registration: a pin the prose doesn't carry would be
+    invisible exactly where it governs."""
+    serve(monkeypatch, b"whatever")
+    pins.endorse(("https://spec.test/v1.html",))
+    err = capsys.readouterr().err
+    assert "no `pin:` directive flags it" in err
+    assert pinfile(project).get("urls", {}) == {}
+
+
+def test_url_drift_is_reported_and_re_endorsing_clears_it(project, monkeypatch):
+    cite(project, FLAGGED)
+    serve(monkeypatch, b"v1")
+    pins.endorse(("https://spec.test/v1.html",))
+    serve(monkeypatch, b"v2")
+    assert pins.refresh_seen() == ["https://spec.test/v1.html"]
+    lines = pins.drift_lines()
+    assert len(lines) == 1 and "content changed since it was endorsed" in lines[0]
+    pins.endorse(("https://spec.test/v1.html",))
+    assert pins.drift_lines() == []
+
+
+def test_a_flag_never_endorsed_is_reported(project):
+    """A flag that registered a pin nobody fetched is armed-looking and doing
+    nothing — said, not silent (DP-1)."""
+    cite(project, FLAGGED)
+    lines = pins.drift_lines()
+    assert len(lines) == 1 and "never endorsed" in lines[0]
+
+
+def test_removing_the_flag_retires_the_pin(project):
+    """The issue's escape hatch: a pin that fires too often costs one deleted
+    comment, and the URL goes back to being an ordinary, unwatched link."""
+    cite(project, "We follow [the spec](https://spec.test/v1.html).\n")
+    remotes.write_lock(urls={"https://spec.test/v1.html": {
+        "endorsed": "sha256:aaa", "seen": "sha256:bbb"}})
+    lines = pins.drift_lines()
+    assert len(lines) == 1 and "no `pin:` directive flags it" in lines[0]
+
+
+def test_stale_flags_reach_the_lint(project):
+    from luria import lint
+    cite(project, "<!-- pin: https://spec.test/v1.html — dangling -->\n")
+    sections = {name: lines for name, _, lines in lint.status_sections()}
+    assert any("appears nowhere the directive governs" in line
+               for line in sections.get("stale-directives", []))

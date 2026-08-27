@@ -15,7 +15,9 @@ summary: >-
   `remote-drift` warning class, cleared by re-endorsing after review.
   Rejected: fetching in the lint (a check that fails on a train), mirroring
   upstream status (a projection of somebody else's record), and hashing
-  url-template targets (rendered pages churn under identical content).
+  rendered pages (their markup churns under identical content — a remote
+  with stable bytes elsewhere declares the location with `pin_url`, and a
+  bare URL is pinned by a `pin:` flag where it is cited).
 ---
 
 # ADR-tmptuwov: Remote content endorsed by hash, drift compared offline
@@ -50,11 +52,22 @@ Re-endorsing is the acknowledgement: review the change upstream, run
 exists for the class, deliberately — the judgement lives in the lockfile, not
 in prose at a citation site, so there is no second place for it to go stale.
 
-Only a GitHub file construction can be pinned: the blob URL is re-based onto
-`raw.githubusercontent.com` so the fetched bytes are the document rather than
-the page around it. A pin whose code nothing cites any more is reported too,
-and a bare `--pin` prunes it — committed state that governs nothing is the
-lockfile's version of a stale directive.
+What gets hashed is a construction's **stable bytes**, never the page a
+reader lands on, resolved through an ordered table of sources
+(`luria.pins.SOURCES` — adding a source-specific case is one function and
+one entry). A declared `pin_url` template wins: only the project can vouch
+that a URL is content-stable, so arXiv's immutable e-print archive can stand
+behind the abstract page a reader sees. Otherwise a GitHub file construction
+qualifies on its own, re-based onto `raw.githubusercontent.com` so the
+fetched bytes are the document rather than the page around it.
+
+A URL that is no foreign code at all — a spec, a dataset card — is pinned by
+flagging it where it is cited (`<!-- pin: https://… — why -->`) and running
+the same `--pin`. The flag is the registration, so removing it retires the
+pin: one that fires too often costs one deleted comment, and the URL goes
+back to being an ordinary, unwatched link. A pin whose code nothing cites —
+or whose flag is gone — is reported, and a bare `--pin` prunes it: committed
+state that governs nothing is the lockfile's version of a stale directive.
 
 ## Alternatives considered
 
@@ -71,11 +84,14 @@ lockfile's version of a stale directive.
   actually verifiable — *something* changed — and hands the judgement to a
   person, which is where every status judgement in this record already lives
   ([ADR-035](ADR-035.md)).
-- **Hash url-template and uid targets too** — an arXiv abstract or a Jira
-  ticket is a rendered page whose markup churns under identical content, so
-  the pin would cry wolf on the site's deploy schedule, and a guard that
-  cries wolf is a guard nobody reads ([ADR-016](ADR-016.md)). The command says why it
-  refuses rather than storing a hash that would drift on its own.
+- **Hash whatever URL the reference constructs** — an arXiv abstract or a
+  Jira ticket is a rendered page whose markup churns under identical content,
+  so the pin would cry wolf on the site's deploy schedule, and a guard that
+  cries wolf is a guard nobody reads ([ADR-016](ADR-016.md)). The command refuses by default
+  and says why; a remote that *does* have stable bytes somewhere declares
+  the location (`pin_url`), which moves the judgement to the party that can
+  actually make it — the same bargain as a `url` template, and the config
+  line is the project taking responsibility for the claim.
 - **Status quo** — foreign references stay reachability-checked only
   (`--check`), and a superseded upstream decision keeps being presented as
   justification until a reader happens to click through and notice.

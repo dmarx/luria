@@ -6,6 +6,7 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 
 ## Currently — [August 2026](2026-08.md)
 
+- [27 Aug 04:43 — URL pins fired end-to-end, and where stable bytes hide](2026-08.md#20260827044323)
 - [27 Aug 03:26 — Firing the remote-drift guard on a real pin](2026-08.md#20260827032625)
 - [24 Aug 21:33 — Measuring a downstream config before proposing anything](2026-08.md#20260824213330)
 - [24 Aug 20:37 — What a downstream adoption showed about the docs](2026-08.md#20260824203730)
@@ -52,8 +53,8 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 
 ## All books
 
-43 entries across 1 book, newest first.
+44 entries across 1 book, newest first.
 
 | Book | Entries | First | Last |
 |---|--:|---|---|
-| [2026-08](2026-08.md) | 43 | 2026-08-03 | 2026-08-27 |
+| [2026-08](2026-08.md) | 44 | 2026-08-03 | 2026-08-27 |

@@ -44,16 +44,35 @@ outlive what they excuse.
 | `broad-ok:` | a term flagged by `narrow-titles`, used in a legitimately broad sense | the term(s) |
 | `unlinted-file:` | opts the entire file out of reference checking — the blunt tool for fixture-heavy or vendored pages. File-scoped by design; counted in the report rather than hidden | — |
 | `unexempt:` | the reverse of an exemption: makes the linker treat code regions as prose again, for pages *about* the reference syntax | `codeblock`, `inline-code` |
+| `pin:` | not an acknowledgement — a *registration*: marks a cited URL for content pinning, so `luria remotes --pin` endorses its bytes and the lint reports when they change (`remote-drift`) | the URL(s) |
 
 Each acknowledgement covers findings at its own site only — that locality
 is the point. Vouching for one citation of a retired decision says nothing
 about the next one, which gets its own look and its own reason.
 
-One warning class carries no directive on purpose: `remote-drift` (a
-pinned remote document whose content changed upstream) is acknowledged by
-re-endorsing — `luria remotes --pin CODE` after reviewing the change —
-because the judgement lives in the lockfile, not in prose at a citation
-site.
+One warning class is acknowledged without a directive on purpose:
+`remote-drift` (a pinned document whose content changed upstream) is
+cleared by re-endorsing — `luria remotes --pin CODE` after reviewing the
+change — because the judgement lives in the lockfile, not in prose at a
+citation site.
+
+`pin:` runs the other way from every acknowledgement: it *arms* a check
+rather than quieting one. Flag a URL where it is cited —
+
+```
+<!-- pin: https://spec.example/v1.html — the spec this implements -->
+We follow [the spec](https://spec.example/v1.html).
+```
+
+— and `luria remotes --pin` endorses its content by hash; from then on the
+lint reports when the bytes change. The URL must appear in text the
+directive governs (its own comment doesn't count), so a flag whose
+citation was deleted reports itself under `stale-directives` like any
+other directive. Deleting the flag retires the pin — the next bare
+`luria remotes --pin` prunes it — so a pin that fires too often costs one
+removed comment, and the URL goes back to being an ordinary, unwatched
+link. Foreign codes need no flag: `luria remotes --pin LU-ADR-013`
+already covers them.
 
 ## Mentioning a code without citing it
 

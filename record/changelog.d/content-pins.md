@@ -7,6 +7,15 @@
   `remote-drift` warning class, promotable via `fail_on`. Re-endorsing after
   review clears the finding; a bare `--pin` endorses everything cited and
   prunes pins nothing cites any more ([ADR-tmptuwov](record/decisions.d/ADR-tmptuwov.md)).
+- A `pin_url` template on a remote (or remote scheme) declares where its
+  *stable bytes* live, so content behind a rendered page becomes pinnable —
+  `pin_url = "https://arxiv.org/e-print/{1}.{2}"` pins the paper an abstract
+  page fronts. Declared rather than guessed: only the project can vouch that
+  a URL is content-stable.
+- Arbitrary URLs can be pinned too: flag one where it is cited
+  (`<!-- pin: https://… — why it matters -->`) and run `luria remotes
+  --pin`. The flag is the registration — deleting it retires the pin, so a
+  pin that fires too often costs one removed comment.
 
 ### Fixed
 

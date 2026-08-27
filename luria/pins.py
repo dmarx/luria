@@ -15,6 +15,12 @@ same reason those do (ADR-016): CI, an offline checkout and a laptop have to
 answer "did this change?" the same way, so the network work happens in
 explicit commands whose output is committed, and the lint only ever reads.
 
+Not every load-bearing citation is a foreign code — a spec, a dataset card, a
+blog post the design leans on. An arbitrary URL is pinned by flagging it where
+it is cited (`<!-- pin: https://… — why it matters -->`, see `flagged_urls`)
+and running the same `--pin`; deleting the flag retires the pin, so one that
+fires too often costs one removed comment.
+
 Where stable bytes live
 -----------------------
 Hashing the URL a *reader* lands on is wrong whenever that page is a
@@ -100,26 +106,114 @@ def state() -> dict[str, dict[str, dict[str, str]]]:
     return remotes._read_lockfile().get("pins", {})
 
 
+def url_state() -> dict[str, dict[str, str]]:
+    """The committed URL pins: {url: {endorsed, seen}} — the same two-hash
+    bargain for content that is not a foreign code at all."""
+    return remotes._read_lockfile().get("urls", {})
+
+
 def _copy(pinned: dict) -> dict:
     return {p: {c: dict(e) for c, e in entries.items()}
             for p, entries in pinned.items()}
 
 
+# ── URL flags ────────────────────────────────────────────────────────────
+
+PIN = "pin"
+
+
+def flagged_urls(files=None) -> tuple[set[str], list[str]]:
+    """URLs a `pin:` directive marks for endorsement, and the directives that
+    mark nothing.
+
+        <!-- pin: https://spec.test/v1.html — the spec this implements -->
+        We follow [the spec](https://spec.test/v1.html).
+
+    Not every load-bearing citation is a foreign code: a spec, a blog post,
+    a dataset card. The flag lives where the URL is cited — same scopes as
+    every directive — and it IS the pin's registration: `luria remotes
+    --pin` endorses what is flagged, and removing the flag is how a pin is
+    retired (the next bare `--pin` prunes it). A pin that fires too often
+    costs one deleted comment, and the URL goes back to being an ordinary,
+    unwatched link.
+
+    The directive's own comment is blanked before checking what it governs —
+    otherwise every flag would satisfy itself with the URL in its own text,
+    and a flag whose citation was deleted could never report itself stale."""
+    from . import directives, ref_status
+    cfg = current()
+    flagged: set[str] = set()
+    problems: list[str] = []
+    for path in files if files is not None else ref_status.scanned_files():
+        try:
+            text = path.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            continue
+        found = directives.find(path, text, {PIN})
+        if not found:
+            continue
+        chars = list(text)
+        for d in found:
+            for i in range(max(0, d.span[0]), min(len(chars), d.span[1])):
+                if chars[i] != "\n":
+                    chars[i] = " "
+        lines = "".join(chars).splitlines()
+        for d in found:
+            problem = directives.problems(d)
+            if problem:
+                problems.append(f"{cfg.rel(path)}:{d.line}: {problem}")
+                continue
+            for arg in d.args:
+                if not arg.startswith(("http://", "https://")):
+                    problems.append(
+                        f"{cfg.rel(path)}:{d.line}: `pin` names {arg}, which "
+                        "is not a URL — a foreign code is pinned with "
+                        f"`luria remotes --pin {arg}`, no flag needed")
+                elif any(arg in line for n, line in enumerate(lines, 1)
+                         if d.covers(n)):
+                    flagged.add(arg)
+                else:
+                    problems.append(
+                        f"{cfg.rel(path)}:{d.line}: `pin` names {arg}, which "
+                        "appears nowhere the directive governs")
+    return flagged, problems
+
+
+def flag_problems() -> list[str]:
+    """`pin:` directives that register nothing — the lint's stale-directives
+    section reads these, same bargain as every other directive (DP-1)."""
+    return flagged_urls()[1]
+
+
 # ── The operations ───────────────────────────────────────────────────────
 
 
-def pin_codes(requested: tuple[str, ...]) -> None:
+def endorse(requested: tuple[str, ...]) -> None:
     """Endorse remote content: fetch each document, store its hash (#135).
 
-    With codes, endorse exactly those — which is also how a reviewed change
-    is endorsed again. With none, endorse every cited code that has stable
-    bytes to fetch, and drop pins whose code is no longer cited, so the
-    committed state keeps describing the record that exists."""
+    With arguments — codes or flagged URLs — endorse exactly those, which is
+    also how a reviewed change is endorsed again. With none, endorse every
+    cited code with stable bytes to fetch and every `pin:`-flagged URL, and
+    drop pins nothing cites or flags any more, so the committed state keeps
+    describing the record that exists."""
     cfg = current()
     pinned = _copy(state())
+    url_pinned = {u: dict(e) for u, e in url_state().items()}
+    flagged, _ = flagged_urls()
     targets: list[tuple[Remote, str]] = []
+    url_targets: list[str] = []
     if requested:
         for text in requested:
+            if text.startswith(("http://", "https://")):
+                if text in flagged:
+                    url_targets.append(text)
+                else:
+                    # The flag is the registration — a pin the prose doesn't
+                    # carry would be invisible exactly where it governs.
+                    print(f"{text}: not pinned — no `pin:` directive flags "
+                          "it; add one where the URL is cited",
+                          file=sys.stderr)
+                continue
             parsed = remotes.parse_code(text)
             if parsed is None:
                 # No silent refusal (DP-1): an unparseable code pins nothing,
@@ -140,6 +234,11 @@ def pin_codes(requested: tuple[str, ...]) -> None:
                     del pinned[prefix][code]
                     print(f"{prefix}{delim}{code}: no longer cited — "
                           "pin dropped")
+        url_targets = sorted(flagged)
+        for url in list(url_pinned):
+            if url not in flagged:
+                del url_pinned[url]
+                print(f"{url}: no `pin:` directive flags it — pin dropped")
     for remote, code in targets:
         composed = f"{remote.prefix}{remote.delim}{code}"
         url = stable_url(remote, code)
@@ -151,19 +250,26 @@ def pin_codes(requested: tuple[str, ...]) -> None:
                       else "it names no document there")
             print(f"{composed}: not pinned — {reason}", file=sys.stderr)
             continue
-        body, why = remotes._fetch_bytes(url)
-        if why:
-            print(f"{composed}: not pinned — {why} ({url})", file=sys.stderr)
-            continue
-        digest = content_hash(body)
-        entry = pinned.get(remote.prefix, {}).get(code)
-        told = ("unchanged" if entry and entry.get("endorsed") == digest
-                else "endorsed again" if entry else "pinned")
-        pinned.setdefault(remote.prefix, {})[code] = {
-            "endorsed": digest, "seen": digest}
-        print(f"{composed}: {told} at {digest[:19]}…")
-    path = remotes.write_lock(pinned=pinned)
+        _endorse_one(composed, url, pinned.setdefault(remote.prefix, {}), code)
+    for url in url_targets:
+        _endorse_one(url, url, url_pinned, url)
+    path = remotes.write_lock(pinned=pinned, urls=url_pinned)
     print(f"wrote {cfg.rel(path)}")
+
+
+def _endorse_one(label: str, url: str, into: dict, key: str) -> None:
+    """Fetch one document's stable bytes and record the endorsement."""
+    body, why = remotes._fetch_bytes(url)
+    if why:
+        tail = "" if url == label else f" ({url})"
+        print(f"{label}: not pinned — {why}{tail}", file=sys.stderr)
+        return
+    digest = content_hash(body)
+    entry = into.get(key)
+    told = ("unchanged" if entry and entry.get("endorsed") == digest
+            else "endorsed again" if entry else "pinned")
+    into[key] = {"endorsed": digest, "seen": digest}
+    print(f"{label}: {told} at {digest[:19]}…")
 
 
 def refresh_seen() -> list[str]:
@@ -173,7 +279,8 @@ def refresh_seen() -> list[str]:
     offline (#135)."""
     cfg = current()
     pinned = _copy(state())
-    if not pinned:
+    url_pinned = {u: dict(e) for u, e in url_state().items()}
+    if not pinned and not url_pinned:
         return []
     drifted: list[str] = []
     for prefix, entries in sorted(pinned.items()):
@@ -184,17 +291,24 @@ def refresh_seen() -> list[str]:
             url = stable_url(remote, code)
             if not url:
                 continue              # no stable construction; nothing to observe
-            body, why = remotes._fetch_bytes(url)
-            if why:
-                # An unreachable document is not a changed one — keep the
-                # last observation rather than inventing a new claim.
-                print(f"{prefix}{remote.delim}{code}: seen hash kept — {why}")
-                continue
-            entry["seen"] = content_hash(body)
-            if entry["seen"] != entry.get("endorsed"):
-                drifted.append(f"{prefix}{remote.delim}{code}")
-    remotes.write_lock(pinned=pinned)
+            _observe(f"{prefix}{remote.delim}{code}", url, entry, drifted)
+    for url, entry in sorted(url_pinned.items()):
+        _observe(url, url, entry, drifted)
+    remotes.write_lock(pinned=pinned, urls=url_pinned)
     return drifted
+
+
+def _observe(label: str, url: str, entry: dict, drifted: list[str]) -> None:
+    """One fetch into one pin's `seen` hash."""
+    body, why = remotes._fetch_bytes(url)
+    if why:
+        # An unreachable document is not a changed one — keep the last
+        # observation rather than inventing a new claim.
+        print(f"{label}: seen hash kept — {why}")
+        return
+    entry["seen"] = content_hash(body)
+    if entry["seen"] != entry.get("endorsed"):
+        drifted.append(label)
 
 
 def drift_lines() -> list[str]:
@@ -204,7 +318,9 @@ def drift_lines() -> list[str]:
     `--refresh` recorded what upstream serves, and this compares."""
     cfg = current()
     pinned = state()
-    if not pinned:
+    url_pinned = url_state()
+    flagged, _ = flagged_urls()
+    if not pinned and not url_pinned and not flagged:
         return []
     refs = remotes.cited()
     lines: list[str] = []
@@ -224,4 +340,17 @@ def drift_lines() -> list[str]:
                     f"{composed}: upstream content changed since it was "
                     f"endorsed — review {remotes.link(remote, code)}, then "
                     f"`luria remotes --pin {composed}` to endorse it again")
+    for url, entry in sorted(url_pinned.items()):
+        if url not in flagged:
+            lines.append(f"{url}: pinned, but no `pin:` directive flags it "
+                         "any more — `luria remotes --pin` prunes it")
+        elif entry.get("seen") != entry.get("endorsed"):
+            lines.append(
+                f"{url}: content changed since it was endorsed — review it, "
+                f"then `luria remotes --pin {url}` to endorse it again")
+    # A flag that registered a pin nobody fetched: armed-looking, doing
+    # nothing — the exact quiet failure the directives report exists for.
+    for url in sorted(flagged - set(url_pinned)):
+        lines.append(f"{url}: flagged by `pin:` but never endorsed — "
+                     "`luria remotes --pin` fetches and endorses it")
     return lines

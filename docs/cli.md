@@ -254,12 +254,24 @@ this project can read, but a change in its bytes is knowable — `--refresh`
 re-observes every pinned document, and `luria lint` reports each one whose
 content moved on since its endorsement (the `remote-drift` warning class,
 promotable via `fail_on`). Review the change, then
-`luria remotes --pin CODE` endorses it again. With no code, `--pin`
-endorses everything cited that has fetchable content and drops pins
-nothing cites any more. Only GitHub file constructions can be pinned: a
-`url` template or `uid` remote points at a rendered page whose markup
-churns under identical content, and the command says so rather than
-storing a hash that would drift on its own.
+`luria remotes --pin CODE` endorses it again. With no argument, `--pin`
+endorses everything cited or flagged and drops pins nothing cites or
+flags any more.
+
+What gets hashed is the construction's *stable bytes*, not the page a
+reader lands on. A GitHub file construction qualifies on its own (the blob
+URL, re-based onto raw content); any other remote declares where its
+stable bytes live with a `pin_url` template — arXiv's immutable e-print
+archive behind its abstract page, a forge's own raw scheme — because a
+rendered page's markup churns under identical content, and a hash of it
+would cry wolf. Without either, the command says so rather than storing a
+hash that would drift on its own.
+
+An arbitrary URL — a spec, a dataset card, a post the design leans on —
+is pinned by flagging it where it is cited
+(`<!-- pin: https://… — why it matters -->`, see
+[comment directives](directives.md)) and running the same `--pin`.
+Deleting the flag retires the pin.
 
 ## luria migrate
 
