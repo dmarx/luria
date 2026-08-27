@@ -45,7 +45,7 @@ import sys
 
 from . import adr_index as builder
 from . import (adr_pending, badges, ci, doc_refs, journal, link_targets,
-               narrow_titles, ref_status, remotes, statuses)
+               narrow_titles, pins, ref_status, remotes, statuses)
 from .config import TEMP_TAIL, current
 
 # The closed status vocabulary (ADR-003). `Active` is the in-force state; the
@@ -460,7 +460,7 @@ def status_sections() -> list[tuple[str, str, list[str]]]:
     # writes it), so the comparison here is offline like every other check —
     # and re-endorsing IS the acknowledgement, so no comment directive exists
     # for this class: the remedy updates the lockfile, not the prose.
-    drifted = remotes.drift_lines()
+    drifted = pins.drift_lines()
     if drifted:
         sections.append((
             "remote-drift",

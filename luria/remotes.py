@@ -39,18 +39,14 @@ committed; nothing else in Luria opens a socket.
 
 Content pins
 ------------
-A remote document has no status this project can read — upstream may retire it
-tomorrow and nothing here would know. What CAN be known is whether its bytes
-changed (#135): `--pin` stores a hash of the content being endorsed, `--refresh`
-records what upstream serves now, and `luria lint` compares the two committed
-hashes — offline, like every other check — reporting each pinned document that
-moved on since a human last vouched for it. Re-endorsing after review
-(`luria remotes --pin LU-ADR-013`) is the acknowledgement.
+`--pin` endorses remote *content* by hash, and `luria lint` reports what
+changed upstream since the endorsement (#135). The machinery lives in
+`luria.pins` — this module keeps the lockfile, the fetching and the URL
+construction it builds on.
 """
 
 from __future__ import annotations
 
-import hashlib
 import json
 import re
 import sys
@@ -154,15 +150,6 @@ def _read_lockfile() -> dict:
 
 def lock() -> dict[str, dict[str, str]]:
     return _read_lockfile().get("remotes", {})
-
-
-def pins() -> dict[str, dict[str, dict[str, str]]]:
-    """The committed content pins: {prefix: {code: {endorsed, seen}}} (#135).
-
-    `endorsed` is the hash of the content a human vouched for; `seen` is what
-    upstream served at the last `--refresh`. The two disagreeing is the whole
-    signal, and it lives in the lockfile so `luria lint` can read it offline."""
-    return _read_lockfile().get("pins", {})
 
 
 def write_lock(found: dict[str, dict[str, str]] | None = None,
@@ -467,161 +454,6 @@ def probe(remote: Remote, code: str, visible: bool = True) -> Probe:
                  ("404" if why in ("403", "404") else f"unchecked: {why}"))
 
 
-# ── Content pins (#135) ──────────────────────────────────────────────────
-
-# The construction's blob URL, re-based onto raw.githubusercontent.com so the
-# fetched bytes are the document rather than GitHub's page around it.
-BLOB_URL_RE = re.compile(r"https://github\.com/([^/]+/[^/]+)/blob/([^/#]+)/(.+)")
-
-
-def raw_url(remote: Remote, code: str) -> str:
-    """The URL whose bytes ARE the document, or "" when there isn't one.
-
-    A declared `pin_url` template wins: only the project can vouch that a
-    URL is content-stable, so the declaration is the strongest evidence
-    there is (#135). Otherwise a GitHub file construction qualifies on its
-    own. Anything else — a `url` template, a uid remote — points at a
-    rendered page (arXiv's abstract, a Jira ticket) whose markup churns
-    under identical content, so a hash of it would drift on its own
-    schedule and the pin would cry wolf. The anchor a document scheme
-    appends is dropped: a fragment selects nothing server-side, and the
-    endorsement covers the document the anchor lands in."""
-    declared = remote.pin_link(code)
-    if declared:
-        return declared
-    m = BLOB_URL_RE.fullmatch(link(remote, code).split("#")[0])
-    if not m:
-        return ""
-    owner_repo, ref, path = m.groups()
-    return f"https://raw.githubusercontent.com/{owner_repo}/{ref}/{path}"
-
-
-def content_hash(body: bytes) -> str:
-    """`sha256:<hex>` — prefixed so a future algorithm change is visible in
-    the lockfile rather than silently comparing across algorithms."""
-    return "sha256:" + hashlib.sha256(body).hexdigest()
-
-
-def pin_codes(requested: tuple[str, ...]) -> None:
-    """Endorse remote content: fetch each document, store its hash (#135).
-
-    With codes, endorse exactly those — which is also how a reviewed change
-    is endorsed again. With none, endorse every cited code that has raw
-    content to fetch, and drop pins whose code is no longer cited, so the
-    committed state keeps describing the record that exists."""
-    cfg = current()
-    pinned = {p: {c: dict(e) for c, e in entries.items()}
-              for p, entries in pins().items()}
-    targets: list[tuple[Remote, str]] = []
-    if requested:
-        for text in requested:
-            parsed = parse_code(text)
-            if parsed is None:
-                # No silent refusal (DP-1): an unparseable code pins nothing,
-                # and saying so beats a lockfile that quietly didn't change.
-                print(f"{text}: no configured remote matches — nothing to pin",
-                      file=sys.stderr)
-                continue
-            targets.append(parsed)
-    else:
-        refs = cited()
-        targets = [(cfg.remotes[prefix], code) for prefix in sorted(refs)
-                   for code in sorted(refs[prefix])]
-        for prefix in list(pinned):
-            remote = cfg.remotes.get(prefix)
-            delim = remote.delim if remote else "-"
-            for code in list(pinned[prefix]):
-                if code not in refs.get(prefix, set()):
-                    del pinned[prefix][code]
-                    print(f"{prefix}{delim}{code}: no longer cited — "
-                          "pin dropped")
-    for remote, code in targets:
-        composed = f"{remote.prefix}{remote.delim}{code}"
-        url = raw_url(remote, code)
-        if not url:
-            reason = ("the construction is not a GitHub file, so nothing "
-                      "here knows where its stable bytes live — a `pin_url` "
-                      "template on the remote declares it" if link(remote, code)
-                      else "it names no document there")
-            print(f"{composed}: not pinned — {reason}", file=sys.stderr)
-            continue
-        body, why = _fetch_bytes(url)
-        if why:
-            print(f"{composed}: not pinned — {why} ({url})", file=sys.stderr)
-            continue
-        digest = content_hash(body)
-        entry = pinned.get(remote.prefix, {}).get(code)
-        state = ("unchanged" if entry and entry.get("endorsed") == digest
-                 else "endorsed again" if entry else "pinned")
-        pinned.setdefault(remote.prefix, {})[code] = {
-            "endorsed": digest, "seen": digest}
-        print(f"{composed}: {state} at {digest[:19]}…")
-    path = write_lock(pinned=pinned)
-    print(f"wrote {cfg.rel(path)}")
-
-
-def refresh_seen() -> list[str]:
-    """Re-fetch every pinned document and record what upstream serves now in
-    `seen` — never touching `endorsed`, which only `--pin` moves. Returns the
-    codes that drifted; the committed diff is what lets `luria lint` warn
-    offline (#135)."""
-    cfg = current()
-    pinned = {p: {c: dict(e) for c, e in entries.items()}
-              for p, entries in pins().items()}
-    if not pinned:
-        return []
-    drifted: list[str] = []
-    for prefix, entries in sorted(pinned.items()):
-        remote = cfg.remotes.get(prefix)
-        if remote is None:
-            continue                  # `drift_lines` reports the orphan pin
-        for code, entry in sorted(entries.items()):
-            url = raw_url(remote, code)
-            if not url:
-                continue              # no raw construction; nothing to observe
-            body, why = _fetch_bytes(url)
-            if why:
-                # An unreachable document is not a changed one — keep the
-                # last observation rather than inventing a new claim.
-                print(f"{prefix}{remote.delim}{code}: seen hash kept — {why}")
-                continue
-            entry["seen"] = content_hash(body)
-            if entry["seen"] != entry.get("endorsed"):
-                drifted.append(f"{prefix}{remote.delim}{code}")
-    write_lock(pinned=pinned)
-    return drifted
-
-
-def drift_lines() -> list[str]:
-    """Every pin out of step with the record — from the committed lockfile
-    alone, so the lint that reads this stays a check that passes on a train.
-    The network work happened earlier: `--pin` recorded the endorsement,
-    `--refresh` recorded what upstream serves, and this compares."""
-    cfg = current()
-    pinned = pins()
-    if not pinned:
-        return []
-    refs = cited()
-    lines: list[str] = []
-    for prefix, entries in sorted(pinned.items()):
-        remote = cfg.remotes.get(prefix)
-        delim = remote.delim if remote else "-"
-        for code, entry in sorted(entries.items()):
-            composed = f"{prefix}{delim}{code}"
-            if remote is None:
-                lines.append(f"{composed}: pinned, but no remote {prefix!r} "
-                             "is configured — `luria remotes --pin` prunes it")
-            elif code not in refs.get(prefix, set()):
-                lines.append(f"{composed}: pinned, but nothing cites it any "
-                             "more — `luria remotes --pin` prunes it")
-            elif entry.get("seen") != entry.get("endorsed"):
-                lines.append(
-                    f"{composed}: upstream content changed since it was "
-                    f"endorsed — review {link(remote, code)}, then "
-                    f"`luria remotes --pin {composed}` to endorse it again")
-    return lines
-
-
 # ── CLI ──────────────────────────────────────────────────────────────────
 
 
@@ -632,6 +464,7 @@ def run(refresh: bool = False, check: bool = False,
     content; --check HEADs every construction (needs network — a report,
     never a failure); --pin endorses remote content by hash, so `luria lint`
     can report when a cited document changes upstream (#135)."""
+    from . import pins                 # local: pins imports this module
     cfg = current()
     if not cfg.remotes:
         # No silent refusal: say what would make this command do something.
@@ -642,9 +475,9 @@ def run(refresh: bool = False, check: bool = False,
 
     if pin:
         # Fire hands over True (bare --pin), one code, or a comma list.
-        pin_codes(() if pin is True else
-                  tuple(pin) if isinstance(pin, (tuple, list))
-                  else (str(pin),))
+        pins.pin_codes(() if pin is True else
+                       tuple(pin) if isinstance(pin, (tuple, list))
+                       else (str(pin),))
         return
 
     if refresh:
@@ -675,14 +508,14 @@ def run(refresh: bool = False, check: bool = False,
                   f"via {how}")
         path = write_lock(found)
         print(f"wrote {cfg.rel(path)}")
-        drifted = refresh_seen()
+        drifted = pins.refresh_seen()
         if drifted:
             print(f"content pins: {len(drifted)} pinned document(s) changed "
                   "since endorsement — `luria lint` lists them")
 
     references = cited()
     locked = lock()
-    pinned = pins()
+    pinned = pins.state()
     for remote in cfg.remotes.values():
         codes = sorted(references.get(remote.prefix, ()))
         known = locked.get(remote.prefix, {})
