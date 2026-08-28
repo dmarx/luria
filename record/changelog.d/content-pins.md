@@ -6,7 +6,7 @@
   every pinned document that changed since its endorsement — the new
   `remote-drift` warning class, promotable via `fail_on`. Re-endorsing after
   review clears the finding; a bare `--pin` endorses everything cited and
-  prunes pins nothing cites any more ([ADR-tmptuwov](record/decisions.d/ADR-tmptuwov.md)).
+  prunes pins nothing cites any more ([ADR-066](record/decisions.d/ADR-066.md)).
 - A `pin_url` template on a remote (or remote scheme) declares where its
   *stable bytes* live, so content behind a rendered page becomes pinnable —
   `pin_url = "https://arxiv.org/e-print/{1}.{2}"` pins the paper an abstract
