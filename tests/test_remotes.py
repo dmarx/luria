@@ -184,13 +184,30 @@ def test_an_unparseable_upstream_config_leaves_the_default_standing():
 
 
 def test_discovery_says_why_it_found_nothing(project):
-    """A discovery that silently returns {} is indistinguishable from a remote
-    with no documents (DP-1)."""
+    """A discovery that silently returns nothing is indistinguishable from a
+    remote with no documents (DP-1) — and it returns None, not {}, because an
+    unreadable remote and an empty directory are different claims."""
     (project / "luria.toml").write_text(
         '[luria]\nissue_url = ""\n[luria.remotes.UP]\nname = "upstream"\n')
     config.reset()
     found, how = remotes.discover(config.current().remotes["UP"])
-    assert found == {} and "no `repo` configured" in how
+    assert found is None and "no `repo` configured" in how
+
+
+def test_failed_discovery_never_writes_an_authoritative_empty_map(project, monkeypatch, capsys):
+    """Surfaced by pinning against this repo's own remotes: a private remote's
+    failed discovery wrote `{}` to the lockfile, and an empty map is
+    *authoritative* — every one of its references then resolved to "absent
+    from the remote". Failure must leave the remote off the lockfile (or keep
+    the map it had), so it stays on the code-only convention."""
+    with_remote(project)
+    lockfile(project, {"ADR-032": "adr-032-x.md"})
+    monkeypatch.setattr(remotes, "discover",
+                        lambda remote: (None, "GitHub API: not readable anonymously"))
+    remotes.run(refresh=True)
+    capsys.readouterr()
+    assert remotes.lock()["UP"] == {"ADR-032": "adr-032-x.md"}
+    assert remotes.resolve("UP", "ADR-032").endswith("/adr-032-x.md")
 
 
 # ── Hand-written URLs (url-ok) ───────────────────────────────────────────

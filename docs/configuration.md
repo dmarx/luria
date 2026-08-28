@@ -198,6 +198,15 @@ uid = "(\d{4})[.:](\d{4,5})"
 url = "https://arxiv.org/abs/{1}.{2}"   # {0} or {uid} is the whole tail
 ```
 
+A `pin_url` template names where the remote's *stable bytes* live, which
+is what lets `luria remotes --pin` endorse content that has no GitHub
+file behind it (#135) — arXiv's e-print archive is the paper where its
+abstract page is a rendering:
+
+```toml
+pin_url = "https://arxiv.org/e-print/{1}.{2}"
+```
+
 | key | type | default |
 |---|---|---|
 | `prefix` | `str` | *the table's own name* |
@@ -208,6 +217,8 @@ url = "https://arxiv.org/abs/{1}.{2}"   # {0} or {uid} is the whole tail
 | `url` | `str` | *unset* |
 | `delim` | `str` | `"-"` |
 | `uid` | `str` | *unset* |
+| `pin_url` | `str` | *unset* |
+| `pin` | `bool` | `False` |
 | `schemes` | `dict[str, RemoteScheme]` | *unset* |
 
 ## Per-scheme remote construction — `[luria.remotes.X.schemes.Y]`
@@ -242,6 +253,8 @@ overrides both and takes {code}, {number} and {prefix}.
 | `document` | `str` | *unset* |
 | `anchor` | `str` | *unset* |
 | `url` | `str` | *unset* |
+| `pin_url` | `str` | *unset* |
+| `pin` | `bool` | `False` |
 
 ## The site — `[luria.site]`
 

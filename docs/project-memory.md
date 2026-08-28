@@ -137,6 +137,22 @@ offline checkouts resolve identically), or from an explicit template.
 `luria remotes --check` HEAD-probes every cited URL and reports the ones
 that would 404 on a reader.
 
+A foreign document's *status* is unknowable — upstream may retire it
+tomorrow and nothing here would notice — but a change in its content is
+not. `luria remotes --pin` stores a hash of each cited document in the
+lockfile as an endorsement; `--refresh` records what upstream serves now;
+and `luria lint` compares the two committed hashes offline, reporting each
+pinned document that changed since a human vouched for it (the
+`remote-drift` warning class). Re-endorsing after review is the
+acknowledgement. `pin = true` on a remote or one of its schemes registers
+the whole code family — every cited reference is pinned automatically,
+and the lint reports any not yet endorsed. A remote whose readable page
+is a rendering declares where its stable bytes live
+(`pin_url = "https://arxiv.org/e-print/…"`), and a URL that is not a
+foreign code at all is pinned by flagging it where it is cited
+(`<!-- pin: https://… — why -->`). Removing a registration — the config
+line, the flag — retires its pins.
+
 The `uid` form generalises past Luria-shaped records entirely: give a
 remote a regex and a URL template and arXiv identifiers, Jira keys, or CVE
 numbers become linted, linkable references:

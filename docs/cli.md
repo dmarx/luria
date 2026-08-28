@@ -236,7 +236,7 @@ would re-create the collision the temporary codes exist to avoid.
 ## luria remotes
 
 ```
-luria remotes [--refresh] [--check]
+luria remotes [--refresh] [--check] [--pin [CODE]]
 ```
 
 Prints every foreign code the record cites, per remote, with the URL each
@@ -247,6 +247,41 @@ committed, so CI and offline checkouts resolve identically. `--check`
 HEAD-probes every cited URL and reports what a reader would find: broken,
 absent from the remote, or unverifiable because the repository is not
 readable anonymously.
+
+`--pin` endorses remote *content*: it fetches each document, hashes it,
+and stores the hash in the same lockfile. A remote document has no status
+this project can read, but a change in its bytes is knowable — `--refresh`
+re-observes every pinned document, and `luria lint` reports each one whose
+content moved on since its endorsement (the `remote-drift` warning class,
+promotable via `fail_on`). Review the change, then
+`luria remotes --pin CODE` endorses it again.
+
+Every pin has a registration — the thing that says it should exist, and
+whose removal retires it. `pin = true` on a remote (or one of its
+schemes) registers the whole code family: each cited reference is pinned
+automatically, and the lint reports any the lockfile has not endorsed
+yet. A `pin:` comment directive registers one arbitrary URL where it is
+cited. An explicit `--pin CODE` registers one ad-hoc pin, whose lockfile
+entry is its own registration. A bare `--pin` syncs the lockfile to the
+registrations — endorsing what is newly registered, re-observing what
+exists, dropping what nothing cites or flags — and it never re-endorses
+drifted content: that always takes the explicit command, so a scheduled
+sweep cannot quietly launder a drift finding.
+
+What gets hashed is the construction's *stable bytes*, not the page a
+reader lands on. A GitHub file construction qualifies on its own (the blob
+URL, re-based onto raw content); any other remote declares where its
+stable bytes live with a `pin_url` template — arXiv's immutable e-print
+archive behind its abstract page, a forge's own raw scheme — because a
+rendered page's markup churns under identical content, and a hash of it
+would cry wolf. Without either, the command says so rather than storing a
+hash that would drift on its own.
+
+An arbitrary URL — a spec, a dataset card, a post the design leans on —
+is pinned by flagging it where it is cited
+(`<!-- pin: https://… — why it matters -->`, see
+[comment directives](directives.md)) and running the same `--pin`.
+Deleting the flag retires the pin.
 
 ## luria migrate
 
