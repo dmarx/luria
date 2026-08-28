@@ -123,4 +123,7 @@ document-scheme code covers the whole document the anchor lands in, so one
 upstream edit can flag several pinned anchors at once; that is conservative
 in the right direction. The `seen` hash moves only on successful fetches —
 an unreachable document keeps its last observation rather than inventing a
-change.
+change. The migration sweep ([ADR-040](ADR-040.md)) skips the lockfile entirely: its JSON
+nests a remote's prefix away from its tails, so the composed-span mask
+cannot tell a foreign key from a local code, and machine-derived state is
+re-derived after a migration (`luria remotes --pin`), never re-spelled.

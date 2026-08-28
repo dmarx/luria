@@ -31,3 +31,8 @@
   flip every one of that remote's references to "absent from the remote".
   Failure now leaves the remote off the lockfile — or keeps the map it
   already had — so it stays on the code-only convention.
+- The migration sweep (`luria migrate`) skips `remotes.lock.json`: its JSON
+  nests a remote's prefix away from its tails, so the composed-span mask
+  could not tell a foreign pin key from a local code, and a scheme rename
+  would have rewritten another project's namespace. Machine-derived state
+  is re-derived after a migration, never re-spelled.

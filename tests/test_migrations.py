@@ -12,6 +12,7 @@ journal link whose frame the sweep must not disturb (#57).
 # deliberate specimen of a pre- or post-migration state, not a claim about
 # this repository's documents. The sweep honors this for the same reason the
 # scanners do: a quote is not an address.
+import json
 import subprocess
 from pathlib import Path
 
@@ -105,6 +106,33 @@ def _premigration_project(tmp_path, monkeypatch):
     config.reset()
     aliases.reset()
     return tmp_path
+
+
+def test_the_sweep_never_touches_the_lockfile(tmp_path, monkeypatch):
+    """`remotes.lock.json` nests a remote's prefix away from its tails, so
+    the composed-span mask cannot recognize `"DP-004"` under `"SG"` as
+    another project's namespace — swept as text, a local rename would
+    rewrite the remote's keys (#135). Machine-derived state is re-derived
+    (`luria remotes --pin` / `--refresh` after the migration), never
+    re-spelled, so the sweep leaves the file byte-identical: the foreign
+    SG pin because that namespace is theirs, and even the mirrored LU pin,
+    whose key only becomes true when upstream's own rename lands and a
+    human re-endorses the moved content."""
+    root = _premigration_project(tmp_path, monkeypatch)
+    lock = root / "remotes.lock.json"
+    before = json.dumps({
+        "remotes": {},
+        "pins": {"LU": {"DP-004": {"endorsed": "sha256:bbb",
+                                   "seen": "sha256:bbb"}},
+                 "SG": {"DP-004": {"endorsed": "sha256:aaa",
+                                   "seen": "sha256:aaa"}}}},
+        indent=2) + "\n"
+    lock.write_text(before)
+    _git(root, "add", "-A")
+    _git(root, "-c", "user.email=t@t", "-c", "user.name=t",
+         "commit", "-qm", "lockfile")
+    migrate.run("0001")
+    assert lock.read_text() == before
 
 
 def test_dry_run_prints_the_plan_and_changes_nothing(tmp_path, monkeypatch, capsys):

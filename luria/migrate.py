@@ -34,7 +34,10 @@ What an operation does, in ADR-040's terms:
 - **Full rewrite, history included.** Every tracked file is swept — journals
   and the changelog too. One spelling tree-wide afterwards; git holds the
   history, and `--commit` appends the migration to `.git-blame-ignore-revs`
-  so blame reads through it.
+  so blame reads through it. Two exceptions: the migrations directory
+  (its specs remember old spellings on purpose) and `remotes.lock.json`
+  (machine-derived — rebuilt by `luria remotes --pin` / `--refresh` after
+  the migration, never re-spelled).
 - **Mapping-driven, never prefix-driven.** Only the enumerated pairs are
   rewritten. A fixture number survives by not being in the mapping; a
   composed remote code (`SG-DP-18`) survives because remote spans are
@@ -309,6 +312,15 @@ def _tracked_files() -> list[Path]:
     for name in out.stdout.splitlines():
         if name.startswith(MIGRATIONS_DIR):
             continue                     # the spec remembers old spellings
+        if cfg.root / name == cfg.remotes_lock:
+            # Machine-derived state, re-derived rather than re-spelled — the
+            # same principle that deletes a generated view instead of
+            # renaming it. Its JSON nests a remote's prefix away from its
+            # tails, so the composed-span mask cannot recognize `"ADR-013"`
+            # under `"LU"` as another project's namespace, and a local
+            # rename would rewrite the remote's keys (#135). After a
+            # migration, `luria remotes --pin` / `--refresh` rebuild it.
+            continue
         keep.append(cfg.root / name)
     return keep
 
