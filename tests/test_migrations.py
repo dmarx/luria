@@ -108,30 +108,54 @@ def _premigration_project(tmp_path, monkeypatch):
     return tmp_path
 
 
-def test_the_sweep_never_touches_the_lockfile(tmp_path, monkeypatch):
-    """`remotes.lock.json` nests a remote's prefix away from its tails, so
-    the composed-span mask cannot recognize `"DP-004"` under `"SG"` as
-    another project's namespace — swept as text, a local rename would
-    rewrite the remote's keys (#135). Machine-derived state is re-derived
-    (`luria remotes --pin` / `--refresh` after the migration), never
-    re-spelled, so the sweep leaves the file byte-identical: the foreign
-    SG pin because that namespace is theirs, and even the mirrored LU pin,
-    whose key only becomes true when upstream's own rename lands and a
-    human re-endorses the moved content."""
+def _locked_project(tmp_path, monkeypatch):
+    """The pre-migration project plus a committed lockfile: pins and
+    filename maps for both the mirrored LU remote and the foreign SG one."""
     root = _premigration_project(tmp_path, monkeypatch)
     lock = root / "remotes.lock.json"
-    before = json.dumps({
-        "remotes": {},
+    lock.write_text(json.dumps({
+        "remotes": {"LU": {"DP-004": "DP-004.md"},
+                    "SG": {"DP-004": "dp-004-a-slug.md"}},
         "pins": {"LU": {"DP-004": {"endorsed": "sha256:bbb",
-                                   "seen": "sha256:bbb"}},
+                                   "seen": "sha256:ccc"}},
                  "SG": {"DP-004": {"endorsed": "sha256:aaa",
                                    "seen": "sha256:aaa"}}}},
-        indent=2) + "\n"
-    lock.write_text(before)
+        indent=2) + "\n")
     _git(root, "add", "-A")
     _git(root, "-c", "user.email=t@t", "-c", "user.name=t",
          "commit", "-qm", "lockfile")
+    return root, lock
+
+
+def test_endorsements_travel_with_a_claimed_rename(tmp_path, monkeypatch):
+    """The endorsement is of CONTENT, which a rename does not change — so
+    the mirrored LU pin is re-keyed with both hashes intact (drift state
+    included: prune-and-re-endorse would have laundered the unreviewed
+    `seen`). The foreign SG entries survive byte-for-byte: the lockfile is
+    never swept as text, which is what protects `"DP-004"` under `"SG"`
+    from a mask that cannot see nested keys as another project's
+    namespace (#135)."""
+    root, lock = _locked_project(tmp_path, monkeypatch)
     migrate.run("0001")
+    data = json.loads(lock.read_text())
+    assert data["pins"]["LU"] == {"GP-004": {"endorsed": "sha256:bbb",
+                                             "seen": "sha256:ccc"}}
+    assert data["pins"]["SG"] == {"DP-004": {"endorsed": "sha256:aaa",
+                                             "seen": "sha256:aaa"}}
+    # The claimed remote's filename map spells the old world in keys AND
+    # values — dropped for re-discovery, while the foreign map stands.
+    assert "LU" not in data["remotes"]
+    assert data["remotes"]["SG"] == {"DP-004": "dp-004-a-slug.md"}
+
+
+def test_dry_run_plans_the_pin_move_and_keeps_the_lockfile(tmp_path,
+                                                          monkeypatch,
+                                                          capsys):
+    root, lock = _locked_project(tmp_path, monkeypatch)
+    before = lock.read_text()
+    migrate.run("0001", dry_run=True)
+    out = capsys.readouterr().out
+    assert "LU pin DP-004 -> GP-004" in out and "endorsement travels" in out
     assert lock.read_text() == before
 
 

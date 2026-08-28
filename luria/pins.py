@@ -340,6 +340,44 @@ def _observe(label: str, url: str, entry: dict, drifted: list[str]) -> None:
         drifted.append(label)
 
 
+def migrate_endorsements(moves: list[tuple[str, str, str]],
+                         claimed: list[str]) -> tuple[int, list[str]]:
+    """Carry pinned endorsements through a migration (ADR-040, #135).
+
+    A rename moves a document's ADDRESS and leaves its content standing, and
+    the endorsement is of the content — so for each claimed mirrored remote,
+    a pin is re-keyed from the old tail to the new one with both hashes
+    intact, rather than dropped and re-fetched. The distinction is not
+    cosmetic: prune-and-re-endorse would silently vouch for whatever is
+    upstream at that moment, laundering any drift a human had not reviewed.
+
+    The claimed remote's discovered filename map is dropped instead of
+    re-keyed: its keys AND its values spell the old world, an authoritative
+    map with the wrong keys turns every new-spelled reference into "absent
+    from the remote", and discovery (`luria remotes --refresh`) is the only
+    authority that can rebuild it — absence honestly means "code-only
+    convention until then". When upstream's own rename lands, the pinned
+    documents' bytes will have changed too (their citations were swept), and
+    that surfaces as ordinary drift for review — exactly the crossing of a
+    human's desk the two-hash design exists to force.
+
+    Returns (pins re-keyed, remote prefixes whose filename maps dropped)."""
+    pinned = _copy(state())
+    rekeyed = 0
+    for prefix, old_tail, new_tail in moves:
+        entries = pinned.get(prefix, {})
+        if old_tail in entries:
+            entries[new_tail] = entries.pop(old_tail)
+            rekeyed += 1
+    found = remotes.lock()
+    dropped = sorted(p for p in set(claimed) if p in found)
+    if dropped:
+        found = {p: m for p, m in found.items() if p not in dropped}
+    if rekeyed or dropped:
+        remotes.write_lock(found=found, pinned=pinned)
+    return rekeyed, dropped
+
+
 def drift_lines() -> list[str]:
     """Every pin out of step with the record — from the committed lockfile
     alone, so the lint that reads this stays a check that passes on a train.

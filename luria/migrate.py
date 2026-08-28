@@ -35,9 +35,11 @@ What an operation does, in ADR-040's terms:
   and the changelog too. One spelling tree-wide afterwards; git holds the
   history, and `--commit` appends the migration to `.git-blame-ignore-revs`
   so blame reads through it. Two exceptions: the migrations directory
-  (its specs remember old spellings on purpose) and `remotes.lock.json`
-  (machine-derived — rebuilt by `luria remotes --pin` / `--refresh` after
-  the migration, never re-spelled).
+  (its specs remember old spellings on purpose) and `remotes.lock.json`,
+  which is never swept as text — a claimed remote's pinned endorsements
+  are re-keyed structurally so the hashes travel with the rename, its
+  discovered filename map is dropped for re-discovery, and the rest is
+  machine-derived state that `luria remotes --pin` / `--refresh` rebuild.
 - **Mapping-driven, never prefix-driven.** Only the enumerated pairs are
   rewritten. A fixture number survives by not being in the mapping; a
   composed remote code (`SG-DP-18`) survives because remote spans are
@@ -134,6 +136,12 @@ class Plan:
     # blanket path sweep — a remote's `document =` line spells *its* path.
     config_files: list[Path] = field(default_factory=list)
     claimed_remotes: list[str] = field(default_factory=list)
+    # Pinned endorsements that travel with a claimed remote's rename:
+    # (remote prefix, old tail, new tail), canonical spellings. The
+    # endorsement is of CONTENT, which a rename does not change — only the
+    # address moves — so the hashes are re-keyed structurally rather than
+    # dropped and re-fetched, and the human's claim survives (#135).
+    pin_moves: list[tuple[str, str, str]] = field(default_factory=list)
     # Supersede mode: (source path, new status line) + fresh copies to write.
     tombstones: list[tuple[Path, str]] = field(default_factory=list)
     copies: list[tuple[Path, Path, str, str]] = field(default_factory=list)
@@ -215,6 +223,8 @@ def _plan_rename(plan: Plan, op: dict) -> None:
             plan.composed.append(Pair(
                 f"{remote_prefix.upper()}{delim}{old_code}",
                 f"{remote_prefix.upper()}{delim}{new_code}"))
+            plan.pin_moves.append(
+                (remote_prefix.upper(), old_code, new_code))
 
     configs = [cfg.root / "luria.toml"] + \
         [cfg.root / c for c in op.get("configs", [])]
@@ -552,6 +562,20 @@ def apply(plan: Plan) -> tuple[int, int]:
         if stale_view.exists():
             _git(["rm", "-q", str(stale_view)])
 
+    # Pinned endorsements travel with a claimed remote's rename — re-keyed
+    # structurally, never swept as text (the sweep skips the lockfile).
+    if plan.pin_moves or plan.claimed_remotes:
+        from . import pins as pins_mod
+        rekeyed, dropped = pins_mod.migrate_endorsements(
+            plan.pin_moves, plan.claimed_remotes)
+        if rekeyed:
+            print(f"pins: {rekeyed} endorsement(s) re-keyed — the hashes "
+                  "travel; upstream's own rename will surface as drift to "
+                  "review")
+        for prefix in dropped:
+            print(f"pins: {prefix} filename map dropped — old spellings "
+                  "throughout; `luria remotes --refresh` rebuilds it")
+
     files = swept = 0
     if plan.mapping or plan.composed or plan.path_pairs:
         for path in _tracked_files():
@@ -621,6 +645,11 @@ def describe(plan: Plan) -> list[str]:
         lines.append(f"  {pair.old} -> {pair.new}")
     for pair in plan.composed:
         lines.append(f"  {pair.old} -> {pair.new}  (composed)")
+    for prefix, old_tail, new_tail in plan.pin_moves:
+        from . import pins as pins_mod
+        if old_tail in pins_mod.state().get(prefix, {}):
+            lines.append(f"  {prefix} pin {old_tail} -> {new_tail}  "
+                         "(endorsement travels)")
     for old, new in plan.path_pairs:
         lines.append(f"  {old} -> {new}  (path)")
     for old_path, new_path in plan.moves:
