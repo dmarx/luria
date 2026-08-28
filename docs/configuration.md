@@ -207,6 +207,23 @@ abstract page is a rendering:
 pin_url = "https://arxiv.org/e-print/{1}.{2}"
 ```
 
+Both are the short names of a general table: a code relates to a SET of
+named URIs, each through a template over one vocabulary — {code},
+{number}, {prefix}, {repo}, {ref}, {dir}, {document}, {anchor}, and
+{filename}, which the discovered lockfile map fills. `url` is
+`uris.read`, `pin_url` is `uris.bytes`, and a relation Luria does not
+ship yet is one more name:
+
+```toml
+[luria.remotes.LU.uris]
+bytes   = "https://gitlab.example/{repo}/-/raw/{ref}/{dir}/{filename}"
+history = "https://github.com/{repo}/commits/{ref}/{dir}/{filename}"
+```
+
+GitHub's blob/raw pair is simply the shipped default pair of `read` and
+`bytes` templates for a remote with a `repo` — a different forge is a
+different pair of lines, not a different subsystem.
+
 | key | type | default |
 |---|---|---|
 | `prefix` | `str` | *the table's own name* |
@@ -219,6 +236,7 @@ pin_url = "https://arxiv.org/e-print/{1}.{2}"
 | `uid` | `str` | *unset* |
 | `pin_url` | `str` | *unset* |
 | `pin` | `bool` | `False` |
+| `uris` | `dict[str, str]` | *unset* |
 | `schemes` | `dict[str, RemoteScheme]` | *unset* |
 
 ## Per-scheme remote construction — `[luria.remotes.X.schemes.Y]`
@@ -244,7 +262,8 @@ anchor = "dp-{number}"                 # …at Luria's stable anchors
 `anchor` defaults to the prefix lowercased plus the number — `dp-18` —
 which is the anchor shape Luria's own document render emits, so a remote
 on current conventions needs only the `document` line. A `url` template
-overrides both and takes {code}, {number} and {prefix}.
+overrides both, and a `uris` table names further relations for this
+family alone — both with the full template vocabulary (see `Remote`).
 
 | key | type | default |
 |---|---|---|
@@ -255,6 +274,7 @@ overrides both and takes {code}, {number} and {prefix}.
 | `url` | `str` | *unset* |
 | `pin_url` | `str` | *unset* |
 | `pin` | `bool` | `False` |
+| `uris` | `dict[str, str]` | *unset* |
 
 ## The site — `[luria.site]`
 
