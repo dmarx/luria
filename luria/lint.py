@@ -131,7 +131,7 @@ def check_frontmatter(errors: list[str]) -> None:
                     f"{cfg.rel(scheme.statuses_yaml)})")
             elif status.value == "Superseded" and not status.superseded_by:
                 # The successor is structure, not a sentence: the field is
-                # what the edge, the index and the site read (ADR-tmpxmnac).
+                # what the edge, the index and the site read (ADR-071).
                 errors.append(
                     f"{rel}: Superseded, but `superseded_by:` names nothing "
                     f"— write the successor's code there")

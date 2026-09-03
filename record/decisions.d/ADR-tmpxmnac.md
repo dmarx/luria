@@ -18,12 +18,12 @@
 
 # Active | Proposed | Deferred | Superseded | Rejected, optionally " — <note>".
 # Supersede when the CHOICE changes: set the old one to
-# `Superseded — by [ADR-tmpxmnac](ADR-tmpxmnac.md)` and leave its body intact. When the
+# `Superseded — by [ADR-071](ADR-071.md)` and leave its body intact. When the
 # choice stands and only a REASON was wrong, correct this body in place and
 # bump `version:` below — the rule objects to silent revision, not to editing.
 status: 'Active'
 
-# What the index shows in place of the code. Repeat it as the body's `# ADR-tmpxmnac:`
+# What the index shows in place of the code. Repeat it as the body's `# ADR-071:`
 # heading — someone reading the file alone needs one — and `luria lint` checks
 # that the two agree, because two copies of a string is a projection that drifts.
 title: 'Typed edges come from fields, and a superseded document names its successor in `superseded_by:`'
@@ -69,7 +69,7 @@ summary: >-
 ---
 
 
-# ADR-tmpxmnac: Typed edges come from fields, and a superseded document names its successor in `superseded_by:`
+# [ADR-071](ADR-071.md): Typed edges come from fields, and a superseded document names its successor in `superseded_by:`
 
 ## Context
 

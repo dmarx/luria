@@ -61,7 +61,7 @@ summary: >-
   rebased for links, and split off the word in six places. The note is now
   its own field, `status_note:`, and a prose key like `summary:` — a code
   in it is a citation the fixer links. The successor a superseded
-  document names is a reference field, `superseded_by:` (ADR-tmpxmnac);
+  document names is a reference field, `superseded_by:` (ADR-071);
   the note is for what the field cannot say. A note still riding in
   `status:` is a lint finding that `luria index` repairs, the way it fills
   `created:` from a path ([ADR-031](ADR-031.md)). Amends [ADR-003](ADR-003.md), which placed the note
@@ -94,7 +94,7 @@ that had to stay data.
 The cost was paid in code. Six places split the word off the note with
 three spellings of one regex — the status report, the pending report,
 three in the vocabulary module, and the first draft of the typed edges
-([ADR-tmpxmnac](ADR-tmpxmnac.md)). Every one of them was a place the
+([ADR-071](ADR-071.md)). Every one of them was a place the
 field's two types were being taken apart by hand because the file had
 put them together. And a code in the note cited nothing: `Deferred —
 parked by WDR-015` in a downstream record named a document the scanner
@@ -112,7 +112,7 @@ status_note: the capital never burned after all
 
 `status:` is one word from the closed vocabulary and nothing else.
 `superseded_by:` is the successor, a reference field every scheme has
-([ADR-tmpxmnac](ADR-tmpxmnac.md)): structure, checked and resolved.
+([ADR-071](ADR-071.md)): structure, checked and resolved.
 `status_note:` is prose — a prose key beside `summary:` and `origin:`
 ([ADR-051](ADR-051.md)): scanned for bare references, linked by
 `luria link --fix`, checked by the lint, and a citation wherever citations
@@ -144,7 +144,7 @@ qualifier lives; that decision carries a `history:` entry saying so.
   reader of the canonical one.
 - **The successor in the note, the field left out.** What this decision
   first proposed, with the typed-edges work inferring the successor from
-  a `by CODE` note. Reversed on review and decided in [ADR-tmpxmnac](ADR-tmpxmnac.md): the
+  a `by CODE` note. Reversed on review and decided in [ADR-071](ADR-071.md): the
   successor is a relation, and a relation is written as structure — a
   field the tool checks — not as a sentence the tool recognises. The note
   is prose for what the field cannot say.
