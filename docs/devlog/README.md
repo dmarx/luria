@@ -6,8 +6,8 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 
 ## Currently — [September 2026](2026-09.md)
 
-- [3 Sep 04:09 — Three facts the record already stated, read as edges](2026-09.md#20260903040926)
-- [3 Sep 03:58 — Three lint passes compile into one contract per scheme](2026-09.md#20260903035841)
+- [3 Sep 21:57 — A temporary code in a workflow file breaks the generation job](2026-09.md#20260903215722)
+- [3 Sep 19:42 — Six conflicts on files nobody wrote](2026-09.md#20260903194237)
 
 ## All books
 
