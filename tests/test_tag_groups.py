@@ -48,7 +48,7 @@ def project(tmp_path: Path, monkeypatch, *tags: str, cfg: str = CONFIG) -> Path:
 def errors_for(tmp_path, monkeypatch, *tags: str, cfg: str = CONFIG) -> list[str]:
     project(tmp_path, monkeypatch, *tags, cfg=cfg)
     errors: list[str] = []
-    lint.check_tag_groups(errors)
+    lint.check_contracts(errors)
     return errors
 
 

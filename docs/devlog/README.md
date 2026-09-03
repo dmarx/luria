@@ -4,58 +4,15 @@
 
 The narrative that doesn't fit a changelog entry: root-cause archaeology, failed approaches, verification details, and the traps the next person would otherwise rediscover. Generated from the entries in `record/devlog.d/` — file one with `luria new`.
 
-## Currently — [August 2026](2026-08.md)
+## Currently — [September 2026](2026-09.md)
 
-- [28 Aug 04:30 — Endorsements travel through a rename](2026-08.md#20260828043016)
-- [27 Aug 04:43 — URL pins fired end-to-end, and where stable bytes hide](2026-08.md#20260827044323)
-- [27 Aug 03:26 — Firing the remote-drift guard on a real pin](2026-08.md#20260827032625)
-- [24 Aug 21:33 — Measuring a downstream config before proposing anything](2026-08.md#20260824213330)
-- [24 Aug 20:37 — What a downstream adoption showed about the docs](2026-08.md#20260824203730)
-- [22 Aug 21:40 — The documentation rewritten from a flushed skeleton](2026-08.md#20260822214025)
-- [22 Aug 06:34 — The schema reference was somebody else's file in everybody else's repo](2026-08.md#20260822063442)
-- [16 Aug 19:30 — Four descriptions and no name](2026-08.md#20260816193000)
-- [16 Aug 19:02 — The field was green because nobody was judging](2026-08.md#20260816190210)
-- [16 Aug 18:24 — The five words held; what they mean drifted](2026-08.md#20260816182420)
-- [16 Aug 16:51 — Ninety-nine dead links behind eleven clean lints](2026-08.md#20260816165105)
-- [12 Aug 06:02 — Dogfooding merge allocation, and finishing rung one](2026-08.md#20260812060240)
-- [12 Aug 03:51 — Implementing merge allocation: aliases are the load-bearing half](2026-08.md#20260812035155)
-- [11 Aug 23:36 — Config-first adoption: replacement semantics and a config-driven init](2026-08.md#20260811233614)
-- [11 Aug 21:39 — Generating the configuration reference](2026-08.md#20260811213949)
-- [10 Aug 03:42 — The branding that never shipped: a squash merge photographs the branch, not the branch name](2026-08.md#20260810034232)
-- [10 Aug 03:10 — Branding the site: a rasterizer reads an icon before any human does](2026-08.md#20260810031009)
-- [10 Aug 00:49 — The first look at the published site found what no build check could](2026-08.md#20260810004959)
-- [9 Aug 21:44 — Building the site was a reference-integrity check the lint doesn't have](2026-08.md#20260809214428)
-- [8 Aug 00:19 — The link that was wrong in both frames: characterizing the journal link-frame bug](2026-08.md#20260808001939)
-- [7 Aug 23:48 — The rename that refused to stay small: DP→GP becomes a migrations doctrine](2026-08.md#20260807234804)
-- [7 Aug 19:05 — Idiomatic Fire, drafted: what the rewrite cost and bought](2026-08.md#20260807190509)
-- [7 Aug 18:35 — The agent file becomes a map](2026-08.md#20260807183530)
-- [7 Aug 18:26 — One scaffold for every entry kind, fired on its own record](2026-08.md#20260807182641)
-- [7 Aug 18:17 — The 'never' comes out of ADR-007: enforcement becomes a dial](2026-08.md#20260807181733)
-- [7 Aug 16:48 — A blunt directive and a fixture prefix, both priced in visibility](2026-08.md#20260807164832)
-- [7 Aug 15:55 — Reports become views a badge can land on, and created: fills itself in](2026-08.md#20260807155534)
-- [7 Aug 04:59 — The CLI sheds the commands that were only the module layout showing through](2026-08.md#20260807045929)
-- [6 Aug 20:48 — Branding and copyediting](2026-08.md#20260806204800)
-- [5 Aug 13:34 — A checking job runs nothing that writes](2026-08.md#20260805133445)
-- [4 Aug 20:05 — The collector grew the changelog shape, for strata-g's scriv retirement](2026-08.md#20260804200509)
-- [4 Aug 18:44 — Shipping: the wheel that worked was working by accident](2026-08.md#20260804184404)
-- [4 Aug 18:18 — Parallelism measured first: the probes were the win, the rest is seams](2026-08.md#20260804181814)
-- [4 Aug 18:12 — Wikilinks: the brackets are consent, and typing them flips the rules](2026-08.md#20260804181244)
-- [4 Aug 17:29 — Numbers were the special case: uid remotes and one parser for a code's anatomy](2026-08.md#20260804172947)
-- [4 Aug 17:09 — A remote learns its schemes, and the url-ok loop closes on schedule](2026-08.md#20260804170921)
-- [4 Aug 15:37 — The read/write boundary: record/ for filing, docs/ for reading](2026-08.md#20260804153748)
-- [4 Aug 03:44 — The devlog becomes a journal, and the migration's timestamps came from the commits](2026-08.md#20260804034408)
-- [4 Aug 03:27 — A decision cited as a principle](2026-08.md#20260804032711)
-- [3 Aug 22:56 — Two badges that could never be wrong, replaced with two that can](2026-08.md#20260803225648)
-- [3 Aug 22:13 — Foreign decisions get a namespace, and the first version bent the tool around one repo](2026-08.md#20260803221327)
-- [3 Aug 21:50 — Four bare codes were a hole in the lint with ten real defects in it](2026-08.md#20260803215013)
-- [3 Aug 21:19 — The filename is the code, and the rename removed a copy rather than adding one](2026-08.md#20260803211926)
-- [3 Aug 21:02 — Principles become fragments, and collected turns out not to mean generated](2026-08.md#20260803210211)
-- [3 Aug 20:35 — Extracting the project-memory framework out of strata-g](2026-08.md#20260803203505)
+- [3 Sep 03:58 — Three lint passes compile into one contract per scheme](2026-09.md#20260903035841)
 
 ## All books
 
-45 entries across 1 book, newest first.
+46 entries across 2 books, newest first.
 
 | Book | Entries | First | Last |
 |---|--:|---|---|
+| [2026-09](2026-09.md) | 1 | 2026-09-03 | 2026-09-03 |
 | [2026-08](2026-08.md) | 45 | 2026-08-03 | 2026-08-28 |

@@ -115,7 +115,7 @@ def test_a_derived_group_is_enforced_like_any_other(two_schemes):
     doc(root, "record/practices.d/SOTA-001.md", code="SOTA-001",
         title="Two primaries", tags=["optimization", "stability"])
     errors = []
-    lint.check_tag_groups(errors)
+    lint.check_contracts(errors)
     assert any("wants exactly one" in e for e in errors)
 
 
@@ -127,7 +127,7 @@ def test_a_tag_the_scheme_cannot_carry_is_not_in_its_group(two_schemes):
     doc(root, "record/practices.d/SOTA-001.md", code="SOTA-001",
         title="Wrong axis", tags=["generative"])
     errors = []
-    lint.check_tag_groups(errors)
+    lint.check_contracts(errors)
     assert any("wants exactly one" in e for e in errors)
 
 
@@ -179,7 +179,7 @@ def test_a_declared_reference_must_be_present(two_schemes):
     doc(root, "record/practices.d/SOTA-001.md", code="SOTA-001",
         title="No source", tags=["optimization"])
     errors = []
-    lint.check_references(errors)
+    lint.check_contracts(errors)
     assert any("no `source:`" in e for e in errors)
 
 
@@ -191,7 +191,7 @@ def test_a_reference_must_be_a_code(two_schemes):
         title="Prose source", tags=["optimization"],
         extra="source: 'a paper I read once'")
     errors = []
-    lint.check_references(errors)
+    lint.check_contracts(errors)
     assert any("is not a code" in e for e in errors)
 
 
@@ -204,7 +204,7 @@ def test_a_reference_must_belong_to_the_named_scheme(two_schemes):
     doc(root, "record/practices.d/SOTA-001.md", code="SOTA-001",
         title="Wrong scheme", tags=["optimization"], extra="source: ADR-001")
     errors = []
-    lint.check_references(errors)
+    lint.check_contracts(errors)
     assert any("is not a LIT code" in e for e in errors)
 
 
@@ -213,7 +213,7 @@ def test_a_reference_must_resolve(two_schemes):
     doc(root, "record/practices.d/SOTA-001.md", code="SOTA-001",
         title="Dangling", tags=["optimization"], extra="source: LIT-999")
     errors = []
-    lint.check_references(errors)
+    lint.check_contracts(errors)
     assert any("resolves to no LIT document" in e for e in errors)
 
 
@@ -224,7 +224,7 @@ def test_a_good_reference_is_silent(two_schemes):
     doc(root, "record/practices.d/SOTA-001.md", code="SOTA-001",
         title="Cited", tags=["optimization"], extra="source: LIT-001")
     errors = []
-    lint.check_references(errors)
+    lint.check_contracts(errors)
     assert errors == []
 
 
@@ -238,7 +238,7 @@ def test_a_linked_reference_still_reads(two_schemes):
         title="Linked", tags=["optimization"],
         extra="source: '[LIT-001](../literature.d/LIT-001.md)'")
     errors = []
-    lint.check_references(errors)
+    lint.check_contracts(errors)
     assert errors == []
 
 
@@ -248,7 +248,7 @@ def test_an_optional_reference_may_be_absent(two_schemes):
     doc(root, "record/practices.d/SOTA-001.md", code="SOTA-001",
         title="No source", tags=["optimization"])
     errors = []
-    lint.check_references(errors)
+    lint.check_contracts(errors)
     assert errors == []
 
 

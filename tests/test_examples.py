@@ -172,7 +172,7 @@ def test_a_scheme_can_require_its_own_fields(example):
     doc = root / "record" / "practices.d" / "SOTA-001.md"
     doc.write_text(doc.read_text().replace("source: LIT-001\n", ""))
     errors = []
-    lint.check_frontmatter(errors)
+    lint.check_contracts(errors)
     assert any("no `source:`" in e for e in errors)
 
 
@@ -187,7 +187,7 @@ def test_exactly_one_primary_category_is_enforced(example):
     doc.write_text(doc.read_text().replace(
         "tags:\n- optimization\n", "tags:\n- optimization\n- stability\n"))
     errors = []
-    lint.check_tag_groups(errors)
+    lint.check_contracts(errors)
     assert any("wants exactly one" in e for e in errors)
 
 

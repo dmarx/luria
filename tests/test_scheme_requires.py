@@ -34,14 +34,14 @@ def test_no_requires_demands_nothing(tmp_path, monkeypatch):
     """The default: a scheme asks for the standard fields and no more."""
     _project(tmp_path, monkeypatch)
     errors: list[str] = []
-    lint.check_frontmatter(errors)
+    lint.check_contracts(errors)
     assert errors == []
 
 
 def test_a_required_field_is_demanded_by_name(tmp_path, monkeypatch):
     _project(tmp_path, monkeypatch, requires='"approvers"')
     errors: list[str] = []
-    lint.check_frontmatter(errors)
+    lint.check_contracts(errors)
     assert any("no `approvers:`" in e and "NRM scheme requires it" in e
                for e in errors), errors
 
@@ -51,7 +51,7 @@ def test_supplying_the_field_clears_it(tmp_path, monkeypatch):
     doc.write_text(doc.read_text().replace(
         "date: '2026-01-01'\n", "date: '2026-01-01'\napprovers:\n- someone\n"))
     errors: list[str] = []
-    lint.check_frontmatter(errors)
+    lint.check_contracts(errors)
     assert errors == []
 
 
@@ -62,5 +62,5 @@ def test_an_empty_value_does_not_satisfy_it(tmp_path, monkeypatch):
     doc.write_text(doc.read_text().replace(
         "date: '2026-01-01'\n", "date: '2026-01-01'\napprovers: []\n"))
     errors: list[str] = []
-    lint.check_frontmatter(errors)
+    lint.check_contracts(errors)
     assert any("no `approvers:`" in e for e in errors), errors

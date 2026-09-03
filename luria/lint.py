@@ -11,6 +11,10 @@ Checks (each one fails the build):
 2. **Frontmatter** — every document in a reference scheme carries a `status:`
    from the canonical vocabulary, at least one `tags:` entry (ADR-003), and a
    `title:` that agrees with its body heading (ADR-013).
+2b. **Contracts** — what a scheme declares beyond the standard set, compiled
+   once per scheme (`luria/contract.py`, #141): fields it `requires`
+   (ADR-040), what its `references` hold (ADR-060), and which of its tags may
+   combine (`tag_groups`, ADR-054). One pass, each finding saying why.
 3. **Generated index** — the decision index and its per-tag pages are built from
    frontmatter (ADR-004), so a stale index is a failure rather than a silent
    divergence. `luria index` regenerates.
@@ -44,9 +48,10 @@ import re
 import sys
 
 from . import adr_index as builder
-from . import (adr_pending, badges, ci, doc_refs, journal, link_targets,
-               narrow_titles, pins, ref_status, remotes, statuses)
-from .config import TEMP_TAIL, current
+from . import (adr_pending, badges, ci, contract, doc_refs, journal,
+               link_targets, narrow_titles, pins, ref_status, remotes,
+               statuses)
+from .config import current
 
 # The closed status vocabulary (ADR-003). `Active` is the in-force state; the
 # rest are the ways a decision can be out of force, each meaning something a
@@ -120,82 +125,6 @@ def check_frontmatter(errors: list[str]) -> None:
             if not (meta.get("tags") or []):
                 errors.append(f"{rel}: no `tags:` in frontmatter (see ADR-003)")
 
-            # Per-scheme requirements (ADR-040): the fields a scheme demands
-            # beyond the standard set — what makes a cross-scheme move safe to
-            # automate, because the moved document fails here until a human
-            # supplies what the target scheme's template would have prompted
-            # for. The machinery relocates; only a person vouches.
-            for field in scheme.requires:
-                if not meta.get(field):
-                    errors.append(
-                        f"{rel}: no `{field}:` in frontmatter — the "
-                        f"{scheme.prefix} scheme requires it (luria.toml)")
-
-
-def check_references(errors: list[str]) -> None:
-    """Declared cross-scheme references (`[luria.schemes.X.references]`).
-
-    `requires` asks whether a field is there. This asks whether it means what
-    the scheme says it means, which is four questions: present, shaped like a
-    code, belonging to the named scheme, and resolving to a document.
-
-    The gap between those is not theoretical. Measured on the record that
-    motivated this, a field declared to hold a paper accepted a decision's
-    code and an arbitrary sentence, both silently — so the rule the whole
-    two-scheme split existed to enforce was enforced only in the sense that
-    the field was not blank (ADR-060)."""
-    cfg = current()
-    for scheme in cfg.schemes.values():
-        if not scheme.references:
-            continue
-        targets = {ref.scheme: cfg.schemes[ref.scheme]
-                   for ref in scheme.references}
-        known = {
-            prefix: ({t.code(n) for n in t.documents()}
-                     | {f"{prefix}-{tail}" for tail in t.temp_documents()})
-            for prefix, t in targets.items()
-        }
-        for path in [*scheme.documents().values(),
-                     *scheme.temp_documents().values()]:
-            rel = cfg.rel(path)
-            meta, _ = builder.parse_frontmatter(path.read_text(encoding="utf-8"))
-            if not meta:
-                continue          # check_frontmatter already said so
-            for ref in scheme.references:
-                raw = meta.get(ref.field)
-                if not raw:
-                    if ref.required:
-                        errors.append(
-                            f"{rel}: no `{ref.field}:` in frontmatter — the "
-                            f"{scheme.prefix} scheme declares it a "
-                            f"{ref.scheme} reference (luria.toml)")
-                    continue
-                code = _reference_code(str(raw))
-                if code is None:
-                    errors.append(
-                        f"{rel}: `{ref.field}: {raw}` is not a code — the "
-                        f"{scheme.prefix} scheme declares this field a "
-                        f"{ref.scheme} reference")
-                elif not code.startswith(f"{ref.scheme}-"):
-                    errors.append(
-                        f"{rel}: `{ref.field}: {code}` is not a "
-                        f"{ref.scheme} code — a {scheme.prefix} document's "
-                        f"`{ref.field}` names a {ref.scheme} document")
-                elif code not in known[ref.scheme]:
-                    errors.append(
-                        f"{rel}: `{ref.field}: {code}` resolves to no "
-                        f"{ref.scheme} document")
-
-
-# A reference field is data, not prose, so it holds a bare code — but the
-# fixer rewrites prose fields in place and a hand-edited file can carry a
-# link, so read the code out of either shape rather than demanding one.
-_REF_CODE_RE = re.compile(r"([A-Z]{2,}(?:-[A-Z]+)*-(?:\d{1,4}|" + TEMP_TAIL + r"))")
-
-
-def _reference_code(value: str) -> str | None:
-    m = _REF_CODE_RE.search(value.strip())
-    return m.group(1) if m else None
 
 
 def check_title(errors: list[str], rel: str, meta: dict, body: str) -> None:
@@ -228,43 +157,32 @@ def check_status_vocabulary(errors: list[str]) -> None:
         errors.extend(statuses.problems(scheme))
 
 
-def check_tag_groups(errors: list[str]) -> None:
-    """A scheme's tag groups, enforced (`[luria.schemes.X.tag_groups]`).
+def check_contracts(errors: list[str]) -> None:
+    """Each scheme's contract, enforced — what it `requires`, what its
+    `references` hold, which of its `tag_groups` combine (ADR-040, ADR-060,
+    ADR-054). Compiled once per scheme and checked in one pass over its
+    documents (#141), where there used to be one pass per table.
 
-    `tags.yaml` says what a tag means and nothing has ever said which may
-    appear together. For a vocabulary that is a pile of labels that is right;
-    for one that is an *axis* it leaves the rule to prose, and a rule checked
-    by nobody is a comment — the failure this package objects to everywhere
-    else.
-
-    Opt-in, like `requires` (ADR-040): a scheme declaring no group is
-    unconstrained, so this is silent for every record that predates it."""
+    Opt-in, all of it: a scheme declaring none of the three compiles to an
+    empty contract and this is silent for it, which is every record that
+    predates the tables. A breach is a hard error, not a status class — a
+    malformed entry is a defect in the document, and declaring the table
+    was the opt-in (ADR-054)."""
     cfg = current()
+    known: dict[str, set[str]] = {}
     for scheme in cfg.schemes.values():
-        if not scheme.tag_groups:
+        c = contract.for_scheme(scheme)
+        if c.empty:
             continue
+        for field in c.fields:
+            if field.reference and field.reference not in known:
+                known[field.reference] = contract.resolvable(field.reference)
         for path in [*scheme.documents().values(),
                      *scheme.temp_documents().values()]:
             meta, _ = builder.parse_frontmatter(path.read_text(encoding="utf-8"))
             if not meta:
                 continue          # check_frontmatter already said so
-            rel = cfg.rel(path)
-            tags = {str(t) for t in (meta.get("tags") or [])}
-            for group in scheme.tag_groups:
-                present = sorted(tags & group.tags)
-                shown = ", ".join(sorted(group.tags))
-                if group.require == "exactly-one" and len(present) != 1:
-                    errors.append(
-                        f"{rel}: `{group.name}` wants exactly one of "
-                        f"{shown} — has {', '.join(present) or 'none'}")
-                elif group.require == "at-most-one" and len(present) > 1:
-                    errors.append(
-                        f"{rel}: `{group.name}` wants at most one of "
-                        f"{shown} — has {', '.join(present)}")
-                if present and (clash := sorted(tags & group.excluded_by)):
-                    errors.append(
-                        f"{rel}: {', '.join(clash)} excludes `{group.name}`, "
-                        f"but the document also has {', '.join(present)}")
+            errors.extend(contract.violations(c, cfg.rel(path), meta, known))
 
 
 def check_journals(errors: list[str]) -> None:
@@ -578,8 +496,7 @@ def run() -> None:
     check_docs_index(errors)
     check_frontmatter(errors)
     check_status_vocabulary(errors)
-    check_tag_groups(errors)
-    check_references(errors)
+    check_contracts(errors)
     check_generated_index(errors)
     check_journals(errors)
     check_version_history(errors)
