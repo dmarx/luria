@@ -1,29 +1,39 @@
-# The generation half of the recommended docs workflow (ADR-029): regenerate
-# luria's views, commit and push them as the bot, and hand the checking job the
-# SHA it must read. This action is the single authoritative implementation of
-# the commit/push/handoff logic — the template workflow and luria's own CI both
-# use it rather than restating it, because a restated copy of tricky logic is
-# the drift this package exists to prevent.
+# The generation half of the recommended docs workflow (ADR-029): repair the
+# sources, regenerate luria's views, commit each where it belongs as the bot,
+# and hand the checking job the SHA it must read. This action is the single
+# authoritative implementation of the commit/push/handoff logic — the template
+# workflow and luria's own CI both use it rather than restating it, because a
+# restated copy of tricky logic is the drift this package exists to prevent.
+#
+# Two commit points (LU-ADR-068). A source repair — a bare code linked,
+# a journal entry's `created:` filled from its path — touches only the files
+# a branch itself authored, so it is committed onto the branch, where the
+# review reads it. A view — the decision index, the devlog book — is a shared
+# file every branch would rewrite, so it is committed on the default branch
+# only, and two branches never conflict on one.
 #
 # Caller contract:
-#   - Check out the repository FIRST, with a fork-safe ref (see the template
-#     workflow: a fork PR's head branch does not exist in the base repository,
-#     so name it only for same-repo PRs and fall back to the default
-#     merge-commit checkout otherwise).
+#   - Check out the repository FIRST, on a branch the bot can push to: the
+#     default branch on push, the head branch on a same-repo pull request. A
+#     fork PR's head branch does not exist in the base repository, so fall
+#     back to the default merge-commit checkout there (see the template
+#     workflow); the push guard below skips the commit with a warning.
 #   - Grant the job `permissions: contents: write`; a fork PR's read-only
 #     token is detected and the push is skipped with a warning instead.
 #   - Set up Python before this action (actions/setup-python).
-#   - Give the DOWNSTREAM checking job `needs:` on this job and have it check
-#     out this action's `sha` output. A push made with GITHUB_TOKEN does not
-#     retrigger workflows, so a lint in a separate workflow would keep a red
-#     it can never clear.
+#   - On the default branch, give the DOWNSTREAM checking job `needs:` on
+#     this job and have it check out this action's `sha` output. A push made
+#     with GITHUB_TOKEN does not retrigger workflows, so a lint in a separate
+#     workflow would keep a red it can never clear.
+#   - On a pull request, pass `commit-views: "false"` and run the lint action
+#     in the SAME job: the regenerated views live only on this runner.
 name: luria docs generate
 description: >-
-  Regenerate luria's derived views (luria link --fix + luria index), commit and
-  push any diff as github-actions[bot], and output the SHA a downstream
-  checking job must read. On a fork PR nothing is pushed and the output SHA is
-  the un-regenerated commit, so the staleness lint downstream fails
-  informatively instead of this job dying on a 403.
+  Run luria's source repairs (`luria repair`) and regenerate its derived views
+  (`luria index`), committing each where it belongs as github-actions[bot]:
+  repairs onto the branch that authored the sources, views on the default
+  branch only (LU-ADR-068). Outputs the SHA a downstream checking job
+  must read.
 inputs:
   pip-spec:
     description: >-
@@ -33,20 +43,36 @@ inputs:
     default: luria
   concretize:
     description: >-
-      "true" runs `luria concretize` before the views regenerate, assigning
-      real numbers to any merge-allocated temporary codes (LU-ADR-049). Pass
-      true ONLY where merges serialize — the push-to-default-branch run —
-      and never on pull-request runs: concretizing on a branch is exactly
-      the premature number claim the temporary codes exist to avoid. A
-      project with no merge-allocated schemes can pass true harmlessly; the
-      command is a no-op with nothing pending.
+      "true" runs `luria concretize` before anything else, assigning real
+      numbers to any merge-allocated temporary codes (LU-ADR-049). Pass true
+      ONLY where merges serialize — the push-to-default-branch run — and
+      never on pull-request runs: concretizing on a branch is exactly the
+      premature number claim the temporary codes exist to avoid. A project
+      with no merge-allocated schemes can pass true harmlessly; the command
+      is a no-op with nothing pending.
     default: "false"
+  commit-views:
+    description: >-
+      "true" commits and pushes the regenerated views together with the
+      repairs — the push-to-default-branch shape, where merges serialize.
+      "false" — the pull-request shape — commits and pushes the source
+      repairs alone, then regenerates the views in the working tree and
+      commits none of them; run the lint action in the SAME job afterwards.
+    default: "true"
   commit-message:
     description: >-
-      Commit message for the regenerated views. The default carries GitHub's
-      skip marker so the bot's push does not trigger a fresh workflow run;
-      keep that property if you override it.
+      Commit message for the default-branch commit (repairs and views). The
+      default carries GitHub's skip marker so the bot's push does not trigger
+      a fresh workflow run; keep that property if you override it.
     default: "docs: regenerate views [skip ci]"
+  repair-message:
+    description: >-
+      Commit message for a pull request's repair commit. No skip marker, on
+      purpose: a push made with GITHUB_TOKEN triggers no run anyway, and a
+      caller pushing with a token that does trigger runs wants the re-run —
+      it is the check on the head that will merge, and `luria repair` is
+      idempotent, so it repairs nothing and pushes nothing.
+    default: "docs: repair sources"
 outputs:
   sha:
     description: The commit the checking job must check out.
@@ -61,7 +87,29 @@ runs:
       shell: bash
       run: luria concretize
     - shell: bash
-      run: luria link --fix
+      run: luria repair
+    # The pull-request shape commits the repairs now, before the views are
+    # written into the same tree; the default-branch shape folds them into
+    # the one commit below.
+    - if: ${{ inputs.commit-views != 'true' }}
+      shell: bash
+      env:
+        CAN_PUSH: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+        MSG: ${{ inputs.repair-message }}
+      run: |
+        git add -A
+        if git diff --staged --quiet; then
+          echo "luria sources need no repair."
+        elif [ "$CAN_PUSH" != "true" ]; then
+          echo "::warning::luria repaired sources on this fork PR and cannot push them — run 'luria repair' and commit the result"
+          git reset -q
+        else
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git commit -m "$MSG"
+          git pull --rebase origin "$(git rev-parse --abbrev-ref HEAD)"
+          git push
+        fi
     - shell: bash
       run: luria index
     - id: commit
@@ -72,8 +120,14 @@ runs:
         # leaves HEAD at the un-regenerated SHA, which is exactly what makes
         # the staleness check downstream fire for forks.
         CAN_PUSH: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+        COMMIT: ${{ inputs.commit-views }}
         MSG: ${{ inputs.commit-message }}
       run: |
+        if [ "$COMMIT" != "true" ]; then
+          echo "luria views regenerated in the working tree; committing none of them (commit-views: false)."
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
         git config user.name  "github-actions[bot]"
         git config user.email "github-actions[bot]@users.noreply.github.com"
         git add -A

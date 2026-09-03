@@ -18,14 +18,13 @@ from . import doc_refs
 from .config import current
 
 
-def run(*paths: str, fix: bool = False) -> None:
-    """Rewrite bare references as links — every doc, or just PATHS.
-    Reports what would change; --fix writes it."""
-    files = [Path(p).resolve() for p in paths] or doc_refs.doc_files()
+def linkify_files(paths: list[Path], fix: bool = False) -> tuple[int, list[Path]]:
+    """Count the references PATHS would gain as links; --fix writes them.
+    Returns the count and the files written (none without --fix)."""
     adrs, anchors = doc_refs.adr_paths(), doc_refs.dp_anchors()
-
     total = 0
-    for path in files:
+    written: list[Path] = []
+    for path in paths:
         text = path.read_text(encoding="utf-8")
         new, count = doc_refs.linkify(text, path, adrs, anchors)
         if not count:
@@ -34,7 +33,15 @@ def run(*paths: str, fix: bool = False) -> None:
         print(f"{current().rel(path)}: {count} reference(s)")
         if fix:
             path.write_text(new, encoding="utf-8")
+            written.append(path)
+    return total, written
 
+
+def run(*paths: str, fix: bool = False) -> None:
+    """Rewrite bare references as links — every doc, or just PATHS.
+    Reports what would change; --fix writes it."""
+    files = [Path(p).resolve() for p in paths] or doc_refs.doc_files()
+    total, _ = linkify_files(files, fix)
     verb = "linked" if fix else "would link"
     print(f"{verb} {total} reference(s) in {len(files)} file(s)")
 
