@@ -61,25 +61,24 @@ def test_a_bare_code_in_the_note_is_the_same_edge(project):
     assert edge.target == "ADR-001"
 
 
-def test_a_note_that_runs_on_keeps_the_successor_apart(project):
+def test_a_note_that_runs_on_yields_only_the_successor(project):
     """ADR-015's note runs on past its successor and names a second code.
-    The canonical `by CODE` opening is the succession; anything else the
-    note cites is the weaker fact that the note mentions it."""
+    The canonical `by CODE` opening is the succession; the second code is a
+    mention — the citation scanner's business, not an edge."""
     decision(project, 1, "Active")
     decision(project, 2, "Active")
     path = decision(project, 3, "Superseded — by ADR-001, which folds in ADR-002")
     found = {(e.relation, e.target) for e in edges.outbound(adr(path))}
-    assert found == {("superseded_by", "ADR-001"), ("status_note", "ADR-002")}
+    assert found == {("superseded_by", "ADR-001")}
 
 
-def test_a_superseded_note_off_the_canonical_form_is_a_mention_only(project):
+def test_a_superseded_note_off_the_canonical_form_derives_nothing(project):
     """`Superseded` is scheme-relative (ADR-056) and the note is prose. Only
     the shape the migration machinery writes — `by CODE` first — is read as
     the succession; a code anywhere else is not promoted to one."""
     decision(project, 1, "Active")
     path = decision(project, 2, "Superseded — folded into ADR-001 wholesale")
-    edge, = edges.outbound(adr(path))
-    assert (edge.relation, edge.target) == ("status_note", "ADR-001")
+    assert edges.outbound(adr(path)) == []
 
 
 def test_a_superseded_note_with_no_code_is_no_edge(project):
@@ -87,18 +86,18 @@ def test_a_superseded_note_with_no_code_is_no_edge(project):
     assert edges.outbound(adr(path)) == []
 
 
-def test_a_code_in_any_other_status_note_is_a_status_note_edge(project):
+def test_a_code_in_any_other_status_note_is_not_an_edge(project):
     """A Rejected note may cite what defeated it, a Deferred one what parked
-    it. Reading either as a succession would invent a relation; dropping
-    them loses a fact the author wrote down. Downstream, four of ten
-    non-Superseded notes cited a code — the weaker edge keeps them."""
+    it. Reading either as a relation — a succession, or a `status_note`
+    relation an earlier draft invented — dresses a location up as a
+    meaning. Where the code was found is provenance; the fact is a mention,
+    and mentions belong to the citation scanner once the note is read as
+    prose (a separate decision)."""
     decision(project, 1, "Active")
     rejected = decision(project, 2, "Rejected — [ADR-001](ADR-001.md) covers it")
     deferred = decision(project, 3, "Deferred — parked by ADR-001")
     for path in (rejected, deferred):
-        edge, = edges.outbound(adr(path))
-        assert (edge.relation, edge.target) == ("status_note", "ADR-001")
-        assert "status" in edge.because
+        assert edges.outbound(adr(path)) == []
 
 
 def test_a_foreign_code_in_the_note_is_not_an_edge(project):
@@ -197,16 +196,6 @@ def test_the_record_line_names_what_a_decision_supersedes():
     inbound = [edges.Edge("ADR-010", "superseded_by", "ADR-011", "status")]
     line = site.record_line({"status": "Active"}, where, inbound=inbound)
     assert "**Supersedes** [ADR-010](ADR-010.md)" in line
-
-
-def test_the_record_line_says_only_that_a_note_names_it():
-    """No stronger English than the relation guarantees: a code in a
-    Deferred note is named there, and that is all the page may claim."""
-    where = current().schemes["ADR"].dir / "ADR-001.md"
-    inbound = [edges.Edge("ADR-003", "status_note", "ADR-001", "status")]
-    line = site.record_line({"status": "Active"}, where, inbound=inbound)
-    assert "**Named in the status of** [ADR-003](ADR-003.md)" in line
-    assert "Supersedes" not in line
 
 
 def test_the_record_line_names_what_a_decision_influenced():

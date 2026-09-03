@@ -107,8 +107,7 @@ def _load_scheme(scheme) -> dict[str, Doc]:
     docs: dict[str, Doc] = {}
     for number, path in scheme.documents().items():
         doc = builder.Adr(path, scheme)
-        # The bare status word: `Superseded — by [ADR-011](…)` is `Superseded`.
-        status = re.split(r"\s+—\s+", doc.status, maxsplit=1)[0]
+        status = doc.status_value
         code = scheme.code(number)
         docs[code] = Doc(code, status, doc.title, path, status == scheme.active)
     return docs
