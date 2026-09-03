@@ -1,0 +1,33 @@
+# A record of narrative world-building: scenes in a story bible, each set
+# in one or more of a closed set of world trajectories.
+#
+# This is the shape that produced two additions to the machinery. A scene
+# `follows` several scenes, so its reference is plural (LU-ADR-tmp0sz8p);
+# and `worlds` is a field that is not a reference (its values are not
+# codes), not a tag (the scenes have topical tags too) and not a status —
+# a frontmatter field backed by a scheme-local controlled vocabulary
+# (LU-ADR-tmpcso13), the third instance of what `statuses.yaml` and
+# `tags.yaml` already are.
+[luria]
+issue_url = "https://github.com/acme/bible/issues/{n}"
+
+[luria.schemes.SCENE]
+dir    = "record/scenes.d"
+output = "docs/scenes"
+render = "index"
+
+# A scene may follow several: a list of SCENE codes, every element checked
+# and resolved, each one an edge. Optional, because an opening scene
+# follows nothing.
+[luria.schemes.SCENE.references]
+follows = { scheme = "SCENE", many = true, required = false }
+
+# Which trajectories the scene belongs to. The values and what they mean
+# live in `record/scenes.d/worlds.yaml`, beside the scenes, and the file is
+# closed: a world the file does not name is a lint finding. Most scenes sit
+# in the default trajectory and say nothing, so an absent field is read as
+# world B by the lint, the index and the record page — and never written
+# into the source.
+[luria.schemes.SCENE.vocabularies.worlds]
+many    = true
+default = ["B"]

@@ -21,7 +21,7 @@
 # `Superseded — by [ADR-tmpcso13](ADR-tmpcso13.md)` and leave its body intact. When the
 # choice stands and only a REASON was wrong, correct this body in place and
 # bump `version:` below — the rule objects to silent revision, not to editing.
-status: 'Proposed'
+status: 'Active'
 
 # What the index shows in place of the code. Repeat it as the body's `# ADR-tmpcso13:`
 # heading — someone reading the file alone needs one — and `luria lint` checks
@@ -58,7 +58,7 @@ summary: >-
   entries, drawn from six values, absent meaning B, with a view per value
   wanted — a field that is not a reference (the values are not codes),
   not a tag (it is a second axis, not the browsing pile) and not a status
-  (closed and single). Proposed: a scheme declares the field under
+  (closed and single). Decided: a scheme declares the field under
   `[luria.schemes.X.vocabularies.NAME]` with `many`, `required` and
   `default`, the values live in `NAME.yaml` beside the records shaped like
   `tags.yaml`, the lint holds the field to the vocabulary, the default is
@@ -71,11 +71,6 @@ summary: >-
 ---
 
 # ADR-tmpcso13: A frontmatter field can be backed by a scheme-local controlled vocabulary
-
-<!-- A Proposed decision on a draft pull request (ADR-052): merge flips it
-     Active, close files it Rejected with the body intact. The writeup argues
-     both directions; the open questions at the end are where the verdict is
-     expected to land. -->
 
 ## Context
 
@@ -157,7 +152,13 @@ are facts about the field.
 **The vocabulary is closed.** A value not in the file is a lint finding,
 naming the file. This is the `statuses.yaml` posture, not the `tags.yaml`
 one: a controlled vocabulary that accepts unknown values is a pile of
-labels, and the record has `tags:` for those.
+labels, and the record has `tags:` for those. The declaration is validated
+at load, eagerly, the way a tag group is: a vocabulary whose file names no
+values, a default the file does not contain, a default of the wrong shape,
+and a `required` beside a `default` (a field with a default is never
+absent, so `required` would say nothing) are all configuration errors. The
+built-in axes — `status`, `tags` — cannot be redeclared here; they have
+their own files and their own rules.
 
 **A default is an effective value, not a rewrite.** An absent `worlds:` is
 read as `["B"]` by every consumer — the lint, the index, the graph — and
@@ -168,22 +169,26 @@ B`, and a finding about the field cites the same line. And `default` is
 distinct from `required = false`: optional means *no value is a meaningful
 state*; default means *no value written is this value*.
 
-**The compiled contract grows a type.** `Field.reference` becomes one case
-of what a field holds:
+**The compiled contract grows a second typed case.** What a field holds
+is now one of three things — anything, a code from a scheme, or a value
+from a vocabulary:
 
 ```text
 Field
   name
   required
   many
-  holds:   Any | Ref[SCHEME] | Vocabulary[NAME]
-  default: value | None
+  reference:  SCHEME | None       what `references` compiles to
+  vocabulary: NAME | None         what this table compiles to
+  values, default                 the vocabulary's members and its default
 ```
 
-`requires` compiles to `Any`, `references` to `Ref`, and this table to
-`Vocabulary`. The lint, the record page and the edge derivation read the
-type; nothing else changes shape. No edges are derived from a vocabulary
-field — its values are not nodes.
+Written as two optional attributes rather than one sum type, because that
+is the smallest change that keeps every consumer honest; the day a fourth
+case arrives, the three collapse into one `holds`. The lint, the record
+page and the site read the field; the edge derivation ignores it — no
+edges are derived from a vocabulary field, because its values are not
+nodes.
 
 **The index renders a page per value.** For an index-rendered scheme,
 `luria index` writes `<view>/worlds/A.md` beside the tag pages, listing the
@@ -257,10 +262,11 @@ is trusted; the anthology has not reported a facet, and this repository
 has none. That is the strongest argument for the draft flag: the shape is
 priced from one corpus, and the verdict should say whether one is enough.
 
-## Open questions
+## Questions the implementation settled
 
-Where the verdict is expected to land, with the draft's answer in each
-case:
+Filed as open questions on the draft, each taken as the draft answered it
+and proved on the `world-bible` example, which is the reporting record's
+shape in three scenes:
 
 1. **Pages per value: automatic, or declared?** Draft: automatic, because
    tag pages are, and declaring the vocabulary is the opt-in. The other
@@ -271,9 +277,10 @@ case:
 3. **May a default be a list?** Draft: it takes the field's shape — a list
    for `many = true`, a scalar otherwise.
 4. **Does the default render on the entry?** Draft: on the record page and
-   in findings only; the site's record line shows written values, not
-   effective ones, so a reader is never shown a field the file does not
-   have. The alternative is *Worlds: B (default)* on every page.
+   in findings only; the site's record line shows written values, each
+   linked to its page, and never the effective ones, so a reader is never
+   shown a field the file does not have. The alternative is *Worlds: B
+   (default)* on every page.
 5. **Sidecar path: fixed `NAME.yaml`, or a `file` key like `tags = …`?**
    Draft: fixed name, with a `file` key added the day two schemes share a
    vocabulary — the same sequence `tags.yaml` went through ([ADR-060](ADR-060.md)).

@@ -6,6 +6,7 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 
 ## Currently — [September 2026](2026-09.md)
 
+- [3 Sep 16:22 — A field that was neither a reference, a tag nor a status](2026-09.md#20260903162230)
 - [3 Sep 14:25 — A list in a reference field was read as its first code, silently](2026-09.md#20260903142510)
 - [3 Sep 04:43 — Provenance goes into the finding, not into a command](2026-09.md#20260903044350)
 - [3 Sep 04:09 — Three facts the record already stated, read as edges](2026-09.md#20260903040926)
@@ -13,9 +14,9 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 
 ## All books
 
-49 entries across 2 books, newest first.
+50 entries across 2 books, newest first.
 
 | Book | Entries | First | Last |
 |---|--:|---|---|
-| [2026-09](2026-09.md) | 4 | 2026-09-03 | 2026-09-03 |
+| [2026-09](2026-09.md) | 5 | 2026-09-03 | 2026-09-03 |
 | [2026-08](2026-08.md) | 45 | 2026-08-03 | 2026-08-28 |

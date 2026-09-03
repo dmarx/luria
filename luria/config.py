@@ -251,6 +251,32 @@ class Reference:
 
 
 @dataclass(frozen=True)
+class Vocabulary:
+    """A frontmatter field backed by a scheme-local controlled vocabulary
+    (ADR-tmpcso13):
+
+        [luria.schemes.SCENE.vocabularies.worlds]
+        many    = true            # a list of values; default false, one value
+        default = ["B"]           # the effective value when the field is absent
+
+    with the values in `worlds.yaml` beside the records, shaped like
+    `tags.yaml`. Closed: a value outside the file is a finding. `required`
+    (default false) and `default` are exclusive — a field with a default is
+    never absent, so `required` would say nothing."""
+    name: str
+    file: Path
+    many: bool = False
+    required: bool = False
+    # Normalised to a tuple of values whatever the shape declared; None when
+    # absence is a meaningful state rather than a spelling of the default.
+    default: tuple[str, ...] | None = None
+
+
+# The axes every scheme has, with their own files and their own rules.
+BUILT_IN_AXES = ("status", "statuses", "tags")
+
+
+@dataclass(frozen=True)
 class Scheme:
     """A family of referable documents — `ADR-012`, `RFC-7`, `SPEC-3`.
 
@@ -310,6 +336,11 @@ class Scheme:
     # says a field is present; this says what it means, and whether it holds
     # one code or a list of them.
     references: tuple[Reference, ...] = ()
+    # Frontmatter fields backed by a controlled vocabulary, by field name
+    # (see `Vocabulary`): `[luria.schemes.X.vocabularies.NAME]`, values in
+    # `NAME.yaml` beside the records. The third instance of what
+    # `statuses.yaml` and `tags.yaml` already are.
+    vocabularies: tuple[Vocabulary, ...] = ()
     # Why this scheme's records all sharing one status is deliberate rather
     # than a dead enforcement mechanism (#104). The `inert-status` check is the
     # one judgment call in luria with no acknowledgement — every other has an
@@ -334,6 +365,10 @@ class Scheme:
     @property
     def tag_dir(self) -> Path:
         return self.view / "tags"
+
+    def vocab_dir(self, name: str) -> Path:
+        """Where a vocabulary's per-value pages render, beside the tag pages."""
+        return self.view / name
 
     # The stub and the tag metadata are *authored*, so they live with the
     # sources — the view directory holds only what the generator wrote, which
@@ -712,6 +747,53 @@ def _references(prefix: str, raw: dict) -> tuple[Reference, ...]:
     return tuple(found)
 
 
+def _vocabularies(prefix: str, raw: dict, scheme_dir: Path,
+                  root: Path) -> tuple[Vocabulary, ...]:
+    """Read a scheme's `[luria.schemes.X.vocabularies]` tables.
+
+    Validated here, eagerly, for the reason tag groups are: a declared axis
+    with no values, or a default no value matches, would surface as "no
+    violations", which is the quiet failure a declaration exists to remove."""
+    from .vocabularies import declared
+    found = []
+    for name, spec in raw.items():
+        where = f"luria.toml: schemes.{prefix}.vocabularies.{name}"
+        if name in BUILT_IN_AXES:
+            raise ValueError(f"{where}: `{name}` is built in — `status` and "
+                             f"`tags` have their own files and rules")
+        file = scheme_dir / f"{name}.yaml"
+        values = declared(file)
+        if not values:
+            raise ValueError(
+                f"{where}: {file.relative_to(root)} declares no values, so "
+                f"the field constrains nothing")
+        many = bool(spec.get("many", False))
+        required = bool(spec.get("required", False))
+        default = spec.get("default")
+        defaults = None
+        if default is not None:
+            if required:
+                raise ValueError(
+                    f"{where}: a field with a default is never absent, so "
+                    f"`required` says nothing — drop one of them")
+            if many and not isinstance(default, list):
+                raise ValueError(f"{where}: `many = true`, so `default` must "
+                                 f"be a list")
+            if not many and isinstance(default, list):
+                raise ValueError(f"{where}: `default` must be one value, since "
+                                 f"the field holds one (`many = true` for a "
+                                 f"list)")
+            defaults = tuple(str(v) for v in
+                             (default if isinstance(default, list) else [default]))
+            if bad := [d for d in defaults if d not in values]:
+                raise ValueError(
+                    f"{where}: default {', '.join(bad)} is not in "
+                    f"{file.relative_to(root)} (values: {', '.join(values)})")
+        found.append(Vocabulary(name=str(name), file=file, many=many,
+                                required=required, default=defaults))
+    return tuple(found)
+
+
 def _fragment(spec) -> Fragment:
     if isinstance(spec, dict):
         return Fragment(Path(spec.get("file") or spec.get("target") or ""),
@@ -1082,6 +1164,8 @@ def _schemes(raw: dict, root: Path) -> dict[str, Scheme]:
                                    tags_path),
             tags_file=tags_file,
             references=_references(prefix, spec.get("references", {})),
+            vocabularies=_vocabularies(prefix, spec.get("vocabularies", {}),
+                                       root / spec["dir"], root),
             uniform_ok=(spec.get("uniform_ok") or None),
         )
     for prefix, scheme in schemes.items():

@@ -1,0 +1,12 @@
+# The trajectories, and what each one means. Closed: a scene naming a world
+# not listed here fails the lint, which is how a typo stays a typo instead
+# of becoming a seventh world.
+A:
+  label: The unbroken line
+  blurb: the treaty holds and the capital never burns
+B:
+  label: The main line
+  blurb: the trajectory most scenes sit in; an absent `worlds:` means this
+C:
+  label: The long winter
+  blurb: the harvest fails in the second year

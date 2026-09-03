@@ -472,10 +472,13 @@ def _edge_bits(outbound, inbound) -> list[str]:
     reference fields — the one direction the site otherwise loses, since
     frontmatter renders as nothing."""
     bits = []
+    out: dict[str, list[str]] = {}
     for edge in outbound:
         if edge.relation not in _INBOUND:
-            label = edge.relation.replace("_", " ").capitalize()
-            bits.append(f"**{label}** [[{edge.target}]]")
+            out.setdefault(edge.relation, []).append(edge.target)
+    for relation, targets in out.items():
+        label = relation.replace("_", " ").capitalize()
+        bits.append(f"**{label}** " + " · ".join(f"[[{t}]]" for t in targets))
     grouped: dict[str, list[str]] = {}
     for edge in inbound:
         grouped.setdefault(edge.relation, []).append(edge.source)
@@ -489,6 +492,30 @@ def _edge_bits(outbound, inbound) -> list[str]:
         label = _INBOUND.get(relation) or f"Cited as `{relation}` by"
         codes = " · ".join(f"[[{c}]]" for c in sorted(set(grouped[relation])))
         bits.append(f"**{label}** {codes}")
+    return bits
+
+
+def _vocabulary_bits(meta: dict, source: Path) -> list[str]:
+    """A vocabulary field's *written* values, each linked to its page. The
+    default is deliberately not shown: a reader is never shown a field the
+    file does not have (ADR-tmpcso13); the record page says what absence
+    means."""
+    cfg = current()
+    scheme = next((s for s in cfg.schemes.values()
+                   if s.render == "index" and source.parent == s.dir), None)
+    if scheme is None:
+        return []
+    bits = []
+    for vocab in scheme.vocabularies:
+        raw = meta.get(vocab.name)
+        values = raw if isinstance(raw, list) else (
+            [] if raw in (None, "") else [raw])
+        if not values:
+            continue
+        links = " · ".join(
+            f"[{v}]({posixpath.relpath((scheme.vocab_dir(vocab.name) / f'{v}.md').as_posix(), source.parent.as_posix())})"
+            for v in values)
+        bits.append(f"**{vocab.name.replace('_', ' ').capitalize()}** {links}")
     return bits
 
 
@@ -519,6 +546,7 @@ def record_line(meta: dict, source: Path, outbound=(), inbound=()) -> str:
     if influenced:
         codes = " · ".join(f"[[{code}]]" for code in influenced if code)
         bits.append(f"**Influenced by** {codes}")
+    bits += _vocabulary_bits(meta, source)
     bits += _edge_bits(outbound, inbound)
     if not bits:
         return ""
