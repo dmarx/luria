@@ -36,10 +36,13 @@ image is copied so it renders; anything else becomes a `source_url` link, and
 (DP-1).
 
 The one thing added rather than copied: each scheme document gets a **record
-line** under its title — status, date, issue, and the decisions named in
-`influenced_by:`. Those facts live in frontmatter, which a site renders as
-nothing at all, and `influenced_by` is precisely the lineage a citation graph
-exists to show. The line is composed with wikilinks and expanded by the same
+line** under its title — status, date, issue, the decisions named in
+`influenced_by:`, and its typed edges both ways (`luria/edges.py`): what it
+supersedes, what it influenced, what a declared reference field names and
+which documents name it. Those facts live in frontmatter, which a site
+renders as nothing at all, and the edges are precisely the lineage a
+citation graph exists to show — Quartz's own backlinks say only that a page
+was mentioned. The line is composed with wikilinks and expanded by the same
 resolver the record uses everywhere else.
 """
 
@@ -53,7 +56,7 @@ import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from . import doc_refs
+from . import doc_refs, edges
 from .adr_index import parse_frontmatter
 from .config import Site, current
 
@@ -451,9 +454,44 @@ def _alias(path: Path, cfg) -> str | None:
     return None
 
 
-def record_line(meta: dict, source: Path) -> str:
+# How an inbound edge reads on the page it lands on. A declared reference
+# field has no built-in inverse, so it is named for the field.
+_INBOUND = {edges.SUPERSEDED_BY: "Supersedes", edges.INFLUENCED_BY: "Influenced"}
+_INBOUND_ORDER = (edges.SUPERSEDED_BY, edges.INFLUENCED_BY)
+
+
+def _edge_bits(outbound, inbound) -> list[str]:
+    """The typed edges as record-line fragments, wikilinks and all.
+
+    Supersession and influence already read from the page's own frontmatter
+    (the status note, `influenced_by:`), so outbound only adds the declared
+    reference fields — the one direction the site otherwise loses, since
+    frontmatter renders as nothing."""
+    bits = []
+    for edge in outbound:
+        if edge.relation not in _INBOUND:
+            label = edge.relation.replace("_", " ").capitalize()
+            bits.append(f"**{label}** [[{edge.target}]]")
+    grouped: dict[str, list[str]] = {}
+    for edge in inbound:
+        grouped.setdefault(edge.relation, []).append(edge.source)
+
+    def order(relation: str) -> tuple[int, str]:
+        built_in = relation in _INBOUND_ORDER
+        return (_INBOUND_ORDER.index(relation) if built_in
+                else len(_INBOUND_ORDER), relation)
+
+    for relation in sorted(grouped, key=order):
+        label = _INBOUND.get(relation) or f"Cited as `{relation}` by"
+        codes = " · ".join(f"[[{c}]]" for c in sorted(set(grouped[relation])))
+        bits.append(f"**{label}** {codes}")
+    return bits
+
+
+def record_line(meta: dict, source: Path, outbound=(), inbound=()) -> str:
     """The frontmatter facts, rendered where a reader (and a graph) can see
-    them: status, when it was filed, the issue, and what influenced it.
+    them: status, when it was filed, the issue, what influenced it, and the
+    typed edges in and out of it.
 
     Composed with wikilinks and handed to the resolver rather than spelled
     here — the fixer owns every target in this record, and a second speller
@@ -477,6 +515,7 @@ def record_line(meta: dict, source: Path) -> str:
     if influenced:
         codes = " · ".join(f"[[{code}]]" for code in influenced if code)
         bits.append(f"**Influenced by** {codes}")
+    bits += _edge_bits(outbound, inbound)
     if not bits:
         return ""
     expanded, _ = doc_refs.expand_wikilinks("> " + " · ".join(bits), source)
@@ -644,13 +683,20 @@ def stage(out: Path, cfg=None) -> Report:
     pages = publishable(cfg, skip=out)
     published = set(pages)
     report, assets = Report(), {}
+    # Read once for the whole record: a page's backlinks are somebody else's
+    # frontmatter.
+    typed = edges.graph()
 
     for path in pages:
         text = path.read_text(encoding="utf-8")
         yaml_text, body = split_frontmatter(text)
         if yaml_text is not None:
             meta = parse_frontmatter(text)[0]
-            line = record_line(meta, path)
+            code = edges.code_of(path)
+            line = record_line(
+                meta, path,
+                outbound=typed.outbound(code) if code else (),
+                inbound=typed.inbound(code) if code else ())
             if line:
                 body = _insert_after_title(body, line)
                 report.lineage += 1

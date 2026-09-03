@@ -6,13 +6,14 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 
 ## Currently — [September 2026](2026-09.md)
 
+- [3 Sep 04:09 — Three facts the record already stated, read as edges](2026-09.md#20260903040926)
 - [3 Sep 03:58 — Three lint passes compile into one contract per scheme](2026-09.md#20260903035841)
 
 ## All books
 
-46 entries across 2 books, newest first.
+47 entries across 2 books, newest first.
 
 | Book | Entries | First | Last |
 |---|--:|---|---|
-| [2026-09](2026-09.md) | 1 | 2026-09-03 | 2026-09-03 |
+| [2026-09](2026-09.md) | 2 | 2026-09-03 | 2026-09-03 |
 | [2026-08](2026-08.md) | 45 | 2026-08-03 | 2026-08-28 |
