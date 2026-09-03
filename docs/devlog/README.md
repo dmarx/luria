@@ -6,15 +6,16 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 
 ## Currently — [September 2026](2026-09.md)
 
+- [3 Sep 22:39 — The lint reads sources; nobody regenerates a view to check a branch](2026-09.md#20260903223927)
 - [3 Sep 22:23 — An ADR closed in review: the constraint was the token's, not the file's](2026-09.md#20260903222323)
 - [3 Sep 21:57 — A temporary code in a workflow file breaks the generation job](2026-09.md#20260903215722)
 - [3 Sep 19:42 — Six conflicts on files nobody wrote](2026-09.md#20260903194237)
 
 ## All books
 
-49 entries across 2 books, newest first.
+50 entries across 2 books, newest first.
 
 | Book | Entries | First | Last |
 |---|--:|---|---|
-| [2026-09](2026-09.md) | 3 | 2026-09-03 | 2026-09-03 |
+| [2026-09](2026-09.md) | 4 | 2026-09-03 | 2026-09-03 |
 | [2026-08](2026-08.md) | 46 | 2026-08-03 | 2026-08-28 |
