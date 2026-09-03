@@ -342,7 +342,8 @@ luria site [--out build/site]
 Stages the record as a [Quartz](https://quartz.jzhao.xyz/) vault: every
 publishable page at its repository path (so all relative links keep
 working), a `record line` (status · version · filed · issue · influenced
-by) injected under each document's title, codes registered as aliases,
+by · the typed edges in and out of it) injected under each document's
+title, codes registered as aliases,
 README as the landing page, links to unpublished files redirected to the
 repository, and the theme/branding from `[luria.site]` rendered into
 Quartz config. The published site gets search, backlinks, and a local

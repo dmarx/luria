@@ -222,8 +222,10 @@ resolving with no second link-resolution system:
 - The root `README.md` becomes the landing page (and still answers to its
   old name via an alias).
 - Each scheme document gets its code as an alias, so `/ADR-012` finds it.
-- A **record line** — status, version, filing date, issue, influences — is
-  injected under each document's title from its frontmatter.
+- A **record line** — status, version, filing date, issue, influences, and
+  the document's typed edges both ways (what it supersedes, what it
+  influenced, what a declared reference names and who names it) — is
+  injected under each document's title from the record's frontmatter.
 - Links to files that are not published (source code, for instance) are
   retargeted to the repository on GitHub; images are staged alongside
   their pages.
