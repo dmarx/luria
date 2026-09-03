@@ -154,7 +154,8 @@ Now the decision changes. File its successor, and retire the old one by
 editing one field — not by deleting it:
 
 ```yaml
-status: 'Superseded — by ADR-002'
+status: Superseded
+status_note: by ADR-002
 ```
 
 Nobody touched `docs/api.md`. It is now wrong, and the record says so:

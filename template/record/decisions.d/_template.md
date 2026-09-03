@@ -16,9 +16,11 @@
 # pages are generated from it — never edit them by hand; run `luria index`.
 # Why: LU-ADR-004.
 
-# Active | Proposed | Deferred | Superseded | Rejected, optionally " — <note>".
-# Supersede when the CHOICE changes: set the old one to
-# `Superseded — by [ADR-NNN](ADR-NNN.md)` and leave its body intact. When the
+# Active | Proposed | Deferred | Superseded | Rejected. A qualifying note goes
+# in `status_note:` below it — prose, like `summary:`, so a code in it is a
+# citation and the fixer links it. Supersede when the CHOICE changes: set the
+# old one to `status: Superseded` with `status_note: by ADR-NNN` and leave
+# its body intact. When the
 # choice stands and only a REASON was wrong, correct this body in place and
 # bump `version:` below — the rule objects to silent revision, not to editing.
 status: Proposed
