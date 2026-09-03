@@ -123,7 +123,11 @@ A ──superseded_by──→ B     derived: status `Superseded`, note `by B`
 
 Four details are load-bearing.
 
-**No new field.** The supersession edge is read out of the note.
+**No `superseded_by:` field.** The derivation reads `status_note:` — the
+note is a prose field of its own ([ADR-tmpvte2k](ADR-tmpvte2k.md)) — and the note already
+names the successor. A relation the tool derives from one authored fact
+beats a second authored fact the tool would have to reconcile with the
+first.
 
 <!-- inactive-ok-block: ADR-015 — cited as the note that names two codes; it is superseded, which is why it has a note -->
 **Three levels of claim, and only the top two are edges.** A code found
@@ -139,17 +143,16 @@ status note names — the second code in a note that runs on
 `Rejected` was overturned by — is a mention with a location. Downstream, a
 world-building record found four of its ten non-Superseded notes citing a
 code; those are facts worth keeping, and the place that keeps them is the
-citation scanner, once the note is read as the prose it already is (a
-separate decision on field typing). `Superseded` is itself scheme-relative
+citation scanner, which reads the note as the prose key it is
+([ADR-tmpvte2k](ADR-tmpvte2k.md)). `Superseded` is itself scheme-relative
 ([ADR-056](ADR-056.md)), which is one more reason to promote only the shape
 with a mechanical writer.
 
-**The status field is read as two things.** One `Status(value, note)`
-parse, on the document, replaces the six places that split the word off
-the note with three spellings of one regex. The word is data, checked
-against the vocabulary; the note is prose, rendered and rebased for links.
-Storage is unchanged; whether it should change is the migration decision
-above, not this one.
+**The status field is two fields.** One `Status(value, note)` on the
+document replaces the six places that split the word off the note with
+three spellings of one regex, and [ADR-tmpvte2k](ADR-tmpvte2k.md) gives the note its own key,
+`status_note:`. The word is data, checked against the vocabulary; the note
+is prose, rendered, linked and cited.
 
 **A remote code is never an edge.** A remote's namespace is theirs
 ([ADR-016](ADR-016.md)); the graph has no node for the edge to land on.
@@ -217,9 +220,8 @@ The note stays the single source of the supersession fact, and the
 derivation is one function that a project can read in full. What it does
 not do is as deliberate: *parked by* and *overturned by* are meanings the
 tool does not know, and the alternative to leaving them as mentions is the
-tool guessing. Until the note is a prose key of its own, the codes in a
-Deferred or Rejected note are cited by nothing the scanner sees; that gap
-is named in the field-typing decision that closes it.
+tool guessing. The codes in a Deferred or Rejected note are citations,
+found by the scanner in `status_note:` like a code in a summary.
 
 The lint for a successor-less `Superseded` document is one function away
 when a record needs it. The graph is also the natural next consumer of the

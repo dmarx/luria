@@ -1,5 +1,6 @@
 ---
-status: 'Deferred — the finding is settled; how widely it is adopted is not'
+status: Deferred
+status_note: the finding is settled; how widely it is adopted is not
 title: 'Prefer decoupled weight decay to L2 regularization added to the loss'
 version: 1
 tags:
