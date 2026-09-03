@@ -104,7 +104,6 @@ carries its prefix, so a second scheme is an entry here (ADR-006).
 | `requires` | `tuple[str, ...]` | *unset* |
 | `tag_groups` | `tuple[TagGroup, ...]` | *unset* |
 | `tags_file` | `Path \| None` | *unset* |
-| `field_groups` | `tuple[FieldGroup, ...]` | *unset* |
 | `references` | `tuple[Reference, ...]` | *unset* |
 | `vocabularies` | `tuple[Vocabulary, ...]` | *unset* |
 | `uniform_ok` | `str \| None` | *unset* |

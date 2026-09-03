@@ -122,8 +122,8 @@ wherever a reader sees a status; nothing changes on a page.
 **The combined form is read, reported, and repaired.** A file still
 carrying `status: 'Superseded — by X'` parses as before, so nothing
 breaks between the field arriving and the file being moved. The lint
-reports it — *`status:` carries a note — `luria index` moves it to
-`status_note:`* — and `luria index` moves it, the way it fills `created:`
+reports it — *`status:` carries a note — `luria repair` moves it to
+`status_note:`* — and `luria repair` moves it, the way it fills `created:`
 from a journal entry's path ([ADR-031](ADR-031.md)): the file already
 states both facts, in one scalar, and the tree is made to say so in two.
 One function writes the field, and the migration's tombstone goes through
