@@ -25,15 +25,16 @@
 #     this job and have it check out this action's `sha` output. A push made
 #     with GITHUB_TOKEN does not retrigger workflows, so a lint in a separate
 #     workflow would keep a red it can never clear.
-#   - On a pull request, pass `commit-views: "false"` and run the lint action
-#     in the SAME job: the regenerated views live only on this runner.
+#   - On a pull request, pass `views: "false"` and run the lint action in
+#     the SAME job: the repairs are pushed, no view is written, and the lint
+#     reads sources (LU-ADR-068).
 name: luria docs generate
 description: >-
-  Run luria's source repairs (`luria repair`) and regenerate its derived views
-  (`luria index`), committing each where it belongs as github-actions[bot]:
-  repairs onto the branch that authored the sources, views on the default
-  branch only (LU-ADR-068). Outputs the SHA a downstream checking job
-  must read.
+  Run luria's source repairs (`luria repair`) and, on the default branch,
+  regenerate its derived views (`luria index`), committing each where it
+  belongs as github-actions[bot]: repairs onto the branch that authored the
+  sources, views on the default branch only (LU-ADR-068). Outputs the SHA a
+  downstream checking job must read.
 inputs:
   pip-spec:
     description: >-
@@ -51,13 +52,13 @@ inputs:
       with no merge-allocated schemes can pass true harmlessly; the command
       is a no-op with nothing pending.
     default: "false"
-  commit-views:
+  views:
     description: >-
-      "true" commits and pushes the regenerated views together with the
-      repairs — the push-to-default-branch shape, where merges serialize.
+      "true" regenerates the views and commits and pushes them together with
+      the repairs — the push-to-default-branch shape, where merges serialize.
       "false" — the pull-request shape — commits and pushes the source
-      repairs alone, then regenerates the views in the working tree and
-      commits none of them; run the lint action in the SAME job afterwards.
+      repairs alone and writes no view: a branch carries none and is not
+      checked for one; run the lint action in the SAME job afterwards.
     default: "true"
   commit-message:
     description: >-
@@ -88,10 +89,9 @@ runs:
       run: luria concretize
     - shell: bash
       run: luria repair
-    # The pull-request shape commits the repairs now, before the views are
-    # written into the same tree; the default-branch shape folds them into
-    # the one commit below.
-    - if: ${{ inputs.commit-views != 'true' }}
+    # The pull-request shape commits the repairs and is done; the
+    # default-branch shape folds them into the one commit below.
+    - if: ${{ inputs.views != 'true' }}
       shell: bash
       env:
         CAN_PUSH: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
@@ -110,7 +110,8 @@ runs:
           git pull --rebase origin "$(git rev-parse --abbrev-ref HEAD)"
           git push
         fi
-    - shell: bash
+    - if: ${{ inputs.views == 'true' }}
+      shell: bash
       run: luria index
     - id: commit
       shell: bash
@@ -120,11 +121,11 @@ runs:
         # leaves HEAD at the un-regenerated SHA, which is exactly what makes
         # the staleness check downstream fire for forks.
         CAN_PUSH: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
-        COMMIT: ${{ inputs.commit-views }}
+        COMMIT: ${{ inputs.views }}
         MSG: ${{ inputs.commit-message }}
       run: |
         if [ "$COMMIT" != "true" ]; then
-          echo "luria views regenerated in the working tree; committing none of them (commit-views: false)."
+          echo "luria views neither written nor committed on a branch (views: false)."
           echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
           exit 0
         fi
@@ -145,8 +146,10 @@ runs:
         fi
         echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
     # The generator itself is the thing that can still fail: stale immediately
-    # after regenerating means luria is broken or non-idempotent.
-    - shell: bash
+    # after regenerating means luria is broken or non-idempotent. This is the
+    # one staleness check there is (LU-ADR-068) — the lint reads sources.
+    - if: ${{ inputs.views == 'true' }}
+      shell: bash
       run: luria index --check
     # The trunk's guard (LU-ADR-049): where concretization runs, a temporary
     # code surviving it means the concretizer is broken — fail here, at the

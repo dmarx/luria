@@ -6,6 +6,13 @@
 # composite action builds that vault with a pinned Quartz, which gives the
 # citations a graph and backlinks without anyone maintaining either.
 #
+# The site is built from the committed views, so it builds after the job
+# that commits them: `workflow_run` fires when the Docs workflow completes on
+# the default branch, by which time its generation job has pushed the
+# regenerated views, and the checkout is the head of the default branch. A
+# pull request builds nothing — a branch carries no views of its own
+# (LU-ADR-068). If you rename the Docs workflow, rename it here too.
+#
 # Before the first deploy succeeds, set Settings → Pages → Source to
 # "GitHub Actions". That is a repository setting; no file in the repository
 # can turn it on, and until it is on the `deploy` job fails with "Pages is
@@ -17,9 +24,10 @@
 name: Pages
 
 on:
-  push:
+  workflow_run:
+    workflows: [Docs]
+    types: [completed]
     branches: [main]
-  pull_request:
   workflow_dispatch:
 
 permissions:
@@ -31,6 +39,8 @@ concurrency:
 
 jobs:
   build:
+    # A Docs run that failed has no regenerated views to publish.
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -44,10 +54,8 @@ jobs:
         with:
           path: ${{ steps.site.outputs.path }}
 
-  # Separate from the build because it is the only job that needs to write:
-  # a pull request proves the site still builds and publishes nothing.
+  # Separate from the build because it is the only job that needs to write.
   deploy:
-    if: github.event_name != 'pull_request'
     needs: build
     runs-on: ubuntu-latest
     permissions:

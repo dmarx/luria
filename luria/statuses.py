@@ -62,7 +62,7 @@ class Status:
 
     The word is data, checked against the vocabulary. `superseded_by` is a
     reference — structure, checked and resolved like any declared
-    reference, and the typed edge (ADR-tmpxmnac). The note is prose — a
+    reference, and the typed edge (ADR-071). The note is prose — a
     prose key like `summary:` (ADR-051): rendered, linked by the fixer,
     scanned for citations, for whatever the field cannot say. They used to
     share one scalar, `Superseded — by X`, split in six places with three
