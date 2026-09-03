@@ -175,10 +175,19 @@ class Adr:
 
     @property
     def status(self) -> str:
-        """The display form — `Superseded — by …` — composed from the two
-        fields. `status_value` and `status_note` are the fields."""
+        """The display form — `Superseded — by [X](…); note` — composed from
+        the fields, a successor linked relative to the scheme directory the
+        way a hand-written note's link was. `status_value`, `status_note`
+        and `superseded_by` are the fields."""
         from . import statuses
-        return statuses.of(self.meta).display
+        return statuses.display(
+            statuses.of(self.meta),
+            link=lambda c: f"[{c}]({t})" if (t := _link(c, self.scheme.dir)) else c)
+
+    @property
+    def superseded_by(self) -> tuple[str, ...]:
+        from . import statuses
+        return statuses.of(self.meta).superseded_by
 
     @property
     def status_value(self) -> str:
@@ -571,12 +580,13 @@ def run(check: bool = False) -> None:
         for j in current().journals.values():
             for p in journal.populate_created(j):
                 print(f"populated `created:` from the path in {current().rel(p)}")
-        # A note still riding in `status:` moves to `status_note:` — the
-        # same repair: the file states both facts, and now says so in two
-        # fields (ADR-tmp).
+        # A note still riding in `status:` moves to `status_note:`, and an
+        # old-form `by CODE` note becomes `superseded_by:` — the same
+        # repair: the file states the facts, and now says so in the fields
+        # that carry them (ADR-tmpvte2k, ADR-tmpxmnac).
         for s in current().schemes.values():
             for p in statuses.populate(s):
-                print(f"moved the status note to `status_note:` in {current().rel(p)}")
+                print(f"brought the status fields up to date in {current().rel(p)}")
         # One-time cleanup for a project upgrading past ADR-059, which stopped
         # rendering the schema reference outside Luria's own tree.
         for p in config_doc.retire():

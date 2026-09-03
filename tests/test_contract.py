@@ -54,18 +54,23 @@ def sota() -> contract.Contract:
     return contract.for_scheme(config.current().schemes["SOTA"])
 
 
+def declared(c: contract.Contract) -> list:
+    """The scheme's own fields — every scheme also carries the built-ins."""
+    return [f for f in c.fields if not f.builtin]
+
+
 # --- compilation ----------------------------------------------------------
 
 def test_a_scheme_declaring_nothing_has_an_empty_contract(tmp_path, monkeypatch):
     project(tmp_path, monkeypatch)
     c = sota()
-    assert c.fields == () and c.groups == ()
+    assert declared(c) == [] and c.groups == ()
     assert c.empty
 
 
 def test_requires_compiles_to_a_required_untyped_field(tmp_path, monkeypatch):
     project(tmp_path, monkeypatch, 'requires = ["arxiv"]')
-    field, = sota().fields
+    field, = declared(sota())
     assert field.name == "arxiv"
     assert field.required and field.reference is None
 
@@ -73,7 +78,7 @@ def test_requires_compiles_to_a_required_untyped_field(tmp_path, monkeypatch):
 def test_a_reference_compiles_to_a_typed_field(tmp_path, monkeypatch):
     project(tmp_path, monkeypatch,
             '[luria.schemes.SOTA.references]\nsource = { scheme = "LIT" }')
-    field, = sota().fields
+    field, = declared(sota())
     assert field.name == "source"
     assert field.required and field.reference == "LIT"
 
@@ -82,7 +87,7 @@ def test_an_optional_reference_is_typed_but_not_required(tmp_path, monkeypatch):
     project(tmp_path, monkeypatch,
             '[luria.schemes.SOTA.references]\n'
             'source = { scheme = "LIT", required = false }')
-    field, = sota().fields
+    field, = declared(sota())
     assert not field.required and field.reference == "LIT"
 
 
@@ -94,7 +99,7 @@ def test_a_field_in_both_tables_is_one_obligation(tmp_path, monkeypatch):
     project(tmp_path, monkeypatch,
             'requires = ["source"]\n'
             '[luria.schemes.SOTA.references]\nsource = { scheme = "LIT" }')
-    field, = sota().fields
+    field, = declared(sota())
     assert field.required and field.reference == "LIT"
     assert len(field.because) == 2
 
@@ -106,8 +111,8 @@ def test_every_obligation_says_where_it_was_declared(tmp_path, monkeypatch):
             '[luria.schemes.SOTA.tag_groups.axis]\n'
             'tags = ["a", "b"]\nrequire = "exactly-one"')
     c = sota()
-    assert {f.name for f in c.fields} == {"arxiv", "source"}
-    for field in c.fields:
+    assert {f.name for f in declared(c)} == {"arxiv", "source"}
+    for field in declared(c):
         assert field.because and all("luria.toml" in b for b in field.because)
     group, = c.groups
     assert group.name == "axis"
@@ -273,7 +278,7 @@ def test_a_reference_declares_whether_it_holds_one_code_or_many(tmp_path, monkey
     scenes(tmp_path, monkeypatch)
     ref, = config.current().schemes["SCENE"].references
     assert ref.many
-    field, = contract.for_scheme(config.current().schemes["SCENE"]).fields
+    field, = declared(contract.for_scheme(config.current().schemes["SCENE"]))
     assert field.many and field.reference == "SCENE"
 
 

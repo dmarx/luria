@@ -207,7 +207,7 @@ def _plan_rename(plan: Plan, op: dict) -> None:
             new_code, old_code = target.code(number), scheme.code(number)
             plan.copies.append((path, target.dir / target.filename(number),
                                 old_code, new_code))
-            plan.tombstones.append((path, f"by {new_code}"))
+            plan.tombstones.append((path, new_code))
         return
 
     for number, path in docs.items():
@@ -285,7 +285,7 @@ def _plan_move(plan: Plan, op: dict) -> None:
     new_path = target.dir / f"{new_code}.md"
     if op.get("strategy") == "supersede":
         plan.copies.append((path, new_path, old_code, new_code))
-        plan.tombstones.append((path, f"by {new_code}"))
+        plan.tombstones.append((path, new_code))
         return
     plan.relocated.add(new_code)
     plan.old_addresses[
@@ -546,10 +546,11 @@ def apply(plan: Plan) -> tuple[int, int]:
         new_path.parent.mkdir(parents=True, exist_ok=True)
         new_path.write_text(text, encoding="utf-8")
     from . import statuses
-    for source, note in plan.tombstones:
+    for source, new_code in plan.tombstones:
         text = source.read_text(encoding="utf-8")
-        source.write_text(statuses.set_status(text, "Superseded", note),
-                          encoding="utf-8")
+        source.write_text(
+            statuses.set_status(text, "Superseded", superseded_by=[new_code]),
+            encoding="utf-8")
     for config_file, old_header, new_header in plan.section_renames:
         text = config_file.read_text(encoding="utf-8")
         if old_header in text:

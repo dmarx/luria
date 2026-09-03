@@ -129,6 +129,12 @@ def check_frontmatter(errors: list[str]) -> None:
                     f"{rel}: status {status.value!r} is not one the "
                     f"{scheme.prefix} scheme declares (see "
                     f"{cfg.rel(scheme.statuses_yaml)})")
+            elif status.value == "Superseded" and not status.superseded_by:
+                # The successor is structure, not a sentence: the field is
+                # what the edge, the index and the site read (ADR-tmpxmnac).
+                errors.append(
+                    f"{rel}: Superseded, but `superseded_by:` names nothing "
+                    f"— write the successor's code there")
             if not (meta.get("tags") or []):
                 errors.append(f"{rel}: no `tags:` in frontmatter (see ADR-003)")
 
@@ -179,10 +185,11 @@ def check_contracts(errors: list[str]) -> None:
     known: dict[str, set[str]] = {}
     for scheme in cfg.schemes.values():
         c = contract.for_scheme(scheme)
-        if c.empty:
+        if not c.fields and not c.groups:
             continue
         for field in c.fields:
-            if field.reference and field.reference not in known:
+            if (field.reference and field.reference != contract.ANY_SCHEME
+                    and field.reference not in known):
                 known[field.reference] = contract.resolvable(field.reference)
         for path in [*scheme.documents().values(),
                      *scheme.temp_documents().values()]:

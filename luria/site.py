@@ -526,7 +526,7 @@ def record_line(meta: dict, source: Path, outbound=(), inbound=()) -> str:
     would be the drift DP-4 names."""
     bits = []
     from . import statuses
-    if status := statuses.of(meta).display:
+    if status := statuses.display(statuses.of(meta), link=lambda c: f"[[{c}]]"):
         bits.append(f"**Status** {status}")
     # Shown only when it isn't 1, the same rule the index follows (ADR-016).
     # A version that isn't a number is somebody's mistake, not this function's

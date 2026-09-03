@@ -56,16 +56,18 @@ issue: '#141'
 # frontmatter is data and stays plain. (`origin:` on a principle is
 # prose for the same reason — the generator renders it.)
 summary: >-
-  `status: Superseded — by ADR-035` was one scalar carrying two types: a
+  `status: Superseded — by FX-ADR-032` was one scalar carrying two types: a
   word from a closed vocabulary, and a prose note that was rendered,
   rebased for links, and split off the word in six places. The note is now
   its own field, `status_note:`, and a prose key like `summary:` — a code
-  in it is a citation the fixer links. A note still riding in `status:` is
-  a lint finding that `luria index` repairs, the way it fills `created:`
-  from a path ([ADR-031](ADR-031.md)). Amends [ADR-003](ADR-003.md), which placed the note after an
-  em-dash. Rejected: leaving the scalar and parsing it forever, which keeps
-  the field's type a lie; and a `superseded_by:` field, which the note
-  already carries.
+  in it is a citation the fixer links. The successor a superseded
+  document names is a reference field, `superseded_by:` (ADR-tmpxmnac);
+  the note is for what the field cannot say. A note still riding in
+  `status:` is a lint finding that `luria index` repairs, the way it fills
+  `created:` from a path ([ADR-031](ADR-031.md)). Amends [ADR-003](ADR-003.md), which placed the note
+  after an em-dash. Rejected: leaving the scalar and parsing it forever,
+  which keeps the field's type a lie; and scanning `status:` as prose
+  without splitting it.
 
 ---
 
@@ -104,10 +106,13 @@ never saw, because the scanner reads prose keys and this was not one.
 
 ```yaml
 status: Superseded
-status_note: by [ADR-035](ADR-035.md)
+superseded_by: FX-ADR-032
+status_note: the capital never burned after all
 ```
 
 `status:` is one word from the closed vocabulary and nothing else.
+`superseded_by:` is the successor, a reference field every scheme has
+([ADR-tmpxmnac](ADR-tmpxmnac.md)): structure, checked and resolved.
 `status_note:` is prose — a prose key beside `summary:` and `origin:`
 ([ADR-051](ADR-051.md)): scanned for bare references, linked by
 `luria link --fix`, checked by the lint, and a citation wherever citations
@@ -137,12 +142,12 @@ qualifier lives; that decision carries a `history:` entry saying so.
   prose is not that type, and every new consumer has to learn the parse.
   The parse survives as the reader of the old form; it stops being the
   reader of the canonical one.
-- **A `superseded_by:` field beside the note.** Proposed in [#141](https://github.com/dmarx/luria/issues/141). The
-  note already names the successor, and a relation the tool derives from
-  one authored fact beats a second authored fact the tool would then have
-  to reconcile with the first. With the note a prose field of its own,
-  the derivation reads a typed field rather than half of a scalar, which
-  was most of what the proposal wanted.
+- **The successor in the note, the field left out.** What this decision
+  first proposed, with the typed-edges work inferring the successor from
+  a `by CODE` note. Reversed on review and decided in [ADR-tmpxmnac](ADR-tmpxmnac.md): the
+  successor is a relation, and a relation is written as structure — a
+  field the tool checks — not as a sentence the tool recognises. The note
+  is prose for what the field cannot say.
 - **Scan `status:` as prose without splitting it.** [ADR-051](ADR-051.md)
   rejected scanning fields that are parsed by value, and the rejection
   holds: a rewrite that links a code inside `status:` can break the value
@@ -160,9 +165,10 @@ finding tells them so; the old form keeps reading until they do.
 
 A code in a status note is now a citation: `Deferred — parked by WDR-015`
 links, counts, and reports when WDR-015 retires — through the ordinary
-scanner, with no relation invented for it. The typed-edges derivation
-reads `status_note:` as the prose field it is.
+scanner, with no relation invented for it. The successor is not a
+citation but a field, and the repair drops the note that used to carry it
+when the note said only the code.
 
 The ADR template, the scaffold's, the principle templates and the docs
-say the two-field form. `luria migrate --strategy supersede` writes it.
-The lint's status pattern is five bare words again.
+say the three-field form. `luria migrate --strategy supersede` writes the
+field. The lint's status pattern is five bare words again.

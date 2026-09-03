@@ -71,7 +71,8 @@ vocabulary = "{name}"
 
 
 def field():
-    f, = contract.for_scheme(current().schemes["SCENE"]).fields
+    f, = [f for f in contract.for_scheme(current().schemes["SCENE"]).fields
+          if not f.builtin]
     return f
 
 
