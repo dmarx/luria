@@ -278,7 +278,7 @@ def test_a_reference_declares_whether_it_holds_one_code_or_many(tmp_path, monkey
     scenes(tmp_path, monkeypatch)
     ref, = config.current().schemes["SCENE"].references
     assert ref.many
-    field, = contract.for_scheme(config.current().schemes["SCENE"]).fields
+    field, = declared(contract.for_scheme(config.current().schemes["SCENE"]))
     assert field.many and field.reference == "SCENE"
 
 
