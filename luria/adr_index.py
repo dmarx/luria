@@ -175,19 +175,20 @@ class Adr:
 
     @property
     def status(self) -> str:
-        """The field as written — the display form. `status_value` and
-        `status_note` are the two things it carries."""
-        return str(self.meta.get("status", "")).strip()
+        """The display form — `Superseded — by …` — composed from the two
+        fields. `status_value` and `status_note` are the fields."""
+        from . import statuses
+        return statuses.of(self.meta).display
 
     @property
     def status_value(self) -> str:
         from . import statuses
-        return statuses.parse(self.status).value
+        return statuses.of(self.meta).value
 
     @property
     def status_note(self) -> str:
         from . import statuses
-        return statuses.parse(self.status).note
+        return statuses.of(self.meta).note
 
     @property
     def tags(self) -> list[str]:
@@ -557,10 +558,16 @@ def run(check: bool = False) -> None:
         # A journal entry filed without `created:` gets the field written from
         # its path before anything renders (#33) — a source repair, so it
         # belongs to write mode; `--check` must keep reading, not writing.
-        from . import config_doc, journal
+        from . import config_doc, journal, statuses
         for j in current().journals.values():
             for p in journal.populate_created(j):
                 print(f"populated `created:` from the path in {current().rel(p)}")
+        # A note still riding in `status:` moves to `status_note:` — the
+        # same repair: the file states both facts, and now says so in two
+        # fields (ADR-tmp).
+        for s in current().schemes.values():
+            for p in statuses.populate(s):
+                print(f"moved the status note to `status_note:` in {current().rel(p)}")
         # One-time cleanup for a project upgrading past ADR-059, which stopped
         # rendering the schema reference outside Luria's own tree.
         for p in config_doc.retire():

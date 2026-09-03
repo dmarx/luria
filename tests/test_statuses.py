@@ -36,8 +36,12 @@ def _project(root: Path, monkeypatch) -> None:
 
 def _value(root: Path, number: int, status: str = "Active") -> Path:
     path = root / "record" / "values.d" / f"VP-{number:03d}.md"
+    parsed = statuses.parse(status)
+    head = f"status: {parsed.value}\n"
+    if parsed.note:
+        head += f"status_note: {parsed.note!r}\n"
     path.write_text(
-        f"---\nstatus: {status}\ntitle: 'A value'\ntags:\n- craft\n"
+        f"---\n{head}title: 'A value'\ntags:\n- craft\n"
         f"date: '2026-01-01'\n---\n\n# VP-{number:03d}: A value\n\nBody.\n")
     return path
 
@@ -77,9 +81,8 @@ def test_a_declared_vocabulary_narrows_the_five(tmp_path, monkeypatch):
 
 
 def test_a_trailing_note_does_not_defeat_the_check(tmp_path, monkeypatch):
-    """ADR-003 allows `Superseded — by X`, and the note qualifies the word
-    rather than being part of it. Comparing the whole string would reject every
-    annotated status a project declared."""
+    """A `status_note:` qualifies the word rather than being part of it, and
+    the check reads the word alone."""
     _project(tmp_path, monkeypatch)
     _declare(tmp_path, "Active:\n  blurb: in force\nSuperseded:\n  blurb: replaced\n")
     _value(tmp_path, 1, "Superseded — by [VP-002](VP-002.md)")
@@ -288,3 +291,86 @@ def test_a_document_exposes_both(project):
     doc = Adr(path)
     assert doc.status_value == "Deferred" and doc.status_note == "parked by ADR-002"
     assert doc.status == "Deferred — parked by ADR-002"
+
+
+# --- the note is its own field ------------------------------------------
+
+def test_of_reads_the_two_field_form(project):
+    meta = {"status": "Superseded", "status_note": "by [ADR-035](ADR-035.md)"}
+    s = statuses.of(meta)
+    assert (s.value, s.note) == ("Superseded", "by [ADR-035](ADR-035.md)")
+    assert not statuses.combined(meta)
+
+
+def test_of_still_reads_the_combined_form_and_says_so(project):
+    meta = {"status": "Superseded — by ADR-035"}
+    assert statuses.of(meta).note == "by ADR-035"
+    assert statuses.combined(meta)
+
+
+def test_split_moves_the_note_out_of_status(project):
+    text = ("---\nstatus: 'Superseded — by [ADR-035](ADR-035.md)'\n"
+            "title: 'T'\ntags:\n- record\n---\n\n# ADR-001: T\n")
+    fresh = statuses.split(text)
+    assert fresh is not None
+    assert "status: Superseded\nstatus_note: by [ADR-035](ADR-035.md)\n" in fresh
+    assert fresh.endswith("# ADR-001: T\n")
+    assert statuses.split(fresh) is None
+
+
+def test_split_carries_a_quoted_multi_line_note_intact(project):
+    """ADR-015's shape: a quoted scalar that runs onto a second line."""
+    text = ("---\nstatus: 'Superseded — by [ADR-016](ADR-016.md), which drops\n"
+            "  the local-clone path'\ntitle: 'T'\n---\n\nBody.\n")
+    fresh = statuses.split(text)
+    from luria.adr_index import parse_frontmatter
+    meta, _ = parse_frontmatter(fresh)
+    assert meta["status"] == "Superseded"
+    assert meta["status_note"] == "by [ADR-016](ADR-016.md), which drops the local-clone path"
+    assert "title: 'T'" in fresh
+
+
+def test_set_status_replaces_an_existing_note_rather_than_duplicating(project):
+    text = "---\nstatus: Deferred\nstatus_note: until the audit\ntitle: 'T'\n---\n"
+    fresh = statuses.set_status(text, "Superseded", "by ADR-002")
+    assert fresh.count("status_note:") == 1
+    assert "status: Superseded\nstatus_note: by ADR-002\ntitle: 'T'" in fresh
+
+
+def test_a_note_riding_in_status_is_a_finding_that_names_the_repair(tmp_path, monkeypatch):
+    _project(tmp_path, monkeypatch)
+    path = tmp_path / "record" / "values.d" / "VP-001.md"
+    path.write_text("---\nstatus: 'Deferred — until the audit'\ntitle: 'A value'\n"
+                    "tags:\n- craft\ndate: '2026-01-01'\n---\n\n# VP-001: A value\n")
+    errors: list[str] = []
+    lint.check_frontmatter(errors)
+    assert any("carries a note" in e and "`luria index`" in e for e in errors), errors
+
+
+def test_index_moves_the_note_and_the_finding_clears(tmp_path, monkeypatch):
+    """The repair is the one `luria index` already runs for `created:`
+    (ADR-031): the file states both facts, and is made to say so in two."""
+    _project(tmp_path, monkeypatch)
+    path = tmp_path / "record" / "values.d" / "VP-001.md"
+    path.write_text("---\nstatus: 'Deferred — until the audit'\ntitle: 'A value'\n"
+                    "tags:\n- craft\ndate: '2026-01-01'\n---\n\n# VP-001: A value\n")
+    adr_index.run()
+    assert "status: Deferred\nstatus_note: until the audit\n" in path.read_text()
+    errors: list[str] = []
+    lint.check_frontmatter(errors)
+    assert errors == []
+
+
+def test_a_code_in_the_note_is_a_citation_the_fixer_links(project):
+    """The note is prose (ADR-051): a bare code there is what `luria link
+    --fix` writes, and what the lint demands until it does."""
+    from _scheme import decision
+    from luria import doc_refs
+    decision(project, 1, "Active")
+    path = decision(project, 2, "Deferred — parked by ADR-001")
+    assert "status_note: 'parked by ADR-001'" in path.read_text()
+    refs = doc_refs.find_refs(path.read_text(), path)
+    assert "ADR-001" in [r.describe() for r in refs if r.kind == "scheme"]
+    errors: list[str] = []
+    lint.check_bare_refs(errors)
+    assert any("ADR-001" in e for e in errors), errors

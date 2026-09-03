@@ -52,15 +52,17 @@ _NOTE_RE = re.compile(r"\s+—\s+")
 
 @dataclass(frozen=True)
 class Status:
-    """A status field, read as the two things it has always been: one word
-    from the closed vocabulary, and an optional prose note qualifying it.
+    """A status: one word from the closed vocabulary, and an optional prose
+    note qualifying it. Two fields, two types:
 
-    Stored today as one scalar — `Superseded — by ADR-035` — and split, before
-    this existed, in six places with three spellings of the same regex. The
-    word is data (checked against the vocabulary); the note is prose (it is
-    rendered, rebased for links, and may cite codes). Whether the two should
-    be stored apart is a separate decision; this is the one place that reads
-    them apart."""
+        status: Superseded
+        status_note: by [ADR-035](ADR-035.md)
+
+    The word is data, checked against the vocabulary. The note is prose — a
+    prose key like `summary:` (ADR-051): rendered, linked by the fixer,
+    scanned for citations. They used to share one scalar, `Superseded — by
+    ADR-035`, split in six places with three spellings of one regex; that
+    form is still read, reported by the lint, and moved by `luria index`."""
     value: str
     note: str = ""
 
@@ -70,10 +72,74 @@ class Status:
 
 
 def parse(raw) -> Status:
-    """`Superseded — by ADR-035` → `Status("Superseded", "by ADR-035")`."""
+    """The combined scalar — `Superseded — by ADR-035` — read apart."""
     text = str(raw or "").strip()
     word, *rest = _NOTE_RE.split(text, maxsplit=1)
     return Status(word.strip(), rest[0].strip() if rest else "")
+
+
+def of(meta: dict) -> Status:
+    """A document's status from its frontmatter, whichever form it wrote.
+
+    `status_note:` wins when present; a note still riding in `status:` is
+    read too, so nothing breaks between the field arriving and the file
+    being moved."""
+    meta = meta or {}
+    parsed = parse(meta.get("status"))
+    note = str(meta.get("status_note") or "").strip()
+    return Status(parsed.value, note or parsed.note)
+
+
+def combined(meta: dict) -> bool:
+    """True when `status:` still carries the note — the form to move."""
+    return bool(parse((meta or {}).get("status")).note)
+
+
+# The `status:` block and, if present, the `status_note:` block: a scalar
+# with any indented continuation lines a quoted multi-line value carries.
+_STATUS_BLOCK_RE = re.compile(r"^status:.*(?:\n[ \t]+.*)*", re.MULTILINE)
+_NOTE_BLOCK_RE = re.compile(r"^status_note:.*(?:\n[ \t]+.*)*\n?", re.MULTILINE)
+
+
+def set_status(text: str, value: str, note: str = "") -> str:
+    """The file text with its status written in the two-field form.
+
+    The one writer of the field, so the shape has one spelling: the
+    migration's tombstone and the index's split both come through here. An
+    existing `status_note:` is replaced, never duplicated."""
+    lines = f"status: {value}"
+    if note:
+        dumped = yaml.safe_dump({"status_note": note}, allow_unicode=True,
+                                width=10 ** 6, default_flow_style=False)
+        lines += "\n" + dumped.rstrip("\n")
+    text = _NOTE_BLOCK_RE.sub("", text, count=1)
+    return _STATUS_BLOCK_RE.sub(lambda _: lines, text, count=1)
+
+
+def split(text: str) -> str | None:
+    """A document's text with a note moved out of `status:`, or None when
+    there is nothing to move. Reads the value through YAML rather than by
+    eye, so a quoted multi-line note comes through intact."""
+    from .adr_index import parse_frontmatter
+    meta, _ = parse_frontmatter(text)
+    if not meta or not combined(meta):
+        return None
+    parsed = parse(meta.get("status"))
+    return set_status(text, parsed.value, parsed.note)
+
+
+def populate(scheme) -> list:
+    """Move every note still riding in `status:` to `status_note:` — a
+    source repair `luria index` runs, like `created:` from a journal
+    entry's path (ADR-031): the file already states both facts, in one
+    scalar, and the tree is made to say so in two."""
+    moved = []
+    for path in [*scheme.documents().values(), *scheme.temp_documents().values()]:
+        text = path.read_text(encoding="utf-8")
+        if (fresh := split(text)) is not None:
+            path.write_text(fresh, encoding="utf-8")
+            moved.append(path)
+    return moved
 
 
 def declared(scheme) -> dict[str, dict]:
@@ -171,7 +237,7 @@ def uniform(scheme) -> tuple[str, int] | None:
     found: list[str] = []
     for path in [*scheme.documents().values(), *scheme.temp_documents().values()]:
         meta, _ = adr_index.parse_frontmatter(path.read_text(encoding="utf-8"))
-        if status := parse((meta or {}).get("status")).value:
+        if status := of(meta).value:
             found.append(status)
     if len(found) < FLOOR or len(set(found)) != 1:
         return None
@@ -209,7 +275,7 @@ def acknowledged_rows() -> list[str]:
         for path in [*scheme.documents().values(),
                      *scheme.temp_documents().values()]:
             meta, _ = adr_index.parse_frontmatter(path.read_text(encoding="utf-8"))
-            if status := parse((meta or {}).get("status")).value:
+            if status := of(meta).value:
                 found.append(status)
         if len(found) >= FLOOR and len(set(found)) == 1:
             rows.append(f"{prefix}: {len(found)}/{len(found)} at "

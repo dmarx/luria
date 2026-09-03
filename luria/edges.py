@@ -21,9 +21,10 @@ with a location, not a relation; an earlier draft here named it one and a
 reviewer caught it. It becomes an ordinary citation once the note is read
 as the prose it is, which is a separate decision (#141).
 
-Nothing here is a new authoring surface: `superseded_by:` as a frontmatter
-field beside the note that already says it would be the second copy of one
-fact that DP-3 says will drift, so the derivation reads the note.
+The derivation reads `status_note:`, a prose field. There is no
+`superseded_by:` field to author: the note already names the successor,
+and a relation the tool derives from one authored fact beats a second
+authored fact the tool would have to reconcile with the first.
 
 Consumers: the site renders each page's edges both ways (#141). A remote
 code is never an edge — the graph has no node for it to land on (ADR-016).

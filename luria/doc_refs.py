@@ -171,7 +171,10 @@ def _frontmatter_span(text: str) -> tuple[int, int] | None:
 # data field. That is why this is a constant rather than configuration: a
 # project cannot make a field prose by declaring it so, because the rendering
 # is what makes it true.
-PROSE_KEYS = ("summary", "origin")
+# `status_note:` joined when the note left `status:` — it was always
+# rendered (the index column, the site's record line), which is ADR-051's
+# test for prose; only sharing a scalar with a data value kept it out.
+PROSE_KEYS = ("summary", "origin", "status_note")
 
 # A `formerly:` list is the record's memory of an address a document used to
 # answer to. Naming an old code there is what the alias IS — a declaration,
