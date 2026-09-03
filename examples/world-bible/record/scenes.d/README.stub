@@ -1,0 +1,12 @@
+# Scenes
+
+One document per scene. A scene names the scenes it follows and the world
+trajectories it belongs to; the pages under `worlds/` list every scene in
+each trajectory, counting the ones that say nothing and so sit in the main
+line.
+
+<!-- GENERATED below this line by `luria index` — edit README.stub instead. -->
+
+{categories}
+
+{table}

@@ -79,6 +79,8 @@ def check_docs_index(errors: list[str]) -> None:
     exempt = ({s.dir for s in cfg.schemes.values()}
               | {s.view for s in cfg.schemes.values() if s.render == "index"}
               | {s.tag_dir for s in cfg.schemes.values() if s.render == "index"}
+              | {s.vocab_dir(v.name) for s in cfg.schemes.values()
+                 if s.render == "index" for v in s.vocabularies}
               | {j.dir for j in cfg.journals.values()}
               | {j.output for j in cfg.journals.values()}
               | {cfg.reports})

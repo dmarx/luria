@@ -42,10 +42,17 @@ class Field:
     name: str
     required: bool = True
     reference: str | None = None
-    # A list of codes rather than one. Only a reference can say so; a
-    # plain `requires` field is satisfied by any truthy value, whatever
-    # shape it has.
+    # A list of values rather than one. A reference or a vocabulary can say
+    # so; a plain `requires` field is satisfied by any truthy value,
+    # whatever shape it has.
     many: bool = False
+    # A controlled vocabulary the field draws from (ADR-tmpcso13), with its
+    # values in file order and the effective value of an absent field.
+    # `reference` and `vocabulary` are the two typed cases of what a field
+    # holds; neither set is `Any`.
+    vocabulary: str | None = None
+    values: tuple[str, ...] = ()
+    default: tuple[str, ...] | None = None
     # Standard for every scheme rather than declared by one — `superseded_by`
     # (ADR-071). Checked like any other; not a declaration, so it stays
     # out of `Contract.empty`.
@@ -113,6 +120,19 @@ def for_scheme(scheme) -> Contract:
             ref.field,
             required=ref.required or (prior is not None and prior.required),
             reference=ref.scheme, many=ref.many, because=because)
+    from .vocabularies import declared
+    for vocab in scheme.vocabularies:
+        prior = fields.get(vocab.field)
+        because = (f"{where}.fields.{vocab.field}",
+                   f"{current().rel(vocab.file)}: values")
+        if prior is not None:
+            because = prior.because + because
+        fields[vocab.field] = Field(
+            vocab.field,
+            required=vocab.required or (prior is not None and prior.required),
+            many=vocab.many, vocabulary=vocab.name,
+            values=tuple(declared(vocab.file)), default=vocab.default,
+            because=because)
     for field in BUILT_IN:
         fields.setdefault(field.name, field)
     return Contract(scheme.prefix, tuple(fields.values()), scheme.tag_groups,
@@ -158,6 +178,9 @@ def explain(contract: Contract, field: Field) -> str:
     The provenance is read out of the obligation rather than spelled here,
     so the day one comes from somewhere other than `luria.toml` the finding
     says so without this function learning about it."""
+    if field.vocabulary is not None:
+        return (f"the {contract.scheme} scheme declares it a `{field.vocabulary}` "
+                f"value {_cite(field.because)}")
     if field.reference is None:
         return f"the {contract.scheme} scheme requires it {_cite(field.because)}"
     return (f"the {contract.scheme} scheme declares it a {field.reference} "
@@ -171,6 +194,15 @@ def describe(contract: Contract) -> list[str]:
     lines = []
     for field in contract.fields:
         if field.builtin:
+            continue
+        if field.vocabulary is not None:
+            members = ", ".join(f"`{v}`" for v in field.values)
+            what = ("required, " if field.required
+                    else "" if field.default else "optional, ")
+            what += ("one or more of " if field.many else "one of ") + members
+            if field.default:
+                what += "; absent means " + ", ".join(f"`{d}`" for d in field.default)
+            lines.append(f"`{field.name}` — {what} {_cite(field.because)}")
             continue
         what = "required" if field.required else "optional"
         if field.reference is not None:
@@ -230,6 +262,18 @@ def values_of(field: Field, raw) -> list | None:
     return [] if raw in (None, "") else [raw]
 
 
+def effective_values(field: Field, raw) -> list | None:
+    """What a field is read as: its written values, or the default when it
+    is absent. The source is never touched — a default is a convention the
+    config states, not a fact the tree does (ADR-tmpcso13)."""
+    values = values_of(field, raw)
+    if values is None:
+        return None
+    if not values and field.default is not None:
+        return list(field.default)
+    return values
+
+
 def local_scheme(code: str) -> str | None:
     """The configured scheme a code belongs to, or None for a remote code
     or a prefix nothing declares."""
@@ -272,6 +316,9 @@ def violations(contract: Contract, rel: str, meta: dict,
     out: list[str] = []
     for field in contract.fields:
         raw = meta.get(field.name)
+        if field.vocabulary is not None:
+            out.extend(_vocabulary_violations(contract, field, rel, raw))
+            continue
         target = field.reference
         if target is None:
             if not raw and field.required:
@@ -338,3 +385,26 @@ def violations(contract: Contract, rel: str, meta: dict,
             out.append(f"{rel}: {', '.join(clash)} excludes `{group.name}`, "
                        f"but the document also has {', '.join(present)} {cite}")
     return out
+
+
+def _vocabulary_violations(contract: Contract, field: Field, rel: str,
+                           raw) -> list[str]:
+    """A vocabulary field against its declaration: the shape, the presence,
+    and every value against the closed set — naming the file, since that is
+    where a missing value gets added."""
+    values = values_of(field, raw)
+    if values is None:
+        return [f"{rel}: `{field.name}:` holds {len(raw)} values, but the "
+                f"{contract.scheme} scheme declares it one `{field.vocabulary}` "
+                f"value {_cite(field.because)} — set `many = true` there if "
+                f"it should hold several"]
+    if not values:
+        if field.required and field.default is None:
+            return [f"{rel}: no `{field.name}:` in frontmatter — "
+                    f"{explain(contract, field)}"]
+        return []
+    file = next((b.split(": ", 1)[0] for b in field.because
+                 if b.endswith(": values")), "")
+    return [f"{rel}: `{field.name}: {value}` is not in the `{field.vocabulary}` "
+            f"vocabulary ({file}) — the values are {', '.join(field.values)}"
+            for value in values if str(value) not in field.values]

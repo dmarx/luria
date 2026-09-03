@@ -25,7 +25,7 @@ from luria import adr_index, config, doc_refs, lint, statuses
 
 EXAMPLES = Path(__file__).resolve().parents[1] / "examples"
 NAMES = ["rfcs-and-specs", "collocated", "many-journals", "external-citations",
-         "knowledge-base"]
+         "knowledge-base", "world-bible"]
 
 
 @pytest.fixture
@@ -312,6 +312,38 @@ def test_a_document_never_links_to_itself(example):
     linked, count = doc_refs.linkify(spec.read_text(), spec)
     assert count == 0
     assert linked.count("# SPEC-001:") == 1
+
+
+# --- a controlled vocabulary with a default ------------------------------
+
+def test_a_scene_with_no_worlds_sits_in_the_default_trajectory(example):
+    """The convention the world-building record could not state: absent
+    means B. Read as B by the index; never written into the scene."""
+    root = example("world-bible")
+    b = (root / "docs" / "scenes" / "worlds" / "B.md").read_text()
+    a = (root / "docs" / "scenes" / "worlds" / "A.md").read_text()
+    assert "SCENE-001" in b and "the default" in b
+    assert "SCENE-001" not in a and "SCENE-002" in a
+    assert "worlds" not in (root / "record" / "scenes.d" / "SCENE-001.md").read_text().split("---")[1]
+    assert lint_errors() == []
+
+
+def test_a_world_the_file_does_not_name_is_a_finding(example):
+    root = example("world-bible")
+    doc = root / "record" / "scenes.d" / "SCENE-002.md"
+    doc.write_text(doc.read_text().replace("worlds:\n- A\n", "worlds:\n- Z\n"))
+    errors = []
+    lint.check_contracts(errors)
+    assert any("`worlds: Z` is not in the `worlds` vocabulary" in e for e in errors)
+
+
+def test_a_plural_follows_is_checked_element_by_element(example):
+    root = example("world-bible")
+    doc = root / "record" / "scenes.d" / "SCENE-003.md"
+    doc.write_text(doc.read_text().replace("- SCENE-002\n", "- SCENE-099\n"))
+    errors = []
+    lint.check_contracts(errors)
+    assert any("`follows: SCENE-099` resolves to no SCENE document" in e for e in errors)
 
 
 def test_a_paper_with_only_a_url_has_a_source(example):

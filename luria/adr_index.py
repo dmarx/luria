@@ -314,7 +314,13 @@ def render_index(adrs: list[Adr], tags: list[tuple[str, dict]],
              else DEFAULT_STUB.replace(
                  "{title}", "Architecture decision records"
                  if scheme.prefix == "ADR" else f"{scheme.prefix} documents"))
-    return (prose.replace("{categories}", render_categories(adrs, tags, prefix))
+    from . import vocabularies
+    categories = render_categories(adrs, tags, prefix)
+    # A declared vocabulary's values, linked to their pages, after the tag
+    # categories — automatic for the same reason the status legend is.
+    if blocks := vocabularies.index_blocks(scheme, adrs):
+        categories = f"{categories}\n\n{blocks}" if categories else blocks
+    return (prose.replace("{categories}", categories)
                  .replace("{table}", table))
 
 
@@ -415,6 +421,7 @@ def view_dirs() -> list[Path]:
         if s.render != "index":
             continue
         dirs.append(s.tag_dir)
+        dirs += [s.vocab_dir(v.name) for v in s.vocabularies]
         if s.view != s.dir:
             dirs.append(s.view)
     dirs += [j.output for j in cfg.journals.values()]
@@ -470,6 +477,8 @@ def _render_scheme(scheme) -> dict[Path, str]:
     out = {scheme.index_path: render_index(docs, tags, scheme)}
     for tag, meta in tags:
         out[scheme.tag_dir / f"{tag}.md"] = render_tag_page(tag, meta, docs, scheme)
+    from . import vocabularies
+    out.update(vocabularies.pages(scheme, docs))
     return out
 
 

@@ -273,6 +273,39 @@ class Reference:
 
 
 @dataclass(frozen=True)
+class Vocabulary:
+    """A frontmatter field backed by a scheme-local controlled vocabulary
+    (ADR-tmpcso13):
+
+        [luria.schemes.SCENE.fields.worlds]
+        vocabulary = "worlds"     # the values: worlds.yaml beside the records
+        many       = true         # a list of values; default false, one value
+        default    = ["B"]        # the effective value when the field is absent
+
+    `fields` is the table a field's shape and type are declared in; today
+    `vocabulary` is the one type it takes, and `requires` and `references`
+    remain the spellings for the other two kinds until they consolidate
+    here. The values file is shaped like `tags.yaml`. Closed: a value
+    outside the file is a finding. `required` (default false) and `default`
+    are exclusive — a field with a default is never absent, so `required`
+    would say nothing."""
+    # The frontmatter key, and the vocabulary (file stem) it draws from.
+    # Usually the same word; `world:` backed by `worlds.yaml` is the other.
+    field: str
+    name: str
+    file: Path
+    many: bool = False
+    required: bool = False
+    # Normalised to a tuple of values whatever the shape declared; None when
+    # absence is a meaningful state rather than a spelling of the default.
+    default: tuple[str, ...] | None = None
+
+
+# The axes every scheme has, with their own files and their own rules.
+BUILT_IN_AXES = ("status", "statuses", "tags")
+
+
+@dataclass(frozen=True)
 class Scheme:
     """A family of referable documents — `ADR-012`, `RFC-7`, `SPEC-3`.
 
@@ -336,6 +369,11 @@ class Scheme:
     # says a field is present; this says what it means, and whether it holds
     # one code or a list of them.
     references: tuple[Reference, ...] = ()
+    # Frontmatter fields backed by a controlled vocabulary (see
+    # `Vocabulary`): `[luria.schemes.X.fields.NAME]` with `vocabulary =
+    # "V"`, values in `V.yaml` beside the records. The third instance of
+    # what `statuses.yaml` and `tags.yaml` already are.
+    vocabularies: tuple[Vocabulary, ...] = ()
     # Why this scheme's records all sharing one status is deliberate rather
     # than a dead enforcement mechanism (#104). The `inert-status` check is the
     # one judgment call in luria with no acknowledgement — every other has an
@@ -360,6 +398,10 @@ class Scheme:
     @property
     def tag_dir(self) -> Path:
         return self.view / "tags"
+
+    def vocab_dir(self, name: str) -> Path:
+        """Where a vocabulary's per-value pages render, beside the tag pages."""
+        return self.view / name
 
     # The stub and the tag metadata are *authored*, so they live with the
     # sources — the view directory holds only what the generator wrote, which
@@ -864,6 +906,69 @@ def _references(prefix: str, raw: dict) -> tuple[Reference, ...]:
     return tuple(found)
 
 
+def _fields(prefix: str, raw: dict, scheme_dir: Path, root: Path,
+            references: tuple) -> tuple[Vocabulary, ...]:
+    """Read a scheme's `[luria.schemes.X.fields]` tables.
+
+    One table for a field's shape and type. `vocabulary` is the one type it
+    takes today; an entry declaring none is an error rather than a field
+    that constrains nothing, and a field also named in `references` is two
+    declarations of one thing.
+
+    Validated here, eagerly, for the reason tag groups are: a declared axis
+    with no values, or a default no value matches, would surface as "no
+    violations", which is the quiet failure a declaration exists to remove."""
+    from .vocabularies import declared
+    found = []
+    taken = {r.field for r in references}
+    for field, spec in raw.items():
+        where = f"luria.toml: schemes.{prefix}.fields.{field}"
+        if field in BUILT_IN_AXES:
+            raise ValueError(f"{where}: `{field}` is built in — `status` and "
+                             f"`tags` have their own files and rules")
+        if field in taken:
+            raise ValueError(f"{where}: `{field}` is also declared under "
+                             f"`references`; a field has one declaration")
+        name = spec.get("vocabulary")
+        if not name:
+            raise ValueError(f"{where}: declares no type — `vocabulary = "
+                             f"\"NAME\"` is the one kind of field this table "
+                             f"takes today")
+        name = str(name)
+        file = scheme_dir / f"{name}.yaml"
+        values = declared(file)
+        if not values:
+            raise ValueError(
+                f"{where}: {file.relative_to(root)} declares no values, so "
+                f"the field constrains nothing")
+        many = bool(spec.get("many", False))
+        required = bool(spec.get("required", False))
+        default = spec.get("default")
+        defaults = None
+        if default is not None:
+            if required:
+                raise ValueError(
+                    f"{where}: a field with a default is never absent, so "
+                    f"`required` says nothing — drop one of them")
+            if many and not isinstance(default, list):
+                raise ValueError(f"{where}: `many = true`, so `default` must "
+                                 f"be a list")
+            if not many and isinstance(default, list):
+                raise ValueError(f"{where}: `default` must be one value, since "
+                                 f"the field holds one (`many = true` for a "
+                                 f"list)")
+            defaults = tuple(str(v) for v in
+                             (default if isinstance(default, list) else [default]))
+            if bad := [d for d in defaults if d not in values]:
+                raise ValueError(
+                    f"{where}: default {', '.join(bad)} is not in "
+                    f"{file.relative_to(root)} (values: {', '.join(values)})")
+        found.append(Vocabulary(field=str(field), name=name, file=file,
+                                many=many, required=required,
+                                default=defaults))
+    return tuple(found)
+
+
 def _fragment(spec) -> Fragment:
     if isinstance(spec, dict):
         return Fragment(Path(spec.get("file") or spec.get("target") or ""),
@@ -1236,7 +1341,9 @@ def _schemes(raw: dict, root: Path) -> dict[str, Scheme]:
             tag_groups=_tag_groups(prefix, spec.get("tag_groups", {}),
                                    tags_path),
             tags_file=tags_file,
-            references=_references(prefix, spec.get("references", {})),
+            references=(refs := _references(prefix, spec.get("references", {}))),
+            vocabularies=_fields(prefix, spec.get("fields", {}),
+                                 root / spec["dir"], root, refs),
             field_groups=_field_groups(prefix, spec.get("field_groups", {})),
             uniform_ok=(spec.get("uniform_ok") or None),
         )

@@ -245,6 +245,24 @@ group stay unconstrained, so secondary tags remain free. `excluded_by` covers
 the contradiction case — naming how an argument fails contradicts saying it
 holds.
 
+**Controlled vocabularies.** A field whose values come from a closed set the
+project defines — not codes, so not a reference; a second axis, so not a
+tag; many-valued and project-defined, so not a status:
+
+```toml
+[luria.schemes.SCENE.fields.worlds]
+vocabulary = "worlds"          # the values: worlds.yaml beside the records
+many       = true              # a list of values; omit for one
+default    = ["B"]             # what an absent field is read as
+```
+
+The values and what they mean live in `worlds.yaml` beside the records,
+shaped like `tags.yaml`, and the file is closed: a value it does not name is
+a finding. The default is an effective value — the lint, the index and the
+record page read an absent field as `B` — and is never written into the
+source. `luria index` renders a page per value beside the tag pages.
+`statuses.yaml` and `tags.yaml` are the first two instances of this shape.
+
 **Titles that generalise.** A principle stated about the one artifact it was
 noticed on is a principle nobody applies to the next one. That failure is
 quiet: the entry stays true and keeps rendering, and never gets cited.

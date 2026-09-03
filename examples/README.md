@@ -17,6 +17,7 @@ believed at the time of writing.
 | [`many-journals/`](many-journals/) | three journals at three granularities: a devlog, an incident log, a meeting log |
 | [`external-citations/`](external-citations/) | `uid` remotes — linted, linked citations to arXiv papers, Jira tickets and CVEs, none of which is a Luria record |
 | [`knowledge-base/`](knowledge-base/) | a record of *domain* content rather than project meta-documentation: two schemes that cite each other and carry separate statuses, with required fields and a one-primary-category rule |
+| [`world-bible/`](world-bible/) | a story bible: scenes that `follow` several scenes (a plural reference) and belong to world trajectories drawn from a closed vocabulary with a default — a field that is neither a reference, a tag nor a status |
 
 To run one by hand:
 
