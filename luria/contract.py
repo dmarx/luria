@@ -42,6 +42,10 @@ class Field:
     name: str
     required: bool = True
     reference: str | None = None
+    # A list of codes rather than one. Only a reference can say so; a
+    # plain `requires` field is satisfied by any truthy value, whatever
+    # shape it has.
+    many: bool = False
     because: tuple[str, ...] = ()
 
 
@@ -86,7 +90,7 @@ def for_scheme(scheme) -> Contract:
         fields[ref.field] = Field(
             ref.field,
             required=ref.required or (prior is not None and prior.required),
-            reference=ref.scheme, because=because)
+            reference=ref.scheme, many=ref.many, because=because)
     return Contract(scheme.prefix, tuple(fields.values()), scheme.tag_groups,
                     where="luria.toml", vocabulary=vocabulary)
 
@@ -133,7 +137,8 @@ def describe(contract: Contract) -> list[str]:
     for field in contract.fields:
         what = "required" if field.required else "optional"
         if field.reference is not None:
-            what += f", a `{field.reference}` code"
+            what += (f", one or more `{field.reference}` codes" if field.many
+                     else f", a `{field.reference}` code")
             if not field.required:
                 what += " when present"
         lines.append(f"`{field.name}` — {what} {_cite(field.because)}")
@@ -169,6 +174,21 @@ def resolvable(prefix: str) -> set[str]:
             | {f"{prefix}-{tail}" for tail in scheme.temp_documents()})
 
 
+def values_of(field: Field, raw) -> list | None:
+    """The values a reference field holds, one per element, or None when
+    the shape contradicts the declaration.
+
+    A plural field takes a list or a single value (a list of one, which is
+    unambiguous). A scalar field given a list is None: the tool would have
+    to guess which element was meant, and guessing is what stringifying
+    the list and reading its first code used to do, silently."""
+    if isinstance(raw, list):
+        if not field.many:
+            return None
+        return [v for v in raw if v not in (None, "")]
+    return [] if raw in (None, "") else [raw]
+
+
 def violations(contract: Contract, rel: str, meta: dict,
                known: dict[str, set[str]]) -> list[str]:
     """One document against its scheme's contract, one line per breach.
@@ -178,28 +198,40 @@ def violations(contract: Contract, rel: str, meta: dict,
     out: list[str] = []
     for field in contract.fields:
         raw = meta.get(field.name)
-        if not raw:
+        target = field.reference
+        if target is None:
+            if not raw and field.required:
+                out.append(f"{rel}: no `{field.name}:` in frontmatter — "
+                           f"{explain(contract, field)}")
+            continue
+        values = values_of(field, raw)
+        if values is None:
+            out.append(
+                f"{rel}: `{field.name}:` holds {len(raw)} values, but the "
+                f"{contract.scheme} scheme declares it one {target} "
+                f"reference {_cite(field.because)} — set `many = true` "
+                f"there if it should hold several")
+            continue
+        if not values:
             if field.required:
                 out.append(f"{rel}: no `{field.name}:` in frontmatter — "
                            f"{explain(contract, field)}")
             continue
-        target = field.reference
-        if target is None:
-            continue
-        code = reference_code(str(raw))
-        if code is None:
-            out.append(
-                f"{rel}: `{field.name}: {raw}` is not a code — the "
-                f"{contract.scheme} scheme declares this field a "
-                f"{target} reference {_cite(field.because)}")
-        elif not code.startswith(f"{target}-"):
-            out.append(
-                f"{rel}: `{field.name}: {code}` is not a {target} code — a "
-                f"{contract.scheme} document's `{field.name}` names a "
-                f"{target} document {_cite(field.because)}")
-        elif code not in known[target]:
-            out.append(f"{rel}: `{field.name}: {code}` resolves to no "
-                       f"{target} document")
+        for value in values:
+            code = reference_code(str(value))
+            if code is None:
+                out.append(
+                    f"{rel}: `{field.name}: {value}` is not a code — the "
+                    f"{contract.scheme} scheme declares this field a "
+                    f"{target} reference {_cite(field.because)}")
+            elif not code.startswith(f"{target}-"):
+                out.append(
+                    f"{rel}: `{field.name}: {code}` is not a {target} code — "
+                    f"a {contract.scheme} document's `{field.name}` names a "
+                    f"{target} document {_cite(field.because)}")
+            elif code not in known[target]:
+                out.append(f"{rel}: `{field.name}: {code}` resolves to no "
+                           f"{target} document")
     tags = {str(t) for t in (meta.get("tags") or [])}
     for group in contract.groups:
         present = sorted(tags & group.tags)

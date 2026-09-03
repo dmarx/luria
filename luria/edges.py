@@ -39,7 +39,7 @@ from pathlib import Path
 from . import doc_refs
 from .adr_index import Adr, load_scheme
 from .config import current
-from .contract import reference_code
+from .contract import for_scheme, reference_code, values_of
 
 SUPERSEDED_BY = "superseded_by"
 STATUS_NOTE = "status_note"
@@ -96,16 +96,17 @@ def outbound(doc: Adr) -> list[Edge]:
     for code in doc.influenced_by:
         out.append(Edge(doc.code, INFLUENCED_BY, code,
                         "frontmatter `influenced_by:`"))
-    for ref in doc.scheme.references:
-        raw = doc.meta.get(ref.field)
-        if not raw:
+    for field in for_scheme(doc.scheme).fields:
+        if field.reference is None:
             continue
-        # A value that is not a code of the declared scheme is the lint's to
-        # report (ADR-060); the graph does not invent a node for it.
-        code = reference_code(str(raw))
-        if code and code.startswith(f"{ref.scheme}-"):
-            out.append(Edge(doc.code, ref.field, code,
-                            f"frontmatter `{ref.field}:`"))
+        # A value that is not a code of the declared scheme, or a list where
+        # one code was declared, is the lint's to report (ADR-060); the
+        # graph neither invents a node nor guesses which element was meant.
+        for value in values_of(field, doc.meta.get(field.name)) or ():
+            code = reference_code(str(value))
+            if code and code.startswith(f"{field.reference}-"):
+                out.append(Edge(doc.code, field.name, code,
+                                f"frontmatter `{field.name}:`"))
     return out
 
 

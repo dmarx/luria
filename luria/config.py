@@ -237,10 +237,17 @@ class Reference:
 
     Declaring the relationship instead makes four checks out of one: present,
     shaped like a code, belonging to that scheme, resolving to a document
-    (ADR-060)."""
+    (ADR-060).
+
+    `many` says the field holds a list of codes rather than one. Without it
+    a list was stringified and its first code checked, the rest ignored —
+    structured input coerced to prose and half-read, with no finding. A
+    scalar field given a list is now a finding; a plural field checks and
+    resolves every element, and each becomes an edge (#141)."""
     field: str
     scheme: str
     required: bool = True
+    many: bool = False
 
 
 @dataclass(frozen=True)
@@ -298,8 +305,10 @@ class Scheme:
     # two schemes can name ONE file and share a vocabulary instead of keeping
     # a copy each (ADR-060).
     tags_file: Path | None = None
-    # Frontmatter fields that hold a code from another scheme, by field name.
-    # `requires` says a field is present; this says what it means.
+    # Frontmatter fields that hold a code from another scheme, by field name:
+    # `source = { scheme = "LIT", required = true, many = false }`. `requires`
+    # says a field is present; this says what it means, and whether it holds
+    # one code or a list of them.
     references: tuple[Reference, ...] = ()
     # Why this scheme's records all sharing one status is deliberate rather
     # than a dead enforcement mechanism (#104). The `inert-status` check is the
@@ -698,7 +707,8 @@ def _references(prefix: str, raw: dict) -> tuple[Reference, ...]:
                 f"`scheme` — it names which scheme's codes the field holds")
         found.append(Reference(field=str(field),
                                scheme=str(spec["scheme"]).upper(),
-                               required=bool(spec.get("required", True))))
+                               required=bool(spec.get("required", True)),
+                               many=bool(spec.get("many", False))))
     return tuple(found)
 
 
