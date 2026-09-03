@@ -42,6 +42,10 @@ class Field:
     name: str
     required: bool = True
     reference: str | None = None
+    # Standard for every scheme rather than declared by one — `superseded_by`
+    # (ADR-tmpxmnac). Checked like any other; not a declaration, so it stays
+    # out of `Contract.empty`.
+    builtin: bool = False
     because: tuple[str, ...] = ()
 
 
@@ -62,7 +66,21 @@ class Contract:
     def empty(self) -> bool:
         """True for every scheme that declares nothing — which is every
         scheme that predates the three tables, and the shipped ADR scheme."""
-        return not self.fields and not self.groups
+        return not any(not f.builtin for f in self.fields) and not self.groups
+
+
+# A reference into any local scheme: the successor a superseded document
+# names may live in another scheme, and a remote code passes as a citation
+# the remote machinery verifies.
+ANY_SCHEME = "*"
+
+# The fields every scheme has. `superseded_by` holds one code or a list —
+# the successor is structure, written and checked as a reference, and the
+# typed edge the index and the site render (ADR-tmpxmnac).
+BUILT_IN = (
+    Field("superseded_by", required=False, reference=ANY_SCHEME, builtin=True,
+          because=("built in: `superseded_by` (ADR-tmpxmnac)",)),
+)
 
 
 def for_scheme(scheme) -> Contract:
@@ -87,6 +105,8 @@ def for_scheme(scheme) -> Contract:
             ref.field,
             required=ref.required or (prior is not None and prior.required),
             reference=ref.scheme, because=because)
+    for field in BUILT_IN:
+        fields.setdefault(field.name, field)
     return Contract(scheme.prefix, tuple(fields.values()), scheme.tag_groups,
                     where="luria.toml", vocabulary=vocabulary)
 
@@ -131,6 +151,8 @@ def describe(contract: Contract) -> list[str]:
     What `docs/record.md` prints under "what an entry must carry"."""
     lines = []
     for field in contract.fields:
+        if field.builtin:
+            continue
         what = "required" if field.required else "optional"
         if field.reference is not None:
             what += f", a `{field.reference}` code"
@@ -169,6 +191,41 @@ def resolvable(prefix: str) -> set[str]:
             | {f"{prefix}-{tail}" for tail in scheme.temp_documents()})
 
 
+def local_scheme(code: str) -> str | None:
+    """The configured scheme a code belongs to, or None for a remote code
+    or a prefix nothing declares."""
+    prefix = code.rsplit("-", 1)[0]
+    return prefix if prefix in current().schemes else None
+
+
+def is_remote(code: str) -> bool:
+    from . import remotes
+    return remotes.parse_code(code) is not None
+
+
+def _any_scheme_violations(contract: Contract, field: Field, rel: str, raw,
+                           known: dict[str, set[str]]) -> list[str]:
+    """A built-in reference into any scheme: one code or a list, each a
+    code that resolves in the scheme it names, or a remote code."""
+    out = []
+    for value in (raw if isinstance(raw, list) else [raw]):
+        if value in (None, ""):
+            continue
+        code = reference_code(str(value))
+        if code is None:
+            out.append(f"{rel}: `{field.name}: {value}` is not a code — "
+                       f"`{field.name}` names a document {_cite(field.because)}")
+        elif is_remote(code):
+            continue
+        elif (home := local_scheme(code)) is None:
+            out.append(f"{rel}: `{field.name}: {code}` names no scheme or "
+                       f"remote this record declares")
+        elif code not in known.setdefault(home, resolvable(home)):
+            out.append(f"{rel}: `{field.name}: {code}` resolves to no "
+                       f"{home} document")
+    return out
+
+
 def violations(contract: Contract, rel: str, meta: dict,
                known: dict[str, set[str]]) -> list[str]:
     """One document against its scheme's contract, one line per breach.
@@ -185,6 +242,9 @@ def violations(contract: Contract, rel: str, meta: dict,
             continue
         target = field.reference
         if target is None:
+            continue
+        if target == ANY_SCHEME:
+            out.extend(_any_scheme_violations(contract, field, rel, raw, known))
             continue
         code = reference_code(str(raw))
         if code is None:

@@ -53,20 +53,18 @@ issue: '#141'
 # frontmatter is data and stays plain. (`origin:` on a principle is
 # prose for the same reason — the generator renders it.)
 summary: >-
-  The citation graph had one kind of edge, "A mentions B", while three
-  stronger facts sat in the record unread: a `Superseded — by` note, an
-  `influenced_by:` list, and any field a scheme declares a reference. They
-  are now read as typed edges, the field name being the relation, and the
-  site renders each page's edges both ways. Three levels of claim, and
-  only the top two are edges: a code in prose is a mention; a typed field
-  is a named relation; the canonical `Superseded — by CODE` note is one
-  derived relation. Any other code in a status note is a mention with a
-  location, not a relation. No new frontmatter field: a `superseded_by:`
-  beside the note would be the second copy of one fact. Rejected: that
-  field; every code in a Superseded note as a succession; a `status_note`
-  relation for the rest, which dresses a location up as a meaning; leaving
-  it to Quartz's untyped backlinks; a relations DSL; and a lint for a
-  successor-less Superseded, which the record's own audit does not justify.
+  The citation graph had one kind of edge, "A mentions B", while facts the
+  record states in structure went unread: a declared reference field, an
+  `influenced_by:` list, and the successor a superseded document names.
+  They are now typed edges, the field name being the relation, and the
+  site renders each page's edges both ways. `superseded_by:` is a built-in
+  reference field on every scheme — the successor written as structure and
+  read as structure, checked, resolved, an edge — where two drafts of this
+  decision inferred it from the `by CODE` shape of a status note and were
+  corrected on review: a field is concrete and checkable, and a relation
+  inferred from free text makes the author's prose conform to a shape the
+  tool happens to recognise. Rejected: that inference; leaving it to
+  Quartz's untyped backlinks; a relations DSL.
 
 ---
 
@@ -112,100 +110,79 @@ when the two disagree.
 
 ## Decision
 
-**Typed edges are derived from what the record already states.** A module
-reads three of them; the field name is the relation:
+**Typed edges are read from what the record states as structure.** A
+module reads three of them; the field name is the relation:
 
 ```text
 A ──source─────────→ B     any declared reference field, named for the field
+A ──superseded_by──→ B     the built-in `superseded_by:` field
 A ──influenced_by──→ B     the `influenced_by:` list
-A ──superseded_by──→ B     derived: status `Superseded`, note `by B`
 ```
 
-Four details are load-bearing.
+Three details are load-bearing.
 
-**No `superseded_by:` field.** The derivation reads `status_note:` — the
-note is a prose field of its own ([ADR-tmpvte2k](ADR-tmpvte2k.md)) — and the note already
-names the successor. A relation the tool derives from one authored fact
-beats a second authored fact the tool would have to reconcile with the
-first.
+**`superseded_by:` is a field every scheme has.** A built-in reference,
+one code or a list, into any local scheme — a decision may be superseded
+by a principle — checked and resolved like a declared reference, and an
+error when a `Superseded` document leaves it empty. The successor is
+structure, and structure is what the edge, the index column and the site
+read. The status note ([ADR-tmpvte2k](ADR-tmpvte2k.md)) stays prose for
+what the field cannot say, and the old canonical `by CODE` note is read
+once more, by `luria index`, as the repair that fills the field and drops
+a note that said only that.
 
-<!-- inactive-ok-block: ADR-015 — cited as the note that names two codes; it is superseded, which is why it has a note -->
-**Three levels of claim, and only the top two are edges.** A code found
-in prose is a *mention*: the citation graph, found by scanning, carrying
-where it was found as provenance and nothing more. A typed reference field
-is a *named relation*: the schema vouches for the field, so the field name
-is the relation. A recognised construction in prose is a *derived
-relation*, and there is one: `Superseded — by CODE` has a writer — `luria
-migrate --strategy supersede` emits exactly that shape — and one meaning,
-so the code in that opening position is the successor. Every other code a
-status note names — the second code in a note that runs on
-([ADR-015](ADR-015.md)'s does), what a `Deferred` was parked by, what a
-`Rejected` was overturned by — is a mention with a location. Downstream, a
-world-building record found four of its ten non-Superseded notes citing a
-code; those are facts worth keeping, and the place that keeps them is the
-citation scanner, which reads the note as the prose key it is
-([ADR-tmpvte2k](ADR-tmpvte2k.md)). `Superseded` is itself scheme-relative
-([ADR-056](ADR-056.md)), which is one more reason to promote only the shape
-with a mechanical writer.
-
-**The status field is two fields.** One `Status(value, note)` on the
-document replaces the six places that split the word off the note with
-three spellings of one regex, and [ADR-tmpvte2k](ADR-tmpvte2k.md) gives the note its own key,
-`status_note:`. The word is data, checked against the vocabulary; the note
-is prose, rendered, linked and cited.
+This reverses two earlier drafts, and the reason is worth stating in the
+reviewer's words: the whole point is to move toward structured, explicit
+documentation of these relationships, not to double down on inference over
+free text. Fields are concrete and definable; inferring a relation from
+prose is strictly weaker and makes the author cooperate with a particular
+phrasing inside text that is supposed to be free. Given a structured
+interface, requiring implicature instead would countermand it.
 
 **A remote code is never an edge.** A remote's namespace is theirs
-([ADR-016](ADR-016.md)); the graph has no node for the edge to land on.
+([ADR-016](ADR-016.md)); the graph has no node for the edge to land on. In
+`superseded_by:` it passes as a citation the remote machinery verifies.
 
-**Rendered where a document has room, in no stronger English than the
-relation guarantees.** The site's record line gains the edges both ways: on
-the page that supersedes, *Supersedes*; on the decision a principle cites,
-*Influenced*; on a practice, its *Source*; on the paper, *Cited as `source`
-by*. A mention gets no line of its own — the note renders with its links,
-and the site's own backlinks list it. Composed with wikilinks and expanded by the resolver
-that owns every target in the record ([DP-4](../../docs/design-principles.md#dp-4)), so nothing here spells a link.
+**Rendered where a document has room.** The site's record line gains the
+edges both ways: on the page that supersedes, *Supersedes*; on the
+decision a principle cites, *Influenced*; on a practice, its *Source*; on
+the paper, *Cited as `source` by*. The status itself reads `Superseded — by
+[X]` on the index and the site, composed from the field. Composed with
+wikilinks and expanded by the resolver that owns every target in the
+record ([DP-4](../../docs/design-principles.md#dp-4)), so nothing here
+spells a link.
 
-This reads prose for a fact, which is what [ADR-003](ADR-003.md) chose frontmatter to
-avoid — "a regex between a decision and its own metadata". It is the right
-call here because the citation graph is already codes found in prose, the
-note's shape is written mechanically by the migration machinery, and the
-alternative is the duplicated field above. The tension is stated rather
-than hidden.
+**The status field is three fields.** One `Status(value, note,
+superseded_by)` on the document replaces the six places that split the
+word off the note with three spellings of one regex. The word is data,
+the successor is a reference, the note is prose.
 
 ## Alternatives considered
 
 <!-- inactive-ok-block: ADR-007, ADR-015 — the example succession and the example run-on note; retired is the point -->
-- **A `superseded_by:` frontmatter field**, as [#141](https://github.com/dmarx/luria/issues/141) proposed. The obvious
-  home for a typed fact, and it loses on this record's own rule: the note
-  already carries the code, so the field is a second copy that nothing
-  relates, and the first disagreement between them has no arbiter. A
-  migration writes the note; it would have to learn the field too.
-- **Every code in a Superseded note as a succession**, which the first
-  draft of this decision did, and a reviewer caught: [ADR-015](ADR-015.md)'s note names
-  a second code that is not its successor, and the site would have said
-  *Supersedes* of it.
+- **Infer the successor from the status note**, which the first two
+  drafts of this decision did — first from every code in a Superseded
+  note, then from the canonical `by CODE` opening only. A reviewer caught
+  each: the first over-claimed for a note that runs on past its successor
+  ([ADR-015](ADR-015.md)'s does); the second was inference dressed as
+  structure, asking authors to phrase free text so a regex would read it.
+  The shape survives only as the one-time repair.
 - **A `status_note` relation for every other code in a note**, which the
-  second draft did, and a reviewer caught: where a code was found is
-  provenance, and naming the location as the relation dresses a location
-  up as a meaning. A mention is a mention; the scanner already has a
-  representation for one, with a location on it.
-- **Leave it to the site's backlinks.** Quartz already lists every page that
-  mentions this one. Untyped: "[ADR-007](ADR-007.md) mentions [ADR-035](ADR-035.md)" and "[ADR-007](ADR-007.md) was
-  replaced by [ADR-035](ADR-035.md)" render identically, and the second is the fact a
-  reader came for.
+  second draft also did: where a code was found is provenance, and naming
+  the location as the relation dresses a location up as a meaning. Those
+  codes are citations now that the note is a prose key.
+- **Leave it to the site's backlinks.** Quartz already lists every page
+  that mentions this one. Untyped: "[ADR-007](ADR-007.md) mentions [ADR-035](ADR-035.md)" and "[ADR-007](ADR-007.md)
+  was replaced by [ADR-035](ADR-035.md)" render identically, and the second is the fact
+  a reader came for.
 - **A `[luria.relations]` table** naming relations and their inverses. A
-  named non-goal of [#141](https://github.com/dmarx/luria/issues/141), and nothing to configure yet: the field name says
-  what the relation is, and the two built-in inverses fit in a dict.
-- **Render the edges in the generated index and tag pages.** The index is a
-  table with one row per document and no room for a list; the site page is
-  where a document has room. Deferred rather than rejected — the graph is
-  read once and any view can consume it.
-- **A lint for a `Superseded` document whose note cites no code.** The
-  check the edge makes possible. Not built: this record has three superseded
-  decisions and all three name a successor, so the prose convention is
-  holding, and [#141](https://github.com/dmarx/luria/issues/141)'s own gate says no obligation without a convention that
-  has already failed.
-- **Status quo.** Three facts written down and read by nobody, which is the
+  named non-goal of [#141](https://github.com/dmarx/luria/issues/141), and nothing to configure yet: the field name
+  says what the relation is, and the two built-in inverses fit in a dict.
+- **Render the edges in the generated index and tag pages.** The index is
+  a table with one row per document and no room for a list; the site page
+  is where a document has room. Deferred rather than rejected — the graph
+  is read once and any view can consume it.
+- **Status quo.** Facts written down and read by nobody, which is the
   shape this package objects to everywhere else.
 
 ## Consequences
@@ -213,17 +190,16 @@ than hidden.
 Twenty-six of this record's sixty-six decision pages gain a typed edge the
 moment the site is next built; every succession and every principle's
 lineage now reads in both directions. A downstream record with declared
-references gets its citations back on the site, in both directions, with no
-configuration change.
+references gets its citations back on the site, in both directions, with
+no configuration change.
 
-The note stays the single source of the supersession fact, and the
-derivation is one function that a project can read in full. What it does
-not do is as deliberate: *parked by* and *overturned by* are meanings the
-tool does not know, and the alternative to leaving them as mentions is the
-tool guessing. The codes in a Deferred or Rejected note are citations,
-found by the scanner in `status_note:` like a code in a summary.
+Three decisions in this record moved on the first `luria index`: the
+field filled from the old note, the note dropped where it said only the
+code and kept where it said more. A `Superseded` document with an empty
+`superseded_by:` is now a lint error, on this record and every downstream
+one; the finding names the field to write. The tombstone `luria migrate
+--strategy supersede` leaves writes the field.
 
-The lint for a successor-less `Superseded` document is one function away
-when a record needs it. The graph is also the natural next consumer of the
-compiled contract ([#141](https://github.com/dmarx/luria/issues/141)): an obligation over an edge rather than a field is
-the shape the proposal's later phases want, and nothing here forecloses it.
+The built-in field is the first of its kind, and the compiled contract
+carries it as such: checked like a declared field, absent from the record
+page's "beyond the standard fields" list, and not counted as a declaration.
