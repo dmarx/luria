@@ -149,6 +149,20 @@ to hit.
 4. A scheduled job (weekly, in the scaffold) runs `luria collect --commit`
    to assemble changelog fragments and pushes the result.
 
+**Which token the job pushes with** decides one thing. The workflow's own
+`GITHUB_TOKEN` needs no setup and is what the scaffold uses, and it cannot
+create or update anything under `.github/workflows/` — there is no
+`workflows:` entry to grant in a `permissions:` block. So a temporary code
+cited from a workflow comment is one the job can never number: `luria
+concretize` rewrites it with everything else, and the push is refused
+whole. The lint reports that as `workflow-temp-codes`, and the scaffold's
+`luria.toml` names it in `fail_on`; cite the number once the decision has
+one, or say it in prose. A job that checks out with a personal access
+token carrying the `workflow` scope, or a GitHub App token with workflow
+write (`token:` on `actions/checkout`), can push those files — and its
+pushes trigger workflow runs, so a repair commit on a pull request gets a
+check of its own. Such a project leaves the class unenforced.
+
 Two hazards, both found by adopting this into a repository that already had
 generators of its own.
 

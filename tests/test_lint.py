@@ -362,26 +362,37 @@ def test_pending_documents_can_be_promoted(project, capsys):
 # ── Temporary codes in workflow files ────────────────────────────────────
 
 
-def workflow_errors(project, text: str) -> list[str]:
+def workflow_project(project, text: str, fail_on: str = "") -> None:
     wf = project / ".github" / "workflows" / "docs.yml"
     wf.parent.mkdir(parents=True)
     wf.write_text(text)
-    found: list[str] = []
-    lint.check_workflow_temp_codes(found)
-    return found
+    (project / "luria.toml").write_text(
+        '[luria]\nissue_url = "https://example.test/issues/{n}"\n'
+        f'[luria.lint]\nfail_on = [{fail_on}]\n')
+    from luria import config
+    config.reset()
 
 
-def test_a_temporary_code_in_a_workflow_is_reported(project):
-    """The generation job's commit would be refused: `luria concretize`
-    rewrites the code with everything else, and the workflow token may not
-    modify `.github/workflows/`. Found by the first merge that cited a
-    pending decision from a workflow comment."""
-    errors = workflow_errors(project, "# The shape (ADR-tmpabcde).\nname: Docs\n")
-    assert len(errors) == 1
-    assert "docs.yml:1" in errors[0]
-    assert "ADR-tmpabcde" in errors[0]
-    assert "cite the number once the decision has one" in errors[0]
+def test_a_temporary_code_in_a_workflow_is_a_warning_class(project, capsys):
+    """On the workflow's own token the generation job's push would be
+    refused: `luria concretize` rewrites the code with everything else, and
+    that token may not modify `.github/workflows/`. A job pushing with
+    workflow write has no such problem — so a warning class, on the dial."""
+    workflow_project(project, "# The shape (ADR-tmpabcde).\nname: Docs\n")
+    errors, err = dial_errors(capsys)
+    assert errors == []
+    assert "temporary code(s) cited from a workflow file" in err
+    assert "docs.yml:1: ADR-tmpabcde" in err
+
+
+def test_a_project_on_the_workflow_token_fails_on_it(project, capsys):
+    workflow_project(project, "# The shape (ADR-tmpabcde).\nname: Docs\n",
+                     '"workflow-temp-codes"')
+    errors, _ = dial_errors(capsys)
+    assert any("failing: `fail_on`" in e for e in errors)
+    assert any("docs.yml:1: ADR-tmpabcde" in e for e in errors)
 
 
 def test_a_numbered_code_in_a_workflow_is_fine(project):
-    assert workflow_errors(project, "# The shape (ADR-029).\nname: Docs\n") == []
+    workflow_project(project, "# The shape (ADR-029).\nname: Docs\n")
+    assert lint.workflow_temp_code_lines() == []

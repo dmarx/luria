@@ -168,3 +168,10 @@ pin = true
 [luria.remotes.FX]
 name = "fixtures"
 url  = "https://github.com/dmarx/luria/blob/main/docs/directives.md#fixture-codes"
+
+
+# The generation job pushes with the workflow's own token, which cannot
+# write under .github/workflows/ — so a temporary code cited from a workflow
+# file is one the job can never number, and it fails the lint here.
+[luria.lint]
+fail_on = ["workflow-temp-codes"]

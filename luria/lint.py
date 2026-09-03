@@ -352,30 +352,25 @@ def check_view_dirs(errors: list[str]) -> None:
                       "file the content as a source")
 
 
-def check_workflow_temp_codes(errors: list[str]) -> None:
-    """A temporary code (ADR-049) in a workflow file is one the generation
-    job can never number: `luria concretize` rewrites it with everything
-    else, and GitHub refuses a push from the workflow token that modifies
-    `.github/workflows/` — so the job's commit is rejected and the default
-    branch stays red, with nothing wrong in the record. The first merge to
-    cite a pending decision from a workflow comment found this. Cite the
-    number once the decision has one, or say it in prose."""
+def workflow_temp_code_lines() -> list[str]:
+    """A temporary code (ADR-049) cited from a workflow file, one line per
+    site. `luria concretize` rewrites the code with everything else when the
+    decision is numbered, and the workflow's own token cannot push a change
+    under `.github/workflows/` — so on that token the generation job's
+    commit is refused whole. A job pushing with a token that has workflow
+    write has no such problem, which is why this is a warning class and not
+    a violation: the project says which token it runs on by naming
+    `workflow-temp-codes` in `fail_on`, or not."""
     cfg = current()
     patterns = [s.temp_pattern for s in cfg.schemes.values()]
-    if not patterns:
-        return
+    found: list[str] = []
     for path in sorted(cfg.root.glob(".github/workflows/*.y*ml")):
         text = path.read_text(encoding="utf-8")
         for regex in patterns:
             for m in regex.finditer(text):
                 line = text.count("\n", 0, m.start()) + 1
-                errors.append(
-                    f"{cfg.rel(path)}:{line}: temporary code {m.group(0)} in a "
-                    "workflow file — the generation job cannot rewrite it when "
-                    "the decision is numbered (the workflow token may not "
-                    "modify `.github/workflows/`), so its push is refused; "
-                    "cite the number once the decision has one, or say it in "
-                    "prose")
+                found.append(f"{cfg.rel(path)}:{line}: {m.group(0)}")
+    return found
 
 
 def check_wikilinks(errors: list[str]) -> None:
@@ -429,7 +424,7 @@ def check_bare_refs(errors: list[str]) -> None:
 FAILABLE = ("retired-citations", "unresolved-codes", "hand-written-urls",
             "broken-targets", "remote-drift", "inert-status",
             "legacy-spellings", "narrow-titles", "stale-directives",
-            "pending-documents", "unlinted-files")
+            "pending-documents", "unlinted-files", "workflow-temp-codes")
 
 
 def status_sections() -> list[tuple[str, str, list[str]]]:
@@ -456,6 +451,19 @@ def status_sections() -> list[tuple[str, str, list[str]]]:
             f"{len(loose)} code(s) resolve to no document "
             "(`luria reports` for the sites, `unresolved-ok:` for the "
             "deliberate ones)", loose))
+
+    # A temporary code in a workflow file is one the generation job cannot
+    # rewrite on the workflow's own token; a project on that token names the
+    # class in `fail_on`, one whose job pushes with workflow write leaves it.
+    sites = workflow_temp_code_lines()
+    if sites:
+        sections.append((
+            "workflow-temp-codes",
+            f"{len(sites)} temporary code(s) cited from a workflow file — the "
+            "workflow's own token cannot push the rewrite once the decision "
+            "is numbered; cite the number when it has one, say it in prose, "
+            "or give the generation job a token with workflow write and "
+            "leave this class unenforced", sites))
 
     # A whole file opting out of reference checking is legitimate and blunt
     # (#37) — blunt enough that the count surfaces even though nothing here
@@ -607,7 +615,6 @@ def run() -> None:
     check_journals(errors)
     check_version_history(errors)
     check_bare_refs(errors)
-    check_workflow_temp_codes(errors)
     check_wikilinks(errors)
     report_warnings(errors)
     if errors:

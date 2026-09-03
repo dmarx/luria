@@ -210,7 +210,8 @@ full in the [reports](reports/reference-status.md):
 
 `retired-citations` · `unresolved-codes` · `hand-written-urls` ·
 `broken-targets` · `inert-status` · `legacy-spellings` · `narrow-titles` ·
-`stale-directives` · `pending-documents` · `unlinted-files`
+`stale-directives` · `pending-documents` · `unlinted-files` ·
+`workflow-temp-codes`
 
 Any of those class names listed in `[luria.lint] fail_on` fails the build
 instead. Only unacknowledged findings ever reach a class, so
