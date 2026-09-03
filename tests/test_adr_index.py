@@ -80,7 +80,7 @@ def test_every_generated_relative_link_resolves():
     several broken ones on purpose.
 
     A target resolves if it is on disk or is itself a view this render
-    writes: a branch carries no regenerated views (ADR-tmphzwg9), so the
+    writes: a branch carries no regenerated views (ADR-068), so the
     book a new entry opens exists only in `outputs()` until `main` commits
     it."""
     rendered = builder.outputs()

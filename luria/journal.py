@@ -125,7 +125,7 @@ def populate_created(journal: Journal) -> list[Path]:
     judgement for a human, not a mechanical fix.
 
     Runs from `luria repair`, which the generation job commits onto the
-    branch that filed the entry (ADR-tmphzwg9)."""
+    branch that filed the entry (ADR-068)."""
     fixed: list[Path] = []
     for path in sorted(journal.dir.rglob("*.md")):
         if path.name == "_template.md":

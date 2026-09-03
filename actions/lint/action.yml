@@ -2,7 +2,7 @@
 # gates what a generator cannot decide, plus the status reports uploaded where
 # they can be read — which matters most when the lint failed.
 #
-# Caller contract, in the two shapes (LU-ADR-tmphzwg9):
+# Caller contract, in the two shapes (LU-ADR-068):
 #   - On the default branch: check out the SHA the generate action output (via
 #     `needs:` on the generation job), and set up Python first. Without that
 #     handoff this lint reads the pre-regeneration commit and fails on

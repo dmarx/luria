@@ -5,7 +5,7 @@
 # workflow and luria's own CI both use it rather than restating it, because a
 # restated copy of tricky logic is the drift this package exists to prevent.
 #
-# Two commit points (LU-ADR-tmphzwg9). A source repair — a bare code linked,
+# Two commit points (LU-ADR-068). A source repair — a bare code linked,
 # a journal entry's `created:` filled from its path — touches only the files
 # a branch itself authored, so it is committed onto the branch, where the
 # review reads it. A view — the decision index, the devlog book — is a shared
@@ -32,7 +32,7 @@ description: >-
   Run luria's source repairs (`luria repair`) and regenerate its derived views
   (`luria index`), committing each where it belongs as github-actions[bot]:
   repairs onto the branch that authored the sources, views on the default
-  branch only (LU-ADR-tmphzwg9). Outputs the SHA a downstream checking job
+  branch only (LU-ADR-068). Outputs the SHA a downstream checking job
   must read.
 inputs:
   pip-spec:

@@ -6,7 +6,7 @@ author can regenerate and commit, or a generation job can run the generator
 and push what it wrote — the second is usually better, since a view a human
 has to rebuild by hand is still a hand-maintained projection (ADR-029).
 
-Where the commit lands is decided (ADR-tmphzwg9): a view on the default
+Where the commit lands is decided (ADR-068): a view on the default
 branch, where merges serialize; a source repair on the branch that authored
 the source. A pull request pushes its repairs, regenerates the views in the
 working tree and commits none of them, so a branch never carries a generated

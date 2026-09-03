@@ -72,7 +72,7 @@ def test_ci_warns_against_the_shape_that_commits_nothing(monkeypatch):
     """The broken shape is specifically 'generator in the checking job on the
     default branch, output committed by nobody' — not 'a generator ran in
     CI', and not the pull-request shape, where committing no view is the
-    point (ADR-tmphzwg9)."""
+    point (ADR-068)."""
     monkeypatch.setenv("CI", "true")
     remedy = ci.regenerate_remedy()
     assert "default branch" in remedy

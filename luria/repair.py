@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""`luria repair` — the source repairs, apart from the views (ADR-tmphzwg9).
+"""`luria repair` — the source repairs, apart from the views (ADR-068).
 
     luria repair          # write every mechanical repair to the sources
 

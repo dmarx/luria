@@ -1,4 +1,4 @@
-"""`luria repair` — the source repairs, apart from the views (ADR-tmphzwg9).
+"""`luria repair` — the source repairs, apart from the views (ADR-068).
 
 A repair is committed on the branch that authored the source; a view on the
 default branch only. The split rests on two properties: `luria repair` writes

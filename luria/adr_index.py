@@ -544,7 +544,7 @@ def run(check: bool = False) -> None:
     if any view is stale instead of writing."""
     # Views only. The source repairs that used to run first — a journal
     # entry's missing `created:`, a retired configuration reference — are
-    # `luria repair`'s (ADR-tmphzwg9): a repair is committed on the branch
+    # `luria repair`'s (ADR-068): a repair is committed on the branch
     # that authored the source, a view on the default branch alone, and one
     # command cannot write to two commit points.
     if check:
