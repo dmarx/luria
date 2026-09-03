@@ -1,0 +1,109 @@
+---
+status: Active
+title: 'A code relates to named URIs through one template vocabulary'
+version: 1
+tags:
+- mechanism
+date: '2026-08-28'
+issue: '#135'
+summary: >-
+  A foreign code had accumulated one subsystem per URI it related to: `url`
+  templates for the reader's link, a hardcoded GitHub blob construction, the
+  `document`/`anchor` shape, `pin_url` templates for stable bytes, and a
+  regex that parsed the rendered blob URL back apart to derive the raw one.
+  Unified: a code relates to a SET of named URIs (`read`, `bytes`, and any
+  name a project declares), each rendered through one template vocabulary in
+  which the discovered filename is an ordinary variable carrying the
+  lockfile's authority. `url` and `pin_url` survive as sugar; the rebase
+  regex is deleted in favor of shipped default templates. Rejected: a field
+  and method per relation (the status quo), per-forge builtins, and deriving
+  bytes by parsing whatever `read` rendered.
+---
+
+# ADR-tmpo1286: A code relates to named URIs through one template vocabulary
+
+## Context
+
+The remote machinery grew one mechanism per relation between a code and a
+URI. The reader's link had four: `url` templates at two levels, the
+`document`/`anchor` shape ([ADR-023](ADR-023.md)), and a hardcoded GitHub blob
+construction fed by the discovered filename map ([ADR-016](ADR-016.md)). Content pins
+([ADR-066](ADR-066.md)) added two more: `pin_url` templates duplicating the whole
+precedence story in a parallel method, and — worst — a regex that parsed
+the already-rendered blob URL back apart to derive its raw counterpart,
+which meant Luria constructed a URL from parts it held and then read the
+parts back out of its own output, for one forge only.
+
+Every future relation — another forge's raw scheme, an edit view, an API
+endpoint — would have meant another field, another mirrored method, another
+special case. That is the drift [DP-4](../../docs/design-principles.md#dp-4) names, one axis up: not five copies of
+one glob, but five mechanisms for one idea.
+
+## Decision
+
+A code relates to a **set of named URIs**. `read` is where a reader lands;
+`bytes` is what a content pin hashes; a project may declare further names
+in a `uris` table on a remote or one of its schemes, and they render
+through `Remote.uri` — one call, one template vocabulary: {code}, {number},
+{prefix}, {repo}, {ref}, {dir}, {document}, {anchor}, {filename}. `url`
+and `pin_url` remain the short spellings of `uris.read` and `uris.bytes`,
+folded together at load; setting both spellings to different values is a
+config error rather than a silent winner.
+
+Three properties are load-bearing:
+
+- **The forge lives in data.** GitHub's blob/raw pairing is the shipped
+  default pair of `read`/`bytes` templates for a remote with a `repo` — the
+  rebase regex is deleted, and a different forge is a different pair of
+  template lines.
+- **The lockfile's authority is variable availability, not control flow.**
+  {filename} comes from the discovered map: no map, and the code-only
+  convention fills it; a map whose keys omit the code, and the variable is
+  unavailable, so any construction needing it renders "" — the old veto,
+  now reaching custom templates too. A template that never mentions
+  {filename} never consults the map, which is the old rule "the lockfile
+  covers exactly what discovery can see" stated once instead of enforced
+  twice.
+- **A chosen template renders or fails visibly.** Precedence picks a
+  template first and renders second; a template that cannot fill a variable
+  yields "" rather than falling through, so a misspelled variable surfaces
+  as a dangling reference instead of hiding behind a working convention
+  ([DP-1](../../docs/design-principles.md#dp-1)).
+
+Precedence for `read` is unchanged from [ADR-023](ADR-023.md): the scheme's template,
+then the scheme's shape, then the remote's template, then the remote-level
+construction. For every other name a declaration beats a derivation at
+either level ([ADR-066](ADR-066.md)), and a derived default exists only where `read`
+itself resolves by construction — a remote whose `read` is a template has
+said nothing about its bytes, so none are guessed.
+
+## Alternatives considered
+
+- **A field and a method per relation** — the status quo, and the path of
+  least resistance each time. Two relations in, it had already produced a
+  mirrored precedence implementation and a regex reading Luria's own
+  output; every further relation would compound it.
+- **Keep the rebase regex** — it made bytes free for any URL that happened
+  to render blob-shaped, including a `url` template pointing at GitHub.
+  That freeness was the problem: bytes derived from parsing a rendered
+  page's address is a guess wearing a construction's confidence, and it
+  bound the derivation to one forge's URL anatomy forever. The one
+  behavior this decision changes: a blob-shaped `read` template no longer
+  implies bytes — declaring `uris.bytes` does.
+- **Per-forge builtins** (`forge = "gitlab"`) — solves only the forge case,
+  adds a registry Luria must maintain, and answers "what about my edit
+  URI?" with another mechanism. Templates subsume it; a forge shorthand
+  can still be added later as sugar that expands to templates.
+- **Status quo** — each new relation costs a subsystem, and the sixth looks
+  like the fifth.
+
+## Consequences
+
+Nothing a project wrote changes meaning: `url`, `pin_url`, `document`,
+`anchor`, `dir` and the lockfile keep their spellings and semantics, and
+the whole prior test suite passes unchanged on the unified renderer.
+Custom templates gain {filename} — a GitLab raw scheme with slug filenames
+now works, authority semantics included. A declared name without a
+consumer renders and waits; `luria remotes --check` still probes `read`,
+pins hash `bytes`. The `history:`-style relations this enables are a name
+away rather than a design away.

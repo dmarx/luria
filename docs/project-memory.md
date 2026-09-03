@@ -153,6 +153,11 @@ foreign code at all is pinned by flagging it where it is cited
 (`<!-- pin: https://… — why -->`). Removing a registration — the config
 line, the flag — retires its pins.
 
+Under it all, a code relates to a set of *named URIs* through one template
+vocabulary: `url` is the `read` relation, `pin_url` the `bytes` one, and a
+`uris` table on a remote or scheme names more — a different forge's raw
+scheme, an edit view — without a new mechanism.
+
 The `uid` form generalises past Luria-shaped records entirely: give a
 remote a regex and a URL template and arXiv identifiers, Jira keys, or CVE
 numbers become linted, linkable references:
