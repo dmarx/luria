@@ -59,7 +59,7 @@ summary: >-
   wanted — a field that is not a reference (the values are not codes),
   not a tag (it is a second axis, not the browsing pile) and not a status
   (closed and single). Decided: a scheme declares the field under
-  `[luria.schemes.X.vocabularies.NAME]` with `many`, `required` and
+  `[luria.schemes.X.fields.NAME]` with `vocabulary`, `many`, `required` and
   `default`, the values live in `NAME.yaml` beside the records shaped like
   `tags.yaml`, the lint holds the field to the vocabulary, the default is
   an effective value that never rewrites the source, and `luria index`
@@ -121,15 +121,27 @@ case. This decision adds the third case and names the type.
 ## Decision
 
 **A scheme may declare a frontmatter field backed by a controlled
-vocabulary.** The declaration is explicit, in the scheme's table, and
-names the field:
+vocabulary.** The declaration is explicit, in a `fields` table under the
+scheme, keyed by the frontmatter field and naming what it holds:
 
 ```toml
-[luria.schemes.SCENE.vocabularies.worlds]
-many     = true          # a list of values; default false, one value
-required = false         # default false; required + many means non-empty
-default  = ["B"]         # the effective value when the field is absent
+[luria.schemes.SCENE.fields.worlds]
+vocabulary = "worlds"    # what the field holds: values from worlds.yaml
+many       = true        # a list of values; default false, one value
+required   = false       # default false; required + many means non-empty
+default    = ["B"]       # the effective value when the field is absent
 ```
+
+`fields` is the table a field's shape and type are declared in, and
+`vocabulary` is the one type it takes today. `requires` and `references`
+stay as they are, the spellings for the other two kinds of field, until a
+decision consolidates them here; a field declared in both `fields` and
+`references` is an error. The table was chosen over a parallel
+`vocabularies` table because the contract's `Field` already has one shape
+with a type in it, and a reader of `fields.worlds` learns the field's kind
+from its one type key rather than from which of three tables it sits in.
+The field and the vocabulary may be named differently — `world:` drawn
+from `worlds.yaml` — and usually are not.
 
 **The values live beside the records**, in `worlds.yaml` in the scheme's
 directory, shaped exactly like `tags.yaml`:
@@ -224,14 +236,18 @@ the consumer is the reason the record declared it.
 - **Implicit wiring: any `NAME.yaml` beside the records declares a field.**
   Zero configuration, and a stray file becomes a schema change nobody
   wrote down. The two existing files are recognised by name; a third
-  convention should be declared, and the TOML path `vocabularies.worlds`
+  convention should be declared, and `fields.worlds` with its type key
   tells a reader what kind of thing `worlds` is before they open the file.
-- **A general `fields` table with `vocabulary = "worlds"` as one key among
-  `reference = …` and others.** The reviewer's first spelling, and the
-  more general one. Deferred rather than rejected: it is the shape the
-  contract's type already has, and if a fourth kind of field arrives the
-  three tables can be read as one. Today a table per kind matches the
-  tables a reader already knows.
+- **A `vocabularies` table beside `requires` and `references`.** What the
+  draft of this decision proposed: a table per kind of field, matching the
+  tables a reader already knows. Rejected on review, before the draft
+  merged: `status` and `tags` are themselves vocabulary-backed fields, the
+  contract has one `Field` shape with a type in it, and a fourth parallel
+  table is a fourth spelling of one thing — the two-grammar cost
+  [ADR-063](ADR-063.md) names, paid a table at a time. `fields` is the
+  normal form; the older two tables consolidate into it when the
+  field-typing work lands, and adding a third to consolidate later was the
+  wrong direction.
 - **Write the default into the source.** `luria index` fills `worlds: [B]`
   into the 38 records that omit it, and the convention disappears. This is
   [ADR-031](ADR-031.md)'s move — populate what the tree states — and it does not apply:

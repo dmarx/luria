@@ -504,7 +504,7 @@ def _vocabulary_bits(meta: dict, source: Path) -> list[str]:
         return []
     bits = []
     for vocab in scheme.vocabularies:
-        raw = meta.get(vocab.name)
+        raw = meta.get(vocab.field)
         values = raw if isinstance(raw, list) else (
             [] if raw in (None, "") else [raw])
         if not values:
@@ -512,7 +512,7 @@ def _vocabulary_bits(meta: dict, source: Path) -> list[str]:
         links = " · ".join(
             f"[{v}]({posixpath.relpath((scheme.vocab_dir(vocab.name) / f'{v}.md').as_posix(), source.parent.as_posix())})"
             for v in values)
-        bits.append(f"**{vocab.name.replace('_', ' ').capitalize()}** {links}")
+        bits.append(f"**{vocab.field.replace('_', ' ').capitalize()}** {links}")
     return bits
 
 

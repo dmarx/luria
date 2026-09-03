@@ -100,13 +100,13 @@ def for_scheme(scheme) -> Contract:
             reference=ref.scheme, many=ref.many, because=because)
     from .vocabularies import declared
     for vocab in scheme.vocabularies:
-        prior = fields.get(vocab.name)
-        because = (f"{where}.vocabularies.{vocab.name}",
+        prior = fields.get(vocab.field)
+        because = (f"{where}.fields.{vocab.field}",
                    f"{current().rel(vocab.file)}: values")
         if prior is not None:
             because = prior.because + because
-        fields[vocab.name] = Field(
-            vocab.name,
+        fields[vocab.field] = Field(
+            vocab.field,
             required=vocab.required or (prior is not None and prior.required),
             many=vocab.many, vocabulary=vocab.name,
             values=tuple(declared(vocab.file)), default=vocab.default,

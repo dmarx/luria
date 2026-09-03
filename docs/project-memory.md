@@ -229,9 +229,10 @@ project defines — not codes, so not a reference; a second axis, so not a
 tag; many-valued and project-defined, so not a status:
 
 ```toml
-[luria.schemes.SCENE.vocabularies.worlds]
-many    = true                 # a list of values; omit for one
-default = ["B"]                # what an absent field is read as
+[luria.schemes.SCENE.fields.worlds]
+vocabulary = "worlds"          # the values: worlds.yaml beside the records
+many       = true              # a list of values; omit for one
+default    = ["B"]             # what an absent field is read as
 ```
 
 The values and what they mean live in `worlds.yaml` beside the records,

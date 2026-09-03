@@ -22,12 +22,14 @@ render = "index"
 [luria.schemes.SCENE.references]
 follows = { scheme = "SCENE", many = true, required = false }
 
-# Which trajectories the scene belongs to. The values and what they mean
-# live in `record/scenes.d/worlds.yaml`, beside the scenes, and the file is
-# closed: a world the file does not name is a lint finding. Most scenes sit
-# in the default trajectory and say nothing, so an absent field is read as
-# world B by the lint, the index and the record page — and never written
-# into the source.
-[luria.schemes.SCENE.vocabularies.worlds]
-many    = true
-default = ["B"]
+# Which trajectories the scene belongs to. A field's shape and type are
+# declared under `fields`; `vocabulary` names the file the values come
+# from — `record/scenes.d/worlds.yaml`, beside the scenes, saying what each
+# one means — and the file is closed: a world it does not name is a lint
+# finding. Most scenes sit in the default trajectory and say nothing, so an
+# absent field is read as world B by the lint, the index and the record
+# page, and never written into the source.
+[luria.schemes.SCENE.fields.worlds]
+vocabulary = "worlds"
+many       = true
+default    = ["B"]

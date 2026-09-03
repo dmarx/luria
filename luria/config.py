@@ -255,14 +255,21 @@ class Vocabulary:
     """A frontmatter field backed by a scheme-local controlled vocabulary
     (ADR-tmpcso13):
 
-        [luria.schemes.SCENE.vocabularies.worlds]
-        many    = true            # a list of values; default false, one value
-        default = ["B"]           # the effective value when the field is absent
+        [luria.schemes.SCENE.fields.worlds]
+        vocabulary = "worlds"     # the values: worlds.yaml beside the records
+        many       = true         # a list of values; default false, one value
+        default    = ["B"]        # the effective value when the field is absent
 
-    with the values in `worlds.yaml` beside the records, shaped like
-    `tags.yaml`. Closed: a value outside the file is a finding. `required`
-    (default false) and `default` are exclusive — a field with a default is
-    never absent, so `required` would say nothing."""
+    `fields` is the table a field's shape and type are declared in; today
+    `vocabulary` is the one type it takes, and `requires` and `references`
+    remain the spellings for the other two kinds until they consolidate
+    here. The values file is shaped like `tags.yaml`. Closed: a value
+    outside the file is a finding. `required` (default false) and `default`
+    are exclusive — a field with a default is never absent, so `required`
+    would say nothing."""
+    # The frontmatter key, and the vocabulary (file stem) it draws from.
+    # Usually the same word; `world:` backed by `worlds.yaml` is the other.
+    field: str
     name: str
     file: Path
     many: bool = False
@@ -336,10 +343,10 @@ class Scheme:
     # says a field is present; this says what it means, and whether it holds
     # one code or a list of them.
     references: tuple[Reference, ...] = ()
-    # Frontmatter fields backed by a controlled vocabulary, by field name
-    # (see `Vocabulary`): `[luria.schemes.X.vocabularies.NAME]`, values in
-    # `NAME.yaml` beside the records. The third instance of what
-    # `statuses.yaml` and `tags.yaml` already are.
+    # Frontmatter fields backed by a controlled vocabulary (see
+    # `Vocabulary`): `[luria.schemes.X.fields.NAME]` with `vocabulary =
+    # "V"`, values in `V.yaml` beside the records. The third instance of
+    # what `statuses.yaml` and `tags.yaml` already are.
     vocabularies: tuple[Vocabulary, ...] = ()
     # Why this scheme's records all sharing one status is deliberate rather
     # than a dead enforcement mechanism (#104). The `inert-status` check is the
@@ -747,20 +754,35 @@ def _references(prefix: str, raw: dict) -> tuple[Reference, ...]:
     return tuple(found)
 
 
-def _vocabularies(prefix: str, raw: dict, scheme_dir: Path,
-                  root: Path) -> tuple[Vocabulary, ...]:
-    """Read a scheme's `[luria.schemes.X.vocabularies]` tables.
+def _fields(prefix: str, raw: dict, scheme_dir: Path, root: Path,
+            references: tuple) -> tuple[Vocabulary, ...]:
+    """Read a scheme's `[luria.schemes.X.fields]` tables.
+
+    One table for a field's shape and type. `vocabulary` is the one type it
+    takes today; an entry declaring none is an error rather than a field
+    that constrains nothing, and a field also named in `references` is two
+    declarations of one thing.
 
     Validated here, eagerly, for the reason tag groups are: a declared axis
     with no values, or a default no value matches, would surface as "no
     violations", which is the quiet failure a declaration exists to remove."""
     from .vocabularies import declared
     found = []
-    for name, spec in raw.items():
-        where = f"luria.toml: schemes.{prefix}.vocabularies.{name}"
-        if name in BUILT_IN_AXES:
-            raise ValueError(f"{where}: `{name}` is built in — `status` and "
+    taken = {r.field for r in references}
+    for field, spec in raw.items():
+        where = f"luria.toml: schemes.{prefix}.fields.{field}"
+        if field in BUILT_IN_AXES:
+            raise ValueError(f"{where}: `{field}` is built in — `status` and "
                              f"`tags` have their own files and rules")
+        if field in taken:
+            raise ValueError(f"{where}: `{field}` is also declared under "
+                             f"`references`; a field has one declaration")
+        name = spec.get("vocabulary")
+        if not name:
+            raise ValueError(f"{where}: declares no type — `vocabulary = "
+                             f"\"NAME\"` is the one kind of field this table "
+                             f"takes today")
+        name = str(name)
         file = scheme_dir / f"{name}.yaml"
         values = declared(file)
         if not values:
@@ -789,8 +811,9 @@ def _vocabularies(prefix: str, raw: dict, scheme_dir: Path,
                 raise ValueError(
                     f"{where}: default {', '.join(bad)} is not in "
                     f"{file.relative_to(root)} (values: {', '.join(values)})")
-        found.append(Vocabulary(name=str(name), file=file, many=many,
-                                required=required, default=defaults))
+        found.append(Vocabulary(field=str(field), name=name, file=file,
+                                many=many, required=required,
+                                default=defaults))
     return tuple(found)
 
 
@@ -1163,9 +1186,9 @@ def _schemes(raw: dict, root: Path) -> dict[str, Scheme]:
             tag_groups=_tag_groups(prefix, spec.get("tag_groups", {}),
                                    tags_path),
             tags_file=tags_file,
-            references=_references(prefix, spec.get("references", {})),
-            vocabularies=_vocabularies(prefix, spec.get("vocabularies", {}),
-                                       root / spec["dir"], root),
+            references=(refs := _references(prefix, spec.get("references", {}))),
+            vocabularies=_fields(prefix, spec.get("fields", {}),
+                                 root / spec["dir"], root, refs),
             uniform_ok=(spec.get("uniform_ok") or None),
         )
     for prefix, scheme in schemes.items():

@@ -47,14 +47,18 @@ def scene(root: Path, n: int, extra: str = "") -> Path:
 
 
 def world(tmp_path, monkeypatch, table: str = 'many = true\ndefault = ["B"]',
-          vocab: str = WORLDS, name: str = "worlds") -> Path:
+          vocab: str = WORLDS, name: str = "worlds", field: str | None = None,
+          extra: str = "") -> Path:
+    field = field or name
     write(tmp_path, "luria.toml", f"""
 [luria]
 issue_url = "https://example.test/issues/{{n}}"
 [luria.schemes.SCENE]
 dir = "record/scenes.d"
 output = "docs/scenes"
-[luria.schemes.SCENE.vocabularies.{name}]
+{extra}
+[luria.schemes.SCENE.fields.{field}]
+vocabulary = "{name}"
 {table}
 """)
     if vocab is not None:
@@ -76,7 +80,8 @@ def field():
 def test_a_declared_vocabulary_is_read_with_its_values(tmp_path, monkeypatch):
     world(tmp_path, monkeypatch)
     v, = current().schemes["SCENE"].vocabularies
-    assert (v.name, v.many, v.required, v.default) == ("worlds", True, False, ("B",))
+    assert (v.field, v.name, v.many, v.required, v.default) == \
+        ("worlds", "worlds", True, False, ("B",))
     assert v.file == tmp_path / "record/scenes.d/worlds.yaml"
     f = field()
     assert f.vocabulary == "worlds" and f.values == ("A", "B", "C")
@@ -127,6 +132,49 @@ def test_the_built_in_axes_cannot_be_redeclared(tmp_path, monkeypatch):
         current()
 
 
+def test_a_field_entry_declares_its_type(tmp_path, monkeypatch):
+    """`fields` is the table a field's shape and type live in; `vocabulary`
+    is the one type it takes today, and an entry naming none is an error
+    rather than a field that constrains nothing."""
+    write(tmp_path, "luria.toml", """
+[luria]
+issue_url = "https://example.test/issues/{n}"
+[luria.schemes.SCENE]
+dir = "record/scenes.d"
+[luria.schemes.SCENE.fields.worlds]
+many = true
+""")
+    write(tmp_path, "record/scenes.d/worlds.yaml", WORLDS)
+    monkeypatch.setenv("LURIA_ROOT", str(tmp_path))
+    config.reset()
+    with pytest.raises(ValueError, match="declares no type"):
+        current()
+
+
+def test_a_field_has_one_declaration(tmp_path, monkeypatch):
+    world(tmp_path, monkeypatch, extra="""
+[luria.schemes.SCENE.references]
+worlds = { scheme = "SCENE" }
+""")
+    with pytest.raises(ValueError, match="one declaration"):
+        current()
+
+
+def test_the_field_and_its_vocabulary_may_be_named_differently(tmp_path, monkeypatch):
+    """`world:` in the frontmatter, drawn from `worlds.yaml`: the field is
+    the author's word, the vocabulary is the file's. Pages render under the
+    vocabulary's name; the finding and the record line use the field's."""
+    root = world(tmp_path, monkeypatch, field="world", table="")
+    scene(root, 1, "world: C")
+    scene(root, 2, "world: Z")
+    e, = findings()
+    assert "`world: Z` is not in the `worlds` vocabulary" in e
+    pages = {p.relative_to(root).as_posix() for p in adr_index.outputs()}
+    assert "docs/scenes/worlds/C.md" in pages
+    line, = contract.describe(contract.for_scheme(current().schemes["SCENE"]))
+    assert line.startswith("`world` —") and "schemes.SCENE.fields.world" in line
+
+
 # --- the contract ---------------------------------------------------------
 
 def test_describe_names_the_values_the_default_and_both_files(tmp_path, monkeypatch):
@@ -134,7 +182,7 @@ def test_describe_names_the_values_the_default_and_both_files(tmp_path, monkeypa
     line, = contract.describe(contract.for_scheme(current().schemes["SCENE"]))
     assert "`worlds`" in line and "one or more of `A`, `B`, `C`" in line
     assert "absent means `B`" in line
-    assert "schemes.SCENE.vocabularies.worlds" in line
+    assert "schemes.SCENE.fields.worlds" in line
     assert "record/scenes.d/worlds.yaml" in line
 
 
@@ -169,7 +217,7 @@ def test_a_required_vocabulary_field_may_not_be_absent(tmp_path, monkeypatch):
     root = world(tmp_path, monkeypatch, table="many = true\nrequired = true")
     scene(root, 1)
     e, = findings()
-    assert "no `worlds:`" in e and "schemes.SCENE.vocabularies.worlds" in e
+    assert "no `worlds:`" in e and "schemes.SCENE.fields.worlds" in e
 
 
 def test_effective_values_apply_the_default_without_touching_the_source(tmp_path, monkeypatch):
