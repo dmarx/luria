@@ -21,7 +21,14 @@ issue_url = "https://github.com/acme/anthology/issues/{n}"
 dir      = "record/literature.d"
 output   = "docs/literature"
 render   = "index"
-requires = ["arxiv"]
+
+# Every paper has a SOURCE, and a source is any of several things: an arXiv
+# identifier, a DOI, or failing both a URL. `requires = ["arxiv"]` would
+# demand the wrong thing of a report that was never posted there. The group
+# names the need and the fields that satisfy it, and the lint asks for one.
+[luria.schemes.LIT.field_groups.source]
+fields  = ["arxiv", "doi", "url"]
+require = "at-least-one"
 
 # The product. The declared reference is the rule that this is an anthology
 # of JUSTIFIED practice: a recommendation with no paper behind it is an
@@ -29,8 +36,8 @@ requires = ["arxiv"]
 # as a reference rather than a bare `requires` because the field names a
 # LIT document, and only a typed field can say so: `requires` is satisfied
 # by any truthy value, so a practice citing a decision — or a sentence — as
-# its evidence passed (LU-ADR-060). `arxiv` on a paper stays a plain
-# `requires`; it names nothing in the record.
+# its evidence passed (LU-ADR-060). A paper's own source is not a
+# reference into the record — it is one of the `source` fields above.
 [luria.schemes.SOTA]
 dir      = "record/practices.d"
 output   = "docs/practices"

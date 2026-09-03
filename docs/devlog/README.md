@@ -6,6 +6,7 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 
 ## Currently — [September 2026](2026-09.md)
 
+- [3 Sep 19:21 — Requiring arxiv was requiring the wrong thing](2026-09.md#20260903192111)
 - [3 Sep 18:00 — One field was two types, and had been for sixty decisions](2026-09.md#20260903180058)
 - [3 Sep 14:25 — A list in a reference field was read as its first code, silently](2026-09.md#20260903142510)
 - [3 Sep 04:43 — Provenance goes into the finding, not into a command](2026-09.md#20260903044350)
@@ -14,9 +15,9 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 
 ## All books
 
-50 entries across 2 books, newest first.
+51 entries across 2 books, newest first.
 
 | Book | Entries | First | Last |
 |---|--:|---|---|
-| [2026-09](2026-09.md) | 5 | 2026-09-03 | 2026-09-03 |
+| [2026-09](2026-09.md) | 6 | 2026-09-03 | 2026-09-03 |
 | [2026-08](2026-08.md) | 45 | 2026-08-03 | 2026-08-28 |

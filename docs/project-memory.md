@@ -212,6 +212,19 @@ document then fails until a human supplies what the destination scheme's
 template would have prompted for. The machinery moves it; only a person
 vouches that it belongs.
 
+**One of several fields.** `requires` demands every field it names. When
+the need is *a source* and any of several fields is one, a field group
+says so and the lint asks for one:
+
+```toml
+[luria.schemes.LIT.field_groups.source]
+fields  = ["arxiv", "doi", "url"]
+require = "at-least-one"       # or "exactly-one", "at-most-one"
+```
+
+A paper never posted to arXiv but carrying a DOI, or only a URL, passes;
+one with none of the three fails, and the finding names all three.
+
 **Tag rules.** `tags.yaml` says what a tag *means*; a tag group says which may
 appear together, because some vocabularies are an axis rather than a pile:
 
