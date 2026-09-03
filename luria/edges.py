@@ -5,7 +5,8 @@ The citation graph has one kind of edge: A mentions B, found in prose. Three
 facts in the record are stronger than a mention, and each was already
 written down before this module read it as an edge:
 
-    A ──superseded_by──→ B     the `Superseded — by B` status note (ADR-003)
+    A ──superseded_by──→ B     a `Superseded — by B` status note (ADR-003)
+    A ──status_note────→ B     any other code a status note cites
     A ──influenced_by──→ B     the `influenced_by:` list (ADR-012)
     A ──source─────────→ B     any field a scheme declares a reference (ADR-060)
 
@@ -15,8 +16,15 @@ would be the second copy of one fact that DP-3 says will drift, so the edge
 is read out of the note. That is a regex over prose, which ADR-003 chose
 frontmatter to avoid — defensible here because the whole citation graph is
 already codes found in prose, and `luria migrate` writes this exact note
-shape mechanically (ADR-040). The note may cite more than one code, so the
-edge is "the codes a Superseded note cites", not "the successor".
+shape mechanically (ADR-040).
+
+Two relations, because the note says two kinds of thing. `Superseded — by
+CODE` is a convention with a writer (the migration) and a single meaning,
+so the code in that position is the successor. Every other code a status
+note cites — a second one after the successor, what a Deferred was parked
+by, what a Rejected was overturned by — is a fact the author wrote down
+whose meaning the tool does not know. `status_note` keeps it as exactly
+that: this note names that code, and no more (#141).
 
 Consumers: the site renders each page's edges both ways (#141). A remote
 code is never an edge — the graph has no node for it to land on (ADR-016).
@@ -34,10 +42,14 @@ from .config import current
 from .contract import reference_code
 
 SUPERSEDED_BY = "superseded_by"
+STATUS_NOTE = "status_note"
 INFLUENCED_BY = "influenced_by"
 
 # `Superseded — by …`: the bare word, then the note (ADR-003).
 _NOTE_RE = re.compile(r"\s+—\s+")
+# The canonical succession: the note opens with `by` and then the code —
+# the shape `luria migrate --strategy supersede` writes (ADR-040).
+_BY_RE = re.compile(r"^by\s+")
 
 
 @dataclass(frozen=True)
@@ -49,26 +61,38 @@ class Edge:
     because: str
 
 
-def _codes_in(text: str) -> list[str]:
-    """Local scheme codes cited in a note, linked or bare, in order.
+def _note_edges(doc: Adr) -> list[Edge]:
+    """What a status note says, as edges: the successor when the note has
+    the canonical shape, and every other code as a bare mention.
 
     The note is prose, so it is read the way prose is read everywhere else:
     links unwrapped, then the scheme-driven finder (ADR-046). Issues and
-    remote codes come back as other kinds and are dropped here."""
-    plain = doc_refs.UNLINK_RE.sub(r"\1", text)
-    return [ref.describe() for ref in doc_refs.find_refs(plain)
-            if ref.kind == "scheme"]
+    remote codes come back as other kinds and are dropped."""
+    word, *rest = _NOTE_RE.split(doc.status, maxsplit=1)
+    if not rest:
+        return []
+    plain = doc_refs.UNLINK_RE.sub(r"\1", rest[0]).strip()
+    refs = [r for r in doc_refs.find_refs(plain) if r.kind == "scheme"]
+    successor = None
+    if word.strip() == "Superseded" and refs:
+        opening = _BY_RE.match(plain)
+        if opening and refs[0].start == opening.end():
+            successor = refs[0].describe()
+    out: list[Edge] = []
+    seen: set[str] = set()
+    for ref in refs:
+        code = ref.describe()
+        if code == doc.code or code in seen:
+            continue
+        seen.add(code)
+        relation = SUPERSEDED_BY if code == successor else STATUS_NOTE
+        out.append(Edge(doc.code, relation, code, "the `status:` note"))
+    return out
 
 
 def outbound(doc: Adr) -> list[Edge]:
     """Every typed edge this document is the source of."""
-    out: list[Edge] = []
-    word, *rest = _NOTE_RE.split(doc.status, maxsplit=1)
-    if word.strip() == "Superseded" and rest:
-        for code in _codes_in(rest[0]):
-            if code != doc.code:
-                out.append(Edge(doc.code, SUPERSEDED_BY, code,
-                                "the `status:` note"))
+    out: list[Edge] = list(_note_edges(doc))
     for code in doc.influenced_by:
         out.append(Edge(doc.code, INFLUENCED_BY, code,
                         "frontmatter `influenced_by:`"))

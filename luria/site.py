@@ -454,10 +454,14 @@ def _alias(path: Path, cfg) -> str | None:
     return None
 
 
-# How an inbound edge reads on the page it lands on. A declared reference
-# field has no built-in inverse, so it is named for the field.
-_INBOUND = {edges.SUPERSEDED_BY: "Supersedes", edges.INFLUENCED_BY: "Influenced"}
-_INBOUND_ORDER = (edges.SUPERSEDED_BY, edges.INFLUENCED_BY)
+# How an inbound edge reads on the page it lands on — and no stronger
+# English than the relation guarantees: a bare status-note mention says the
+# note names this page, nothing more. A declared reference field has no
+# built-in inverse, so it is named for the field.
+_INBOUND = {edges.SUPERSEDED_BY: "Supersedes",
+            edges.INFLUENCED_BY: "Influenced",
+            edges.STATUS_NOTE: "Named in the status of"}
+_INBOUND_ORDER = (edges.SUPERSEDED_BY, edges.INFLUENCED_BY, edges.STATUS_NOTE)
 
 
 def _edge_bits(outbound, inbound) -> list[str]:
