@@ -41,7 +41,7 @@ def apply() -> list[Path]:
     # A note still riding in `status:` moves to `status_note:`, and an
     # old-form `by CODE` note becomes `superseded_by:` — the same repair: the
     # file states the facts, and now says so in the fields that carry them
-    # (ADR-tmpvte2k, ADR-071).
+    # (ADR-072, ADR-071).
     for s in cfg.schemes.values():
         for p in statuses.populate(s):
             print(f"brought the status fields up to date in {cfg.rel(p)}")
