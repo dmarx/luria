@@ -26,7 +26,7 @@ status: 'Active'
 # What the index shows in place of the code. Repeat it as the body's `# ADR-tmpxmnac:`
 # heading — someone reading the file alone needs one — and `luria lint` checks
 # that the two agree, because two copies of a string is a projection that drifts.
-title: 'Typed edges are read from what the record already says, never from a new field'
+title: 'Typed edges come from fields, and a superseded document names its successor in `superseded_by:`'
 
 # Which revision of this decision's claim you are reading. Standard frontmatter
 # for every scheme, and it moves rarely here: a decision that CHANGES is
@@ -69,7 +69,7 @@ summary: >-
 ---
 
 
-# ADR-tmpxmnac: Typed edges are read from what the record already says, never from a new field
+# ADR-tmpxmnac: Typed edges come from fields, and a superseded document names its successor in `superseded_by:`
 
 ## Context
 
@@ -102,16 +102,18 @@ status: Superseded
 superseded_by: ADR-035
 ```
 
-This record's convention is `status: 'Superseded — by [ADR-035](ADR-035.md)'`
-— the pointer is in the note, and `luria migrate --strategy supersede`
-writes that exact shape. A second field carrying the same code is the
-drifting copy [DP-3](../../docs/design-principles.md#dp-3) warns about, and it would need a rule for what happens
-when the two disagree.
+This record's convention was `status: 'Superseded — by [ADR-035](ADR-035.md)'`
+— the pointer in a prose note, which `luria migrate --strategy supersede`
+wrote and nothing read as structure. The proposal's field is the right
+shape: a relation is a fact the tool should check, resolve and render,
+and a field is where that happens. The note keeps its place for prose.
 
 ## Decision
 
-**Typed edges are read from what the record states as structure.** A
-module reads three of them; the field name is the relation:
+**Typed edges come from fields.** A structured field is what the tool
+can check, resolve and render, so a field is the preferred home for a
+relation, and the three the module reads today are fields; the field name
+is the relation:
 
 ```text
 A ──source─────────→ B     any declared reference field, named for the field
@@ -119,7 +121,13 @@ A ──superseded_by──→ B     the built-in `superseded_by:` field
 A ──influenced_by──→ B     the `influenced_by:` list
 ```
 
-Three details are load-bearing.
+Prose keeps its place. A code in prose is a citation the scanner finds,
+and where a record has not yet written a field, a recognised construction
+in prose can seed one — `luria index` fills `superseded_by:` from an
+old-form `by CODE` note. The field is what a document is then held to,
+and what the graph reads.
+
+Four details are load-bearing.
 
 **`superseded_by:` is a field every scheme has.** A built-in reference,
 one code or a list, into any local scheme — a decision may be superseded
@@ -139,9 +147,10 @@ prose is strictly weaker and makes the author cooperate with a particular
 phrasing inside text that is supposed to be free. Given a structured
 interface, requiring implicature instead would countermand it.
 
-**A remote code is never an edge.** A remote's namespace is theirs
-([ADR-016](ADR-016.md)); the graph has no node for the edge to land on. In
-`superseded_by:` it passes as a citation the remote machinery verifies.
+**A remote code is a citation, not an edge.** A remote's namespace is
+theirs ([ADR-016](ADR-016.md)); the graph has no node for an edge to land
+on. In `superseded_by:` it passes as a citation the remote machinery
+verifies.
 
 **Rendered where a document has room.** The site's record line gains the
 edges both ways: on the page that supersedes, *Supersedes*; on the
@@ -164,9 +173,10 @@ the successor is a reference, the note is prose.
   drafts of this decision did — first from every code in a Superseded
   note, then from the canonical `by CODE` opening only. A reviewer caught
   each: the first over-claimed for a note that runs on past its successor
-  ([ADR-015](ADR-015.md)'s does); the second was inference dressed as
+  ([ADR-015](ADR-015.md)'s does); the second was inference in place of
   structure, asking authors to phrase free text so a regex would read it.
-  The shape survives only as the one-time repair.
+  Reading prose is welcome as a seed — the shape survives as the repair
+  that fills the field — and the field is what the record is held to.
 - **A `status_note` relation for every other code in a note**, which the
   second draft also did: where a code was found is provenance, and naming
   the location as the relation dresses a location up as a meaning. Those
