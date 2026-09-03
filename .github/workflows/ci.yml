@@ -22,10 +22,9 @@ jobs:
   # and both committed and pushed as the bot; the lint then reads that
   # commit (ADR-029). Generated views are committed on main only (the
   # amendment to ADR-029 on where views land): a pull request pushes its
-  # source repairs onto the branch, regenerates the views in the working
-  # tree, checks in the same job, and commits no view — so branches never
-  # carry the decision index or the devlog book, and two branches cannot
-  # conflict on them.
+  # source repairs onto the branch and lints its sources in the same job,
+  # writing no view — so branches never carry the decision index or the
+  # devlog book, and two branches cannot conflict on them.
   docs-generate:
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
@@ -66,11 +65,11 @@ jobs:
         with:
           pip-spec: -e .
 
-  # The pull-request shape: repair the sources and push the repair onto the
-  # branch, regenerate the views in the working tree, and lint the result in
-  # the same job. A repair touches only what the branch authored, so the
-  # review reads the repaired source and the author's next pull carries it;
-  # the views are never committed here.
+  # The pull-request shape: repair the sources, push the repair onto the
+  # branch, and lint the sources in the same job. A repair touches only what
+  # the branch authored, so the review reads the repaired source and the
+  # author's next pull carries it; no view is written here, and the lint
+  # needs none.
   docs-check:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
@@ -91,7 +90,7 @@ jobs:
       - uses: ./actions/generate
         with:
           pip-spec: -e .
-          commit-views: "false"
+          views: "false"
       - uses: ./actions/lint
         with:
           pip-spec: ""
