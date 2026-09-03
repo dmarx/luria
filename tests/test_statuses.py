@@ -319,6 +319,7 @@ def test_split_moves_the_note_out_of_status(project):
 
 
 def test_split_carries_a_quoted_multi_line_note_intact(project):
+    # inactive-ok: ADR-015 — its note is the fixture's shape; retired is why it has one
     """ADR-015's shape: a quoted scalar that runs onto a second line."""
     text = ("---\nstatus: 'Superseded — by [ADR-016](ADR-016.md), which drops\n"
             "  the local-clone path'\ntitle: 'T'\n---\n\nBody.\n")
