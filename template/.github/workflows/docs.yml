@@ -1,9 +1,10 @@
 # The record's own CI, in the recommended shape (LU-ADR-029, LU-ADR-tmphzwg9).
 # Three jobs on the default branch and pull requests, one on a schedule:
 #
-#   docs-generate  on push to the default branch: regenerates the derived
-#                  views (index, tag pages, books, README badges, reference
-#                  links) and commits them back as the bot — derived
+#   docs-generate  on push to the default branch: repairs the sources
+#                  (reference links, a journal entry's missing `created:`),
+#                  regenerates the derived views (index, tag pages, books,
+#                  README badges) and commits both back as the bot — derived
 #                  documentation is built, not maintained, and a view a human
 #                  has to rebuild by hand will drift.
 #   docs-lint      on push: gates what a generator cannot decide: unresolved
@@ -13,12 +14,15 @@
 #                  output — a push made with GITHUB_TOKEN does not retrigger
 #                  workflows, so a lint anywhere else would keep a red earned
 #                  from the pre-regeneration commit and never clear it.
-#   docs-check     on a pull request: regenerates the views in the working
-#                  tree, commits nothing, and lints the regenerated tree in
-#                  the same job. Generated views are committed on the default
+#   docs-check     on a pull request: repairs the sources and pushes the
+#                  repair onto the branch (a repair touches only what the
+#                  branch authored, so the review reads it), regenerates the
+#                  views in the working tree, and lints the result in the
+#                  same job. Generated views are committed on the default
 #                  branch only, so a branch never carries them and two
-#                  branches cannot conflict on them; a fork needs no write
-#                  permission, because nothing is pushed.
+#                  branches cannot conflict on them. On a fork the repair
+#                  cannot be pushed; the action warns and the lint still
+#                  runs on the repaired tree.
 #   collect        assembles changelog fragments on a cadence, never
 #                  per-merge (LU-ADR-002 — a per-merge bot commit races
 #                  in-flight rebases, reintroducing the conflict fragments
@@ -80,14 +84,22 @@ jobs:
   docs-check:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Same-repo PR: the head branch, so a repair has somewhere to land.
+          # Fork PR: that branch only exists in the fork — naming it fails
+          # the checkout before any push guard runs — so fall back to the
+          # default merge-commit checkout (empty ref).
+          ref: ${{ github.event.pull_request.head.repo.full_name == github.repository && github.head_ref || '' }}
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
       - uses: dmarx/luria/actions/generate@main
         with:
-          commit: "false"
+          commit-views: "false"
       - uses: dmarx/luria/actions/lint@main
         with:
           pip-spec: ""

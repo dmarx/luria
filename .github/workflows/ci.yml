@@ -18,12 +18,13 @@ on:
   workflow_dispatch:
 
 jobs:
-  # Where merges serialize, the views are regenerated, committed and pushed
-  # as the bot; the lint then reads that commit (ADR-029). Generated views
-  # are committed on main only (ADR-tmphzwg9): a pull request regenerates and
-  # checks in one job and commits nothing, so branches never carry the
-  # decision index or the devlog book, and two branches cannot conflict on
-  # them.
+  # Where merges serialize, the sources are repaired, the views regenerated,
+  # and both committed and pushed as the bot; the lint then reads that
+  # commit (ADR-029). Generated views are committed on main only
+  # (ADR-tmphzwg9): a pull request pushes its source repairs onto the
+  # branch, regenerates the views in the working tree, checks in the same
+  # job, and commits no view — so branches never carry the decision index or
+  # the devlog book, and two branches cannot conflict on them.
   docs-generate:
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
@@ -64,22 +65,32 @@ jobs:
         with:
           pip-spec: -e .
 
-  # The pull-request shape: regenerate in the working tree, commit nothing,
-  # lint the regenerated tree in the same job. The default checkout is the
-  # merge commit, so the record is checked as it would land — and a fork
-  # needs no write permission, because nothing is pushed.
+  # The pull-request shape: repair the sources and push the repair onto the
+  # branch, regenerate the views in the working tree, and lint the result in
+  # the same job. A repair touches only what the branch authored, so the
+  # review reads the repaired source and the author's next pull carries it;
+  # the views are never committed here.
   docs-check:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Same-repo PR: the head branch, so a repair has somewhere to land.
+          # Fork PR: that branch only exists in the fork — naming it fails
+          # the checkout before any push guard runs — so fall back to the
+          # default merge-commit checkout (empty ref); the action warns
+          # instead of pushing.
+          ref: ${{ github.event.pull_request.head.repo.full_name == github.repository && github.head_ref || '' }}
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
       - uses: ./actions/generate
         with:
           pip-spec: -e .
-          commit: "false"
+          commit-views: "false"
       - uses: ./actions/lint
         with:
           pip-spec: ""

@@ -77,15 +77,24 @@ def test_every_generated_relative_link_resolves():
 
     Code spans are skipped for the same reason the hyperlink lint skips them:
     a link inside backticks is a *quotation* of a link, and the devlog quotes
-    several broken ones on purpose."""
+    several broken ones on purpose.
+
+    A target resolves if it is on disk or is itself a view this render
+    writes: a branch carries no regenerated views (ADR-tmphzwg9), so the
+    book a new entry opens exists only in `outputs()` until `main` commits
+    it."""
+    rendered = builder.outputs()
     broken = []
-    for path, text in builder.outputs().items():
+    for path, text in rendered.items():
         quoted = doc_refs.code_spans(text)
         for m in builder.RELATIVE_LINK_RE.finditer(text):
             if doc_refs.in_html_block(m.start(), quoted):
                 continue
             file = m.group(1).split("#")[0]
-            if file and not (path.parent / file).resolve().exists():
+            if not file:
+                continue
+            target = (path.parent / file).resolve()
+            if not target.exists() and target not in rendered:
                 broken.append(f"{path.name} -> {m.group(1)}")
     assert broken == []
 

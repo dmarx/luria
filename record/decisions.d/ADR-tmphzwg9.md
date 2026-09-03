@@ -26,7 +26,7 @@ status: 'Proposed'
 # What the index shows in place of the code. Repeat it as the body's `# ADR-tmphzwg9:`
 # heading — someone reading the file alone needs one — and `luria lint` checks
 # that the two agree, because two copies of a string is a projection that drifts.
-title: 'Generated views are committed on the default branch only; a pull request regenerates, checks, and commits nothing'
+title: 'Source repairs are committed on the branch that authored them; generated views on the default branch only'
 
 # Which revision of this decision's claim you are reading. Standard frontmatter
 # for every scheme, and it moves rarely here: a decision that CHANGES is
@@ -59,24 +59,30 @@ summary: >-
   decision or a devlog entry diverged on the decision index, its tag pages
   and the devlog book, and the second to merge conflicted on files nobody
   wrote. Six times across one stack, resolved the same mechanical way each
-  time. Generated views are now committed on the default branch only: a
-  pull request regenerates in the working tree, lints the regenerated
-  tree in the same job, and commits nothing. Amends [ADR-029](ADR-029.md), whose choice
-  stands — a view is committed by something — while the somewhere moves.
-  Rejected: a merge driver (the merge button does not run one), and a
-  documented routine of regenerate-on-conflict.
+  time. The two kinds of write the job makes now land in two places: a
+  source repair (`luria repair` — a bare code linked, a missing `created:`
+  filled) touches only the files a branch authored and is committed onto
+  the branch, where the review reads it; a generated view is a shared file
+  every branch would rewrite and is committed on the default branch only.
+  A pull request pushes its repairs, regenerates the views in the working
+  tree, lints the result in the same job, and commits no view. Amends
+  [ADR-029](ADR-029.md), whose choice stands — a view is committed by something — while
+  the somewhere moves. Rejected: a merge driver (the merge button does not
+  run one), a documented routine of regenerate-on-conflict, and the first
+  draft of this decision, which discarded the repairs on a pull request
+  along with the views.
 
 ---
 
-# ADR-tmphzwg9: Generated views are committed on the default branch only; a pull request regenerates, checks, and commits nothing
+# ADR-tmphzwg9: Source repairs are committed on the branch that authored them; generated views on the default branch only
 
 ## Context
 
-[ADR-029](ADR-029.md) settled that a generated view is a committed
-artifact and that a generation job is the better thing to commit it. The
-job it shipped runs on every pull request as well as on push to `main`,
-committing regenerated views onto the branch as the bot. That closed the
-staleness gap and opened a different one.
+[ADR-029](ADR-029.md) settled that a generated view is a committed artifact and that a
+generation job is the better thing to commit it. The job it shipped runs
+on every pull request as well as on push to `main`, committing regenerated
+views onto the branch as the bot. That closed the staleness gap and opened
+a different one.
 
 Every branch that files a decision or a devlog entry regenerates the
 decision index, the tag pages and the devlog book, and commits its own
@@ -89,40 +95,63 @@ commit. Never a judgement, always a chore, and one that a contributor
 without the habit resolves by hand, which is how a generated file drifts
 from its generator.
 
-The sources never conflict; [ADR-002](ADR-002.md) saw to that with
-fragments. The views conflict *because* they are committed where branches
-live.
+The sources never conflict; [ADR-002](ADR-002.md) saw to that with fragments. The views
+conflict *because* they are committed where branches live.
+
+The job makes a second kind of write, and it has the opposite shape. A
+**source repair** is a write to a source the record already implies: the
+fixer's links ([ADR-005](ADR-005.md)), a journal entry's `created:` filled from its path
+([#33](https://github.com/dmarx/luria/issues/33)), a superseded document's successor, once that field exists. Each
+touches only files the branch itself authored — the entry it filed, the
+prose it wrote — so two branches never meet on one. Until now `luria
+index` made both kinds of write in one pass, so they were committed
+together, in one place, and that place had to be wrong for one of them.
 
 ## Decision
 
-**Generated views are committed on the default branch only.**
+**Repairs and views are two commands, committed at two points.**
 
-- **On push to the default branch**, the generation job runs as before —
-  `luria concretize`, `luria link --fix`, `luria index` — commits the diff
-  as the bot and pushes, and the lint job reads that commit through the
-  `needs:` + SHA handoff. Nothing here changes.
-- **On a pull request**, one job runs the generate action with
-  `commit: "false"` and the lint action right after it: the views are
-  regenerated in the working tree, the lint checks the regenerated tree,
-  and nothing is committed. The default checkout is the merge commit, so
-  the record is checked as it would land. A fork needs no write
-  permission, and the fork-safe checkout gymnastics go away.
+- **`luria repair`** writes every mechanical source repair — each one a
+  state `luria lint` reports with this command as its remedy, so the two
+  cannot disagree about what counts. It is idempotent: a second run
+  changes nothing. **`luria index`** writes views and nothing else.
+- **On push to the default branch**, the generation job runs
+  `luria concretize`, `luria repair`, `luria index`, commits the whole
+  diff as the bot in one commit and pushes, and the lint job reads that
+  commit through the `needs:` + SHA handoff. One bot commit, as before.
+- **On a pull request**, one job checks out the head branch and runs the
+  generate action with `commit-views: "false"`: `luria repair`, its diff
+  committed and pushed onto the branch; then `luria index` in the working
+  tree, committing no view; then the lint action, on the result. A repair
+  lands where the review reads it and the author's next pull carries it. A
+  view is never committed on a branch, so two branches cannot conflict on
+  one. On a fork the token cannot push: the action warns, the lint still
+  runs on the repaired tree, and the default branch repairs the source
+  after merge.
 
-A branch never carries a regenerated view, so two branches cannot
-conflict on one. The views on `main` stay committed, so
-[ADR-032](ADR-032.md)'s reasons hold: the badges land on real pages and a
-stale view on `main` still fails the lint.
+The views on `main` stay committed, so [ADR-032](ADR-032.md)'s reasons hold: the badges
+land on real pages and a stale view on `main` still fails the lint.
 
-**What [ADR-029](ADR-029.md) warned against is still wrong where it said
-so.** A checking job on the default branch that regenerates and commits
-nothing discards the output and compares the generator against itself.
-On a pull request that is the shape by design: staleness is not a
-property a branch has, because a branch does not carry the views. The
-staleness remedy says which is which. [ADR-029](ADR-029.md) carries a `history:` entry;
-its choice stands and the somewhere moves.
+**What [ADR-029](ADR-029.md) warned against is still wrong where it said so.** A
+checking job on the default branch that regenerates and commits nothing
+discards the output and compares the generator against itself. On a pull
+request that is the shape by design for the views: staleness is not a
+property a branch has, because a branch does not carry them. The staleness
+remedy says which is which. [ADR-029](ADR-029.md) carries a `history:` entry; its choice
+stands and the somewhere moves.
 
 ## Alternatives considered
 
+- **Discard the repairs on a pull request along with the views** — the
+  first draft of this decision. The check then passes on a tree the
+  reviewer never sees: the diff under review shows bare codes and missing
+  fields the runner had already fixed, and the bot edits sources on `main`
+  after merge, out of anyone's review. Rejected once the question "what
+  happens to the repairs?" was asked. The draft's objection to a bot
+  pushing to branches — that it races the author's own pushes, the hazard
+  [ADR-002](ADR-002.md) names for the collector — is about a shared file rewritten on
+  every merge. A repair is a small edit to a file the branch already
+  changed, made once, and the author pulls it like any other commit.
 - **A merge driver for generated files.** `.gitattributes` can name a
   driver that resolves a conflict by regenerating. The merge button on
   GitHub runs no driver, and neither does a contributor who has not
@@ -132,31 +161,41 @@ its choice stands and the somewhere moves.
   regenerating, never by hand." True, cheap, and it keeps the chore. It
   is written down anyway, for the branches that predate this.
 - **Stop committing views anywhere; render on demand.** Removes the class
-  entirely and removes what [ADR-032](ADR-032.md) bought: the README
-  badges and the status reports link to committed pages, and the
-  staleness lint on `main` is what catches a generator that did not run.
-- **Keep the bot on pull requests but push only source fixes** (the
-  fixer's links) and not views. Halves the conflicts and keeps a bot
-  pushing to branches, which races the author's own pushes
-  ([ADR-002](ADR-002.md) names that hazard for the collector). Simpler to
-  have the bot write to `main` only.
+  entirely and removes what [ADR-032](ADR-032.md) bought: the README badges and the
+  status reports link to committed pages, and the staleness lint on
+  `main` is what catches a generator that did not run.
+- **Keep `luria index` writing both, and have the action commit only the
+  sources on a pull request.** The action would need its own list of
+  which files are views, a second copy of what the generator already
+  knows — the drift [DP-4](../../docs/design-principles.md#dp-4) forbids. Two commit points want two commands.
 - **Status quo.** Six conflicts per stack, resolved by ritual.
 
 ## Consequences
 
-A pull request's diff shows sources only, which is what review is for;
-the generated diff was already collapsed. The regenerated views a reviewer
-might want to see are one `luria index` away, and the site preview builds
-from the same tree.
+A pull request's diff shows sources only, repaired, which is what review
+is for; the generated diff was already collapsed. The regenerated views a
+reviewer might want to see are one `luria index` away, and the site
+preview builds from the same tree.
+
+An author whose entry needed a repair pulls the bot's commit before
+pushing again — the pre-existing cost of a bot on the branch, now paid
+only when a repair happened, for a file the author was already editing.
+Locally, `luria repair` clears every finding that names it; `luria index`
+followed by `luria lint` still checks a branch, and the views it writes
+into the working tree stay uncommitted.
+
+The pull-request job checks the head branch rather than the merge commit,
+because a repair needs a branch to land on; the default-branch run checks
+the record as it landed. A repair commit pushed with `GITHUB_TOKEN` gets no
+workflow run of its own — the lint that ran in the same job on the same
+tree is its check. A repository that requires status checks on the head
+commit pushes with a token that triggers runs; the repair commit's message
+carries no skip marker for that reason, and `luria repair`'s idempotence is
+what keeps the re-run from pushing again.
 
 Branches that already committed regenerated views keep them until they
 merge, and may still conflict with each other in the meantime; the routine
 for those stays documented in CONTRIBUTING. New branches never carry them.
 
-`luria link --fix` also runs on the pull request without committing, so a
-bare code in a PR's sources passes the check there and is linked by the
-bot on `main` after merge. A reviewer reads bare codes in a source diff;
-the rendered record does not.
-
-The scaffold's workflow changes shape with this repository's, as
-[ADR-029](ADR-029.md) requires: adopters get the same three jobs.
+The scaffold's workflow changes shape with this repository's, as [ADR-029](ADR-029.md)
+requires: adopters get the same three jobs.

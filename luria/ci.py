@@ -6,15 +6,17 @@ author can regenerate and commit, or a generation job can run the generator
 and push what it wrote — the second is usually better, since a view a human
 has to rebuild by hand is still a hand-maintained projection (ADR-029).
 
-Where the commit lands is decided (ADR-tmphzwg9): on the default branch, where
-merges serialize. A pull request regenerates in the working tree and commits
-nothing, so a branch never carries generated files and two branches cannot
-conflict on them; the lint then runs in the same job on the regenerated tree.
-What stays wrong is a checking job on the default branch that regenerates and
-commits nothing — the output dies with the runner, and a `luria lint` in the
-same job compares the generator against itself. The staleness remedy has to
-carry that, because a staleness failure is usually read first in a CI log,
-where the bare "run `luria index`" omits the half that matters.
+Where the commit lands is decided (ADR-tmphzwg9): a view on the default
+branch, where merges serialize; a source repair on the branch that authored
+the source. A pull request pushes its repairs, regenerates the views in the
+working tree and commits none of them, so a branch never carries a generated
+file and two branches cannot conflict on one; the lint then runs in the same
+job on the regenerated tree. What stays wrong is a checking job on the default
+branch that regenerates and commits nothing — the output dies with the runner,
+and a `luria lint` in the same job compares the generator against itself. The
+staleness remedy has to carry that, because a staleness failure is usually
+read first in a CI log, where the bare "run `luria index`" omits the half that
+matters.
 
 Detection is deliberately crude — every CI sets `CI` — and it only ever
 changes what is *said*, never what is done: a false positive costs a sentence
@@ -58,8 +60,9 @@ def regenerate_remedy(command: str = "luria index") -> str:
     return (f"regenerate and commit the result on the default branch — run "
             f"`{command}` locally, or give CI a generation job that runs it "
             f"where merges serialize and pushes what it wrote. A pull request "
-            f"regenerates before it lints and commits nothing, so a stale "
-            f"view there means the check ran without the generator; on the "
+            f"regenerates the views before it lints and commits none of them, "
+            f"so a stale view there means the check ran without the "
+            f"generator; on the "
             f"default branch, `{command}` in the checking job alone is not "
             f"enough: nothing would commit its output, and this check would "
             f"be comparing that output against itself")

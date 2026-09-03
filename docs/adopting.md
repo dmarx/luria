@@ -123,7 +123,7 @@ to hit.
 
 1. **On push to the default branch, `dmarx/luria/actions/generate`** runs
    `luria concretize` (assigning real numbers to merge-allocated temporary
-   codes now that merges have serialized), `luria link --fix` and
+   codes now that merges have serialized), `luria repair` and
    `luria index`, commits any diff as `github-actions[bot]` with a
    `[skip ci]` message, pushes, and outputs the resulting SHA.
 2. **Then `dmarx/luria/actions/lint`** checks out that SHA, runs
@@ -131,12 +131,19 @@ to hit.
    the lint passed. The generate/lint split matters here: a checking job
    that regenerated in place would be comparing its own output against
    itself. Generation commits; the check reads the commit.
-3. **On a pull request, one job** runs the generate action with
-   `commit: "false"` — regenerate in the working tree, commit nothing —
-   and the lint action right after it, on the regenerated tree. The
-   default checkout is the merge commit, so the record is checked as it
-   would land, and a fork needs no write permission because nothing is
-   pushed.
+3. **On a pull request, one job** checks out the head branch and runs the
+   generate action with `commit-views: "false"`: `luria repair` first, its
+   diff committed and pushed onto the branch — a repair touches only the
+   files the branch authored, so the review reads the repaired source and
+   the author's next pull carries it — then `luria index` in the working
+   tree, committing no view; the lint action right after it checks the
+   result. On a fork the token cannot push; the action warns, the lint
+   still runs on the repaired tree, and the default branch repairs the
+   source after merge. A repair commit pushed with `GITHUB_TOKEN` gets no
+   workflow run of its own — the lint that ran in the same job on the same
+   tree is its check; a repository that requires status checks on the head
+   commit should push with a token that triggers runs, which is why the
+   repair commit's message carries no skip marker.
 4. A scheduled job (weekly, in the scaffold) runs `luria collect --commit`
    to assemble changelog fragments and pushes the result.
 
