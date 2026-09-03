@@ -71,7 +71,8 @@ GENERIC_TEMPLATE = """\
 # and nothing else; the title lives in `title:`, where correcting it costs an
 # edit rather than a rename plus every inbound link (LU-ADR-013).
 
-# Active | Proposed | Deferred | Superseded | Rejected, optionally " — note".
+# Active | Proposed | Deferred | Superseded | Rejected. A qualifying note goes
+# in `status_note:` — prose, like `summary:`.
 # `luria lint` enforces the vocabulary; which one counts as "in force" for
 # this scheme is the `active` key in luria.toml.
 status: Proposed

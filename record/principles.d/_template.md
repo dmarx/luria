@@ -16,7 +16,7 @@
 # `luria index`.
 
 # Same vocabulary as a decision (ADR-003): Active | Proposed | Deferred |
-# Superseded | Rejected, optionally " — <note>". A principle that stops being
+# Superseded | Rejected; a qualifying note goes in `status_note:`. A principle that stops being
 # believed is Superseded, not deleted — something out there cites it.
 status: Active
 

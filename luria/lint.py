@@ -55,10 +55,9 @@ from .config import current
 
 # The closed status vocabulary (ADR-003). `Active` is the in-force state; the
 # rest are the ways a decision can be out of force, each meaning something a
-# reader needs. An optional " — note" carries a short qualifier.
-STATUS_RE = re.compile(
-    r"^(Active|Proposed|Deferred|Superseded|Rejected)( — \S(?:.|\n)*\S)?$"
-)
+# reader needs. The qualifying note is its own field, `status_note:`, and
+# prose; a note still riding in `status:` is reported below.
+STATUS_RE = re.compile(r"^(Active|Proposed|Deferred|Superseded|Rejected)$")
 
 # Pages deliberately absent from the index: the index itself.
 INDEX_EXEMPT = {"README.md"}
@@ -111,17 +110,23 @@ def check_frontmatter(errors: list[str]) -> None:
                 errors.append(f"{rel}: no YAML frontmatter (see _template.md)")
                 continue
             check_title(errors, rel, meta, body)
-            status = str(meta.get("status", "")).strip()
-            if not status:
+            status = statuses.of(meta)
+            if not status.value:
                 errors.append(f"{rel}: no `status:` in frontmatter")
-            elif not STATUS_RE.match(status):
+            elif statuses.combined(meta):
+                # The tree states both facts in one scalar; the remedy is
+                # the repair `luria index` already runs (ADR-031).
                 errors.append(
-                    f"{rel}: nonstandard status {status!r} (want: "
-                    "Active|Proposed|Deferred|Superseded|Rejected, optional "
-                    "' — note')")
-            elif statuses.undeclared(scheme, status):
+                    f"{rel}: `status:` carries a note — `luria index` moves "
+                    f"it to `status_note:`")
+            elif not STATUS_RE.match(status.value):
                 errors.append(
-                    f"{rel}: status {status.split(' — ')[0]!r} is not one the "
+                    f"{rel}: nonstandard status {status.value!r} (want: "
+                    "Active|Proposed|Deferred|Superseded|Rejected; the "
+                    "note goes in `status_note:`)")
+            elif statuses.undeclared(scheme, status.value):
+                errors.append(
+                    f"{rel}: status {status.value!r} is not one the "
                     f"{scheme.prefix} scheme declares (see "
                     f"{cfg.rel(scheme.statuses_yaml)})")
             if not (meta.get("tags") or []):

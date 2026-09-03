@@ -525,7 +525,8 @@ def record_line(meta: dict, source: Path, outbound=(), inbound=()) -> str:
     here — the fixer owns every target in this record, and a second speller
     would be the drift DP-4 names."""
     bits = []
-    if status := str(meta.get("status", "")).strip():
+    from . import statuses
+    if status := statuses.of(meta).display:
         bits.append(f"**Status** {status}")
     # Shown only when it isn't 1, the same rule the index follows (ADR-016).
     # A version that isn't a number is somebody's mistake, not this function's

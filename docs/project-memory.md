@@ -175,7 +175,8 @@ Every scheme document carries a `status:` from a closed vocabulary —
 
 > `Active` · `Proposed` · `Deferred` · `Superseded` · `Rejected`
 
-— optionally followed by ` — a note` (`Superseded — by RFC-9`). The words
+— with an optional `status_note:` beside it (`by RFC-9`), which is prose:
+a code in it is a citation, linked by the fixer. The words
 are Luria's; what they *mean* for a scheme is the project's, declared per
 scheme: the `active` key names which status counts as **in force**, and an
 optional `statuses.yaml` beside the sources narrows the vocabulary and
