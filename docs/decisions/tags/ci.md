@@ -2,7 +2,7 @@
 
 # ADRs tagged `ci`
 
-1 of 74 decisions. Back to the [full index](../README.md).
+1 of 75 decisions. Back to the [full index](../README.md).
 
 | # | Title | Summary | Status |
 |---|---|---|---|
