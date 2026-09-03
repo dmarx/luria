@@ -269,13 +269,16 @@ drifted content: that always takes the explicit command, so a scheduled
 sweep cannot quietly launder a drift finding.
 
 What gets hashed is the construction's *stable bytes*, not the page a
-reader lands on. A GitHub file construction qualifies on its own (the blob
-URL, re-based onto raw content); any other remote declares where its
-stable bytes live with a `pin_url` template — arXiv's immutable e-print
-archive behind its abstract page, a forge's own raw scheme — because a
-rendered page's markup churns under identical content, and a hash of it
-would cry wolf. Without either, the command says so rather than storing a
-hash that would drift on its own.
+reader lands on. A GitHub file construction qualifies on its own; any
+other remote declares where its stable bytes live with a `pin_url`
+template — arXiv's immutable e-print archive behind its abstract page, a
+forge's own raw scheme — because a rendered page's markup churns under
+identical content, and a hash of it would cry wolf. Without either, the
+command says so rather than storing a hash that would drift on its own.
+Under the hood these are two entries in one table: a code relates to a
+set of *named URIs* (`read`, `bytes`, and any name a project declares in
+`[luria.remotes.X.uris]`), each a template over one vocabulary — see the
+[configuration reference](configuration.md).
 
 An arbitrary URL — a spec, a dataset card, a post the design leans on —
 is pinned by flagging it where it is cited

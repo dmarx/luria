@@ -11,9 +11,9 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 
 ## All books
 
-47 entries across 2 books, newest first.
+48 entries across 2 books, newest first.
 
 | Book | Entries | First | Last |
 |---|--:|---|---|
 | [2026-09](2026-09.md) | 2 | 2026-09-03 | 2026-09-03 |
-| [2026-08](2026-08.md) | 45 | 2026-08-03 | 2026-08-28 |
+| [2026-08](2026-08.md) | 46 | 2026-08-03 | 2026-08-28 |
