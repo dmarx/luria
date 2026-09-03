@@ -47,7 +47,7 @@ class Field:
     # shape it has.
     many: bool = False
     # Standard for every scheme rather than declared by one — `superseded_by`
-    # (ADR-tmpxmnac). Checked like any other; not a declaration, so it stays
+    # (ADR-071). Checked like any other; not a declaration, so it stays
     # out of `Contract.empty`.
     builtin: bool = False
     because: tuple[str, ...] = ()
@@ -84,10 +84,10 @@ ANY_SCHEME = "*"
 
 # The fields every scheme has. `superseded_by` holds one code or a list —
 # the successor is structure, written and checked as a reference, and the
-# typed edge the index and the site render (ADR-tmpxmnac).
+# typed edge the index and the site render (ADR-071).
 BUILT_IN = (
     Field("superseded_by", required=False, reference=ANY_SCHEME, many=True,
-          builtin=True, because=("built in: `superseded_by` (ADR-tmpxmnac)",)),
+          builtin=True, because=("built in: `superseded_by` (ADR-071)",)),
 )
 
 

@@ -16,13 +16,13 @@
 #                  from the pre-regeneration commit and never clear it.
 #   docs-check     on a pull request: repairs the sources and pushes the
 #                  repair onto the branch (a repair touches only what the
-#                  branch authored, so the review reads it), regenerates the
-#                  views in the working tree, and lints the result in the
-#                  same job. Generated views are committed on the default
-#                  branch only, so a branch never carries them and two
-#                  branches cannot conflict on them. On a fork the repair
-#                  cannot be pushed; the action warns and the lint still
-#                  runs on the repaired tree.
+#                  branch authored, so the review reads it), then lints the
+#                  sources in the same job. No view is written: generated
+#                  views are committed on the default branch only, so a
+#                  branch never carries them, is not checked for them, and
+#                  two branches cannot conflict on them. On a fork the
+#                  repair cannot be pushed; the action warns and the lint
+#                  still runs on the repaired tree.
 #   collect        assembles changelog fragments on a cadence, never
 #                  per-merge (LU-ADR-002 — a per-merge bot commit races
 #                  in-flight rebases, reintroducing the conflict fragments
@@ -99,7 +99,7 @@ jobs:
           python-version: "3.12"
       - uses: dmarx/luria/actions/generate@main
         with:
-          commit-views: "false"
+          views: "false"
       - uses: dmarx/luria/actions/lint@main
         with:
           pip-spec: ""

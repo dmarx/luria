@@ -209,16 +209,16 @@ def test_a_tracked_report_dir_still_gates(tmp_path, monkeypatch):
         adr_index.run(check=True)
 
 
-def test_lint_and_index_check_agree_about_staleness(tmp_path, monkeypatch):
-    """One rule set, two commands. They used to be two rule sets.
+def test_index_check_is_the_one_staleness_verdict(tmp_path, monkeypatch):
+    """One rule set, one command. There used to be two.
 
-    `luria index --check` and `luria lint`'s `check_generated_index` both
-    decided what "stale" means, from the same three rules written twice. The
-    gitignore exemption above went into the first one and `lint` went on
-    rejecting the identical tree — the fixer/linter split this package exists
-    to prevent, reproduced inside the package. They share `staleness()` now,
-    and this pins it from the outside: whatever one says about a tree, the
-    other says too.
+    `luria index --check` and `luria lint` both decided what "stale" means,
+    from the same three rules written twice; the gitignore exemption above
+    went into the first one and `lint` went on rejecting the identical tree.
+    They shared `staleness()` after that, and now the lint asks no staleness
+    question at all (ADR-068): the view-directory check reads only the
+    orphan rule. This pins `--check`'s verdict on both sides of the
+    exemption, and that the lint has nothing to say about a stale view.
     """
     (tmp_path / "docs" / "decisions").mkdir(parents=True)
     (tmp_path / "luria.toml").write_text(
@@ -241,7 +241,7 @@ def test_lint_and_index_check_agree_about_staleness(tmp_path, monkeypatch):
         except SystemExit:
             index_stale = True
         errors: list[str] = []
-        lint.check_generated_index(errors)
+        lint.check_view_dirs(errors)
         return index_stale, errors
 
     adr_index.run()
@@ -249,7 +249,7 @@ def test_lint_and_index_check_agree_about_staleness(tmp_path, monkeypatch):
     index_stale, errors = verdicts()
     assert not index_stale and not errors, errors
 
-    # …and they agree the other way too, on a view that IS tracked.
+    # A hand-edited view is stale to `--check` and not the lint's question.
     (tmp_path / "docs" / "decisions" / "README.md").write_text("hand-edited\n")
     index_stale, errors = verdicts()
-    assert index_stale and errors, "both must fail on a genuinely stale view"
+    assert index_stale and errors == []

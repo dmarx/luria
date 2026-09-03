@@ -65,6 +65,7 @@ Everything not listed here is at Luria's default.
 |---|---|---|
 | `issue_url` | `https://github.com/dmarx/luria/issues/{n}` | *empty* |
 | `code.globs` | `luria/*.py`, `tests/*.py`, `.github/workflows/*.yml`, `actions/**/*.yml`, `template/**/*.yml`, `template/**/*.md`, `template/**/*.stub` | *empty* |
+| `lint.fail_on` | `workflow-temp-codes` | *empty* |
 | `site.exclude` | `template/**`, `examples/**` | *empty* |
 | `site.icon` | `assets/branding/luria-brainslug/luria_project_memory_icon.svg` | *empty* |
 | `site.logo` | `assets/branding/luria-brainslug/luria_project_memory_lockup_horizontal.svg` | *empty* |
