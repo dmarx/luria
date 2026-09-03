@@ -10,6 +10,8 @@ import json
 import sys
 from pathlib import Path
 
+import pytest
+
 from _scheme import decision
 
 from luria import config, doc_refs, ref_status, remotes
@@ -438,3 +440,91 @@ def test_fixture_prefix_resolves_to_the_convention_note():
     url = remotes.resolve("FX", "ADR-032")
     assert url.endswith("docs/directives.md#fixture-codes")
     assert remotes.resolve("FX", "DP-9").endswith("#fixture-codes")
+
+
+# ── Named URIs: one vocabulary, any relation ─────────────────────────────
+
+
+def test_uris_read_is_url_by_its_long_name(project):
+    with_remote(project,
+                '[luria.remotes.UP.uris]\nread = "https://x.test/{code}"\n')
+    assert remotes.resolve("UP", "ADR-032") == "https://x.test/ADR-032"
+
+
+def test_agreeing_spellings_are_allowed(project):
+    with_remote(project, 'url = "https://x.test/{code}"\n'
+                '[luria.remotes.UP.uris]\nread = "https://x.test/{code}"\n')
+    assert remotes.resolve("UP", "ADR-032") == "https://x.test/ADR-032"
+
+
+def test_conflicting_spellings_are_a_config_error(project):
+    """`url` IS `uris.read` — two values for one setting must fail loudly,
+    not crown a silent winner."""
+    (project / "luria.toml").write_text(
+        REMOTE_TOML + 'url = "https://a.test/{code}"\n'
+        '[luria.remotes.UP.uris]\nread = "https://b.test/{code}"\n')
+    config.reset()
+    with pytest.raises(ValueError, match="one setting"):
+        config.current()
+
+
+def test_a_custom_bytes_template_uses_the_discovered_filename(project):
+    """A GitLab-style raw scheme is a template, not a builtin — and
+    {filename} feeds ANY template, carrying the lockfile's authority with
+    it: the map's silence vetoes a custom construction exactly as it vetoes
+    the shipped one."""
+    from luria import pins
+    with_remote(project, '[luria.remotes.UP.uris]\n'
+                'bytes = "https://gitlab.test/o/r/-/raw/{ref}/{dir}/{filename}"\n')
+    lockfile(project, {"ADR-032": "adr-032-a-slug.md"})
+    remote = config.current().remotes["UP"]
+    assert pins.stable_url(remote, "ADR-032") == (
+        "https://gitlab.test/o/r/-/raw/main/record/decisions.d/adr-032-a-slug.md")
+    assert pins.stable_url(remote, "ADR-999") == ""
+
+
+def test_any_name_renders_and_an_undeclared_one_is_empty(project):
+    """`read` and `bytes` are the shipped names, not the vocabulary's edge —
+    a new relation is a template waiting for a consumer, never a subsystem."""
+    with_remote(project, '[luria.remotes.UP.uris]\n'
+                'history = "https://github.com/{repo}/commits/{ref}/{dir}/{filename}"\n')
+    remote = config.current().remotes["UP"]
+    assert remotes.construct(remote, "ADR-32", "history") == (
+        "https://github.com/o/r/commits/main/record/decisions.d/ADR-032.md")
+    assert remotes.construct(remote, "ADR-32", "edit") == ""
+
+
+def test_an_unfillable_template_renders_nothing_rather_than_guessing(project):
+    """A chosen template that cannot fill a variable renders "" instead of
+    falling back to the convention — a misspelled variable stays visible as
+    a dangling reference rather than hiding behind a working guess (DP-1)."""
+    with_remote(project,
+                '[luria.remotes.UP.uris]\nread = "https://x.test/{flename}"\n')
+    assert remotes.resolve("UP", "ADR-032") == ""
+
+
+def test_a_read_template_implies_no_bytes(project):
+    """The retired regex rebased ANY rendered URL that happened to be
+    blob-shaped. Bytes now come from declarations and construction shapes
+    only — a remote whose read is a template has said nothing about where
+    its bytes live, and a guessed raw URL would be a claim nobody made."""
+    from luria import pins
+    with_remote(project,
+                'url = "https://github.com/o/r/blob/main/elsewhere/{code}.md"\n')
+    assert pins.stable_url(config.current().remotes["UP"], "ADR-032") == ""
+
+
+def test_uid_remotes_render_named_uris_through_their_groups(project):
+    with_remote(project, ARXIV +
+                '[luria.remotes.ARXIV.uris]\npdf = "https://arxiv.org/pdf/{1}.{2}"\n')
+    remote = config.current().remotes["ARXIV"]
+    assert remotes.construct(remote, "2403.05530", "pdf") == (
+        "https://arxiv.org/pdf/2403.05530")
+
+
+def test_scheme_level_uris_scope_to_the_family(project):
+    with_remote(project, '[luria.remotes.UP.schemes.VP.uris]\n'
+                'read = "https://up.example/values/{number}"\n')
+    assert remotes.resolve("UP", "VP-18") == "https://up.example/values/18"
+    assert remotes.resolve("UP", "ADR-032").endswith(
+        "record/decisions.d/ADR-032.md")
