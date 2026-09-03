@@ -440,6 +440,41 @@ class Scheme:
         return dict(sorted(found.items()))
 
 
+# The shipped URI templates, per name and per construction shape. GitHub's
+# blob/raw pairing lives HERE, as data — not as a regex that parses a rendered
+# URL back apart. A different forge is a different pair of templates in a
+# remote's `uris` table; teaching Luria a new forge builtin would be one more
+# entry, and both are the same kind of thing.
+_BLOB = "https://github.com/{repo}/blob/{ref}"
+_RAW = "https://raw.githubusercontent.com/{repo}/{ref}"
+_DEFAULT_URIS: dict[str, dict[str, str]] = {
+    "read": {"document": _BLOB + "/{document}#{anchor}",
+             "file": _BLOB + "/{dir}/{filename}"},
+    "bytes": {"document": _RAW + "/{document}",
+              "file": _RAW + "/{dir}/{filename}"},
+}
+
+
+def _fold_uris(spec: dict, where: str) -> dict[str, str]:
+    """A table's `uris` plus its sugar spellings, as one dict.
+
+    `url` and `pin_url` ARE `uris.read` and `uris.bytes` — the short names
+    for the two relations Luria itself consumes. Folded at load so exactly
+    one structure answers at render time (DP-4); setting both spellings to
+    different values is a config error rather than a silent winner."""
+    declared = {str(k): str(v) for k, v in (spec.get("uris") or {}).items()}
+    for sugar, uri_name in (("url", "read"), ("pin_url", "bytes")):
+        value = spec.get(sugar, "")
+        if not value:
+            continue
+        if declared.get(uri_name, value) != value:
+            raise ValueError(
+                f"luria.toml: {where} sets both `{sugar}` and "
+                f"`uris.{uri_name}` — they are one setting; keep either")
+        declared[uri_name] = value
+    return declared
+
+
 @dataclass(frozen=True)
 class RemoteScheme:
     """How one of a remote's code families constructs (ADR-023).
@@ -457,7 +492,8 @@ class RemoteScheme:
     `anchor` defaults to the prefix lowercased plus the number — `dp-18` —
     which is the anchor shape Luria's own document render emits, so a remote
     on current conventions needs only the `document` line. A `url` template
-    overrides both and takes {code}, {number} and {prefix}."""
+    overrides both, and a `uris` table names further relations for this
+    family alone — both with the full template vocabulary (see `Remote`)."""
     prefix: str
     dir: str = ""
     document: str = ""
@@ -472,6 +508,10 @@ class RemoteScheme:
     # lockfile has not endorsed yet — the endorsement is of the code family
     # as a body of knowledge, not of one citation at a time.
     pin: bool = False
+    # Named URI templates for this code family — `[….schemes.Y.uris]`. The
+    # general form of `url` and `pin_url`, which are its `read` and `bytes`
+    # entries; populated at load with the sugar folded in (`_fold_uris`).
+    uris: dict[str, str] = field(default_factory=dict)
 
     def anchor_for(self, number: int) -> str:
         template = self.anchor or f"{self.prefix.lower()}-{{number}}"
@@ -514,7 +554,21 @@ class Remote:
     abstract page is a rendering:
 
         pin_url = "https://arxiv.org/e-print/{1}.{2}"
-    """
+
+    Both are the short names of a general table: a code relates to a SET of
+    named URIs, each through a template over one vocabulary — {code},
+    {number}, {prefix}, {repo}, {ref}, {dir}, {document}, {anchor}, and
+    {filename}, which the discovered lockfile map fills. `url` is
+    `uris.read`, `pin_url` is `uris.bytes`, and a relation Luria does not
+    ship yet is one more name:
+
+        [luria.remotes.LU.uris]
+        bytes   = "https://gitlab.example/{repo}/-/raw/{ref}/{dir}/{filename}"
+        history = "https://github.com/{repo}/commits/{ref}/{dir}/{filename}"
+
+    GitHub's blob/raw pair is simply the shipped default pair of `read` and
+    `bytes` templates for a remote with a `repo` — a different forge is a
+    different pair of lines, not a different subsystem."""
     prefix: str
     repo: str = ""
     ref: str = "main"
@@ -545,6 +599,11 @@ class Remote:
     # as a body of knowledge, and one `luria remotes --pin` keeps the hashes
     # current while `luria lint` reports what is cited but not yet endorsed.
     pin: bool = False
+    # Named URI templates — `[luria.remotes.X.uris]`. A code relates to a SET
+    # of URIs through one template vocabulary, and this table is where a
+    # relation beyond the shipped two gets its name; `url` and `pin_url` are
+    # sugar for its `read` and `bytes` entries, folded in at load.
+    uris: dict[str, str] = field(default_factory=dict)
     schemes: dict[str, RemoteScheme] = field(default_factory=dict)
 
     @property
@@ -567,51 +626,98 @@ class Remote:
     def scheme_for(self, code: str) -> RemoteScheme | None:
         return self.schemes.get(code.rsplit("-", 1)[0].upper())
 
-    def link(self, code: str, filename: str = "") -> str:
-        """The URL for a foreign code, best available construction.
+    def link(self, code: str, filename: str | None = "") -> str:
+        """The reader's URL for a foreign code — the `read` URI."""
+        return self.uri("read", code, filename)
 
-        A uid remote has exactly one rung — the `url` template, fed the whole
-        tail as {0}/{uid} and its capture groups by position (ADR-024).
-        Otherwise: per-scheme config wins (ADR-023); then an explicit
-        remote-level `url` template; a filename discovered from the remote
-        (`luria remotes --refresh`), which is the only thing that can resolve
-        a title-slug name; and the code-only convention (ADR-013), which is
-        right whenever the remote follows it."""
+    def uri(self, name: str, code: str, filename: str | None = "") -> str:
+        """Render the named URI for a code — the one place a code becomes a
+        URL, whatever the relation's name.
+
+        A code relates to a SET of URIs, not one: `read` is where a reader
+        lands, `bytes` is what a content pin hashes (#135), and a project may
+        declare further names ahead of a consumer. Every name renders through
+        one template vocabulary — {code}, {number}, {prefix}, {repo}, {ref},
+        {dir}, {document}, {anchor}, {filename} — so a new relation is a
+        template, never a subsystem.
+
+        Precedence for `read` is ADR-023's: the scheme's template, then the
+        scheme's shape (a `document`'s anchored page, a `dir`'s file), then
+        the remote's template, then the remote-level file construction. For
+        every other name a declaration beats a derivation at either level
+        (ADR-066), and a derived default exists only where `read` itself
+        resolves by construction — a remote whose documents live behind a
+        `url` template has told us nothing about where its bytes live, and a
+        guessed raw URL would be a claim nobody made. A chosen template that
+        cannot fill its variables renders "" rather than falling through:
+        silent fallback would hide a misspelled variable behind a working
+        convention (DP-1).
+
+        `filename` carries the discovered-map contract (ADR-016): "" means
+        never discovered (the code-only convention fills {filename}), a name
+        means discovered, None means the map is authoritative and silent —
+        {filename} is then unavailable, so any construction needing it
+        renders "".
+
+        A uid remote has exactly one rung per name — its own template, fed
+        the whole tail as {0}/{uid} and its capture groups by position
+        (ADR-024)."""
         if self.uid:
-            return self._format(self.url, code)
-        prefix, number = code.rsplit("-", 1)
-        number = int(number)
+            return self._format(self.uris.get(name, ""), code)
         scheme = self.scheme_for(code)
-        if scheme is not None:
-            if scheme.url:
-                return scheme.url.format(code=code, number=number, prefix=prefix)
-            if scheme.document and self.repo:
-                return (f"{self.base('')}/{scheme.document}"
-                        f"#{scheme.anchor_for(number)}")
-            if scheme.dir and self.repo:
-                return f"{self.base(scheme.dir)}/{filename or code + '.md'}"
-        if self.url:
-            return self.url.format(code=code, number=number, prefix=prefix)
-        if not self.repo:
+        if name == "read":
+            if scheme is not None and scheme.uris.get("read"):
+                template = scheme.uris["read"]
+            elif scheme is not None and scheme.document and self.repo:
+                template = _DEFAULT_URIS["read"]["document"]
+            elif scheme is not None and scheme.dir and self.repo:
+                template = _DEFAULT_URIS["read"]["file"]
+            elif self.uris.get("read"):
+                template = self.uris["read"]
+            elif self.repo:
+                template = _DEFAULT_URIS["read"]["file"]
+            else:
+                return ""
+        else:
+            template = (scheme.uris.get(name, "") if scheme else "") \
+                or self.uris.get(name, "") \
+                or _DEFAULT_URIS.get(name, {}).get(self._construction(scheme), "")
+        return self._render(template, code, scheme, filename) if template else ""
+
+    def _construction(self, scheme: RemoteScheme | None) -> str:
+        """How `read` constructs when no template governs it: "document",
+        "file", or "" when a template (or nothing) answers instead. The only
+        shapes whose other-name defaults are derivable rather than guessed."""
+        if scheme is not None and scheme.uris.get("read"):
             return ""
-        return f"{self.base()}/{filename or code + '.md'}"
+        if scheme is not None and scheme.document and self.repo:
+            return "document"
+        if scheme is not None and scheme.dir and self.repo:
+            return "file"
+        if self.uris.get("read"):
+            return ""
+        return "file" if self.repo else ""
 
-    def pin_link(self, code: str) -> str:
-        """Where this code's stable bytes live, by declaration — "" when no
-        `pin_url` covers it. The declared counterpart of `link()`: the same
-        substitutions, answering "what does a pin hash" where `link()` answers
-        "where does a reader land" (#135)."""
-        if self.uid:
-            return self._format(self.pin_url, code)
+    def _render(self, template: str, code: str, scheme: RemoteScheme | None,
+                filename: str | None) -> str:
+        """One template, one vocabulary. A variable the remote cannot supply
+        is simply absent, and a template that references it renders ""."""
         prefix, number = code.rsplit("-", 1)
-        scheme = self.scheme_for(code)
-        if scheme is not None and scheme.pin_url:
-            return scheme.pin_url.format(code=code, number=int(number),
-                                         prefix=prefix)
-        if self.pin_url:
-            return self.pin_url.format(code=code, number=int(number),
-                                       prefix=prefix)
-        return ""
+        values: dict = {"code": code, "number": int(number), "prefix": prefix,
+                        "ref": self.ref,
+                        "dir": (scheme.dir if scheme is not None and scheme.dir
+                                else self.dir)}
+        if self.repo:
+            values["repo"] = self.repo
+        if scheme is not None and scheme.document:
+            values["document"] = scheme.document
+            values["anchor"] = scheme.anchor_for(int(number))
+        if filename is not None:
+            values["filename"] = filename or f"{code}.md"
+        try:
+            return template.format(**values)
+        except (KeyError, IndexError):
+            return ""
 
     def _format(self, template: str, code: str) -> str:
         """A uid template, fed the whole tail as {0}/{uid} and its capture
@@ -1070,6 +1176,7 @@ def load(root: Path | None = None, text: str | None = None) -> Config:
                 uid=spec.get("uid", ""),
                 pin_url=spec.get("pin_url", ""),
                 pin=bool(spec.get("pin", False)),
+                uris=_fold_uris(spec, f"remotes.{prefix.upper()}"),
                 schemes={
                     s.upper(): RemoteScheme(
                         s.upper(),
@@ -1079,6 +1186,8 @@ def load(root: Path | None = None, text: str | None = None) -> Config:
                         url=sub.get("url", ""),
                         pin_url=sub.get("pin_url", ""),
                         pin=bool(sub.get("pin", False)),
+                        uris=_fold_uris(
+                            sub, f"remotes.{prefix.upper()}.schemes.{s.upper()}"),
                     )
                     for s, sub in spec.get("schemes", {}).items()
                 },
