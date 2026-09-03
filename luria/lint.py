@@ -185,7 +185,9 @@ def check_contracts(errors: list[str]) -> None:
     known: dict[str, set[str]] = {}
     for scheme in cfg.schemes.values():
         c = contract.for_scheme(scheme)
-        if c.empty:
+        # Not `c.empty`: that ignores the built-in `superseded_by` field,
+        # which is exactly the one every scheme has to have checked.
+        if not c.fields and not c.groups:
             continue
         for field in c.fields:
             if (field.reference and field.reference != contract.ANY_SCHEME
