@@ -265,3 +265,26 @@ def test_a_project_cannot_promote_its_own_acknowledgement_to_a_failure():
     # it in `fail_on` is a dial set to a notch that does not exist, and the
     # existing check says so rather than silently enforcing nothing.
     assert "acknowledged-uniformity" not in lint.FAILABLE
+
+
+# --- the two things a status field carries ------------------------------
+
+def test_a_status_parses_into_its_word_and_its_note():
+    """One scalar, two concepts (ADR-003): the word is data, the note is
+    prose. Split in six places before this existed."""
+    from luria import statuses
+    s = statuses.parse("Superseded — by [ADR-035](ADR-035.md)")
+    assert (s.value, s.note) == ("Superseded", "by [ADR-035](ADR-035.md)")
+    assert s.display == "Superseded — by [ADR-035](ADR-035.md)"
+    bare = statuses.parse("Active")
+    assert (bare.value, bare.note, bare.display) == ("Active", "", "Active")
+    assert statuses.parse(None).value == ""
+
+
+def test_a_document_exposes_both(project):
+    from _scheme import decision
+    from luria.adr_index import Adr
+    path = decision(project, 1, "Deferred — parked by ADR-002")
+    doc = Adr(path)
+    assert doc.status_value == "Deferred" and doc.status_note == "parked by ADR-002"
+    assert doc.status == "Deferred — parked by ADR-002"

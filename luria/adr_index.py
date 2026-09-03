@@ -175,7 +175,19 @@ class Adr:
 
     @property
     def status(self) -> str:
+        """The field as written — the display form. `status_value` and
+        `status_note` are the two things it carries."""
         return str(self.meta.get("status", "")).strip()
+
+    @property
+    def status_value(self) -> str:
+        from . import statuses
+        return statuses.parse(self.status).value
+
+    @property
+    def status_note(self) -> str:
+        from . import statuses
+        return statuses.parse(self.status).note
 
     @property
     def tags(self) -> list[str]:
