@@ -161,3 +161,28 @@ def test_the_fixer_leaves_it_alone(unusual):
     """It is made of example codes — `RFC-001` names nothing. Rewriting them
     into links would report the page to itself on the next lint."""
     assert current().is_generated(current().record_doc)
+
+
+# --- what an entry must carry (#141) --------------------------------------
+
+def test_the_page_says_when_no_scheme_demands_more_than_the_standard_fields(unusual):
+    section = record_doc.render().split("## What an entry must carry")[1].split("\n## ")[0]
+    assert "Nothing beyond the standard fields" in section
+    assert "requires" in section and "references" in section
+
+
+def test_the_page_lists_each_obligation_with_where_it_was_declared(unusual):
+    (unusual / "luria.toml").write_text(
+        (unusual / "luria.toml").read_text()
+        + '\n[luria.schemes.RFC.tag_groups.track]\n'
+          'tags = ["fast", "slow"]\nrequire = "exactly-one"\n')
+    config.reset()
+    text = (unusual / "luria.toml").read_text().replace(
+        'active = "Ratified"', 'active = "Ratified"\nrequires = ["champion"]')
+    (unusual / "luria.toml").write_text(text)
+    config.reset()
+    section = record_doc.render().split("## What an entry must carry")[1].split("\n## ")[0]
+    assert "`RFC`" in section
+    assert "`champion`" in section and "schemes.RFC.requires" in section
+    assert "`track`" in section and "exactly one of `fast`, `slow`" in section
+    assert "Nothing beyond" not in section

@@ -166,3 +166,72 @@ def test_the_shipped_record_is_clean_through_the_contract():
     errors: list[str] = []
     lint.check_contracts(errors)
     assert errors == []
+
+
+# --- provenance, rendered (#141 step D) -----------------------------------
+
+def test_a_finding_names_the_key_that_declared_the_obligation(tmp_path, monkeypatch):
+    """Not just the file: the key. When a second authoring surface exists,
+    "luria.toml" alone would send the reader to the wrong table."""
+    root = project(tmp_path, monkeypatch,
+                   'requires = ["arxiv"]\n'
+                   '[luria.schemes.SOTA.references]\n'
+                   'source = { scheme = "LIT" }')
+    doc(root, "record/practices.d/SOTA-001.md", code="SOTA-001", tags=[],
+        extra="source: ADR-001")
+    errors: list[str] = []
+    lint.check_contracts(errors)
+    assert any("(luria.toml: schemes.SOTA.requires)" in e for e in errors), errors
+    assert any("is not a LIT code" in e
+               and "(luria.toml: schemes.SOTA.references.source)" in e
+               for e in errors), errors
+
+
+def test_a_merged_obligation_names_both_keys(tmp_path, monkeypatch):
+    root = project(tmp_path, monkeypatch,
+                   'requires = ["source"]\n'
+                   '[luria.schemes.SOTA.references]\n'
+                   'source = { scheme = "LIT" }')
+    doc(root, "record/practices.d/SOTA-001.md", code="SOTA-001", tags=[])
+    errors: list[str] = []
+    lint.check_contracts(errors)
+    e, = errors
+    assert "schemes.SOTA.requires" in e and "schemes.SOTA.references.source" in e
+
+
+def test_a_group_finding_names_its_key_and_derived_membership(tmp_path, monkeypatch):
+    root = project(tmp_path, monkeypatch,
+                   '[luria.schemes.SOTA.tag_groups.axis]\n'
+                   'tags = ["a", "b"]\nrequire = "exactly-one"')
+    doc(root, "record/practices.d/SOTA-001.md", code="SOTA-001", tags=[])
+    errors: list[str] = []
+    lint.check_contracts(errors)
+    e, = errors
+    assert "(luria.toml: schemes.SOTA.tag_groups.axis)" in e
+
+
+def test_describe_is_one_renderer_for_the_whole_contract(tmp_path, monkeypatch):
+    """What the record page prints and what a finding cites are the same
+    words from the same place, so they cannot drift apart (DP-4)."""
+    project(tmp_path, monkeypatch,
+            'requires = ["arxiv"]\n'
+            '[luria.schemes.SOTA.references]\n'
+            'source = { scheme = "LIT" }\n'
+            'cites = { scheme = "LIT", required = false }\n'
+            '[luria.schemes.SOTA.tag_groups.axis]\n'
+            'tags = ["a", "b"]\nrequire = "exactly-one"\nexcluded_by = ["z"]')
+    lines = contract.describe(sota())
+    text = "\n".join(lines)
+    assert "`arxiv`" in text and "required" in text
+    assert "`source`" in text and "`LIT` code" in text
+    assert "`cites`" in text and "optional" in text
+    assert "`axis`" in text and "exactly one of `a`, `b`" in text and "`z`" in text
+    for key in ("schemes.SOTA.requires", "schemes.SOTA.references.source",
+                "schemes.SOTA.references.cites", "schemes.SOTA.tag_groups.axis"):
+        assert key in text, key
+    assert len(lines) == 4
+
+
+def test_describe_of_an_empty_contract_is_empty(tmp_path, monkeypatch):
+    project(tmp_path, monkeypatch)
+    assert contract.describe(sota()) == []

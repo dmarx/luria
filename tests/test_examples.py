@@ -163,17 +163,29 @@ def test_two_schemes_can_disagree_about_the_same_work(example):
         set(statuses.declared(cfg.schemes["SOTA"]))
 
 
-def test_a_scheme_can_require_its_own_fields(example):
-    """`requires` is what makes "every practice cites a paper" a check rather
-    than a sentence in CONTRIBUTING."""
+def test_a_practice_names_the_paper_behind_it(example):
+    """A declared reference is what makes "every practice cites a paper" a
+    check rather than a sentence in CONTRIBUTING — and a *typed* one, so a
+    practice citing a decision, or a sentence, fails too (ADR-060). The
+    example carried `requires = ["source"]` until #141's dogfooding pass
+    measured the gap; `arxiv` on a paper stays a plain `requires`, because
+    it names nothing in the record."""
     root = example("knowledge-base")
-    assert config.current().schemes["SOTA"].requires == ("source",)
+    ref, = config.current().schemes["SOTA"].references
+    assert (ref.field, ref.scheme, ref.required) == ("source", "LIT", True)
+    assert config.current().schemes["LIT"].requires == ("arxiv",)
 
     doc = root / "record" / "practices.d" / "SOTA-001.md"
-    doc.write_text(doc.read_text().replace("source: LIT-001\n", ""))
+    text = doc.read_text()
+    doc.write_text(text.replace("source: LIT-001\n", ""))
     errors = []
     lint.check_contracts(errors)
-    assert any("no `source:`" in e for e in errors)
+    assert any("no `source:`" in e and "LIT reference" in e for e in errors)
+
+    doc.write_text(text.replace("source: LIT-001\n", "source: 'a paper I read once'\n"))
+    errors = []
+    lint.check_contracts(errors)
+    assert any("is not a code" in e for e in errors)
 
 
 def test_exactly_one_primary_category_is_enforced(example):

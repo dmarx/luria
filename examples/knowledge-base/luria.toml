@@ -23,14 +23,21 @@ output   = "docs/literature"
 render   = "index"
 requires = ["arxiv"]
 
-# The product. `requires` is the rule that this is an anthology of JUSTIFIED
-# practice: a recommendation with no paper behind it is an opinion, and the
-# lint says so rather than the CONTRIBUTING file.
+# The product. The declared reference is the rule that this is an anthology
+# of JUSTIFIED practice: a recommendation with no paper behind it is an
+# opinion, and the lint says so rather than the CONTRIBUTING file. Declared
+# as a reference rather than a bare `requires` because the field names a
+# LIT document, and only a typed field can say so: `requires` is satisfied
+# by any truthy value, so a practice citing a decision — or a sentence — as
+# its evidence passed (LU-ADR-060). `arxiv` on a paper stays a plain
+# `requires`; it names nothing in the record.
 [luria.schemes.SOTA]
 dir      = "record/practices.d"
 output   = "docs/practices"
 render   = "index"
-requires = ["source"]
+
+[luria.schemes.SOTA.references]
+source = { scheme = "LIT", required = true }
 
 # "Exactly one primary category" — the rule every tagged corpus states in
 # prose and then drifts away from. Tags outside this group stay free, so
