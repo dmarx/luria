@@ -318,3 +318,31 @@ def test_pending_documents_can_be_promoted(project, capsys):
     config.reset()
     errors, _ = dial_errors(capsys)
     assert any("undecided document(s)" in e and "failing" in e for e in errors)
+
+
+# ── Temporary codes in workflow files ────────────────────────────────────
+
+
+def workflow_errors(project, text: str) -> list[str]:
+    wf = project / ".github" / "workflows" / "docs.yml"
+    wf.parent.mkdir(parents=True)
+    wf.write_text(text)
+    found: list[str] = []
+    lint.check_workflow_temp_codes(found)
+    return found
+
+
+def test_a_temporary_code_in_a_workflow_is_reported(project):
+    """The generation job's commit would be refused: `luria concretize`
+    rewrites the code with everything else, and the workflow token may not
+    modify `.github/workflows/`. Found by the first merge that cited a
+    pending decision from a workflow comment."""
+    errors = workflow_errors(project, "# The shape (ADR-tmpabcde).\nname: Docs\n")
+    assert len(errors) == 1
+    assert "docs.yml:1" in errors[0]
+    assert "ADR-tmpabcde" in errors[0]
+    assert "cite the number once the decision has one" in errors[0]
+
+
+def test_a_numbered_code_in_a_workflow_is_fine(project):
+    assert workflow_errors(project, "# The shape (ADR-029).\nname: Docs\n") == []
