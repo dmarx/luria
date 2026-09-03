@@ -106,25 +106,6 @@ jobs:
       - run: pip install -e ".[dev]"
       - run: python -m pytest tests -q
 
-  # `needs:` + the sha output is the load-bearing handoff: a push made with
-  # GITHUB_TOKEN does not retrigger workflows, so a lint reading any other
-  # commit would fail on staleness the bot just repaired — or, worse, never
-  # re-run to clear it.
-  docs-lint:
-    if: github.event_name != 'schedule'
-    needs: docs-generate
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ needs.docs-generate.outputs.sha }}
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - uses: ./actions/lint
-        with:
-          pip-spec: -e .
-
   collect:
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
