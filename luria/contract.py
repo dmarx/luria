@@ -46,7 +46,7 @@ class Field:
     # so; a plain `requires` field is satisfied by any truthy value,
     # whatever shape it has.
     many: bool = False
-    # A controlled vocabulary the field draws from (ADR-tmpcso13), with its
+    # A controlled vocabulary the field draws from (ADR-076), with its
     # values in file order and the effective value of an absent field.
     # `reference` and `vocabulary` are the two typed cases of what a field
     # holds; neither set is `Any`.
@@ -265,7 +265,7 @@ def values_of(field: Field, raw) -> list | None:
 def effective_values(field: Field, raw) -> list | None:
     """What a field is read as: its written values, or the default when it
     is absent. The source is never touched — a default is a convention the
-    config states, not a fact the tree does (ADR-tmpcso13)."""
+    config states, not a fact the tree does (ADR-076)."""
     values = values_of(field, raw)
     if values is None:
         return None

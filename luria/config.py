@@ -275,7 +275,7 @@ class Reference:
 @dataclass(frozen=True)
 class Vocabulary:
     """A frontmatter field backed by a scheme-local controlled vocabulary
-    (ADR-tmpcso13):
+    (ADR-076):
 
         [luria.schemes.SCENE.fields.worlds]
         vocabulary = "worlds"     # the values: worlds.yaml beside the records

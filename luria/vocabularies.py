@@ -16,7 +16,7 @@ The scheme directory already held two of these — `statuses.yaml` behind
 `status:` (closed, one value) and `tags.yaml` behind `tags:` (open, many) —
 each built as a special case. A downstream record's `worlds: [A, C]` on 37
 of 75 entries, from a closed six-value set, was the third, and the one that
-showed the pattern (ADR-tmpcso13).
+showed the pattern (ADR-076).
 
 The file is the vocabulary; the TOML table is the wiring, and the wiring is
 explicit — a stray `foo.yaml` beside the records declares nothing. The

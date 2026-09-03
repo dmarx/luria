@@ -495,7 +495,7 @@ def _edge_bits(outbound, inbound) -> list[str]:
 def _vocabulary_bits(meta: dict, source: Path) -> list[str]:
     """A vocabulary field's *written* values, each linked to its page. The
     default is deliberately not shown: a reader is never shown a field the
-    file does not have (ADR-tmpcso13); the record page says what absence
+    file does not have (ADR-076); the record page says what absence
     means."""
     cfg = current()
     scheme = next((s for s in cfg.schemes.values()
