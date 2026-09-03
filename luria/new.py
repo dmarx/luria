@@ -71,10 +71,15 @@ def default_kind() -> str | None:
     return journals[0] if len(journals) == 1 else None
 
 
-def _sub_line(text: str, field: str, value: str) -> str:
+def _sub_line(text: str, field: str, value) -> str:
     """Replace a single-line frontmatter field, or a block one (`>-` /
-    list) through its indented continuation lines."""
+    list) through its indented continuation lines.
+
+    `value` may arrive as a tuple: Fire reads `--tags record,mechanism` as
+    a Python literal, and that is the spelling the help text invites."""
     pattern = re.compile(rf"^{field}:.*(?:\n(?:  |- ).*)*", re.MULTILINE)
+    if isinstance(value, (tuple, list)):
+        value = ", ".join(str(v) for v in value)
     if field == "tags":
         replacement = "tags:\n" + "\n".join(
             f"- {t.strip()}" for t in value.split(",") if t.strip())
