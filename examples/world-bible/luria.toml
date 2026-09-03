@@ -2,7 +2,7 @@
 # in one or more of a closed set of world trajectories.
 #
 # This is the shape that produced two additions to the machinery. A scene
-# `follows` several scenes, so its reference is plural (LU-ADR-tmp0sz8p);
+# `follows` several scenes, so its reference is plural (LU-ADR-075);
 # and `worlds` is a field that is not a reference (its values are not
 # codes), not a tag (the scenes have topical tags too) and not a status —
 # a frontmatter field backed by a scheme-local controlled vocabulary

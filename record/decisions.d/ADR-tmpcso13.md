@@ -113,7 +113,7 @@ says what the values mean, and each was built as a special case. The world
 record is the third instance, and it is the one that shows the pattern.
 
 The compiled contract ([#142](https://github.com/dmarx/luria/issues/142)) is where this lands. A `Field` today carries
-`required`, a `reference` scheme or none, and since [ADR-tmp0sz8p](ADR-tmp0sz8p.md) a `many`
+`required`, a `reference` scheme or none, and since [ADR-075](ADR-075.md) a `many`
 shape. A reviewer of that work observed that `reference: str | None` is a
 type wearing a boolean's clothes: `Any`, `Ref[Scheme]`, and now a third
 case. This decision adds the third case and names the type.

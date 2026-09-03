@@ -277,11 +277,11 @@ def test_value_pages_are_generated_views_nobody_has_to_link(tmp_path, monkeypatc
     assert root / "docs/scenes/worlds" in adr_index.view_dirs()
     errors: list[str] = []
     lint.check_docs_index(errors)
-    lint.check_generated_index(errors)
+    lint.check_view_dirs(errors)
     assert errors == [], errors
     write(root, "docs/scenes/worlds/Z.md", "# stale\n")
     errors = []
-    lint.check_generated_index(errors)
+    lint.check_view_dirs(errors)
     assert any("Z.md" in e for e in errors), errors
 
 
