@@ -39,6 +39,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from . import config as config_mod
+from . import contract as contract_mod
 from .adr_index import escape_cell
 from .config import current
 
@@ -105,6 +106,26 @@ def schemes_section(cfg) -> str:
                      f"`{s.active}`"])
     return _table(["a code looks like", "filed in", "rendered to",
                    "in force when status is"], rows)
+
+
+def contracts_section(cfg) -> str:
+    """What each scheme demands of an entry beyond the standard fields —
+    the compiled contract `luria lint` checks (#141), one line per
+    obligation, each naming the key that declared it. Rendered from the
+    same description a finding cites, so the page and the lint cannot
+    disagree about what a scheme asks for."""
+    blocks = []
+    for prefix, scheme in cfg.schemes.items():
+        lines = contract_mod.describe(contract_mod.for_scheme(scheme))
+        if lines:
+            blocks.append(f"**`{prefix}`**\n\n"
+                          + "\n".join(f"- {line}" for line in lines) + "\n")
+    if not blocks:
+        return ("*Nothing beyond the standard fields — `status`, `title`, "
+                "`tags`, `date`. A scheme asks for more with `requires`, "
+                "`references` and `tag_groups`; see the "
+                f"[schema]({SCHEMA_URL}).*\n")
+    return "\n".join(blocks)
 
 
 def journals_section(cfg) -> str:
@@ -225,6 +246,12 @@ SECTIONS = (
      "was never linked; `luria link --fix` writes the link so nobody has to "
      "know where the document renders.",
      schemes_section),
+    ("What an entry must carry",
+     "Beyond the standard fields, what each scheme's entries must carry — "
+     "compiled from `luria.toml` into the contract `luria lint` checks, "
+     "with where each obligation was declared. A finding cites the same "
+     "line.",
+     contracts_section),
     ("Journals",
      "Dated observations. An entry is true about the day it was written and "
      "is never revised or consumed — the books are a view over sources that "

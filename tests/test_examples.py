@@ -163,17 +163,31 @@ def test_two_schemes_can_disagree_about_the_same_work(example):
         set(statuses.declared(cfg.schemes["SOTA"]))
 
 
-def test_a_scheme_can_require_its_own_fields(example):
-    """`requires` is what makes "every practice cites a paper" a check rather
-    than a sentence in CONTRIBUTING."""
+def test_a_practice_names_the_paper_behind_it(example):
+    """A declared reference is what makes "every practice cites a paper" a
+    check rather than a sentence in CONTRIBUTING — and a *typed* one, so a
+    practice citing a decision, or a sentence, fails too (ADR-060). The
+    example carried `requires = ["source"]` until #141's dogfooding pass
+    measured the gap. A paper's own source is a field group: any of
+    `arxiv`, `doi` or `url` satisfies it, because a report never posted to
+    arXiv is a paper all the same."""
     root = example("knowledge-base")
-    assert config.current().schemes["SOTA"].requires == ("source",)
+    ref, = config.current().schemes["SOTA"].references
+    assert (ref.field, ref.scheme, ref.required) == ("source", "LIT", True)
+    group, = config.current().schemes["LIT"].field_groups
+    assert (group.name, group.fields) == ("source", ("arxiv", "doi", "url"))
 
     doc = root / "record" / "practices.d" / "SOTA-001.md"
-    doc.write_text(doc.read_text().replace("source: LIT-001\n", ""))
+    text = doc.read_text()
+    doc.write_text(text.replace("source: LIT-001\n", ""))
     errors = []
     lint.check_contracts(errors)
-    assert any("no `source:`" in e for e in errors)
+    assert any("no `source:`" in e and "LIT reference" in e for e in errors)
+
+    doc.write_text(text.replace("source: LIT-001\n", "source: 'a paper I read once'\n"))
+    errors = []
+    lint.check_contracts(errors)
+    assert any("is not a code" in e for e in errors)
 
 
 def test_exactly_one_primary_category_is_enforced(example):
@@ -298,3 +312,19 @@ def test_a_document_never_links_to_itself(example):
     linked, count = doc_refs.linkify(spec.read_text(), spec)
     assert count == 0
     assert linked.count("# SPEC-001:") == 1
+
+
+def test_a_paper_with_only_a_url_has_a_source(example):
+    """The report that was never posted to arXiv: `requires = ["arxiv"]`
+    would have failed it; the `source` group takes its `url:`."""
+    root = example("knowledge-base")
+    errors = []
+    lint.check_contracts(errors)
+    assert errors == []
+    doc = root / "record" / "literature.d" / "LIT-003.md"
+    doc.write_text(doc.read_text().replace(
+        "url: 'https://example.org/reports/communication-wall'\n", ""))
+    errors = []
+    lint.check_contracts(errors)
+    assert any("no `source`" in e and "`url:`" in e and "LIT-003" in e
+               for e in errors), errors

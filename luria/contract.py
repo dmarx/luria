@@ -28,7 +28,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
-from .config import TEMP_TAIL, TagGroup, current
+from .config import TEMP_TAIL, FieldGroup, TagGroup, current
 
 
 @dataclass(frozen=True)
@@ -55,12 +55,22 @@ class Contract:
     scheme: str
     fields: tuple[Field, ...] = ()
     groups: tuple[TagGroup, ...] = ()
+    # Several fields of which an entry must carry some — a need with a name
+    # that any of them satisfies.
+    field_groups: tuple[FieldGroup, ...] = ()
+    # Where this scheme's table lives, as a finding cites it — the prefix
+    # every key path below starts from.
+    where: str = "luria.toml"
+    # The vocabulary file a derived tag group reads its members from
+    # (`primary_for`, ADR-060), relative to the project; "" when none.
+    vocabulary: str = ""
 
     @property
     def empty(self) -> bool:
         """True for every scheme that declares nothing — which is every
         scheme that predates the three tables, and the shipped ADR scheme."""
-        return not any(not f.builtin for f in self.fields) and not self.groups
+        return (not any(not f.builtin for f in self.fields)
+                and not self.groups and not self.field_groups)
 
 
 # A reference into any local scheme: the successor a superseded document
@@ -84,6 +94,9 @@ def for_scheme(scheme) -> Contract:
     that did not merge into one — so findings read in the order the config
     was written."""
     where = f"luria.toml: schemes.{scheme.prefix}"
+    vocabulary = ""
+    if any(g.derived for g in scheme.tag_groups):
+        vocabulary = str(current().rel(scheme.tags_yaml))
     fields: dict[str, Field] = {}
     for name in scheme.requires:
         fields[name] = Field(name, because=(f"{where}.requires",))
@@ -98,20 +111,83 @@ def for_scheme(scheme) -> Contract:
             reference=ref.scheme, because=because)
     for field in BUILT_IN:
         fields.setdefault(field.name, field)
-    return Contract(scheme.prefix, tuple(fields.values()), scheme.tag_groups)
+    return Contract(scheme.prefix, tuple(fields.values()), scheme.tag_groups,
+                    field_groups=scheme.field_groups,
+                    where="luria.toml", vocabulary=vocabulary)
+
+
+def _cite(because: tuple[str, ...]) -> str:
+    """`(luria.toml: schemes.SOTA.requires, schemes.SOTA.references.source)`
+    — every declaration behind an obligation, grouped by the file it is in,
+    so a reader is sent to the key and not just the file."""
+    by_file: dict[str, list[str]] = {}
+    for entry in because:
+        file, _, key = entry.partition(": ")
+        by_file.setdefault(file, []).append(key)
+    return "(" + "; ".join(f"{file}: {', '.join(keys)}"
+                           for file, keys in by_file.items()) + ")"
+
+
+def field_group_because(contract: Contract, group: FieldGroup) -> str:
+    return (f"({contract.where}: schemes.{contract.scheme}.field_groups."
+            f"{group.name})")
+
+
+_FIELD_RULE_WORDS = {"at-least-one": "at least one of",
+                     "exactly-one": "exactly one of",
+                     "at-most-one": "at most one of"}
+
+
+def group_because(contract: Contract, group: TagGroup) -> str:
+    """Where a tag group was declared — and, when its membership is derived,
+    where the members come from."""
+    cite = f"{contract.where}: schemes.{contract.scheme}.tag_groups.{group.name}"
+    if group.derived and contract.vocabulary:
+        cite += f"; members from `{contract.vocabulary}` `primary_for`"
+    return f"({cite})"
 
 
 def explain(contract: Contract, field: Field) -> str:
-    """Why a field is demanded, in the words the finding has always used.
+    """Why a field is demanded, in the words the finding has always used,
+    plus the key that said so.
 
-    The source file is read out of the provenance rather than spelled here,
-    so the day an obligation comes from somewhere other than `luria.toml`
-    the finding says so without this function learning about it."""
-    sources = ", ".join(sorted({b.split(":", 1)[0] for b in field.because}))
+    The provenance is read out of the obligation rather than spelled here,
+    so the day one comes from somewhere other than `luria.toml` the finding
+    says so without this function learning about it."""
     if field.reference is None:
-        return f"the {contract.scheme} scheme requires it ({sources})"
+        return f"the {contract.scheme} scheme requires it {_cite(field.because)}"
     return (f"the {contract.scheme} scheme declares it a {field.reference} "
-            f"reference ({sources})")
+            f"reference {_cite(field.because)}")
+
+
+def describe(contract: Contract) -> list[str]:
+    """The whole contract, one line per obligation, each naming where it was
+    declared — the same words a finding cites, from the same place (DP-4).
+    What `docs/record.md` prints under "what an entry must carry"."""
+    lines = []
+    for field in contract.fields:
+        if field.builtin:
+            continue
+        what = "required" if field.required else "optional"
+        if field.reference is not None:
+            what += f", a `{field.reference}` code"
+            if not field.required:
+                what += " when present"
+        lines.append(f"`{field.name}` — {what} {_cite(field.because)}")
+    for group in contract.field_groups:
+        members = ", ".join(f"`{f}`" for f in group.fields)
+        lines.append(f"`{group.name}` — {_FIELD_RULE_WORDS[group.require]} "
+                     f"{members} {field_group_because(contract, group)}")
+    for group in contract.groups:
+        members = ", ".join(f"`{t}`" for t in sorted(group.tags))
+        rule = {"exactly-one": "exactly one of", "at-most-one": "at most one of",
+                "any": "any of"}[group.require]
+        what = f"{rule} {members}"
+        if group.excluded_by:
+            banned = ", ".join(f"`{t}`" for t in sorted(group.excluded_by))
+            what += f"; none of them alongside {banned}"
+        lines.append(f"`{group.name}` — {what} {group_because(contract, group)}")
+    return lines
 
 
 # A reference field is data, not prose, so it holds a bare code — but the
@@ -169,10 +245,6 @@ def _any_scheme_violations(contract: Contract, field: Field, rel: str, raw,
     return out
 
 
-def _cite(because: tuple[str, ...]) -> str:
-    return "(" + "; ".join(because) + ")"
-
-
 def violations(contract: Contract, rel: str, meta: dict,
                known: dict[str, set[str]]) -> list[str]:
     """One document against its scheme's contract, one line per breach.
@@ -198,26 +270,41 @@ def violations(contract: Contract, rel: str, meta: dict,
             out.append(
                 f"{rel}: `{field.name}: {raw}` is not a code — the "
                 f"{contract.scheme} scheme declares this field a "
-                f"{target} reference")
+                f"{target} reference {_cite(field.because)}")
         elif not code.startswith(f"{target}-"):
             out.append(
                 f"{rel}: `{field.name}: {code}` is not a {target} code — a "
                 f"{contract.scheme} document's `{field.name}` names a "
-                f"{target} document")
+                f"{target} document {_cite(field.because)}")
         elif code not in known[target]:
             out.append(f"{rel}: `{field.name}: {code}` resolves to no "
                        f"{target} document")
+    for group in contract.field_groups:
+        present = [f for f in group.fields if meta.get(f) not in (None, "", [])]
+        shown = ", ".join(f"`{f}:`" for f in group.fields)
+        has = ", ".join(f"`{f}:`" for f in present)
+        cite = field_group_because(contract, group)
+        if group.require == "at-least-one" and not present:
+            out.append(f"{rel}: no `{group.name}` — one of {shown} — the "
+                       f"{contract.scheme} scheme requires it {cite}")
+        elif group.require == "exactly-one" and len(present) != 1:
+            out.append(f"{rel}: `{group.name}` wants exactly one of {shown} "
+                       f"— has {has or 'none'} {cite}")
+        elif group.require == "at-most-one" and len(present) > 1:
+            out.append(f"{rel}: `{group.name}` wants at most one of {shown} "
+                       f"— has {has} {cite}")
     tags = {str(t) for t in (meta.get("tags") or [])}
     for group in contract.groups:
         present = sorted(tags & group.tags)
         shown = ", ".join(sorted(group.tags))
+        cite = group_because(contract, group)
         if group.require == "exactly-one" and len(present) != 1:
             out.append(f"{rel}: `{group.name}` wants exactly one of {shown} "
-                       f"— has {', '.join(present) or 'none'}")
+                       f"— has {', '.join(present) or 'none'} {cite}")
         elif group.require == "at-most-one" and len(present) > 1:
             out.append(f"{rel}: `{group.name}` wants at most one of {shown} "
-                       f"— has {', '.join(present)}")
+                       f"— has {', '.join(present)} {cite}")
         if present and (clash := sorted(tags & group.excluded_by)):
             out.append(f"{rel}: {', '.join(clash)} excludes `{group.name}`, "
-                       f"but the document also has {', '.join(present)}")
+                       f"but the document also has {', '.join(present)} {cite}")
     return out
