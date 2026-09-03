@@ -2,10 +2,9 @@
 
 The citation graph has one kind of edge: A mentions B. Three facts in the
 record are stronger than a mention and were already written down — a
-`Superseded — by` note, an `influenced_by:` list, and any field a scheme
+`superseded_by:` field, an `influenced_by:` list, and any field a scheme
 declares a reference (ADR-060) — and nothing read them as edges. Now
-something does. No new frontmatter field: a `superseded_by:` beside the note
-would be the second copy of one fact that DP-3 says will drift.
+something does.
 """
 
 from __future__ import annotations
@@ -45,45 +44,53 @@ def adr(path: Path) -> Adr:
 
 # --- supersession, read out of the note it already lives in --------------
 
-def test_a_superseded_note_with_a_link_is_an_edge(project):
+def test_the_superseded_by_field_is_an_edge(project):
     decision(project, 1, "Active")
-    path = decision(project, 2, "Superseded — by [ADR-001](ADR-001.md)")
+    path = decision(project, 2, "Superseded", superseded_by=["ADR-001"])
     edge, = edges.outbound(adr(path))
     assert (edge.source, edge.relation, edge.target) == \
         ("ADR-002", "superseded_by", "ADR-001")
-    assert "status" in edge.because
+    assert "superseded_by" in edge.because
 
 
-def test_a_bare_code_in_the_note_is_the_same_edge(project):
-    decision(project, 1, "Active")
-    path = decision(project, 2, "Superseded — by ADR-001")
-    edge, = edges.outbound(adr(path))
-    assert edge.target == "ADR-001"
-
-
-def test_a_note_may_cite_more_than_one_successor(project):
-    """ADR-015's note runs on past its successor and names a second code:
-    the edge is 'codes cited in the note', not 'the successor'."""
+def test_the_field_may_name_several_successors(project):
     decision(project, 1, "Active")
     decision(project, 2, "Active")
-    path = decision(project, 3, "Superseded — by ADR-001, which folds in ADR-002")
+    path = decision(project, 3, "Superseded", superseded_by=["ADR-001", "ADR-002"])
     assert [e.target for e in edges.outbound(adr(path))] == ["ADR-001", "ADR-002"]
 
 
-def test_a_superseded_note_with_no_code_is_no_edge(project):
-    path = decision(project, 1, "Superseded — by the new runbook")
-    assert edges.outbound(adr(path)) == []
-
-
-def test_only_a_superseded_status_yields_the_edge(project):
-    """A Rejected note may cite what defeated it; that is a mention, not a
-    succession, and reading it as one would invent a relation."""
+def test_a_note_alone_is_not_an_edge(project):
+    """Two drafts inferred the successor from a `by CODE` note and were
+    corrected on review: the field is structure, checked and resolved; a
+    sentence the tool happens to recognise is not. The old shape is read
+    once more by `luria index`, as the repair that fills the field."""
     decision(project, 1, "Active")
-    path = decision(project, 2, "Rejected — [ADR-001](ADR-001.md) covers it")
+    path = decision(project, 2, "Superseded — by ADR-001")
     assert edges.outbound(adr(path)) == []
 
 
-def test_a_foreign_code_in_the_note_is_not_an_edge(project):
+def test_a_note_beside_the_field_is_prose_not_a_second_edge(project):
+    decision(project, 1, "Active")
+    decision(project, 2, "Active")
+    path = decision(project, 3, "Superseded — folds in ADR-002",
+                    superseded_by=["ADR-001"])
+    assert [(e.relation, e.target) for e in edges.outbound(adr(path))] == \
+        [("superseded_by", "ADR-001")]
+
+
+def test_a_code_in_any_other_status_note_is_not_an_edge(project):
+    """A Rejected note may cite what defeated it, a Deferred one what parked
+    it. The note is prose: those are citations the scanner finds, not
+    relations the graph invents."""
+    decision(project, 1, "Active")
+    rejected = decision(project, 2, "Rejected — [ADR-001](ADR-001.md) covers it")
+    deferred = decision(project, 3, "Deferred — parked by ADR-001")
+    for path in (rejected, deferred):
+        assert edges.outbound(adr(path)) == []
+
+
+def test_a_foreign_successor_is_not_an_edge(project):
     """A remote's namespace is theirs (ADR-016); the graph has no node for
     it, so there is nothing for the edge to land on."""
     (project / "luria.toml").write_text(
@@ -91,7 +98,7 @@ def test_a_foreign_code_in_the_note_is_not_an_edge(project):
         + '[luria.remotes.LU]\nname = "luria"\nrepo = "dmarx/luria"\n'
           'dir = "record/decisions.d"\n')
     config.reset()
-    path = decision(project, 1, "Superseded — by LU-ADR-013")
+    path = decision(project, 1, "Superseded", superseded_by=["LU-ADR-013"])
     assert edges.outbound(adr(path)) == []
 
 
@@ -154,7 +161,7 @@ def test_a_reference_that_is_not_a_code_is_no_edge(tmp_path, monkeypatch):
 
 def test_inbound_edges_are_the_backlinks(project):
     decision(project, 1, "Active")
-    decision(project, 2, "Superseded — by [ADR-001](ADR-001.md)")
+    decision(project, 2, "Superseded", superseded_by=["ADR-001"])
     graph = edges.graph()
     edge, = graph.inbound("ADR-001")
     assert edge.source == "ADR-002" and edge.relation == "superseded_by"
@@ -203,7 +210,7 @@ def test_the_record_line_carries_a_declared_reference_both_ways(
 
 def test_a_staged_page_carries_its_inbound_edges(project):
     decision(project, 1, "Active")
-    decision(project, 2, "Superseded — by [ADR-001](ADR-001.md)")
+    decision(project, 2, "Superseded", superseded_by=["ADR-001"])
     out = project / "build" / "site"
     site.stage(out)
     staged = (out / "content" / "record" / "decisions.d" / "ADR-001.md").read_text()

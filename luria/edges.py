@@ -5,18 +5,21 @@ The citation graph has one kind of edge: A mentions B, found in prose. Three
 facts in the record are stronger than a mention, and each was already
 written down before this module read it as an edge:
 
-    A ──superseded_by──→ B     the `Superseded — by B` status note (ADR-003)
-    A ──influenced_by──→ B     the `influenced_by:` list (ADR-012)
     A ──source─────────→ B     any field a scheme declares a reference (ADR-060)
+    A ──superseded_by──→ B     the built-in `superseded_by:` field
+    A ──influenced_by──→ B     the `influenced_by:` list (ADR-012)
 
-The field name is the relation. Nothing here is a new authoring surface:
-`superseded_by:` as a frontmatter field beside the note that already says it
-would be the second copy of one fact that DP-3 says will drift, so the edge
-is read out of the note. That is a regex over prose, which ADR-003 chose
-frontmatter to avoid — defensible here because the whole citation graph is
-already codes found in prose, and `luria migrate` writes this exact note
-shape mechanically (ADR-040). The note may cite more than one code, so the
-edge is "the codes a Superseded note cites", not "the successor".
+Two levels of claim, and only the second is an edge. A code in prose is a
+*mention* — the citation graph, found by scanning, and not this module's
+business; a code in a status note is one of those. A reference field is a
+*named relation*: the field name is the relation, and the schema vouches
+for it. `superseded_by` is a reference field every scheme has, so a
+succession is written as structure and read as structure. Two drafts here
+inferred it from the `by CODE` shape of a status note instead, and were
+corrected on review: a field is concrete and checkable, and inferring a
+relation from free text is strictly weaker — it makes the author's prose
+conform to a shape the tool happens to recognise. The old note shape is
+read once more, by `luria index`, as the repair that fills the field.
 
 Consumers: the site renders each page's edges both ways (#141). A remote
 code is never an edge — the graph has no node for it to land on (ADR-016).
@@ -24,20 +27,16 @@ code is never an edge — the graph has no node for it to land on (ADR-016).
 
 from __future__ import annotations
 
-import re
 from dataclasses import dataclass
 from pathlib import Path
 
-from . import doc_refs
 from .adr_index import Adr, load_scheme
 from .config import current
-from .contract import reference_code
+from .contract import (ANY_SCHEME, for_scheme, is_remote, local_scheme,
+                       reference_code)
 
 SUPERSEDED_BY = "superseded_by"
 INFLUENCED_BY = "influenced_by"
-
-# `Superseded — by …`: the bare word, then the note (ADR-003).
-_NOTE_RE = re.compile(r"\s+—\s+")
 
 
 @dataclass(frozen=True)
@@ -49,39 +48,35 @@ class Edge:
     because: str
 
 
-def _codes_in(text: str) -> list[str]:
-    """Local scheme codes cited in a note, linked or bare, in order.
-
-    The note is prose, so it is read the way prose is read everywhere else:
-    links unwrapped, then the scheme-driven finder (ADR-046). Issues and
-    remote codes come back as other kinds and are dropped here."""
-    plain = doc_refs.UNLINK_RE.sub(r"\1", text)
-    return [ref.describe() for ref in doc_refs.find_refs(plain)
-            if ref.kind == "scheme"]
+def _lands(field, code: str) -> bool:
+    """Whether a code is a node this graph has: a local document of the
+    declared scheme, or of any scheme for a built-in reference. A remote
+    code is a citation the remote machinery verifies, never an edge."""
+    if field.reference == ANY_SCHEME:
+        return not is_remote(code) and local_scheme(code) is not None
+    return code.startswith(f"{field.reference}-")
 
 
 def outbound(doc: Adr) -> list[Edge]:
     """Every typed edge this document is the source of."""
     out: list[Edge] = []
-    word, *rest = _NOTE_RE.split(doc.status, maxsplit=1)
-    if word.strip() == "Superseded" and rest:
-        for code in _codes_in(rest[0]):
-            if code != doc.code:
-                out.append(Edge(doc.code, SUPERSEDED_BY, code,
-                                "the `status:` note"))
+    for field in for_scheme(doc.scheme).fields:
+        if field.reference is None:
+            continue
+        raw = doc.meta.get(field.name)
+        values = raw if isinstance(raw, list) else [raw]
+        # A value that is not a code of the declared scheme is the lint's to
+        # report (ADR-060); the graph does not invent a node for it.
+        for value in values:
+            if value in (None, ""):
+                continue
+            code = reference_code(str(value))
+            if code and code != doc.code and _lands(field, code):
+                out.append(Edge(doc.code, field.name, code,
+                                f"frontmatter `{field.name}:`"))
     for code in doc.influenced_by:
         out.append(Edge(doc.code, INFLUENCED_BY, code,
                         "frontmatter `influenced_by:`"))
-    for ref in doc.scheme.references:
-        raw = doc.meta.get(ref.field)
-        if not raw:
-            continue
-        # A value that is not a code of the declared scheme is the lint's to
-        # report (ADR-060); the graph does not invent a node for it.
-        code = reference_code(str(raw))
-        if code and code.startswith(f"{ref.scheme}-"):
-            out.append(Edge(doc.code, ref.field, code,
-                            f"frontmatter `{ref.field}:`"))
     return out
 
 

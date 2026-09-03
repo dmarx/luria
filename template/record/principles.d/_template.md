@@ -16,7 +16,7 @@
 # Why: LU-ADR-012.
 
 # Same vocabulary as a decision: Active | Proposed | Deferred |
-# Superseded | Rejected, optionally " — <note>". A principle that stops being
+# Superseded | Rejected; a qualifying note goes in `status_note:`. A principle that stops being
 # believed is Superseded, not deleted — something out there cites it.
 status: Active
 

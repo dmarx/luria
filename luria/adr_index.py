@@ -175,7 +175,29 @@ class Adr:
 
     @property
     def status(self) -> str:
-        return str(self.meta.get("status", "")).strip()
+        """The display form — `Superseded — by [X](…); note` — composed from
+        the fields, a successor linked relative to the scheme directory the
+        way a hand-written note's link was. `status_value`, `status_note`
+        and `superseded_by` are the fields."""
+        from . import statuses
+        return statuses.display(
+            statuses.of(self.meta),
+            link=lambda c: f"[{c}]({t})" if (t := _link(c, self.scheme.dir)) else c)
+
+    @property
+    def superseded_by(self) -> tuple[str, ...]:
+        from . import statuses
+        return statuses.of(self.meta).superseded_by
+
+    @property
+    def status_value(self) -> str:
+        from . import statuses
+        return statuses.of(self.meta).value
+
+    @property
+    def status_note(self) -> str:
+        from . import statuses
+        return statuses.of(self.meta).note
 
     @property
     def tags(self) -> list[str]:

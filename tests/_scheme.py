@@ -11,7 +11,7 @@ from luria.config import current
 
 
 def decision(root: Path, number: int, status: str, title: str = "A decision",
-             summary: str = "") -> Path:
+             summary: str = "", superseded_by=()) -> Path:
     """File a decision where the *current* config's ADR scheme reads them.
 
     Derived rather than hardcoded, because the conventional location moved
@@ -22,8 +22,18 @@ def decision(root: Path, number: int, status: str, title: str = "A decision",
     assert root == current().root, "fixture root and LURIA_ROOT disagree"
     path = scheme.dir / f"ADR-{number:03d}.md"
     path.parent.mkdir(parents=True, exist_ok=True)
-    front = [f"status: {status}", f"title: {title!r}",
-             "tags:", "- record", "date: '2026-01-01'"]
+    # `Superseded — by X` in a test reads as the author means it and lands
+    # in the two fields the record writes.
+    from luria.statuses import parse
+    parsed = parse(status)
+    front = [f"status: {parsed.value}"]
+    if superseded_by:
+        front.append("superseded_by:")
+        front += [f"- {c}" for c in ([superseded_by] if isinstance(superseded_by, str)
+                                     else superseded_by)]
+    if parsed.note:
+        front.append(f"status_note: {parsed.note!r}")
+    front += [f"title: {title!r}", "tags:", "- record", "date: '2026-01-01'"]
     if summary:
         front.append(f"summary: {summary!r}")
     path.write_text("---\n" + "\n".join(front) + "\n---\n\n"

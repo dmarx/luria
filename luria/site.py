@@ -456,7 +456,8 @@ def _alias(path: Path, cfg) -> str | None:
 
 # How an inbound edge reads on the page it lands on. A declared reference
 # field has no built-in inverse, so it is named for the field.
-_INBOUND = {edges.SUPERSEDED_BY: "Supersedes", edges.INFLUENCED_BY: "Influenced"}
+_INBOUND = {edges.SUPERSEDED_BY: "Supersedes",
+            edges.INFLUENCED_BY: "Influenced"}
 _INBOUND_ORDER = (edges.SUPERSEDED_BY, edges.INFLUENCED_BY)
 
 
@@ -497,7 +498,8 @@ def record_line(meta: dict, source: Path, outbound=(), inbound=()) -> str:
     here — the fixer owns every target in this record, and a second speller
     would be the drift DP-4 names."""
     bits = []
-    if status := str(meta.get("status", "")).strip():
+    from . import statuses
+    if status := statuses.display(statuses.of(meta), link=lambda c: f"[[{c}]]"):
         bits.append(f"**Status** {status}")
     # Shown only when it isn't 1, the same rule the index follows (ADR-016).
     # A version that isn't a number is somebody's mistake, not this function's

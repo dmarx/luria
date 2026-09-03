@@ -39,7 +39,9 @@ The vocabulary is closed to five words:
 
 `Active` · `Proposed` · `Deferred` · `Superseded` · `Rejected`
 
-each optionally followed by ` — a short note` (`Superseded — by ADR-030`).
+a superseded document naming its successor in `superseded_by:`, and any
+of them optionally qualified by a `status_note:`, a prose field in its
+own right.
 
 Closed because an audit of 121 entries found an open vocabulary had drifted
 into roughly thirty forms — not toward one wrong value but toward *variety*,

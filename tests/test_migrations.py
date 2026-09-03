@@ -342,7 +342,7 @@ def test_move_doc_supersede_copies_and_tombstones(tmp_path, monkeypatch):
                    'to = "VAL"\nstrategy = "supersede"\n')
     migrate.run("0002")
     old = (root / "record" / "principles.d" / "DP-004.md").read_text()
-    assert "status: Superseded — by VAL-tmp" in old
+    assert "status: Superseded\nsuperseded_by:\n- VAL-tmp" in old
     assert len(list((root / "record" / "values.d").glob("VAL-tmp*.md"))) == 1
     assert "Bare DP-4" in (root / "docs" / "notes.md").read_text(), \
         "supersede mode rewrites nothing"
@@ -354,7 +354,7 @@ def test_move_doc_supersede_copies_and_tombstones(tmp_path, monkeypatch):
     aliases.reset()
     concretize.run()
     old = (root / "record" / "principles.d" / "DP-004.md").read_text()
-    assert "status: Superseded — by VAL-001" in old
+    assert "status: Superseded\nsuperseded_by:\n- VAL-001" in old
     assert "Bare DP-4" in (root / "docs" / "notes.md").read_text()
 
 

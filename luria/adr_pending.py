@@ -37,7 +37,6 @@ overdue.
 from __future__ import annotations
 
 import datetime as dt
-import re
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -91,7 +90,7 @@ def pending() -> list[Pending]:
     rows = []
     for scheme in current().schemes.values():
         for doc in builder.load_scheme(scheme):
-            status = re.split(r"\s+—\s+", doc.status, maxsplit=1)[0]
+            status = doc.status_value
             if status not in UNDECIDED:
                 continue
             sites = cited.get(doc.code, [])

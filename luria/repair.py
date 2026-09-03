@@ -24,7 +24,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from . import config_doc, doc_refs, journal, link_refs
+from . import config_doc, doc_refs, journal, link_refs, statuses
 from .config import current
 
 
@@ -38,6 +38,14 @@ def apply() -> list[Path]:
         for p in journal.populate_created(j):
             print(f"populated `created:` from the path in {cfg.rel(p)}")
             changed.append(p)
+    # A note still riding in `status:` moves to `status_note:`, and an
+    # old-form `by CODE` note becomes `superseded_by:` — the same repair: the
+    # file states the facts, and now says so in the fields that carry them
+    # (ADR-tmpvte2k, ADR-071).
+    for s in cfg.schemes.values():
+        for p in statuses.populate(s):
+            print(f"brought the status fields up to date in {cfg.rel(p)}")
+            changed.append(p)
     # One-time cleanup for a project upgrading past ADR-059, which stopped
     # rendering the schema reference outside Luria's own tree.
     for p in config_doc.retire():
@@ -50,7 +58,8 @@ def apply() -> list[Path]:
 
 def run() -> None:
     """Write every mechanical source repair: link bare references, populate
-    `created:` from a journal entry's path, retire a stale configuration
+    `created:` from a journal entry's path, move a note out of `status:`
+    into `status_note:` and `superseded_by:`, retire a stale configuration
     reference. Prints what changed; a second run changes nothing. Returns
     nothing — Fire would print a return value, and a list of paths is not
     the summary a caller wants."""
