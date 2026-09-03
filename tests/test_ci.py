@@ -69,11 +69,14 @@ def test_ci_is_offered_both_ways_to_commit(monkeypatch):
 
 
 def test_ci_warns_against_the_shape_that_commits_nothing(monkeypatch):
-    """The broken shape is specifically 'generator in the checking job, output
-    committed by nobody' — not 'a generator ran in CI'."""
+    """The broken shape is specifically 'generator in the checking job on the
+    default branch, output committed by nobody' — not 'a generator ran in
+    CI', and not the pull-request shape, where committing nothing is the
+    point (ADR-tmphzwg9)."""
     monkeypatch.setenv("CI", "true")
     remedy = ci.regenerate_remedy()
-    assert "not enough on its own" in remedy
+    assert "default branch" in remedy
+    assert "pull request regenerates before it lints and commits nothing" in remedy
     assert "comparing that output against itself" in remedy
 
 

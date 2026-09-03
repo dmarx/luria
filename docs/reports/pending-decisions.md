@@ -5,8 +5,14 @@
 
 `Proposed` and `Deferred` both describe an open question. Neither says *since when*, and that is the signal: a decision proposed last week is pending; the same one a year later was either overdue or settled in code and never written back.
 
-**0 document(s) awaiting a decision.**
+**1 document(s) awaiting a decision.**
+
+| Open since | Status | Code | Cited | Unack. | Title |
+|---|---|---|--:|--:|---|
+| 2026-09-03 | Proposed | [ADR-tmphzwg9](../../record/decisions.d/ADR-tmphzwg9.md) | 0 | 0 | Generated views are committed on the default branch only; a pull request regenerates, checks, and commits nothing |
 
 The citation count is the second axis, and it flips the priority: an old proposal nothing references is a stalled idea worth closing, while an old proposal many files cite is a decision the codebase has already made and hasn't written down.
 
 This count and the reference-status report's will differ, and that is not an off-by-one. That report covers documents something actually **cites** and hasn't acknowledged; this one covers every **undecided** document. One here is missing from there for exactly one of two reasons: nothing cites it, or every citation carries an `inactive-ok` annotation.
+
+**Cited nowhere at all** (1): [ADR-tmphzwg9](../../record/decisions.d/ADR-tmphzwg9.md) — this is the cheapest to close, since nothing depends on the answer.

@@ -114,25 +114,31 @@ Two settings earn attention early:
 `init` scaffolds two workflows built on composite actions published from
 the Luria repository. What they do, so you can rearrange them:
 
-### `docs.yml` — generate, then lint
+### `docs.yml` — generate on the default branch, check on pull requests
 
-1. **`dmarx/luria/actions/generate`** runs `luria link --fix` and
+Generated views are committed on the default branch only. A branch never
+carries the decision index or the devlog book, so two branches cannot
+conflict on them — the conflict every pair of concurrent record PRs used
+to hit.
+
+1. **On push to the default branch, `dmarx/luria/actions/generate`** runs
+   `luria concretize` (assigning real numbers to merge-allocated temporary
+   codes now that merges have serialized), `luria link --fix` and
    `luria index`, commits any diff as `github-actions[bot]` with a
-   `[skip ci]` message, pushes, and outputs the resulting SHA. On a fork
-   PR it cannot push; it outputs the unregenerated SHA so the downstream
-   lint fails informatively instead of the job dying on a 403. With
-   `concretize: true` — pass it only on push-to-main runs, never on PRs —
-   it first runs `luria concretize`, assigning real numbers to any
-   merge-allocated temporary codes now that merges have serialized.
-2. **`dmarx/luria/actions/lint`** checks out that SHA, runs `luria lint`,
-   then writes the status reports and uploads them as an artifact whether
-   or not the lint passed.
-3. A scheduled job (weekly, in the scaffold) runs `luria collect --commit`
+   `[skip ci]` message, pushes, and outputs the resulting SHA.
+2. **Then `dmarx/luria/actions/lint`** checks out that SHA, runs
+   `luria lint`, and writes and uploads the status reports whether or not
+   the lint passed. The generate/lint split matters here: a checking job
+   that regenerated in place would be comparing its own output against
+   itself. Generation commits; the check reads the commit.
+3. **On a pull request, one job** runs the generate action with
+   `commit: "false"` — regenerate in the working tree, commit nothing —
+   and the lint action right after it, on the regenerated tree. The
+   default checkout is the merge commit, so the record is checked as it
+   would land, and a fork needs no write permission because nothing is
+   pushed.
+4. A scheduled job (weekly, in the scaffold) runs `luria collect --commit`
    to assemble changelog fragments and pushes the result.
-
-The generate/lint split matters: a checking job that regenerates views
-in-place would be comparing its own output against itself. Generation
-commits; the check reads the commit.
 
 Two hazards, both found by adopting this into a repository that already had
 generators of its own.

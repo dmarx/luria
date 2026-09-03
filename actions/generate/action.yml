@@ -19,11 +19,13 @@
 #     it can never clear.
 name: luria docs generate
 description: >-
-  Regenerate luria's derived views (luria link --fix + luria index), commit and
-  push any diff as github-actions[bot], and output the SHA a downstream
-  checking job must read. On a fork PR nothing is pushed and the output SHA is
-  the un-regenerated commit, so the staleness lint downstream fails
-  informatively instead of this job dying on a 403.
+  Regenerate luria's derived views (luria link --fix + luria index) and, where
+  merges serialize, commit and push the diff as github-actions[bot], outputting
+  the SHA a downstream checking job must read. With `commit: "false"` — the
+  pull-request shape (LU-ADR-tmphzwg9) — the views are regenerated in the working
+  tree and nothing is committed: a branch never carries generated files, so two
+  branches cannot conflict on them, and the lint runs in the same job on the
+  regenerated tree.
 inputs:
   pip-spec:
     description: >-
@@ -47,6 +49,15 @@ inputs:
       skip marker so the bot's push does not trigger a fresh workflow run;
       keep that property if you override it.
     default: "docs: regenerate views [skip ci]"
+  commit:
+    description: >-
+      "true" commits and pushes the regenerated views — the push-to-default-
+      branch shape, where merges serialize. "false" regenerates in the working
+      tree and commits nothing — the pull-request shape: run the lint action
+      in the SAME job afterwards, since the regenerated tree lives only on
+      this runner. Generated views are committed on the default branch only,
+      so branches never conflict on them (LU-ADR-tmphzwg9).
+    default: "true"
 outputs:
   sha:
     description: The commit the checking job must check out.
@@ -72,8 +83,14 @@ runs:
         # leaves HEAD at the un-regenerated SHA, which is exactly what makes
         # the staleness check downstream fire for forks.
         CAN_PUSH: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+        COMMIT: ${{ inputs.commit }}
         MSG: ${{ inputs.commit-message }}
       run: |
+        if [ "$COMMIT" != "true" ]; then
+          echo "luria views regenerated in the working tree; committing nothing (commit: false)."
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
         git config user.name  "github-actions[bot]"
         git config user.email "github-actions[bot]@users.noreply.github.com"
         git add -A

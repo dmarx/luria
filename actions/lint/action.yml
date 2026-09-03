@@ -2,11 +2,15 @@
 # gates what a generator cannot decide, plus the status reports uploaded where
 # they can be read — which matters most when the lint failed.
 #
-# Caller contract: check out the SHA the generate action output (via `needs:`
-# on the generation job), and set up Python first. Without that handoff this
-# lint reads the pre-regeneration commit and fails on staleness the bot just
-# repaired — a push made with GITHUB_TOKEN does not retrigger workflows, so
-# that red never clears on its own.
+# Caller contract, in the two shapes (LU-ADR-tmphzwg9):
+#   - On the default branch: check out the SHA the generate action output (via
+#     `needs:` on the generation job), and set up Python first. Without that
+#     handoff this lint reads the pre-regeneration commit and fails on
+#     staleness the bot just repaired — a push made with GITHUB_TOKEN does not
+#     retrigger workflows, so that red never clears on its own.
+#   - On a pull request: run the generate action with `commit: "false"` in the
+#     SAME job, then this. The regenerated tree lives only on the runner, and
+#     nothing is committed to the branch.
 name: luria docs lint
 description: >-
   Run luria lint — unresolved references, wikilinks that resolve to nothing, a
