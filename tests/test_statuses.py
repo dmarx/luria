@@ -18,7 +18,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from luria import adr_index, config, lint, statuses
+from luria import repair, adr_index, config, lint, statuses
 
 
 def _project(root: Path, monkeypatch) -> None:
@@ -350,17 +350,17 @@ def test_a_note_riding_in_status_is_a_finding_that_names_the_repair(tmp_path, mo
                     "tags:\n- craft\ndate: '2026-01-01'\n---\n\n# VP-001: A value\n")
     errors: list[str] = []
     lint.check_frontmatter(errors)
-    assert any("carries a note" in e and "`luria index`" in e for e in errors), errors
+    assert any("carries a note" in e and "`luria repair`" in e for e in errors), errors
 
 
-def test_index_moves_the_note_and_the_finding_clears(tmp_path, monkeypatch):
-    """The repair is the one `luria index` already runs for `created:`
+def test_repair_moves_the_note_and_the_finding_clears(tmp_path, monkeypatch):
+    """The repair is the one `luria repair` already runs for `created:`
     (ADR-031): the file states both facts, and is made to say so in two."""
     _project(tmp_path, monkeypatch)
     path = tmp_path / "record" / "values.d" / "VP-001.md"
     path.write_text("---\nstatus: 'Deferred — until the audit'\ntitle: 'A value'\n"
                     "tags:\n- craft\ndate: '2026-01-01'\n---\n\n# VP-001: A value\n")
-    adr_index.run()
+    repair.apply()
     assert "status: Deferred\nstatus_note: until the audit\n" in path.read_text()
     errors: list[str] = []
     lint.check_frontmatter(errors)

@@ -9,6 +9,7 @@ One binary, `luria`, dispatching to plain functions. Every command takes
 | [`luria init`](#luria-init) | scaffold a record into a repository |
 | [`luria config`](#luria-config) | write a starting `luria.toml`, without scaffolding |
 | [`luria new`](#luria-new) | file a new entry of any configured kind |
+| [`luria repair`](#luria-repair) | write every mechanical source repair |
 | [`luria index`](#luria-index) | render every generated view |
 | [`luria link`](#luria-link) | turn bare codes and wikilinks into links |
 | [`luria lint`](#luria-lint) | enforce the record's invariants |
@@ -120,6 +121,25 @@ field flags (`--title`, `--status`, `--summary`, `--tags`) pre-fill the
 scaffolded frontmatter. The generated view of your own config lists every
 kind your project accepts (see [the record](record.md) for this one).
 
+## luria repair
+
+```
+luria repair
+```
+
+Writes every mechanical repair to the sources — each one a state the lint
+reports with this command as its remedy: bare codes in prose become links
+(what `luria link --fix` does, over every file), a journal entry filed
+without `created:` gets the timestamp its path already implies, and a
+configuration reference Luria no longer renders here is removed. Prints
+what changed. Idempotent: a second run changes nothing.
+
+Repairs are a command apart from the views because they land in a
+different place. A repair touches only the files a branch itself authored,
+so the generate action commits it onto the branch, where the review reads
+it; a view is a shared file every branch would rewrite, so it is committed
+on the default branch only.
+
 ## luria index
 
 ```
@@ -130,8 +150,7 @@ Renders every generated view from the sources: scheme indexes and tag
 pages (or the single concatenated page for `render = "document"` schemes),
 journal books, the status reports, the record and configuration reference
 pages, and the README badge region. Also deletes orphaned files from view
-directories and fills in missing `created:` frontmatter on journal entries
-whose path implies the timestamp.
+directories. Writes views only; the sources are `luria repair`'s.
 
 `--check` writes nothing and exits non-zero if any committed view differs
 from what would be generated — the staleness check CI runs. (Views listed
