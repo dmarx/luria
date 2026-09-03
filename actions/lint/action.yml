@@ -8,15 +8,14 @@
 #     handoff this lint reads the pre-regeneration commit and fails on
 #     staleness the bot just repaired — a push made with GITHUB_TOKEN does not
 #     retrigger workflows, so that red never clears on its own.
-#   - On a pull request: run the generate action with `commit-views: "false"`
-#     in the SAME job, then this. The source repairs were pushed to the
-#     branch; the regenerated views live only on the runner.
+#   - On a pull request: run the generate action with `views: "false"` in
+#     the SAME job, then this. The source repairs were pushed to the branch;
+#     no view was written, and none is needed — the lint reads sources.
 name: luria docs lint
 description: >-
   Run luria lint — unresolved references, wikilinks that resolve to nothing, a
-  title disagreeing with its heading, stray files in a view directory, and
-  stale generated views — then write and upload the status reports whether or
-  not the lint passed.
+  title disagreeing with its heading, stray files in a view directory — then
+  write and upload the status reports whether or not the lint passed.
 inputs:
   pip-spec:
     description: >-
@@ -38,9 +37,10 @@ runs:
     - shell: bash
       run: luria lint
     # The reports are committed views written by `luria index` (#35), but the
-    # artifact regenerates them fresh: when the lint failed on staleness, the
-    # committed copies are exactly what can't be trusted. always() keeps them
-    # available when the lint failed, when they are most wanted.
+    # artifact regenerates them fresh: on a branch there is no committed copy
+    # for this tree, and on the default branch the fresh one is the one to
+    # read. always() keeps them available when the lint failed, when they are
+    # most wanted.
     - if: ${{ always() }}
       shell: bash
       run: luria reports

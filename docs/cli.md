@@ -153,8 +153,12 @@ pages, and the README badge region. Also deletes orphaned files from view
 directories. Writes views only; the sources are `luria repair`'s.
 
 `--check` writes nothing and exits non-zero if any committed view differs
-from what would be generated — the staleness check CI runs. (Views listed
-in `.gitignore` are exempt: an uncommitted view cannot be stale.)
+from what would be generated, a file sits in a view directory the generator
+never wrote, or the README's generated region has drifted — the one
+staleness check there is, run by the generation job on the default branch
+right after it regenerates. `luria lint` asks no staleness question, so it
+runs on a branch as it is. (Views listed in `.gitignore` are exempt: an
+uncommitted view cannot be stale.)
 
 ## luria link
 
@@ -193,8 +197,9 @@ The contract, in two halves.
   different version than the document claims
 - a journal entry with no derivable `created:`, or filed at a path its
   timestamp says is wrong
-- a stale generated view, a stray file in a view directory, or stale badge
-  counts
+- a stray hand-written file in a view directory (whether a committed view
+  is *current* is `luria index --check`'s question, asked in the generation
+  job on the default branch; a branch carries no view of its own)
 - a bare code or unexpanded wikilink that `luria link --fix` would rewrite,
   or a wikilink that resolves to nothing
 - a docs page missing from the docs index (`docs/README.md`)

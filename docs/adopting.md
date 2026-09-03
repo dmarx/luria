@@ -132,14 +132,16 @@ to hit.
    that regenerated in place would be comparing its own output against
    itself. Generation commits; the check reads the commit.
 3. **On a pull request, one job** checks out the head branch and runs the
-   generate action with `commit-views: "false"`: `luria repair` first, its
-   diff committed and pushed onto the branch — a repair touches only the
-   files the branch authored, so the review reads the repaired source and
-   the author's next pull carries it — then `luria index` in the working
-   tree, committing no view; the lint action right after it checks the
-   result. On a fork the token cannot push; the action warns, the lint
-   still runs on the repaired tree, and the default branch repairs the
-   source after merge. A repair commit pushed with `GITHUB_TOKEN` gets no
+   generate action with `views: "false"`: `luria repair`, its diff
+   committed and pushed onto the branch — a repair touches only the files
+   the branch authored, so the review reads the repaired source and the
+   author's next pull carries it — and nothing else; the lint action right
+   after it checks the sources. No view is written on a branch and none is
+   needed: `luria lint` reads sources, and whether a committed view is
+   current is `luria index --check`'s question on the default branch. On a
+   fork the token cannot push; the action warns, the lint still runs on
+   the repaired tree, and the default branch repairs the source after
+   merge. A repair commit pushed with `GITHUB_TOKEN` gets no
    workflow run of its own — the lint that ran in the same job on the same
    tree is its check; a repository that requires status checks on the head
    commit should push with a token that triggers runs, which is why the
