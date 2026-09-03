@@ -539,12 +539,15 @@ class Staleness:
 
 
 def staleness(rendered: dict[Path, str] | None = None) -> Staleness:
-    """The one answer `luria index --check` and `luria lint` both consume.
+    """The one answer to "is the committed tree current?", for
+    `luria index --check`; `luria lint` reads only its `orphaned` field.
 
-    They used to compute it twice, in two files, from the same three rules —
+    It used to be computed twice, in two files, from the same three rules —
     which is the arrangement where a fix lands in one of them and the other
     keeps failing. It did: the gitignore exemption below was written in
-    `--check` first, and `lint` went on rejecting the same tree.
+    `--check` first, and `lint` went on rejecting the same tree. Now the
+    lint asks no staleness question at all (ADR-068), and this stays one
+    function so the orphan rule cannot fork either.
 
     A view the project gitignores is excluded from all three kinds. There is
     no committed copy to compare against — see `ignored`."""

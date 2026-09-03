@@ -19,6 +19,12 @@ A code — `ADR-012` — resolves to a document, and every reference to it in th
 | `ADR-001` | `record/decisions.d/` | `docs/decisions/README.md` + tag pages | `Active` |
 | `DP-001` | `record/principles.d/` | `docs/design-principles.md` (one page, read as a whole) | `Active` |
 
+## What an entry must carry
+
+Beyond the standard fields, what each scheme's entries must carry — compiled from `luria.toml` into the contract `luria lint` checks, with where each obligation was declared. A finding cites the same line.
+
+*Nothing beyond the standard fields — `status`, `title`, `tags`, `date`. A scheme asks for more with `requires`, `references` and `tag_groups`; see the [schema](https://github.com/dmarx/luria/blob/main/docs/configuration.md).*
+
 ## Journals
 
 Dated observations. An entry is true about the day it was written and is never revised or consumed — the books are a view over sources that stay, which is what makes a journal safe to write into without coordinating.
@@ -65,6 +71,7 @@ Everything not listed here is at Luria's default.
 |---|---|---|
 | `issue_url` | `https://github.com/dmarx/luria/issues/{n}` | *empty* |
 | `code.globs` | `luria/*.py`, `tests/*.py`, `.github/workflows/*.yml`, `actions/**/*.yml`, `template/**/*.yml`, `template/**/*.md`, `template/**/*.stub` | *empty* |
+| `lint.fail_on` | `workflow-temp-codes` | *empty* |
 | `site.exclude` | `template/**`, `examples/**` | *empty* |
 | `site.icon` | `assets/branding/luria-brainslug/luria_project_memory_icon.svg` | *empty* |
 | `site.logo` | `assets/branding/luria-brainslug/luria_project_memory_lockup_horizontal.svg` | *empty* |

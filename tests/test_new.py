@@ -106,3 +106,14 @@ def test_an_unknown_kind_names_what_this_project_scaffolds(project):
     with pytest.raises(SystemExit) as exc:
         new_mod.new_entry("rfc", {}, None)
     assert "adr" in str(exc.value)
+
+
+def test_a_comma_separated_tags_flag_survives_fire(project):
+    """`luria new adr --tags record,mechanism` reaches `run` as a tuple:
+    Fire reads a comma-separated argument as a Python literal. The
+    scaffolder took `.split(",")` on it and crashed, so the one spelling
+    the help text invites was the one that failed."""
+    from luria import new
+    path = new.new_entry("adr", {"tags": ("record", "mechanism")}, None)
+    text = path.read_text()
+    assert "tags:\n- record\n- mechanism\n" in text

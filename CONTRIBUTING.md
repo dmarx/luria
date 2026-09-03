@@ -15,11 +15,12 @@ $ luria lint                    # also what CI runs
 Work on a branch, open a pull request — nothing lands on `main` directly.
 CI runs `luria repair` on your branch and commits what it wrote as
 `github-actions[bot]` (a bare code linked, a missing `created:` filled —
-pull before you push again), then regenerates the derived views on the
-runner, lints the result, and runs the tests. The views themselves are
-committed on `main` only, by the bot, after merge — so do not commit
-regenerated views on a branch, and if you have, a conflict in one is
-resolved by regenerating, never by hand.
+pull before you push again), lints the sources, and runs the tests. Views
+are neither written nor checked on a branch — `luria lint` needs none, so
+it runs on your checkout as it is. The views are committed on `main` only,
+by the bot, after merge — so do not commit regenerated views on a branch,
+and if you have, a conflict in one is resolved by regenerating, never by
+hand.
 
 ## Every change ships its record entry
 
