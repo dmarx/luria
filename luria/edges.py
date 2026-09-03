@@ -5,26 +5,25 @@ The citation graph has one kind of edge: A mentions B, found in prose. Three
 facts in the record are stronger than a mention, and each was already
 written down before this module read it as an edge:
 
-    A ──superseded_by──→ B     a `Superseded — by B` status note (ADR-003)
-    A ──status_note────→ B     any other code a status note cites
-    A ──influenced_by──→ B     the `influenced_by:` list (ADR-012)
     A ──source─────────→ B     any field a scheme declares a reference (ADR-060)
+    A ──influenced_by──→ B     the `influenced_by:` list (ADR-012)
+    A ──superseded_by──→ B     derived: status `Superseded`, note `by B`
 
-The field name is the relation. Nothing here is a new authoring surface:
-`superseded_by:` as a frontmatter field beside the note that already says it
-would be the second copy of one fact that DP-3 says will drift, so the edge
-is read out of the note. That is a regex over prose, which ADR-003 chose
-frontmatter to avoid — defensible here because the whole citation graph is
-already codes found in prose, and `luria migrate` writes this exact note
-shape mechanically (ADR-040).
+Three levels of claim, and only the top two are edges. A code in prose is
+a *mention* — the citation graph, found by scanning, and not this module's
+business. A typed reference field is a *named relation*: the field name is
+the relation, and the schema vouches for it. A recognised construction in
+prose is a *derived relation*: `Superseded — by CODE` has a writer (`luria
+migrate --strategy supersede`, ADR-040) and one meaning, so the code in
+that position is the successor. Any other code in a status note — what a
+Deferred was parked by, what a Rejected was overturned by — is a mention
+with a location, not a relation; an earlier draft here named it one and a
+reviewer caught it. It becomes an ordinary citation once the note is read
+as the prose it is, which is a separate decision (#141).
 
-Two relations, because the note says two kinds of thing. `Superseded — by
-CODE` is a convention with a writer (the migration) and a single meaning,
-so the code in that position is the successor. Every other code a status
-note cites — a second one after the successor, what a Deferred was parked
-by, what a Rejected was overturned by — is a fact the author wrote down
-whose meaning the tool does not know. `status_note` keeps it as exactly
-that: this note names that code, and no more (#141).
+Nothing here is a new authoring surface: `superseded_by:` as a frontmatter
+field beside the note that already says it would be the second copy of one
+fact that DP-3 says will drift, so the derivation reads the note.
 
 Consumers: the site renders each page's edges both ways (#141). A remote
 code is never an edge — the graph has no node for it to land on (ADR-016).
@@ -42,11 +41,8 @@ from .config import current
 from .contract import for_scheme, reference_code, values_of
 
 SUPERSEDED_BY = "superseded_by"
-STATUS_NOTE = "status_note"
 INFLUENCED_BY = "influenced_by"
 
-# `Superseded — by …`: the bare word, then the note (ADR-003).
-_NOTE_RE = re.compile(r"\s+—\s+")
 # The canonical succession: the note opens with `by` and then the code —
 # the shape `luria migrate --strategy supersede` writes (ADR-040).
 _BY_RE = re.compile(r"^by\s+")
@@ -61,38 +57,34 @@ class Edge:
     because: str
 
 
-def _note_edges(doc: Adr) -> list[Edge]:
-    """What a status note says, as edges: the successor when the note has
-    the canonical shape, and every other code as a bare mention.
+def successor(doc: Adr) -> str | None:
+    """The code a canonical `Superseded — by CODE` note names, or None.
 
-    The note is prose, so it is read the way prose is read everywhere else:
-    links unwrapped, then the scheme-driven finder (ADR-046). Issues and
-    remote codes come back as other kinds and are dropped."""
-    word, *rest = _NOTE_RE.split(doc.status, maxsplit=1)
-    if not rest:
-        return []
-    plain = doc_refs.UNLINK_RE.sub(r"\1", rest[0]).strip()
+    The one derived relation. It needs the status to be `Superseded` and
+    the note to open with `by` and a local code, and it reads nothing else
+    out of the note: a second code, or a code in a Deferred or Rejected
+    note, is a mention, and mentions are the citation scanner's business.
+    The note is read the way prose is read everywhere else — links
+    unwrapped, then the scheme-driven finder (ADR-046) — so a linked or a
+    bare code both count and a remote code never does."""
+    if doc.status_value != "Superseded" or not doc.status_note:
+        return None
+    plain = doc_refs.UNLINK_RE.sub(r"\1", doc.status_note).strip()
+    opening = _BY_RE.match(plain)
+    if not opening:
+        return None
     refs = [r for r in doc_refs.find_refs(plain) if r.kind == "scheme"]
-    successor = None
-    if word.strip() == "Superseded" and refs:
-        opening = _BY_RE.match(plain)
-        if opening and refs[0].start == opening.end():
-            successor = refs[0].describe()
-    out: list[Edge] = []
-    seen: set[str] = set()
-    for ref in refs:
-        code = ref.describe()
-        if code == doc.code or code in seen:
-            continue
-        seen.add(code)
-        relation = SUPERSEDED_BY if code == successor else STATUS_NOTE
-        out.append(Edge(doc.code, relation, code, "the `status:` note"))
-    return out
+    if not refs or refs[0].start != opening.end():
+        return None
+    code = refs[0].describe()
+    return None if code == doc.code else code
 
 
 def outbound(doc: Adr) -> list[Edge]:
     """Every typed edge this document is the source of."""
-    out: list[Edge] = list(_note_edges(doc))
+    out: list[Edge] = []
+    if code := successor(doc):
+        out.append(Edge(doc.code, SUPERSEDED_BY, code, "the `status:` note"))
     for code in doc.influenced_by:
         out.append(Edge(doc.code, INFLUENCED_BY, code,
                         "frontmatter `influenced_by:`"))

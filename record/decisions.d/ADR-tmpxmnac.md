@@ -57,15 +57,16 @@ summary: >-
   stronger facts sat in the record unread: a `Superseded — by` note, an
   `influenced_by:` list, and any field a scheme declares a reference. They
   are now read as typed edges, the field name being the relation, and the
-  site renders each page's edges both ways. The note yields two relations:
-  `superseded_by` for the canonical `by CODE` opening, and a weaker
-  `status_note` for any other code a status note names, so a Deferred
-  parked by a decision keeps that fact without the tool claiming to know
-  what it means. No new frontmatter field: a `superseded_by:` beside the
-  note would be the second copy of one fact. Rejected: that field; every
-  code in a Superseded note as a succession; leaving it to Quartz's untyped
-  backlinks; a relations DSL; and a lint for a successor-less Superseded,
-  which the record's own audit (three of three name one) does not justify.
+  site renders each page's edges both ways. Three levels of claim, and
+  only the top two are edges: a code in prose is a mention; a typed field
+  is a named relation; the canonical `Superseded — by CODE` note is one
+  derived relation. Any other code in a status note is a mention with a
+  location, not a relation. No new frontmatter field: a `superseded_by:`
+  beside the note would be the second copy of one fact. Rejected: that
+  field; every code in a Superseded note as a succession; a `status_note`
+  relation for the rest, which dresses a location up as a meaning; leaving
+  it to Quartz's untyped backlinks; a relations DSL; and a lint for a
+  successor-less Superseded, which the record's own audit does not justify.
 
 ---
 
@@ -115,10 +116,9 @@ when the two disagree.
 reads three of them; the field name is the relation:
 
 ```text
-A ──superseded_by──→ B     a `Superseded — by B` status note
-A ──status_note────→ B     any other code a status note names
-A ──influenced_by──→ B     the `influenced_by:` list
 A ──source─────────→ B     any declared reference field, named for the field
+A ──influenced_by──→ B     the `influenced_by:` list
+A ──superseded_by──→ B     derived: status `Superseded`, note `by B`
 ```
 
 Four details are load-bearing.
@@ -126,27 +126,40 @@ Four details are load-bearing.
 **No new field.** The supersession edge is read out of the note.
 
 <!-- inactive-ok-block: ADR-015 — cited as the note that names two codes; it is superseded, which is why it has a note -->
-**Two relations, because the note says two kinds of thing.** `Superseded —
-by CODE` has a writer — `luria migrate --strategy supersede` emits exactly
-that shape — and one meaning, so the code in that opening position is the
-successor. Every other code a status note names is a fact the author wrote
-down whose meaning the tool does not know: the second code in a note that
-runs on ([ADR-015](ADR-015.md)'s does), what a `Deferred` was parked by, what a
-`Rejected` was overturned by. Downstream, a world-building record found
-four of its ten non-Superseded notes citing a code. Those become
-`status_note` edges — *this note names that code* — and nothing stronger.
-`Superseded` is itself scheme-relative ([ADR-056](ADR-056.md)), which is one more reason
-to promote only the shape with a mechanical writer.
+**Three levels of claim, and only the top two are edges.** A code found
+in prose is a *mention*: the citation graph, found by scanning, carrying
+where it was found as provenance and nothing more. A typed reference field
+is a *named relation*: the schema vouches for the field, so the field name
+is the relation. A recognised construction in prose is a *derived
+relation*, and there is one: `Superseded — by CODE` has a writer — `luria
+migrate --strategy supersede` emits exactly that shape — and one meaning,
+so the code in that opening position is the successor. Every other code a
+status note names — the second code in a note that runs on
+([ADR-015](ADR-015.md)'s does), what a `Deferred` was parked by, what a
+`Rejected` was overturned by — is a mention with a location. Downstream, a
+world-building record found four of its ten non-Superseded notes citing a
+code; those are facts worth keeping, and the place that keeps them is the
+citation scanner, once the note is read as the prose it already is (a
+separate decision on field typing). `Superseded` is itself scheme-relative
+([ADR-056](ADR-056.md)), which is one more reason to promote only the shape
+with a mechanical writer.
+
+**The status field is read as two things.** One `Status(value, note)`
+parse, on the document, replaces the six places that split the word off
+the note with three spellings of one regex. The word is data, checked
+against the vocabulary; the note is prose, rendered and rebased for links.
+Storage is unchanged; whether it should change is the migration decision
+above, not this one.
 
 **A remote code is never an edge.** A remote's namespace is theirs
 ([ADR-016](ADR-016.md)); the graph has no node for the edge to land on.
 
 **Rendered where a document has room, in no stronger English than the
 relation guarantees.** The site's record line gains the edges both ways: on
-the page that supersedes, *Supersedes*; on a page a status note merely
-names, *Named in the status of*; on the decision a principle cites,
+the page that supersedes, *Supersedes*; on the decision a principle cites,
 *Influenced*; on a practice, its *Source*; on the paper, *Cited as `source`
-by*. Composed with wikilinks and expanded by the resolver
+by*. A mention gets no line of its own — the note renders with its links,
+and the site's own backlinks list it. Composed with wikilinks and expanded by the resolver
 that owns every target in the record ([DP-4](../../docs/design-principles.md#dp-4)), so nothing here spells a link.
 
 This reads prose for a fact, which is what [ADR-003](ADR-003.md) chose frontmatter to
@@ -167,9 +180,12 @@ than hidden.
 - **Every code in a Superseded note as a succession**, which the first
   draft of this decision did, and a reviewer caught: [ADR-015](ADR-015.md)'s note names
   a second code that is not its successor, and the site would have said
-  *Supersedes* of it. The opposite correction — discard everything but the
-  first code — loses what a Deferred or Rejected note wrote down. Two
-  relations keep both facts at their true strength.
+  *Supersedes* of it.
+- **A `status_note` relation for every other code in a note**, which the
+  second draft did, and a reviewer caught: where a code was found is
+  provenance, and naming the location as the relation dresses a location
+  up as a meaning. A mention is a mention; the scanner already has a
+  representation for one, with a location on it.
 - **Leave it to the site's backlinks.** Quartz already lists every page that
   mentions this one. Untyped: "[ADR-007](ADR-007.md) mentions [ADR-035](ADR-035.md)" and "[ADR-007](ADR-007.md) was
   replaced by [ADR-035](ADR-035.md)" render identically, and the second is the fact a
@@ -197,12 +213,13 @@ lineage now reads in both directions. A downstream record with declared
 references gets its citations back on the site, in both directions, with no
 configuration change.
 
-The note stays the single source of the supersession fact. A
-`status_note` edge carries less meaning than an author might have intended
-— *parked by* and *overturned by* both flatten to *names* — and that is the
-right loss: the alternative is the tool guessing. The `because` on an edge
-is where the originating status would go if a consumer ever needs to tell
-them apart; it is structured provenance, not a third relation.
+The note stays the single source of the supersession fact, and the
+derivation is one function that a project can read in full. What it does
+not do is as deliberate: *parked by* and *overturned by* are meanings the
+tool does not know, and the alternative to leaving them as mentions is the
+tool guessing. Until the note is a prose key of its own, the codes in a
+Deferred or Rejected note are cited by nothing the scanner sees; that gap
+is named in the field-typing decision that closes it.
 
 The lint for a successor-less `Superseded` document is one function away
 when a record needs it. The graph is also the natural next consumer of the
