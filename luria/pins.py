@@ -33,28 +33,18 @@ Hashing the URL a *reader* lands on is wrong whenever that page is a
 rendering — an arXiv abstract, a Jira ticket — whose markup churns under
 identical content: the pin would cry wolf on the site's deploy schedule, and
 a guard that cries wolf is a guard nobody reads (ADR-016). So a pin hashes a
-different URL, resolved by `stable_url()` through `SOURCES`: an ordered table
-of rungs, each answering "where do this construction's stable bytes live?"
-or "" when it has nothing to say. The first answer wins.
-
-`SOURCES` is the extension point. A new source-specific case — a forge with
-its own raw scheme, a service with a canonical bytes endpoint — is one
-function and one table entry; everything downstream (endorsing, refreshing,
-drift reporting) consumes only the returned URL and never asks where it came
-from. Today's rungs, strongest first:
-
-1. **A declared `pin_url` template** (`Remote.pin_link`) — only the project
-   can vouch that a URL is content-stable, so the declaration beats any
-   construction.
-2. **The GitHub rebase** — a `github.com/.../blob/...` construction re-based
-   onto raw.githubusercontent.com, so the bytes are the document rather than
-   GitHub's page around it.
+different URI under the same code: the `bytes` name in the remote's URI
+table, rendered by the same machinery as the reader's `read` link. A
+declared `uris.bytes` (or its `pin_url` sugar) wins at either level; where
+`read` resolves by construction, `bytes` defaults to the forge's raw
+counterpart of the same shape; where a template governs `read`, no bytes are
+guessed — declaring them is the project vouching that the URL is
+content-stable.
 """
 
 from __future__ import annotations
 
 import hashlib
-import re
 import sys
 
 from . import remotes
@@ -62,36 +52,21 @@ from .config import Remote, current
 
 # ── Where stable bytes live ──────────────────────────────────────────────
 
-BLOB_URL_RE = re.compile(r"https://github\.com/([^/]+/[^/]+)/blob/([^/#]+)/(.+)")
-
-
-def _declared(remote: Remote, code: str) -> str:
-    """Rung 1: the project's own `pin_url` declaration (#135)."""
-    return remote.pin_link(code)
-
-
-def _github_raw(remote: Remote, code: str) -> str:
-    """Rung 2: a GitHub file construction, re-based onto raw bytes.
-
-    The anchor a document scheme appends is dropped: a fragment selects
-    nothing server-side, and the endorsement covers the document the anchor
-    lands in."""
-    m = BLOB_URL_RE.fullmatch(remotes.link(remote, code).split("#")[0])
-    if not m:
-        return ""
-    owner_repo, ref, path = m.groups()
-    return f"https://raw.githubusercontent.com/{owner_repo}/{ref}/{path}"
-
-
-SOURCES = (_declared, _github_raw)
-
 
 def stable_url(remote: Remote, code: str) -> str:
-    """The URL whose bytes ARE the document, or "" when no source knows one."""
-    for source in SOURCES:
-        if url := source(remote, code):
-            return url
-    return ""
+    """The URL whose bytes ARE the document — the code's `bytes` URI.
+
+    One rendering call: `remotes.construct` supplies the lockfile's word on
+    {filename}, `Remote.uri` applies the precedence (a declared template at
+    either level, then the default derived from the same shape `read`
+    constructs by — GitHub's raw scheme as a shipped template, not a regex
+    over a rendered URL). "" means no source vouches for stable bytes: a
+    rendered page's markup churns under identical content, so a hash of it
+    would drift on its own schedule and the pin would cry wolf (ADR-016).
+    A source-specific case — another forge, a service's canonical bytes
+    endpoint — is a `uris.bytes` template in config, or one more entry in
+    `config._DEFAULT_URIS`; everything downstream consumes only the URL."""
+    return remotes.construct(remote, code, "bytes")
 
 
 def content_hash(body: bytes) -> str:

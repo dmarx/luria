@@ -17,13 +17,17 @@ config entry teaches Luria how to turn it into a URL (ADR-016):
 From there `LU-ADR-013` is a first-class reference — `luria link --fix` writes
 the link, and `luria lint` demands it, exactly as it does for a local code.
 
-Constructing the URL
---------------------
-Three rungs, strongest first. An explicit `url` template wins. Otherwise a
-**discovered filename** from the lockfile, which is the only thing that can
-resolve a remote whose files carry title slugs (`adr-013-a-long-title.md`).
-Otherwise the code-only convention (ADR-013), which needs no lockfile at all
-and is the default because it is Luria's own.
+Constructing the URLs
+---------------------
+A code relates to a set of NAMED URIs, every name rendered through one
+template vocabulary (`Remote.uri`): `read` is where a reader lands, `bytes`
+is what a content pin hashes (#135), and a project may declare more. For
+`read`, three rungs, strongest first: an explicit template (`url`, or
+`uris.read`) wins; otherwise the construction fills {filename} from a
+**discovered** lockfile map, the only thing that can resolve a remote whose
+files carry title slugs (`adr-013-a-long-title.md`); otherwise from the
+code-only convention (ADR-013), which needs no lockfile at all and is the
+default because it is Luria's own.
 
 **Discovery reads a public repository over HTTPS**, and reads that repository's
 own `luria.toml` when it has one, so `dir` comes from the authority rather than
@@ -182,33 +186,37 @@ def write_lock(found: dict[str, dict[str, str]] | None = None,
     return path
 
 
-def link(remote: Remote, code: str) -> str:
-    """The URL for one foreign code, using the strongest rung available.
+def construct(remote: Remote, code: str, name: str = "read") -> str:
+    """The named URI for one foreign code, with the lockfile's word on
+    {filename}.
 
-    **Discovery, once done, is authoritative.** If this remote has a lockfile
-    entry and the code isn't in it, the answer is "" rather than a guessed
-    filename — the map was read from the remote itself, so a code missing from
-    it names no document there. Guessing anyway once produced a confident link
-    to a file that has never existed (ADR-016).
-
-    The lockfile's authority covers exactly what discovery can see: *files*.
-    A scheme configured to construct a document anchor or a URL template
-    (ADR-023) never consults it — its documents are sections, which no
-    directory listing contains, so an absence there is not evidence."""
+    `Remote.uri` renders templates; this supplies the one variable only the
+    lockfile knows. **Discovery, once done, is authoritative** (ADR-016): a
+    map read from the remote whose keys omit this code means the code names
+    no file there — {filename} is then unavailable, any construction that
+    needs it renders "", and guessing anyway once produced a confident link
+    to a file that has never existed. No map at all is the different claim
+    "never discovered", and the code-only convention (ADR-013) fills
+    {filename} instead. A template that never mentions {filename} — a `url`,
+    a document anchor — is untouched by any of it, which is the old rule
+    "the lockfile's authority covers exactly what discovery can see: files"
+    falling out of variable availability rather than being control flow."""
     code = remote.canon(code)
     if remote.uid:
         # One rung: the template. The lockfile maps filenames, and a uid
         # remote has none to map (ADR-024).
-        return remote.link(code)
-    scheme = remote.scheme_for(code)
-    if scheme is not None and (scheme.url or scheme.document):
-        return remote.link(code)
-    if remote.url:
-        return remote.link(code)
+        return remote.uri(name, code)
     known = lock().get(remote.prefix)
-    if known is not None:
-        return remote.link(code, known[code]) if code in known else ""
-    return remote.link(code)
+    if known is None:
+        filename: str | None = ""
+    else:
+        filename = known.get(code)        # None = authoritative silence
+    return remote.uri(name, code, filename)
+
+
+def link(remote: Remote, code: str) -> str:
+    """The reader's URL for one foreign code — its `read` URI."""
+    return construct(remote, code, "read")
 
 
 def resolve(remote_prefix: str, code: str) -> str:
@@ -429,7 +437,7 @@ def readable(remote: Remote) -> tuple[bool, str]:
     without asking this first reports a shelf of perfectly good links as
     broken — a guard that cries wolf, which is a guard nobody reads
     (ADR-016)."""
-    if remote.uid and remote.url:
+    if remote.uid and remote.uris.get("read"):
         # The template is the whole story — no repository stands behind the
         # construction, so there is nothing to gate on; each URL is probed on
         # its own (ADR-024).
@@ -526,7 +534,7 @@ def run(refresh: bool = False, check: bool = False,
         codes = sorted(references.get(remote.prefix, ()))
         known = locked.get(remote.prefix, {})
         rung = ("a url template over the uid" if remote.uid
-                else "an explicit url template" if remote.url
+                else "an explicit url template" if remote.uris.get("read")
                 else f"{len(known)} discovered filename(s)" if known
                 else "the code-only filename convention")
         print(f"\n{remote.prefix} → {remote.label}: {len(codes)} reference(s), "
@@ -539,10 +547,12 @@ def run(refresh: bool = False, check: bool = False,
             # A per-scheme construction says which shape it used (ADR-023).
             if remote.uid:
                 note = ""
-            elif scheme is not None and (scheme.url or scheme.document):
-                note = ("  (by the scheme's url template)" if scheme.url
+            elif scheme is not None and (scheme.uris.get("read")
+                                         or scheme.document):
+                note = ("  (by the scheme's url template)"
+                        if scheme.uris.get("read")
                         else "  (a document anchor, per the scheme)")
-            elif code in known or remote.url:
+            elif code in known or remote.uris.get("read"):
                 note = ""
             else:
                 note = "  (by the code-only convention)"
