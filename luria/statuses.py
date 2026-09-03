@@ -52,23 +52,43 @@ _NOTE_RE = re.compile(r"\s+—\s+")
 
 @dataclass(frozen=True)
 class Status:
-    """A status: one word from the closed vocabulary, and an optional prose
-    note qualifying it. Two fields, two types:
+    """A status: one word from the closed vocabulary, the successor a
+    superseded document names, and an optional prose note. Three fields,
+    three types:
 
         status: Superseded
-        status_note: by [ADR-035](ADR-035.md)
+        superseded_by: FX-ADR-032
+        status_note: the capital never burned after all
 
-    The word is data, checked against the vocabulary. The note is prose — a
+    The word is data, checked against the vocabulary. `superseded_by` is a
+    reference — structure, checked and resolved like any declared
+    reference, and the typed edge (ADR-tmpxmnac). The note is prose — a
     prose key like `summary:` (ADR-051): rendered, linked by the fixer,
-    scanned for citations. They used to share one scalar, `Superseded — by
-    ADR-035`, split in six places with three spellings of one regex; that
-    form is still read, reported by the lint, and moved by `luria index`."""
+    scanned for citations, for whatever the field cannot say. They used to
+    share one scalar, `Superseded — by X`, split in six places with three
+    spellings of one regex; that form is still read, reported by the lint,
+    and moved by `luria index`."""
     value: str
     note: str = ""
+    superseded_by: tuple[str, ...] = ()
 
     @property
     def display(self) -> str:
-        return f"{self.value} — {self.note}" if self.note else self.value
+        return display(self)
+
+
+def display(status: Status, link=None) -> str:
+    """`Superseded — by X; note`: the reading a status has always had,
+    composed from the fields. `link` renders a successor's code the way
+    the surface it lands on wants — a relative link in the index, a
+    wikilink on the site — and bare codes are the default."""
+    link = link or (lambda code: code)
+    parts = []
+    if status.superseded_by:
+        parts.append("by " + ", ".join(link(c) for c in status.superseded_by))
+    if status.note:
+        parts.append(status.note)
+    return f"{status.value} — {'; '.join(parts)}" if parts else status.value
 
 
 def parse(raw) -> Status:
@@ -87,7 +107,10 @@ def of(meta: dict) -> Status:
     meta = meta or {}
     parsed = parse(meta.get("status"))
     note = str(meta.get("status_note") or "").strip()
-    return Status(parsed.value, note or parsed.note)
+    raw = meta.get("superseded_by")
+    codes = raw if isinstance(raw, list) else ([raw] if raw not in (None, "") else [])
+    return Status(parsed.value, note or parsed.note,
+                  tuple(str(c).strip() for c in codes if str(c).strip()))
 
 
 def combined(meta: dict) -> bool:
@@ -95,48 +118,101 @@ def combined(meta: dict) -> bool:
     return bool(parse((meta or {}).get("status")).note)
 
 
-# The `status:` block and, if present, the `status_note:` block: a scalar
-# with any indented continuation lines a quoted multi-line value carries.
+# The `status:` block and, if present, the `status_note:` and
+# `superseded_by:` blocks: a scalar or list with any indented or `- `
+# continuation lines.
 _STATUS_BLOCK_RE = re.compile(r"^status:.*(?:\n[ \t]+.*)*", re.MULTILINE)
 _NOTE_BLOCK_RE = re.compile(r"^status_note:.*(?:\n[ \t]+.*)*\n?", re.MULTILINE)
+_BY_BLOCK_RE = re.compile(r"^superseded_by:.*(?:\n(?:[ \t]+|- ).*)*\n?", re.MULTILINE)
+# The old canonical note, `by CODE …`: the shape `luria migrate` used to
+# write, read once more so the repair can turn it into the field.
+_BY_RE = re.compile(r"^by\s+")
 
 
-def set_status(text: str, value: str, note: str = "") -> str:
-    """The file text with its status written in the two-field form.
+def set_status(text: str, value: str, note: str = "",
+               superseded_by=()) -> str:
+    """The file text with its status written in the three-field form.
 
-    The one writer of the field, so the shape has one spelling: the
-    migration's tombstone and the index's split both come through here. An
-    existing `status_note:` is replaced, never duplicated."""
+    The one writer of the fields, so the shape has one spelling: the
+    migration's tombstone and the index's repair both come through here.
+    Existing `status_note:` and `superseded_by:` blocks are replaced, never
+    duplicated."""
     lines = f"status: {value}"
+    fields = {}
+    if superseded_by:
+        fields["superseded_by"] = [str(c) for c in superseded_by]
     if note:
-        dumped = yaml.safe_dump({"status_note": note}, allow_unicode=True,
-                                width=10 ** 6, default_flow_style=False)
+        fields["status_note"] = note
+    if fields:
+        dumped = yaml.safe_dump(fields, allow_unicode=True, width=10 ** 6,
+                                default_flow_style=False, sort_keys=False)
         lines += "\n" + dumped.rstrip("\n")
     text = _NOTE_BLOCK_RE.sub("", text, count=1)
+    text = _BY_BLOCK_RE.sub("", text, count=1)
     return _STATUS_BLOCK_RE.sub(lambda _: lines, text, count=1)
 
 
-def split(text: str) -> str | None:
-    """A document's text with a note moved out of `status:`, or None when
-    there is nothing to move. Reads the value through YAML rather than by
-    eye, so a quoted multi-line note comes through intact."""
+def successor_in(note: str) -> str | None:
+    """The code an old-form `by CODE …` note opens with, or None.
+
+    Read the way prose is read everywhere else — links unwrapped, then the
+    scheme-driven finder (ADR-046). This is the repair's reader only: the
+    relation itself lives in `superseded_by:`, and nothing infers it from
+    prose at check time."""
+    from . import doc_refs
+    plain = doc_refs.UNLINK_RE.sub(r"\1", note or "").strip()
+    opening = _BY_RE.match(plain)
+    if not opening:
+        return None
+    refs = [r for r in doc_refs.find_refs(plain) if r.kind == "scheme"]
+    if not refs or refs[0].start != opening.end():
+        return None
+    return refs[0].describe()
+
+
+def repair(text: str) -> str | None:
+    """A document's text brought to the three-field form, or None when it
+    is there already: a note riding in `status:` moves to `status_note:`,
+    and a Superseded document whose old-form note opens with `by CODE` gets
+    `superseded_by:` — the note dropped when it said only that, kept
+    verbatim when it said more. Reads the values through YAML rather than
+    by eye, so a quoted multi-line note comes through intact."""
     from .adr_index import parse_frontmatter
     meta, _ = parse_frontmatter(text)
-    if not meta or not combined(meta):
+    if not meta:
         return None
-    parsed = parse(meta.get("status"))
-    return set_status(text, parsed.value, parsed.note)
+    status = of(meta)
+    changed = combined(meta)
+    successors = status.superseded_by
+    note = status.note
+    if status.value == "Superseded" and not successors:
+        if code := successor_in(note):
+            successors = (code,)
+            changed = True
+            from . import doc_refs
+            plain = doc_refs.UNLINK_RE.sub(r"\1", note).strip()
+            if plain == f"by {code}":
+                note = ""
+    if not changed:
+        return None
+    return set_status(text, status.value, note, successors)
+
+
+def split(text: str) -> str | None:
+    """Kept as the name the split was introduced under; `repair` is the
+    whole operation."""
+    return repair(text)
 
 
 def populate(scheme) -> list:
-    """Move every note still riding in `status:` to `status_note:` — a
-    source repair `luria index` runs, like `created:` from a journal
-    entry's path (ADR-031): the file already states both facts, in one
-    scalar, and the tree is made to say so in two."""
+    """Bring every document to the three-field form — a source repair
+    `luria index` runs, like `created:` from a journal entry's path
+    (ADR-031): the file already states the facts, and the tree is made to
+    say so in the fields that carry them."""
     moved = []
     for path in [*scheme.documents().values(), *scheme.temp_documents().values()]:
         text = path.read_text(encoding="utf-8")
-        if (fresh := split(text)) is not None:
+        if (fresh := repair(text)) is not None:
             path.write_text(fresh, encoding="utf-8")
             moved.append(path)
     return moved
