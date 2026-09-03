@@ -221,6 +221,28 @@ REQUIRE_RULES = ("any", "at-most-one", "exactly-one")
 
 
 @dataclass(frozen=True)
+class FieldGroup:
+    """Several fields of which an entry must carry some — a requirement that
+    is satisfied by any of them, named for what they have in common:
+
+        [luria.schemes.LIT.field_groups.source]
+        fields  = ["arxiv", "doi", "url"]
+        require = "at-least-one"          # or "exactly-one", "at-most-one"
+
+    `requires` demands every field it names; a paper that was never posted
+    to arXiv but has a DOI, or only a URL, has a source all the same, and
+    demanding `arxiv` of it is demanding the wrong thing. The group says
+    what is actually required — *a source* — and which fields count as
+    one. Opt-in per scheme, like a tag group (ADR-054)."""
+    name: str
+    fields: tuple[str, ...]
+    require: str = "at-least-one"
+
+
+FIELD_RULES = ("at-least-one", "exactly-one", "at-most-one")
+
+
+@dataclass(frozen=True)
 class Reference:
     """A frontmatter field that holds a code from a named scheme.
 
@@ -298,6 +320,10 @@ class Scheme:
     # two schemes can name ONE file and share a vocabulary instead of keeping
     # a copy each (ADR-060).
     tags_file: Path | None = None
+    # Several fields of which an entry must carry some (see `FieldGroup`):
+    # `[luria.schemes.X.field_groups.NAME]`. What `requires` cannot say —
+    # that any of these satisfies the need, and the need has a name.
+    field_groups: tuple[FieldGroup, ...] = ()
     # Frontmatter fields that hold a code from another scheme, by field name.
     # `requires` says a field is present; this says what it means.
     references: tuple[Reference, ...] = ()
@@ -688,6 +714,26 @@ def _tag_groups(prefix: str, raw: dict,
     return tuple(groups)
 
 
+def _field_groups(prefix: str, raw: dict) -> tuple[FieldGroup, ...]:
+    """Read a scheme's `[luria.schemes.X.field_groups]` tables. Validated at
+    load like a tag group: a group naming no fields, or a rule that is not
+    one, would surface as "no violations"."""
+    groups = []
+    for name, spec in raw.items():
+        rule = str(spec.get("require", "at-least-one"))
+        if rule not in FIELD_RULES:
+            raise ValueError(
+                f"luria.toml: schemes.{prefix}.field_groups.{name} has "
+                f"require = {rule!r}; expected one of {list(FIELD_RULES)}")
+        fields = tuple(str(f) for f in spec.get("fields", ()))
+        if not fields:
+            raise ValueError(
+                f"luria.toml: schemes.{prefix}.field_groups.{name} lists no "
+                f"fields, so it constrains nothing")
+        groups.append(FieldGroup(name=str(name), fields=fields, require=rule))
+    return tuple(groups)
+
+
 def _references(prefix: str, raw: dict) -> tuple[Reference, ...]:
     """Read a scheme's `[luria.schemes.X.references]` table."""
     found = []
@@ -1072,6 +1118,7 @@ def _schemes(raw: dict, root: Path) -> dict[str, Scheme]:
                                    tags_path),
             tags_file=tags_file,
             references=_references(prefix, spec.get("references", {})),
+            field_groups=_field_groups(prefix, spec.get("field_groups", {})),
             uniform_ok=(spec.get("uniform_ok") or None),
         )
     for prefix, scheme in schemes.items():

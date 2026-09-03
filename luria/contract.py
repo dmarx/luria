@@ -28,7 +28,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
-from .config import TEMP_TAIL, TagGroup, current
+from .config import TEMP_TAIL, FieldGroup, TagGroup, current
 
 
 @dataclass(frozen=True)
@@ -55,6 +55,9 @@ class Contract:
     scheme: str
     fields: tuple[Field, ...] = ()
     groups: tuple[TagGroup, ...] = ()
+    # Several fields of which an entry must carry some — a need with a name
+    # that any of them satisfies.
+    field_groups: tuple[FieldGroup, ...] = ()
     # Where this scheme's table lives, as a finding cites it — the prefix
     # every key path below starts from.
     where: str = "luria.toml"
@@ -66,7 +69,8 @@ class Contract:
     def empty(self) -> bool:
         """True for every scheme that declares nothing — which is every
         scheme that predates the three tables, and the shipped ADR scheme."""
-        return not any(not f.builtin for f in self.fields) and not self.groups
+        return (not any(not f.builtin for f in self.fields)
+                and not self.groups and not self.field_groups)
 
 
 # A reference into any local scheme: the successor a superseded document
@@ -108,6 +112,7 @@ def for_scheme(scheme) -> Contract:
     for field in BUILT_IN:
         fields.setdefault(field.name, field)
     return Contract(scheme.prefix, tuple(fields.values()), scheme.tag_groups,
+                    field_groups=scheme.field_groups,
                     where="luria.toml", vocabulary=vocabulary)
 
 
@@ -121,6 +126,16 @@ def _cite(because: tuple[str, ...]) -> str:
         by_file.setdefault(file, []).append(key)
     return "(" + "; ".join(f"{file}: {', '.join(keys)}"
                            for file, keys in by_file.items()) + ")"
+
+
+def field_group_because(contract: Contract, group: FieldGroup) -> str:
+    return (f"({contract.where}: schemes.{contract.scheme}.field_groups."
+            f"{group.name})")
+
+
+_FIELD_RULE_WORDS = {"at-least-one": "at least one of",
+                     "exactly-one": "exactly one of",
+                     "at-most-one": "at most one of"}
 
 
 def group_because(contract: Contract, group: TagGroup) -> str:
@@ -159,6 +174,10 @@ def describe(contract: Contract) -> list[str]:
             if not field.required:
                 what += " when present"
         lines.append(f"`{field.name}` — {what} {_cite(field.because)}")
+    for group in contract.field_groups:
+        members = ", ".join(f"`{f}`" for f in group.fields)
+        lines.append(f"`{group.name}` — {_FIELD_RULE_WORDS[group.require]} "
+                     f"{members} {field_group_because(contract, group)}")
     for group in contract.groups:
         members = ", ".join(f"`{t}`" for t in sorted(group.tags))
         rule = {"exactly-one": "exactly one of", "at-most-one": "at most one of",
@@ -260,6 +279,20 @@ def violations(contract: Contract, rel: str, meta: dict,
         elif code not in known[target]:
             out.append(f"{rel}: `{field.name}: {code}` resolves to no "
                        f"{target} document")
+    for group in contract.field_groups:
+        present = [f for f in group.fields if meta.get(f) not in (None, "", [])]
+        shown = ", ".join(f"`{f}:`" for f in group.fields)
+        has = ", ".join(f"`{f}:`" for f in present)
+        cite = field_group_because(contract, group)
+        if group.require == "at-least-one" and not present:
+            out.append(f"{rel}: no `{group.name}` — one of {shown} — the "
+                       f"{contract.scheme} scheme requires it {cite}")
+        elif group.require == "exactly-one" and len(present) != 1:
+            out.append(f"{rel}: `{group.name}` wants exactly one of {shown} "
+                       f"— has {has or 'none'} {cite}")
+        elif group.require == "at-most-one" and len(present) > 1:
+            out.append(f"{rel}: `{group.name}` wants at most one of {shown} "
+                       f"— has {has} {cite}")
     tags = {str(t) for t in (meta.get("tags") or [])}
     for group in contract.groups:
         present = sorted(tags & group.tags)
