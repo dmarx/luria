@@ -69,11 +69,13 @@ def test_ci_is_offered_both_ways_to_commit(monkeypatch):
 
 
 def test_ci_warns_against_the_shape_that_commits_nothing(monkeypatch):
-    """The broken shape is specifically 'generator in the checking job, output
-    committed by nobody' — not 'a generator ran in CI'."""
+    """The broken shape is specifically 'generator in the checking job on the
+    default branch, output committed by nobody' — not 'a generator ran in
+    CI', and not a branch, which carries no view of its own (ADR-068)."""
     monkeypatch.setenv("CI", "true")
     remedy = ci.regenerate_remedy()
-    assert "not enough on its own" in remedy
+    assert "default branch" in remedy
+    assert "carries no view of its own and is not checked for one" in remedy
     assert "comparing that output against itself" in remedy
 
 
@@ -94,20 +96,21 @@ def test_the_remedy_names_the_command_it_was_given(monkeypatch):
 # ── Reaching the messages people actually read ───────────────────────────
 
 
-def test_the_lint_carries_the_ci_remedy(monkeypatch, project):
+def test_the_staleness_check_carries_the_ci_remedy(monkeypatch, project, capsys):
     """The integration that matters: this is the exact string an adopter reads
     in a build log when the index goes stale, and the reason they reached for
-    the wrong fix."""
+    the wrong fix. `luria index --check` is where it is read now — the lint
+    asks no staleness question (ADR-068)."""
+    from luria import adr_index
     decision(project, 1, "Active")
     (project / "docs" / "decisions" / "README.md").write_text("stale\n")
     monkeypatch.setenv("CI", "true")
 
-    errors: list[str] = []
-    lint.check_generated_index(errors)
-
-    assert errors, "a hand-written index should be stale"
-    assert any("regenerate and commit the result" in e for e in errors)
-    assert any("generation job" in e for e in errors)
+    with pytest.raises(SystemExit):
+        adr_index.run(check=True)
+    err = capsys.readouterr().err
+    assert "regenerate and commit the result" in err
+    assert "generation job" in err
 
 
 def test_bare_badges_says_it_only_printed(capsys, monkeypatch, project):

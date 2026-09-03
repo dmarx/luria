@@ -114,25 +114,54 @@ Two settings earn attention early:
 `init` scaffolds two workflows built on composite actions published from
 the Luria repository. What they do, so you can rearrange them:
 
-### `docs.yml` — generate, then lint
+### `docs.yml` — generate on the default branch, check on pull requests
 
-1. **`dmarx/luria/actions/generate`** runs `luria link --fix` and
+Generated views are committed on the default branch only. A branch never
+carries the decision index or the devlog book, so two branches cannot
+conflict on them — the conflict every pair of concurrent record PRs used
+to hit.
+
+1. **On push to the default branch, `dmarx/luria/actions/generate`** runs
+   `luria concretize` (assigning real numbers to merge-allocated temporary
+   codes now that merges have serialized), `luria repair` and
    `luria index`, commits any diff as `github-actions[bot]` with a
-   `[skip ci]` message, pushes, and outputs the resulting SHA. On a fork
-   PR it cannot push; it outputs the unregenerated SHA so the downstream
-   lint fails informatively instead of the job dying on a 403. With
-   `concretize: true` — pass it only on push-to-main runs, never on PRs —
-   it first runs `luria concretize`, assigning real numbers to any
-   merge-allocated temporary codes now that merges have serialized.
-2. **`dmarx/luria/actions/lint`** checks out that SHA, runs `luria lint`,
-   then writes the status reports and uploads them as an artifact whether
-   or not the lint passed.
-3. A scheduled job (weekly, in the scaffold) runs `luria collect --commit`
+   `[skip ci]` message, pushes, and outputs the resulting SHA.
+2. **Then `dmarx/luria/actions/lint`** checks out that SHA, runs
+   `luria lint`, and writes and uploads the status reports whether or not
+   the lint passed. The generate/lint split matters here: a checking job
+   that regenerated in place would be comparing its own output against
+   itself. Generation commits; the check reads the commit.
+3. **On a pull request, one job** checks out the head branch and runs the
+   generate action with `views: "false"`: `luria repair`, its diff
+   committed and pushed onto the branch — a repair touches only the files
+   the branch authored, so the review reads the repaired source and the
+   author's next pull carries it — and nothing else; the lint action right
+   after it checks the sources. No view is written on a branch and none is
+   needed: `luria lint` reads sources, and whether a committed view is
+   current is `luria index --check`'s question on the default branch. On a
+   fork the token cannot push; the action warns, the lint still runs on
+   the repaired tree, and the default branch repairs the source after
+   merge. A repair commit pushed with `GITHUB_TOKEN` gets no
+   workflow run of its own — the lint that ran in the same job on the same
+   tree is its check; a repository that requires status checks on the head
+   commit should push with a token that triggers runs, which is why the
+   repair commit's message carries no skip marker.
+4. A scheduled job (weekly, in the scaffold) runs `luria collect --commit`
    to assemble changelog fragments and pushes the result.
 
-The generate/lint split matters: a checking job that regenerates views
-in-place would be comparing its own output against itself. Generation
-commits; the check reads the commit.
+**Which token the job pushes with** decides one thing. The workflow's own
+`GITHUB_TOKEN` needs no setup and is what the scaffold uses, and it cannot
+create or update anything under `.github/workflows/` — there is no
+`workflows:` entry to grant in a `permissions:` block. So a temporary code
+cited from a workflow comment is one the job can never number: `luria
+concretize` rewrites it with everything else, and the push is refused
+whole. The lint reports that as `workflow-temp-codes`, and the scaffold's
+`luria.toml` names it in `fail_on`; cite the number once the decision has
+one, or say it in prose. A job that checks out with a personal access
+token carrying the `workflow` scope, or a GitHub App token with workflow
+write (`token:` on `actions/checkout`), can push those files — and its
+pushes trigger workflow runs, so a repair commit on a pull request gets a
+check of its own. Such a project leaves the class unenforced.
 
 Two hazards, both found by adopting this into a repository that already had
 generators of its own.
@@ -173,6 +202,16 @@ green belongs to.
 vault with a pinned [Quartz](https://quartz.jzhao.xyz/) (v4 — bump the pin
 deliberately; the generated config targets its plugin API) and hands the
 HTML to `actions/upload-pages-artifact` / `actions/deploy-pages`.
+
+It runs after the Docs workflow completes on the default branch
+(`workflow_run`), not on push: the site is built from the committed views,
+and those are committed by the generation job during that run — a build
+triggered by the push itself would render the merge commit, one bot commit
+behind, and never see the bot's push at all, since a push made with
+`GITHUB_TOKEN` triggers no workflow. Nothing builds on a pull request: a
+branch carries no views of its own, so a preview there would show the
+default branch's views under the branch's sources. If you rename the Docs
+workflow, rename it in `pages.yml` too.
 
 ## The published site
 

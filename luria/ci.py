@@ -6,12 +6,17 @@ author can regenerate and commit, or a generation job can run the generator
 and push what it wrote — the second is usually better, since a view a human
 has to rebuild by hand is still a hand-maintained projection (ADR-029).
 
-What is *not* open is dropping the generator into a checking job and
-committing nothing. That discards the output and, if a `luria lint` follows in
-the same job, leaves the lint comparing the generator's output against itself
-so it can no longer fail. The message that has to carry this is the staleness
-remedy, because a staleness failure is usually read first in a CI log — where
-the bare "run `luria index`" omits exactly the half that matters.
+Where the commit lands is decided (ADR-068): a view on the default
+branch, where merges serialize; a source repair on the branch that authored
+the source. A pull request pushes its repairs and lints its sources; it
+writes no view and checks none, so a branch never carries a generated file
+and two branches cannot conflict on one. Staleness is `luria index --check`'s
+question, asked in the generation job right after it regenerates. What stays
+wrong is a checking job on the default branch that regenerates and commits
+nothing — the output dies with the runner, and a check in the same job
+compares the generator against itself. The staleness remedy has to carry
+that, because a staleness failure is usually read first in a CI log, where
+the bare "run `luria index`" omits the half that matters.
 
 Detection is deliberately crude — every CI sets `CI` — and it only ever
 changes what is *said*, never what is done: a false positive costs a sentence
@@ -52,11 +57,13 @@ def regenerate_remedy(command: str = "luria index") -> str:
     comparing the generator against itself."""
     if not running_in_ci():
         return f"run `{command}`"
-    return (f"regenerate and commit the result — run `{command}` locally, or "
-            f"give CI a generation job that runs it and pushes what it wrote. "
-            f"Adding `{command}` to this checking job is not enough on its "
-            f"own: nothing would commit its output, and this check would be "
-            f"comparing that output against itself")
+    return (f"regenerate and commit the result on the default branch — run "
+            f"`{command}` locally, or give CI a generation job that runs it "
+            f"where merges serialize and pushes what it wrote. A branch "
+            f"carries no view of its own and is not checked for one; on the "
+            f"default branch, `{command}` in the checking job alone is not "
+            f"enough: nothing would commit its output, and this check would "
+            f"be comparing that output against itself")
 
 
 # A third helper was built here and removed before merge: a warning printed

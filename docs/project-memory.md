@@ -14,9 +14,9 @@ Everything in a Luria record divides into two kinds of file:
 - **Views** are written by `luria index`: the decision index and its tag
   pages, the rendered principles document, journal books, the status
   reports, the badge counts in the README. A view directory holds *only*
-  generated files — `luria lint` fails on a stale view and on a stray
-  hand-written file inside one, so a reader can trust that what they see
-  reflects the sources.
+  generated files — `luria lint` fails on a stray hand-written file inside
+  one, and `luria index --check` on the default branch fails on a stale
+  view, so a reader can trust that what they see reflects the sources.
 
 The split is the whole trick. Contributors write into an append-only pile;
 readers get curated, cross-linked pages; and nothing depends on anyone
@@ -152,6 +152,11 @@ is a rendering declares where its stable bytes live
 foreign code at all is pinned by flagging it where it is cited
 (`<!-- pin: https://… — why -->`). Removing a registration — the config
 line, the flag — retires its pins.
+
+Under it all, a code relates to a set of *named URIs* through one template
+vocabulary: `url` is the `read` relation, `pin_url` the `bytes` one, and a
+`uris` table on a remote or scheme names more — a different forge's raw
+scheme, an edit view — without a new mechanism.
 
 The `uid` form generalises past Luria-shaped records entirely: give a
 remote a regex and a URL template and arXiv identifiers, Jira keys, or CVE

@@ -508,12 +508,15 @@ class Staleness:
 
 
 def staleness(rendered: dict[Path, str] | None = None) -> Staleness:
-    """The one answer `luria index --check` and `luria lint` both consume.
+    """The one answer to "is the committed tree current?", for
+    `luria index --check`; `luria lint` reads only its `orphaned` field.
 
-    They used to compute it twice, in two files, from the same three rules —
+    It used to be computed twice, in two files, from the same three rules —
     which is the arrangement where a fix lands in one of them and the other
     keeps failing. It did: the gitignore exemption below was written in
-    `--check` first, and `lint` went on rejecting the same tree.
+    `--check` first, and `lint` went on rejecting the same tree. Now the
+    lint asks no staleness question at all (ADR-068), and this stays one
+    function so the orphan rule cannot fork either.
 
     A view the project gitignores is excluded from all three kinds. There is
     no committed copy to compare against — see `ignored`."""
@@ -540,22 +543,13 @@ def staleness(rendered: dict[Path, str] | None = None) -> Staleness:
 def run(check: bool = False) -> None:
     """Regenerate every view — the decision index and tag pages, the
     principles document, the devlog books, the status reports, the README
-    badges. --check exits 1 if any of them is stale instead of writing."""
-    if not check:
-        # A journal entry filed without `created:` gets the field written from
-        # its path before anything renders (#33) — a source repair, so it
-        # belongs to write mode; `--check` must keep reading, not writing.
-        from . import config_doc, journal
-        for j in current().journals.values():
-            for p in journal.populate_created(j):
-                print(f"populated `created:` from the path in {current().rel(p)}")
-        # One-time cleanup for a project upgrading past ADR-059, which stopped
-        # rendering the schema reference outside Luria's own tree.
-        for p in config_doc.retire():
-            print(f"removed {current().rel(p)} — the configuration reference "
-                  "now renders only where its schema lives; this project's own "
-                  f"record is described in {current().rel(current().record_doc)}")
-
+    badges — and nothing else: sources are `luria repair`'s. --check exits 1
+    if any view is stale instead of writing."""
+    # Views only. The source repairs that used to run first — a journal
+    # entry's missing `created:`, a retired configuration reference — are
+    # `luria repair`'s (ADR-068): a repair is committed on the branch
+    # that authored the source, a view on the default branch alone, and one
+    # command cannot write to two commit points.
     if check:
         report = staleness()
         if report.any:

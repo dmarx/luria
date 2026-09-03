@@ -5,7 +5,7 @@
      which files an entry at devlog.d/yyyy/mm/dd/hhmmss.md, the path derived from the
      timestamp so nothing has a number to assign and nothing has a name to
      collide on. `luria lint` checks the path and the `created:` field agree —
-     and when the field is empty in an entry filed by hand, `luria index`
+     and when the field is empty in an entry filed by hand, `luria repair`
      populates it from the path, since the path already says it (#33).
 
      Entries persist. A journal entry is a dated observation — true when it was

@@ -11,9 +11,11 @@ Checks (each one fails the build):
 2. **Frontmatter** — every document in a reference scheme carries a `status:`
    from the canonical vocabulary, at least one `tags:` entry (ADR-003), and a
    `title:` that agrees with its body heading (ADR-013).
-3. **Generated index** — the decision index and its per-tag pages are built from
-   frontmatter (ADR-004), so a stale index is a failure rather than a silent
-   divergence. `luria index` regenerates.
+3. **View directories** — a view directory holds only generated files
+   (ADR-021), so a hand-written file inside one is a failure. Whether a
+   committed view is *current* is the generation job's question, answered by
+   `luria index --check` on the default branch (ADR-068): the lint reads
+   sources and needs no view on disk, so it runs on a branch as it is.
 4. **Bare references** — a document code, a design principle or an issue number
    cited in prose without being a hyperlink (ADR-005). `luria link --fix`
    writes exactly the links this check demands.
@@ -285,7 +287,7 @@ def check_journals(errors: list[str]) -> None:
                 # witness left is a question only the author can answer.
                 if journal.created_from_path(path) is not None:
                     errors.append(f"{rel}: no `created:` timestamp — "
-                                  "`luria index` populates it from the path")
+                                  "`luria repair` populates it from the path")
                 else:
                     errors.append(f"{rel}: no `created:` timestamp, and the "
                                   "path doesn't imply one (see _template.md)")
@@ -327,32 +329,48 @@ def check_version_history(errors: list[str]) -> None:
                         f"document says {version}")
 
 
-def check_generated_index(errors: list[str]) -> None:
-    """The index is generated (ADR-004) — verify it's current, rather than
-    checking each document is mentioned, which a generated file can't fail."""
+def check_view_dirs(errors: list[str]) -> None:
+    """A view directory holds only generated files (ADR-021), so a
+    hand-written file inside one is a violation — computed against what the
+    generator would write, in memory, so the check reads sources and writes
+    nothing.
+
+    Staleness — a committed view that differs from the generator's output —
+    is not checked here. It is a property of the default branch, where the
+    views are committed, and `luria index --check` in the generation job
+    answers it there (ADR-068); a branch carries the default branch's copies
+    and has nothing to be stale against. For the same reason a file in a view
+    directory that says it was generated is left alone: it is a view the
+    generator no longer writes, which `luria index` deletes and `--check`
+    reports, not something a person wrote."""
     cfg = current()
-    # Computed by the generator, not recomputed here: the rules for what
-    # counts as stale live in one place, so this check and `luria index
-    # --check` cannot answer differently. Only the wording is this file's.
-    report = builder.staleness()
-    # This lint is usually read in a build log, where "run `luria index`" names
-    # the one action that must not be taken here — putting the generator ahead
-    # of this check makes it compare the generator's output against itself, and
-    # it stops being able to fail (ADR-029). The remedy says so when it is
-    # being read in CI.
-    remedy = ci.regenerate_remedy()
-    for path in report.stale:
-        errors.append(f"{cfg.rel(path)}: stale — {remedy}")
-    for path in report.orphaned:
+    for path in builder.staleness().orphaned:
+        if "luria index" in path.read_text(encoding="utf-8"):
+            continue
         errors.append(f"{cfg.rel(path)}: not something the generator wrote — "
                       "a view directory holds only generated files (ADR-021); "
-                      f"{remedy}, or file the content as a source")
-    # The README's badge counts are derived from the same frontmatter, so a
-    # stale one is the same class of failure as a stale index (ADR-018).
-    if report.readme:
-        errors.append(
-            f"{cfg.rel(report.readme)}: a generated region is stale — "
-            f"{remedy}")
+                      "file the content as a source")
+
+
+def workflow_temp_code_lines() -> list[str]:
+    """A temporary code (ADR-049) cited from a workflow file, one line per
+    site. `luria concretize` rewrites the code with everything else when the
+    decision is numbered, and the workflow's own token cannot push a change
+    under `.github/workflows/` — so on that token the generation job's
+    commit is refused whole. A job pushing with a token that has workflow
+    write has no such problem, which is why this is a warning class and not
+    a violation: the project says which token it runs on by naming
+    `workflow-temp-codes` in `fail_on`, or not."""
+    cfg = current()
+    patterns = [s.temp_pattern for s in cfg.schemes.values()]
+    found: list[str] = []
+    for path in sorted(cfg.root.glob(".github/workflows/*.y*ml")):
+        text = path.read_text(encoding="utf-8")
+        for regex in patterns:
+            for m in regex.finditer(text):
+                line = text.count("\n", 0, m.start()) + 1
+                found.append(f"{cfg.rel(path)}:{line}: {m.group(0)}")
+    return found
 
 
 def check_wikilinks(errors: list[str]) -> None:
@@ -406,7 +424,7 @@ def check_bare_refs(errors: list[str]) -> None:
 FAILABLE = ("retired-citations", "unresolved-codes", "hand-written-urls",
             "broken-targets", "remote-drift", "inert-status",
             "legacy-spellings", "narrow-titles", "stale-directives",
-            "pending-documents", "unlinted-files")
+            "pending-documents", "unlinted-files", "workflow-temp-codes")
 
 
 def status_sections() -> list[tuple[str, str, list[str]]]:
@@ -433,6 +451,19 @@ def status_sections() -> list[tuple[str, str, list[str]]]:
             f"{len(loose)} code(s) resolve to no document "
             "(`luria reports` for the sites, `unresolved-ok:` for the "
             "deliberate ones)", loose))
+
+    # A temporary code in a workflow file is one the generation job cannot
+    # rewrite on the workflow's own token; a project on that token names the
+    # class in `fail_on`, one whose job pushes with workflow write leaves it.
+    sites = workflow_temp_code_lines()
+    if sites:
+        sections.append((
+            "workflow-temp-codes",
+            f"{len(sites)} temporary code(s) cited from a workflow file — the "
+            "workflow's own token cannot push the rewrite once the decision "
+            "is numbered; cite the number when it has one, say it in prose, "
+            "or give the generation job a token with workflow write and "
+            "leave this class unenforced", sites))
 
     # A whole file opting out of reference checking is legitimate and blunt
     # (#37) — blunt enough that the count surfaces even though nothing here
@@ -580,7 +611,7 @@ def run() -> None:
     check_status_vocabulary(errors)
     check_tag_groups(errors)
     check_references(errors)
-    check_generated_index(errors)
+    check_view_dirs(errors)
     check_journals(errors)
     check_version_history(errors)
     check_bare_refs(errors)

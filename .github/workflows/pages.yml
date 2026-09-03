@@ -2,11 +2,18 @@
 # action adopters get — referenced by local path so a change to the action is
 # exercised by the pull request that makes it (ADR-029).
 #
-# Build runs on every pull request and deploys on none: a site that stopped
-# building should fail the branch that broke it, not the merge. Deploy is a
-# separate job because it is the only one that needs `pages: write`, and the
-# smallest surface that can publish is the right one (the same reasoning as
-# the PyPI split in publish.yml).
+# The site is built from the committed views, so it builds after the job that
+# commits them: `workflow_run` fires when the CI workflow completes on the
+# default branch, by which time the generation job has pushed the regenerated
+# views, and the checkout is the head of the default branch — that commit.
+# Triggering on `push` instead would build the merge commit, one bot commit
+# behind, and never see the bot's push at all (a push made with GITHUB_TOKEN
+# triggers no workflow). A pull request builds nothing: a branch carries no
+# views of its own (ADR-068), so a preview there would render the default
+# branch's views under the branch's sources. Deploy is a separate job because
+# it is the only one that needs `pages: write`, and the smallest surface that
+# can publish is the right one (the same reasoning as the PyPI split in
+# publish.yml).
 #
 # One repository setting is required and cannot live here: Settings → Pages →
 # Source must be "GitHub Actions". Until it is, `deploy` fails with "Pages is
@@ -14,9 +21,10 @@
 name: Pages
 
 on:
-  push:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
     branches: [main]
-  pull_request:
   workflow_dispatch:
 
 # A published page is the whole repository's markdown rendered; nothing in the
@@ -30,6 +38,8 @@ concurrency:
 
 jobs:
   build:
+    # A CI run that failed has no regenerated views to publish.
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -45,7 +55,6 @@ jobs:
           path: ${{ steps.site.outputs.path }}
 
   deploy:
-    if: github.event_name != 'pull_request'
     needs: build
     runs-on: ubuntu-latest
     permissions:

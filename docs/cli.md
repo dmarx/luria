@@ -9,6 +9,7 @@ One binary, `luria`, dispatching to plain functions. Every command takes
 | [`luria init`](#luria-init) | scaffold a record into a repository |
 | [`luria config`](#luria-config) | write a starting `luria.toml`, without scaffolding |
 | [`luria new`](#luria-new) | file a new entry of any configured kind |
+| [`luria repair`](#luria-repair) | write every mechanical source repair |
 | [`luria index`](#luria-index) | render every generated view |
 | [`luria link`](#luria-link) | turn bare codes and wikilinks into links |
 | [`luria lint`](#luria-lint) | enforce the record's invariants |
@@ -120,6 +121,25 @@ field flags (`--title`, `--status`, `--summary`, `--tags`) pre-fill the
 scaffolded frontmatter. The generated view of your own config lists every
 kind your project accepts (see [the record](record.md) for this one).
 
+## luria repair
+
+```
+luria repair
+```
+
+Writes every mechanical repair to the sources — each one a state the lint
+reports with this command as its remedy: bare codes in prose become links
+(what `luria link --fix` does, over every file), a journal entry filed
+without `created:` gets the timestamp its path already implies, and a
+configuration reference Luria no longer renders here is removed. Prints
+what changed. Idempotent: a second run changes nothing.
+
+Repairs are a command apart from the views because they land in a
+different place. A repair touches only the files a branch itself authored,
+so the generate action commits it onto the branch, where the review reads
+it; a view is a shared file every branch would rewrite, so it is committed
+on the default branch only.
+
 ## luria index
 
 ```
@@ -130,12 +150,15 @@ Renders every generated view from the sources: scheme indexes and tag
 pages (or the single concatenated page for `render = "document"` schemes),
 journal books, the status reports, the record and configuration reference
 pages, and the README badge region. Also deletes orphaned files from view
-directories and fills in missing `created:` frontmatter on journal entries
-whose path implies the timestamp.
+directories. Writes views only; the sources are `luria repair`'s.
 
 `--check` writes nothing and exits non-zero if any committed view differs
-from what would be generated — the staleness check CI runs. (Views listed
-in `.gitignore` are exempt: an uncommitted view cannot be stale.)
+from what would be generated, a file sits in a view directory the generator
+never wrote, or the README's generated region has drifted — the one
+staleness check there is, run by the generation job on the default branch
+right after it regenerates. `luria lint` asks no staleness question, so it
+runs on a branch as it is. (Views listed in `.gitignore` are exempt: an
+uncommitted view cannot be stale.)
 
 ## luria link
 
@@ -174,8 +197,9 @@ The contract, in two halves.
   different version than the document claims
 - a journal entry with no derivable `created:`, or filed at a path its
   timestamp says is wrong
-- a stale generated view, a stray file in a view directory, or stale badge
-  counts
+- a stray hand-written file in a view directory (whether a committed view
+  is *current* is `luria index --check`'s question, asked in the generation
+  job on the default branch; a branch carries no view of its own)
 - a bare code or unexpanded wikilink that `luria link --fix` would rewrite,
   or a wikilink that resolves to nothing
 - a docs page missing from the docs index (`docs/README.md`)
@@ -186,7 +210,8 @@ full in the [reports](reports/reference-status.md):
 
 `retired-citations` · `unresolved-codes` · `hand-written-urls` ·
 `broken-targets` · `inert-status` · `legacy-spellings` · `narrow-titles` ·
-`stale-directives` · `pending-documents` · `unlinted-files`
+`stale-directives` · `pending-documents` · `unlinted-files` ·
+`workflow-temp-codes`
 
 Any of those class names listed in `[luria.lint] fail_on` fails the build
 instead. Only unacknowledged findings ever reach a class, so
@@ -269,13 +294,16 @@ drifted content: that always takes the explicit command, so a scheduled
 sweep cannot quietly launder a drift finding.
 
 What gets hashed is the construction's *stable bytes*, not the page a
-reader lands on. A GitHub file construction qualifies on its own (the blob
-URL, re-based onto raw content); any other remote declares where its
-stable bytes live with a `pin_url` template — arXiv's immutable e-print
-archive behind its abstract page, a forge's own raw scheme — because a
-rendered page's markup churns under identical content, and a hash of it
-would cry wolf. Without either, the command says so rather than storing a
-hash that would drift on its own.
+reader lands on. A GitHub file construction qualifies on its own; any
+other remote declares where its stable bytes live with a `pin_url`
+template — arXiv's immutable e-print archive behind its abstract page, a
+forge's own raw scheme — because a rendered page's markup churns under
+identical content, and a hash of it would cry wolf. Without either, the
+command says so rather than storing a hash that would drift on its own.
+Under the hood these are two entries in one table: a code relates to a
+set of *named URIs* (`read`, `bytes`, and any name a project declares in
+`[luria.remotes.X.uris]`), each a template over one vocabulary — see the
+[configuration reference](configuration.md).
 
 An arbitrary URL — a spec, a dataset card, a post the design leans on —
 is pinned by flagging it where it is cited

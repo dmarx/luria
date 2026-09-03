@@ -54,6 +54,10 @@
       "ADR-049": {
         "endorsed": "sha256:a90407eeb41be3fb7e3d70f8c0ec166e01353b3e6fb2f47546c3c3ccdc288acf",
         "seen": "sha256:a90407eeb41be3fb7e3d70f8c0ec166e01353b3e6fb2f47546c3c3ccdc288acf"
+      },
+      "ADR-068": {
+        "endorsed": "sha256:11af8a877b112a191d3c28b9e72b659eacdae84897d10afcf59167be73795036",
+        "seen": "sha256:11af8a877b112a191d3c28b9e72b659eacdae84897d10afcf59167be73795036"
       }
     }
   }
