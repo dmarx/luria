@@ -1,4 +1,4 @@
-# The record's own CI, in the recommended shape (LU-ADR-029, LU-ADR-tmphzwg9).
+# The record's own CI, in the recommended shape (LU-ADR-029 and its amendment on where views land).
 # Three jobs on the default branch and pull requests, one on a schedule:
 #
 #   docs-generate  on push to the default branch: repairs the sources

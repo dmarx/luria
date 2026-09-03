@@ -20,11 +20,12 @@ on:
 jobs:
   # Where merges serialize, the sources are repaired, the views regenerated,
   # and both committed and pushed as the bot; the lint then reads that
-  # commit (ADR-029). Generated views are committed on main only
-  # (ADR-tmphzwg9): a pull request pushes its source repairs onto the
-  # branch, regenerates the views in the working tree, checks in the same
-  # job, and commits no view — so branches never carry the decision index or
-  # the devlog book, and two branches cannot conflict on them.
+  # commit (ADR-029). Generated views are committed on main only (the
+  # amendment to ADR-029 on where views land): a pull request pushes its
+  # source repairs onto the branch, regenerates the views in the working
+  # tree, checks in the same job, and commits no view — so branches never
+  # carry the decision index or the devlog book, and two branches cannot
+  # conflict on them.
   docs-generate:
     if: github.event_name == 'push'
     runs-on: ubuntu-latest

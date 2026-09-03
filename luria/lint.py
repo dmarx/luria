@@ -355,6 +355,32 @@ def check_generated_index(errors: list[str]) -> None:
             f"{remedy}")
 
 
+def check_workflow_temp_codes(errors: list[str]) -> None:
+    """A temporary code (ADR-049) in a workflow file is one the generation
+    job can never number: `luria concretize` rewrites it with everything
+    else, and GitHub refuses a push from the workflow token that modifies
+    `.github/workflows/` — so the job's commit is rejected and the default
+    branch stays red, with nothing wrong in the record. The first merge to
+    cite a pending decision from a workflow comment found this. Cite the
+    number once the decision has one, or say it in prose."""
+    cfg = current()
+    patterns = [s.temp_pattern for s in cfg.schemes.values()]
+    if not patterns:
+        return
+    for path in sorted(cfg.root.glob(".github/workflows/*.y*ml")):
+        text = path.read_text(encoding="utf-8")
+        for regex in patterns:
+            for m in regex.finditer(text):
+                line = text.count("\n", 0, m.start()) + 1
+                errors.append(
+                    f"{cfg.rel(path)}:{line}: temporary code {m.group(0)} in a "
+                    "workflow file — the generation job cannot rewrite it when "
+                    "the decision is numbered (the workflow token may not "
+                    "modify `.github/workflows/`), so its push is refused; "
+                    "cite the number once the decision has one, or say it in "
+                    "prose")
+
+
 def check_wikilinks(errors: list[str]) -> None:
     """A wikilink is the author asserting "this is a reference" (ADR-025), so
     both failure modes are violations, with different remedies: a resolvable
@@ -584,6 +610,7 @@ def run() -> None:
     check_journals(errors)
     check_version_history(errors)
     check_bare_refs(errors)
+    check_workflow_temp_codes(errors)
     check_wikilinks(errors)
     report_warnings(errors)
     if errors:
