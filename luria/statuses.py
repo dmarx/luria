@@ -38,10 +38,42 @@ all five words, no legend.
 
 from __future__ import annotations
 
+import re
+from dataclasses import dataclass
+
 import yaml
 
 # ADR-003's vocabulary. This module narrows it and never extends it.
 CLOSED = ("Active", "Proposed", "Deferred", "Superseded", "Rejected")
+
+# ADR-003's shape: the word, then optionally an em-dash and a note.
+_NOTE_RE = re.compile(r"\s+—\s+")
+
+
+@dataclass(frozen=True)
+class Status:
+    """A status field, read as the two things it has always been: one word
+    from the closed vocabulary, and an optional prose note qualifying it.
+
+    Stored today as one scalar — `Superseded — by ADR-035` — and split, before
+    this existed, in six places with three spellings of the same regex. The
+    word is data (checked against the vocabulary); the note is prose (it is
+    rendered, rebased for links, and may cite codes). Whether the two should
+    be stored apart is a separate decision; this is the one place that reads
+    them apart."""
+    value: str
+    note: str = ""
+
+    @property
+    def display(self) -> str:
+        return f"{self.value} — {self.note}" if self.note else self.value
+
+
+def parse(raw) -> Status:
+    """`Superseded — by ADR-035` → `Status("Superseded", "by ADR-035")`."""
+    text = str(raw or "").strip()
+    word, *rest = _NOTE_RE.split(text, maxsplit=1)
+    return Status(word.strip(), rest[0].strip() if rest else "")
 
 
 def declared(scheme) -> dict[str, dict]:
@@ -82,7 +114,7 @@ def undeclared(scheme, status: str) -> bool:
     note is a qualifier on the word rather than part of it.
     """
     vocab = declared(scheme)
-    return bool(vocab) and status.split(" — ")[0].strip() not in vocab
+    return bool(vocab) and parse(status).value not in vocab
 
 
 def legend(scheme) -> str:
@@ -139,9 +171,8 @@ def uniform(scheme) -> tuple[str, int] | None:
     found: list[str] = []
     for path in [*scheme.documents().values(), *scheme.temp_documents().values()]:
         meta, _ = adr_index.parse_frontmatter(path.read_text(encoding="utf-8"))
-        status = str((meta or {}).get("status", "")).strip()
-        if status:
-            found.append(status.split(" — ")[0].strip())
+        if status := parse((meta or {}).get("status")).value:
+            found.append(status)
     if len(found) < FLOOR or len(set(found)) != 1:
         return None
     return found[0], len(found)
@@ -178,9 +209,8 @@ def acknowledged_rows() -> list[str]:
         for path in [*scheme.documents().values(),
                      *scheme.temp_documents().values()]:
             meta, _ = adr_index.parse_frontmatter(path.read_text(encoding="utf-8"))
-            status = str((meta or {}).get("status", "")).strip()
-            if status:
-                found.append(status.split(" — ")[0].strip())
+            if status := parse((meta or {}).get("status")).value:
+                found.append(status)
         if len(found) >= FLOOR and len(set(found)) == 1:
             rows.append(f"{prefix}: {len(found)}/{len(found)} at "
                         f"`{found[0]}` — {scheme.uniform_ok}")
