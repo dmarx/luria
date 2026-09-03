@@ -50,7 +50,7 @@ def lint_errors() -> list[str]:
     errors: list[str] = []
     lint.check_docs_index(errors)
     lint.check_frontmatter(errors)
-    lint.check_generated_index(errors)
+    lint.check_view_dirs(errors)
     lint.check_journals(errors)
     lint.check_bare_refs(errors)
     lint.check_wikilinks(errors)

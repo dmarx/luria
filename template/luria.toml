@@ -133,5 +133,10 @@ url  = "https://github.com/dmarx/luria/blob/main/docs/directives.md#fixture-code
 # The enforcement dial (LU-ADR-035): status findings are warnings by default,
 # and a class named here fails `luria lint` instead. The acknowledgement
 # directives keep working under enforcement — only unacknowledged rows fail.
-# [luria.lint]
-# fail_on = ["retired-citations", "pending-documents"]
+# The scaffolded docs workflow pushes with the workflow's own token, which
+# cannot write under .github/workflows/, so a temporary code cited from a
+# workflow file is one the generation job can never number: enforced from
+# the start. Give the job a token with workflow write and drop it.
+[luria.lint]
+fail_on = ["workflow-temp-codes"]
+# fail_on = ["workflow-temp-codes", "retired-citations", "pending-documents"]
