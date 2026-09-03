@@ -187,6 +187,16 @@ vault with a pinned [Quartz](https://quartz.jzhao.xyz/) (v4 — bump the pin
 deliberately; the generated config targets its plugin API) and hands the
 HTML to `actions/upload-pages-artifact` / `actions/deploy-pages`.
 
+It runs after the Docs workflow completes on the default branch
+(`workflow_run`), not on push: the site is built from the committed views,
+and those are committed by the generation job during that run — a build
+triggered by the push itself would render the merge commit, one bot commit
+behind, and never see the bot's push at all, since a push made with
+`GITHUB_TOKEN` triggers no workflow. Nothing builds on a pull request: a
+branch carries no views of its own, so a preview there would show the
+default branch's views under the branch's sources. If you rename the Docs
+workflow, rename it in `pages.yml` too.
+
 ## The published site
 
 `luria site` stages every publishable markdown page at its repository
