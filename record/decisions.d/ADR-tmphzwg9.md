@@ -21,7 +21,7 @@
 # `Superseded — by [ADR-tmphzwg9](ADR-tmphzwg9.md)` and leave its body intact. When the
 # choice stands and only a REASON was wrong, correct this body in place and
 # bump `version:` below — the rule objects to silent revision, not to editing.
-status: 'Proposed'
+status: 'Active'
 
 # What the index shows in place of the code. Repeat it as the body's `# ADR-tmphzwg9:`
 # heading — someone reading the file alone needs one — and `luria lint` checks
