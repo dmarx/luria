@@ -167,7 +167,8 @@ The contract, in two halves.
 - a scheme document without frontmatter, `status:`, `title:`, or `tags:`;
   a status outside the vocabulary (`Active`, `Proposed`, `Deferred`,
   `Superseded`, `Rejected`; a note still riding in `status:` rather
-  than in `status_note:`) or undeclared in the
+  than in `status_note:`; `Superseded` with no `superseded_by:`) or
+  undeclared in the
   scheme's `statuses.yaml`; a missing field the scheme `requires`;
   a `title:` disagreeing with the body heading; tag-group rules
   (`exactly-one`, `at-most-one`, `excluded_by`) broken
@@ -301,7 +302,7 @@ path, a filename, or a unique prefix like `0001`). Two operations:
   temporary code for the next concretize.
 
 Either operation takes `strategy = "supersede"` to copy instead of move,
-leaving a tombstone (`status: Superseded`, `status_note: by …`) at the
+leaving a tombstone (`status: Superseded`, `superseded_by: …`) at the
 old code. `--dry-run`
 prints the full plan. `--commit` commits the sweep and appends the commit
 to `.git-blame-ignore-revs`, so blame reads through the rename. The spec

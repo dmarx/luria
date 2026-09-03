@@ -34,10 +34,13 @@ def _project(root: Path, monkeypatch) -> None:
     config.reset()
 
 
-def _value(root: Path, number: int, status: str = "Active") -> Path:
+def _value(root: Path, number: int, status: str = "Active",
+           superseded_by: str | None = None) -> Path:
     path = root / "record" / "values.d" / f"VP-{number:03d}.md"
     parsed = statuses.parse(status)
     head = f"status: {parsed.value}\n"
+    if superseded_by:
+        head += f"superseded_by: {superseded_by}\n"
     if parsed.note:
         head += f"status_note: {parsed.note!r}\n"
     path.write_text(
@@ -62,7 +65,7 @@ def test_declaring_nothing_leaves_every_word_available(tmp_path, monkeypatch):
     _project(tmp_path, monkeypatch)
     for n, s in enumerate(("Active", "Proposed", "Deferred", "Superseded",
                            "Rejected"), start=1):
-        _value(tmp_path, n, s)
+        _value(tmp_path, n, s, superseded_by="VP-001" if s == "Superseded" else None)
     errors: list[str] = []
     lint.check_frontmatter(errors)
     assert errors == []
@@ -85,7 +88,7 @@ def test_a_trailing_note_does_not_defeat_the_check(tmp_path, monkeypatch):
     the check reads the word alone."""
     _project(tmp_path, monkeypatch)
     _declare(tmp_path, "Active:\n  blurb: in force\nSuperseded:\n  blurb: replaced\n")
-    _value(tmp_path, 1, "Superseded — by [VP-002](VP-002.md)")
+    _value(tmp_path, 1, "Superseded — replaced wholesale", superseded_by="VP-002")
     _value(tmp_path, 2, "Active")
     errors: list[str] = []
     lint.check_frontmatter(errors)
@@ -313,7 +316,9 @@ def test_split_moves_the_note_out_of_status(project):
             "title: 'T'\ntags:\n- record\n---\n\n# ADR-001: T\n")
     fresh = statuses.split(text)
     assert fresh is not None
-    assert "status: Superseded\nstatus_note: by [ADR-035](ADR-035.md)\n" in fresh
+    # A note that said only `by CODE` becomes the field and nothing else.
+    assert "status: Superseded\nsuperseded_by:\n- ADR-035\n" in fresh
+    assert "status_note" not in fresh
     assert fresh.endswith("# ADR-001: T\n")
     assert statuses.split(fresh) is None
 
@@ -375,3 +380,43 @@ def test_a_code_in_the_note_is_a_citation_the_fixer_links(project):
     errors: list[str] = []
     lint.check_bare_refs(errors)
     assert any("ADR-001" in e for e in errors), errors
+
+
+def test_the_repair_keeps_a_note_that_says_more_than_the_code(project):
+    # inactive-ok: ADR-015 — its note is the fixture's shape; retired is why it has one
+    """ADR-015's shape: the successor goes to the field, and the rest of the
+    sentence stays as prose, verbatim — the repair never rewrites what an
+    author wrote beyond the shape the machinery itself used to write."""
+    text = ("---\nstatus: Superseded\nstatus_note: 'by ADR-016, which drops the "
+            "local-clone path'\ntitle: 'T'\n---\n\nBody.\n")
+    fresh = statuses.repair(text)
+    from luria.adr_index import parse_frontmatter
+    meta, _ = parse_frontmatter(fresh)
+    assert meta["superseded_by"] == ["ADR-016"]
+    assert meta["status_note"] == "by ADR-016, which drops the local-clone path"
+
+
+def test_superseded_without_a_successor_is_a_finding(tmp_path, monkeypatch):
+    _project(tmp_path, monkeypatch)
+    _value(tmp_path, 1, "Superseded")
+    errors: list[str] = []
+    lint.check_frontmatter(errors)
+    assert any("`superseded_by:` names nothing" in e for e in errors), errors
+
+
+def test_a_successor_that_resolves_to_nothing_is_a_finding(tmp_path, monkeypatch):
+    _project(tmp_path, monkeypatch)
+    _value(tmp_path, 1, "Superseded", superseded_by="VP-099")
+    errors: list[str] = []
+    lint.check_contracts(errors)
+    assert any("`superseded_by: VP-099` resolves to no VP document" in e
+               for e in errors), errors
+
+
+def test_display_composes_the_successor_and_the_note(project):
+    s = statuses.Status("Superseded", "the capital never burned",
+                        superseded_by=("ADR-002",))
+    assert s.display == "Superseded — by ADR-002; the capital never burned"
+    assert statuses.display(s, link=lambda c: f"[[{c}]]") == \
+        "Superseded — by [[ADR-002]]; the capital never burned"
+    assert statuses.Status("Active").display == "Active"

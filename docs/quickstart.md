@@ -155,7 +155,7 @@ editing one field — not by deleting it:
 
 ```yaml
 status: Superseded
-status_note: by ADR-002
+superseded_by: ADR-002
 ```
 
 Nobody touched `docs/api.md`. It is now wrong, and the record says so:
