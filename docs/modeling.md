@@ -152,6 +152,7 @@ whether the config can state it instead:
 | every entry carries a field | `requires = ["published"]` | a violation |
 | every entry has a source, and any of several fields is one | `field_groups` with `fields = ["arxiv", "doi", "url"]` | a violation naming all three |
 | every entry names its source paper — a real one | `references` with `source = { scheme = "LIT" }` | a violation |
+| an entry names several of its own kind | `references` with `follows = { scheme = "SCENE", many = true }` | a violation per element |
 | exactly one primary category | `tag_groups` with `require = "exactly-one"` | a violation |
 | at most one of these, they are an axis | `require = "at-most-one"` | a violation |
 | saying it failed contradicts saying it holds | `excluded_by` | a violation |

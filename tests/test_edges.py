@@ -215,3 +215,41 @@ def test_a_staged_page_carries_its_inbound_edges(project):
     site.stage(out)
     staged = (out / "content" / "record" / "decisions.d" / "ADR-001.md").read_text()
     assert "**Supersedes** [ADR-002](ADR-002.md)" in staged
+
+
+# --- one edge per code in a plural reference ------------------------------
+
+def scenes(tmp_path, monkeypatch, many: bool = True) -> Path:
+    write(tmp_path, "luria.toml", f"""
+[luria]
+issue_url = "https://example.test/issues/{{n}}"
+[luria.schemes.SCENE]
+dir = "record/scenes.d"
+[luria.schemes.SCENE.references]
+follows = {{ scheme = "SCENE", many = {str(many).lower()} }}
+""")
+    monkeypatch.setenv("LURIA_ROOT", str(tmp_path))
+    config.reset()
+    for n in (1, 2):
+        doc(tmp_path, f"record/scenes.d/SCENE-00{n}.md", code=f"SCENE-00{n}")
+    return tmp_path
+
+
+def test_a_plural_reference_is_one_edge_per_code(tmp_path, monkeypatch):
+    """The reported defect's other half: the edge derivation stringified
+    the list too, and emitted one edge for two codes."""
+    root = scenes(tmp_path, monkeypatch)
+    path = doc(root, "record/scenes.d/SCENE-003.md", code="SCENE-003",
+               extra="follows:\n- SCENE-001\n- SCENE-002")
+    found = edges.outbound(Adr(path, current().schemes["SCENE"]))
+    assert [(e.relation, e.target) for e in found] == \
+        [("follows", "SCENE-001"), ("follows", "SCENE-002")]
+
+
+def test_a_list_in_a_scalar_reference_yields_no_edge(tmp_path, monkeypatch):
+    """The lint reports the shape; the graph does not guess which element
+    was meant."""
+    root = scenes(tmp_path, monkeypatch, many=False)
+    path = doc(root, "record/scenes.d/SCENE-003.md", code="SCENE-003",
+               extra="follows:\n- SCENE-001\n- SCENE-002")
+    assert edges.outbound(Adr(path, current().schemes["SCENE"])) == []

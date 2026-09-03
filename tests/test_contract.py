@@ -244,6 +244,110 @@ def test_describe_of_an_empty_contract_is_empty(tmp_path, monkeypatch):
     assert contract.describe(sota()) == []
 
 
+# --- one code or many (#141, the world-building record's report) ---------
+
+def scenes(tmp_path, monkeypatch, many: str = "many = true") -> Path:
+    write(tmp_path, "luria.toml", f"""
+[luria]
+issue_url = "https://example.test/issues/{{n}}"
+[luria.schemes.SCENE]
+dir = "record/scenes.d"
+[luria.schemes.SCENE.references]
+follows = {{ scheme = "SCENE", {many} }}
+""")
+    monkeypatch.setenv("LURIA_ROOT", str(tmp_path))
+    config.reset()
+    for n in (1, 2):
+        doc(tmp_path, f"record/scenes.d/SCENE-00{n}.md", code=f"SCENE-00{n}", tags=[])
+    return tmp_path
+
+
+def scene(root: Path, extra: str) -> Path:
+    return doc(root, "record/scenes.d/SCENE-003.md", code="SCENE-003", tags=[],
+               extra=extra)
+
+
+def findings() -> list[str]:
+    """Contract findings for the document under test. The two supporting
+    scenes declare no `follows` of their own and are not what is being
+    asked about."""
+    errors: list[str] = []
+    lint.check_contracts(errors)
+    return [e for e in errors if "SCENE-003" in e]
+
+
+def test_a_reference_declares_whether_it_holds_one_code_or_many(tmp_path, monkeypatch):
+    scenes(tmp_path, monkeypatch)
+    ref, = config.current().schemes["SCENE"].references
+    assert ref.many
+    field, = declared(contract.for_scheme(config.current().schemes["SCENE"]))
+    assert field.many and field.reference == "SCENE"
+
+
+def test_the_default_is_one(tmp_path, monkeypatch):
+    scenes(tmp_path, monkeypatch, many="required = true")
+    ref, = config.current().schemes["SCENE"].references
+    assert not ref.many
+
+
+def test_a_list_where_one_code_was_declared_is_a_finding(tmp_path, monkeypatch):
+    """The reported defect: a list was stringified, its first code checked
+    and the rest ignored, silently. Structured input coerced to prose and
+    half-read is worse than no support at all."""
+    root = scenes(tmp_path, monkeypatch, many="required = true")
+    scene(root, "follows:\n- SCENE-001\n- SCENE-999")
+    e, = findings()
+    assert "`follows:` holds 2 values" in e and "one SCENE reference" in e
+    assert "many = true" in e
+    assert "SCENE-999" not in e, "a malformed shape is not half-interpreted"
+
+
+def test_every_element_of_a_plural_reference_is_checked(tmp_path, monkeypatch):
+    root = scenes(tmp_path, monkeypatch)
+    scene(root, "follows:\n- SCENE-001\n- SCENE-999\n- 'a scene I meant to write'")
+    errors = findings()
+    assert any("`follows: SCENE-999` resolves to no SCENE document" in e
+               for e in errors), errors
+    assert any("is not a code" in e for e in errors), errors
+    assert len(errors) == 2
+
+
+def test_a_plural_reference_that_resolves_is_silent(tmp_path, monkeypatch):
+    root = scenes(tmp_path, monkeypatch)
+    scene(root, "follows:\n- SCENE-001\n- SCENE-002")
+    assert findings() == []
+
+
+def test_a_required_plural_reference_may_not_be_empty(tmp_path, monkeypatch):
+    root = scenes(tmp_path, monkeypatch, many="many = true, required = true")
+    scene(root, "follows: []")
+    e, = findings()
+    assert "no `follows:`" in e
+
+
+def test_an_optional_plural_reference_may_be_empty_or_absent(tmp_path, monkeypatch):
+    root = scenes(tmp_path, monkeypatch, many="many = true, required = false")
+    scene(root, "follows: []")
+    assert findings() == []
+    scene(root, "")
+    assert findings() == []
+
+
+def test_a_single_code_in_a_plural_field_is_a_list_of_one(tmp_path, monkeypatch):
+    """Unambiguous, so accepted: one value is fully interpreted. The
+    asymmetry with the scalar case is deliberate — a list in a scalar field
+    leaves the tool guessing which element was meant."""
+    root = scenes(tmp_path, monkeypatch)
+    scene(root, "follows: SCENE-001")
+    assert findings() == []
+
+
+def test_describe_says_one_or_many(tmp_path, monkeypatch):
+    scenes(tmp_path, monkeypatch)
+    line, = contract.describe(contract.for_scheme(config.current().schemes["SCENE"]))
+    assert "one or more `SCENE` codes" in line
+
+
 # --- one of several fields (#144 review) ---------------------------------
 
 def papers(tmp_path, monkeypatch, group: str = 'fields = ["arxiv", "doi", "url"]') -> Path:
