@@ -149,7 +149,8 @@ whether the config can state it instead:
 
 | The rule you would write in prose | The table that enforces it | What fires |
 |---|---|---|
-| every entry carries a field | `requires = ["arxiv"]` | a violation |
+| every entry carries a field | `requires = ["published"]` | a violation |
+| every entry has a source, and any of several fields is one | `field_groups` with `fields = ["arxiv", "doi", "url"]` | a violation naming all three |
 | every entry names its source paper — a real one | `references` with `source = { scheme = "LIT" }` | a violation |
 | an entry names several of its own kind | `references` with `follows = { scheme = "SCENE", many = true }` | a violation per element |
 | an entry belongs to one or more of a closed set of values, absent meaning one of them | `fields` with `vocabulary = "worlds"`, `many = true`, `default = ["B"]`; values in `worlds.yaml` | a violation per unknown value |

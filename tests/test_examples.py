@@ -168,12 +168,14 @@ def test_a_practice_names_the_paper_behind_it(example):
     check rather than a sentence in CONTRIBUTING — and a *typed* one, so a
     practice citing a decision, or a sentence, fails too (ADR-060). The
     example carried `requires = ["source"]` until #141's dogfooding pass
-    measured the gap; `arxiv` on a paper stays a plain `requires`, because
-    it names nothing in the record."""
+    measured the gap. A paper's own source is a field group: any of
+    `arxiv`, `doi` or `url` satisfies it, because a report never posted to
+    arXiv is a paper all the same."""
     root = example("knowledge-base")
     ref, = config.current().schemes["SOTA"].references
     assert (ref.field, ref.scheme, ref.required) == ("source", "LIT", True)
-    assert config.current().schemes["LIT"].requires == ("arxiv",)
+    group, = config.current().schemes["LIT"].field_groups
+    assert (group.name, group.fields) == ("source", ("arxiv", "doi", "url"))
 
     doc = root / "record" / "practices.d" / "SOTA-001.md"
     text = doc.read_text()
@@ -342,3 +344,19 @@ def test_a_plural_follows_is_checked_element_by_element(example):
     errors = []
     lint.check_contracts(errors)
     assert any("`follows: SCENE-099` resolves to no SCENE document" in e for e in errors)
+
+
+def test_a_paper_with_only_a_url_has_a_source(example):
+    """The report that was never posted to arXiv: `requires = ["arxiv"]`
+    would have failed it; the `source` group takes its `url:`."""
+    root = example("knowledge-base")
+    errors = []
+    lint.check_contracts(errors)
+    assert errors == []
+    doc = root / "record" / "literature.d" / "LIT-003.md"
+    doc.write_text(doc.read_text().replace(
+        "url: 'https://example.org/reports/communication-wall'\n", ""))
+    errors = []
+    lint.check_contracts(errors)
+    assert any("no `source`" in e and "`url:`" in e and "LIT-003" in e
+               for e in errors), errors
