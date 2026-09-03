@@ -132,11 +132,11 @@ def test_a_moved_entry_is_reported(project):
 
 def test_an_entry_with_no_created_is_reported(project):
     """When the path implies the timestamp, the error names the remedy —
-    `luria index` populates the field from it (#33)."""
+    `luria repair` populates the field from it (#33)."""
     entry(journal_project(project), "2026/08/03/211926", created=None)
     errors = journal_errors(project)
     assert any("no `created:`" in e for e in errors)
-    assert any("`luria index` populates it from the path" in e for e in errors)
+    assert any("`luria repair` populates it from the path" in e for e in errors)
 
 
 def test_an_entry_no_witness_can_date_is_reported_as_such(project):

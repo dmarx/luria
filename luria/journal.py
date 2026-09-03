@@ -124,8 +124,8 @@ def populate_created(journal: Journal) -> list[Path]:
     and path *disagree* is left alone: two witnesses in conflict is a
     judgement for a human, not a mechanical fix.
 
-    Runs from `luria index`'s write mode, so the same generation job that
-    commits the views repairs the field (ADR-029)."""
+    Runs from `luria repair`, which the generation job commits onto the
+    branch that filed the entry (ADR-tmphzwg9)."""
     fixed: list[Path] = []
     for path in sorted(journal.dir.rglob("*.md")):
         if path.name == "_template.md":

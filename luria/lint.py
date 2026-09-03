@@ -285,7 +285,7 @@ def check_journals(errors: list[str]) -> None:
                 # witness left is a question only the author can answer.
                 if journal.created_from_path(path) is not None:
                     errors.append(f"{rel}: no `created:` timestamp — "
-                                  "`luria index` populates it from the path")
+                                  "`luria repair` populates it from the path")
                 else:
                     errors.append(f"{rel}: no `created:` timestamp, and the "
                                   "path doesn't imply one (see _template.md)")
