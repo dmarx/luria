@@ -67,7 +67,7 @@ class Status:
     scanned for citations, for whatever the field cannot say. They used to
     share one scalar, `Superseded — by X`, split in six places with three
     spellings of one regex; that form is still read, reported by the lint,
-    and moved by `luria index`."""
+    and moved by `luria repair`."""
     value: str
     note: str = ""
     superseded_by: tuple[str, ...] = ()
@@ -206,7 +206,7 @@ def split(text: str) -> str | None:
 
 def populate(scheme) -> list:
     """Bring every document to the three-field form — a source repair
-    `luria index` runs, like `created:` from a journal entry's path
+    `luria repair` runs, like `created:` from a journal entry's path
     (ADR-031): the file already states the facts, and the tree is made to
     say so in the fields that carry them."""
     moved = []

@@ -18,8 +18,16 @@ on:
   workflow_dispatch:
 
 jobs:
+  # Where merges serialize, the sources are repaired, the views regenerated,
+  # and both committed and pushed as the bot; the lint then reads that
+  # commit (ADR-029). Generated views are committed on main only (the
+  # amendment to ADR-029 on where views land): a pull request pushes its
+  # source repairs onto the branch, regenerates the views in the working
+  # tree, checks in the same job, and commits no view — so branches never
+  # carry the decision index or the devlog book, and two branches cannot
+  # conflict on them.
   docs-generate:
-    if: github.event_name != 'schedule'
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -28,11 +36,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          # Same-repo PR: the head branch, so there is something to commit
-          # onto. Fork PR: that branch only exists in the fork — naming it
-          # fails the checkout before any push guard runs — so fall back to
-          # the default merge-commit checkout (empty ref).
-          ref: ${{ github.event_name != 'pull_request' && github.ref_name || (github.event.pull_request.head.repo.full_name == github.repository && github.head_ref || '') }}
+          ref: ${{ github.ref_name }}
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -40,27 +44,15 @@ jobs:
         uses: ./actions/generate
         with:
           pip-spec: -e .
-          # Concretize only where merges serialize (ADR-049): the push-to-main
-          # run. A pull request's temporary codes are its normal state.
-          concretize: ${{ github.event_name != 'pull_request' }}
-
-  test:
-    if: github.event_name != 'schedule'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - run: pip install -e ".[dev]"
-      - run: python -m pytest tests -q
+          # Concretize only where merges serialize (ADR-049).
+          concretize: "true"
 
   # `needs:` + the sha output is the load-bearing handoff: a push made with
   # GITHUB_TOKEN does not retrigger workflows, so a lint reading any other
   # commit would fail on staleness the bot just repaired — or, worse, never
   # re-run to clear it.
   docs-lint:
-    if: github.event_name != 'schedule'
+    if: github.event_name == 'push'
     needs: docs-generate
     runs-on: ubuntu-latest
     steps:
@@ -73,6 +65,47 @@ jobs:
       - uses: ./actions/lint
         with:
           pip-spec: -e .
+
+  # The pull-request shape: repair the sources and push the repair onto the
+  # branch, regenerate the views in the working tree, and lint the result in
+  # the same job. A repair touches only what the branch authored, so the
+  # review reads the repaired source and the author's next pull carries it;
+  # the views are never committed here.
+  docs-check:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Same-repo PR: the head branch, so a repair has somewhere to land.
+          # Fork PR: that branch only exists in the fork — naming it fails
+          # the checkout before any push guard runs — so fall back to the
+          # default merge-commit checkout (empty ref); the action warns
+          # instead of pushing.
+          ref: ${{ github.event.pull_request.head.repo.full_name == github.repository && github.head_ref || '' }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: ./actions/generate
+        with:
+          pip-spec: -e .
+          commit-views: "false"
+      - uses: ./actions/lint
+        with:
+          pip-spec: ""
+
+  test:
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e ".[dev]"
+      - run: python -m pytest tests -q
 
   collect:
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'

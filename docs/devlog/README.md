@@ -6,15 +6,14 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 
 ## Currently — [September 2026](2026-09.md)
 
-- [3 Sep 18:00 — One field was two types, and had been for sixty decisions](2026-09.md#20260903180058)
-- [3 Sep 04:09 — Three facts the record already stated, read as edges](2026-09.md#20260903040926)
-- [3 Sep 03:58 — Three lint passes compile into one contract per scheme](2026-09.md#20260903035841)
+- [3 Sep 21:57 — A temporary code in a workflow file breaks the generation job](2026-09.md#20260903215722)
+- [3 Sep 19:42 — Six conflicts on files nobody wrote](2026-09.md#20260903194237)
 
 ## All books
 
-49 entries across 2 books, newest first.
+48 entries across 2 books, newest first.
 
 | Book | Entries | First | Last |
 |---|--:|---|---|
-| [2026-09](2026-09.md) | 3 | 2026-09-03 | 2026-09-03 |
+| [2026-09](2026-09.md) | 2 | 2026-09-03 | 2026-09-03 |
 | [2026-08](2026-08.md) | 46 | 2026-08-03 | 2026-08-28 |

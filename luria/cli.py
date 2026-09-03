@@ -2,6 +2,8 @@
 
     luria lint          check the record; the only command that can fail
     luria link [--fix]  rewrite bare references as hyperlinks
+    luria repair        write every mechanical source repair: links, a
+                        journal entry's missing `created:`
     luria index         regenerate every generated view, badges included
     luria new [kind]    scaffold an entry: the journal by default, or any
                         configured scheme or fragment dir (adr, dp, changelog)
@@ -36,11 +38,12 @@ import sys
 import fire
 
 from . import (adr_index, collect, concretize, init, link_refs, lint, migrate,
-               new, remotes, reports, site)
+               new, remotes, repair, reports, site)
 
 COMMANDS = {
     "lint": lint.run,
     "link": link_refs.run,
+    "repair": repair.run,
     "index": adr_index.run,
     "new": new.run,
     "concretize": concretize.run,
