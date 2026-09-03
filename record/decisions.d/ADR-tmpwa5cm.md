@@ -1,0 +1,146 @@
+---
+# Don't copy this file by hand — run `luria new adr`, which assigns the
+# identity and fills in the fields a machine can compute. WHICH identity
+# depends on the scheme's `allocate` mode: `filing` (the default) takes the
+# next free number on the spot, `merge` mints a temporary code that
+# `luria concretize` numbers where merges serialize (ADR-049). The kinds are the
+# config: every scheme, fragment directory and journal in luria.toml is one, so
+# `luria new <kind>` works for a scheme the moment it is declared.
+#
+# Numbering is sequential and carries information (it's the order decisions were
+# made). The filename is the code and nothing else; the title goes in `title:`
+# below, where correcting it costs an edit rather than a rename plus every link
+# (ADR-013).
+#
+# This frontmatter is the ONLY place these facts live. The index and the per-tag
+# pages are generated from it (ADR-004) — never edit them by hand; run
+# `luria index`.
+
+# Active | Proposed | Deferred | Superseded | Rejected, optionally " — <note>".
+# Supersede when the CHOICE changes: set the old one to
+# `Superseded — by [ADR-tmpwa5cm](ADR-tmpwa5cm.md)` and leave its body intact. When the
+# choice stands and only a REASON was wrong, correct this body in place and
+# bump `version:` below — the rule objects to silent revision, not to editing.
+status: 'Active'
+
+# What the index shows in place of the code. Repeat it as the body's `# ADR-tmpwa5cm:`
+# heading — someone reading the file alone needs one — and `luria lint` checks
+# that the two agree, because two copies of a string is a projection that drifts.
+title: "A workflow file cites decisions in a form the generation job's token can commit: by number, or in prose"
+
+# Which revision of this decision's claim you are reading. Standard frontmatter
+# for every scheme, and it moves rarely here: a decision that CHANGES is
+# superseded by a new one, not edited. Bump it when the same choice is restated
+# more broadly — scope widened, wording generalized — and say what changed in a
+# `history:` entry. Shown in the index only when it is not 1.
+version: 1
+
+# Browsing categories, pushed down onto the decision itself. One is normal; more
+# than one is fine. A tag not listed in tags.yaml still works.
+tags:
+- ci
+- mechanism
+
+date: '2026-09-03'
+
+# Optional. The issue(s) this decision came from: '#123'.
+
+# Optional but wanted: the one-blob description the index table shows. Without
+# it the table falls back to the title, which is usually too terse to browse by.
+# Say what was decided AND what was rejected — the index is read far more often
+# than the decision, and "why not the obvious thing" is what people come for.
+# This field is prose, so it carries links like any other prose; the rest of the
+# frontmatter is data and stays plain. (`origin:` on a principle is
+# prose for the same reason — the generator renders it.)
+summary: >-
+  The generation job pushes with the workflow's own token, and that token
+  cannot write under `.github/workflows/`; when `luria concretize` numbered
+  [ADR-068](ADR-068.md) it rewrote the temporary code in a `ci.yml` comment too, and the
+  bot's whole commit was refused. The job keeps the workflow token — no
+  setup, fork-safe — and a workflow file cites a decision by its number or
+  in prose; a temporary code there is the `workflow-temp-codes` warning
+  class, enforced here and in the scaffold through `fail_on`. A project
+  that gives its job a token with workflow write leaves the class alone
+  and the bot rewrites the file. A person's `luria concretize` was never
+  constrained: the limit is the token, not the file. Rejected: a lint
+  error regardless of token (the first draft, [#150](https://github.com/dmarx/luria/issues/150)), a concretizer that
+  skips workflow files, and dropping them from the code globs.
+  alternatives that lost. Written to be read in a table row.
+---
+
+# ADR-tmpwa5cm: A workflow file cites decisions in a form the generation job's token can commit: by number, or in prose
+
+## Context
+
+A merge-allocated decision carries a temporary code until the generation
+job on the default branch numbers it ([ADR-049](ADR-049.md)), and `luria concretize`
+then rewrites that code everywhere the record and the code globs reach —
+source, tests, the composite actions, the workflow files — so that no
+second spelling of the document survives ([ADR-040](ADR-040.md)). Workflow files are in
+the code globs on purpose: their comments cite decisions, and the
+reference lint should see a retired one there like anywhere else.
+
+The job pushes with the workflow's own token, `GITHUB_TOKEN`. That token
+cannot create or update anything under `.github/workflows/`, and there is
+no `workflows:` entry a `permissions:` block could grant; a personal
+access token with the `workflow` scope, or a GitHub App token with
+workflow write, can, handed to `actions/checkout` as `token:`. So when
+[ADR-068](ADR-068.md) was numbered, the rename reached a comment in `ci.yml` and the
+bot's one commit — views, rename and repairs together — was refused, and
+the lint job that `needs:` it never ran. The record was right; the branch
+was red; a second pull request was the only fix.
+
+The constraint is the token's, not the file's. A person running
+`luria concretize` locally rewrites a workflow file like any other and
+pushes it like any other; only the job's push is refused, and only on
+that token. The first draft of this decision ([#150](https://github.com/dmarx/luria/issues/150)) wrote "never" where
+the mechanism enforced no such thing — the case [ADR-tmpxgn2o](ADR-tmpxgn2o.md) names.
+
+## Decision
+
+**The generation job pushes with the workflow's own token, and a workflow
+file cites a decision in a form that token can commit: by number, or in
+prose.** A temporary code cited from a workflow file is the
+`workflow-temp-codes` warning class ([ADR-035](ADR-035.md)): reported by default, with
+the remedy in the headline — cite the number when the decision has one,
+say it in prose, or give the job a token with workflow write and leave
+the class unenforced. This repository and the scaffold name the class in
+`[luria.lint] fail_on`, because their jobs run on the workflow token.
+
+A project whose job checks out with a token that has workflow write
+leaves the class where the dial puts it and lets the bot rewrite the
+file; the docs say which tokens those are and what else they buy — a
+push made with one triggers workflow runs, so a repair commit on a pull
+request gets a check of its own ([ADR-068](ADR-068.md)).
+
+## Alternatives considered
+
+- **A lint error regardless of token** — the first draft ([#150](https://github.com/dmarx/luria/issues/150)). Right on
+  the workflow token and wrong on any other, and it said "never" about a
+  file a person can edit freely. A judgement that depends on how the job
+  is configured is a warning class on the dial, which is what [ADR-035](ADR-035.md)
+  built the dial for.
+- **Push with a workflow-capable token by default.** Works, and makes the
+  scaffold depend on a secret someone has to create, scope, store and
+  rotate before its first run succeeds. Offered, not required.
+- **Have `luria concretize` skip `.github/workflows/`.** The push
+  succeeds, and the workflow file keeps a code naming a document that no
+  longer exists under that name — an unresolvable reference on every run
+  until someone edits it by hand — and `--check` needs the same exception.
+- **Drop workflow files from the code globs.** The concretizer leaves them
+  alone, and so does the reference lint: a workflow comment citing a
+  superseded decision stops being caught, in the comments that explain
+  why CI is shaped the way it is.
+
+## Consequences
+
+An author citing a pending decision from a workflow comment writes prose
+— "the amendment to [ADR-029](ADR-029.md) on where views land" — where a source file
+would carry the code. The scaffold's workflow does the same. The finding
+fired once on the real case before the fix, naming the file, the line and
+the code.
+
+A *numbered* citation in a workflow file that a migration renames
+([ADR-040](ADR-040.md)) meets the same refusal on the workflow token; the migration's
+pull request edits that file by hand. This decision covers the temporary
+code, which is the case that recurs.
