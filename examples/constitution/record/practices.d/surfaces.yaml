@@ -1,0 +1,16 @@
+# Where a practice applies. The commonest way a constitution goes wrong is a
+# rule true of one surface being enforced on another, so the surface is a
+# declared field rather than something inferred from how a rule is worded.
+# Closed: a practice naming a surface not listed here fails the lint.
+conversation:
+  label: Conversation
+  blurb: what is said to the person, and how; the default when unstated
+harness:
+  label: Harness
+  blurb: the tools and the environment — files, shell, permissions
+repository:
+  label: Repository
+  blurb: work that lands in someone's codebase — commits, branches, reviews
+record:
+  label: Record
+  blurb: the project's own memory — decisions, principles, journals

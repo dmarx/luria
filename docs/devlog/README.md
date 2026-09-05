@@ -6,6 +6,7 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 
 ## Currently — [September 2026](2026-09.md)
 
+- [5 Sep 01:16 — A record with no code in it, and two failures only staging could see](2026-09.md#20260905011630)
 - [3 Sep 22:50 — The published site was one bot commit behind](2026-09.md#20260903225003)
 - [3 Sep 22:39 — The lint reads sources; nobody regenerates a view to check a branch](2026-09.md#20260903223927)
 - [3 Sep 22:23 — An ADR closed in review: the constraint was the token's, not the file's](2026-09.md#20260903222323)
@@ -21,9 +22,9 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 
 ## All books
 
-58 entries across 2 books, newest first.
+59 entries across 2 books, newest first.
 
 | Book | Entries | First | Last |
 |---|--:|---|---|
-| [2026-09](2026-09.md) | 12 | 2026-09-03 | 2026-09-03 |
+| [2026-09](2026-09.md) | 13 | 2026-09-03 | 2026-09-05 |
 | [2026-08](2026-08.md) | 46 | 2026-08-03 | 2026-08-28 |

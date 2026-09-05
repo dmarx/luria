@@ -18,6 +18,7 @@ believed at the time of writing.
 | [`external-citations/`](external-citations/) | `uid` remotes — linted, linked citations to arXiv papers, Jira tickets and CVEs, none of which is a Luria record |
 | [`knowledge-base/`](knowledge-base/) | a record of *domain* content rather than project meta-documentation: two schemes that cite each other and carry separate statuses, with required fields and a one-primary-category rule |
 | [`world-bible/`](world-bible/) | a story bible: scenes that `follow` several scenes (a plural reference) and belong to world trajectories drawn from a closed vocabulary with a default — a field that is neither a reference, a tag nor a status |
+| [`constitution/`](constitution/) | a record with no code in it at all: an AI assistant's operating instructions decomposed into values, practices and boundaries, where **precedence is a checked reference** (`BOUNDARY.overrides → PRACTICE`) rather than escalating emphasis, and a practice is retired by a boundary from another scheme |
 
 To run one by hand:
 
@@ -26,6 +27,48 @@ cd examples/rfcs-and-specs
 LURIA_ROOT=$PWD luria index
 LURIA_ROOT=$PWD luria lint
 ```
+
+## Each example publishes as its own site
+
+`luria.toml` at the repository root excludes `examples/**` from *this
+project's* site, which reads like the examples cannot be published. It is the
+opposite claim. Every example is a whole record with its own `luria.toml`, so
+every one stages its own vault — the parent excludes them because a parent
+config cannot stage a child's record, not because they are unpublishable:
+
+```
+cd examples/constitution
+LURIA_ROOT=$PWD luria index
+LURIA_ROOT=$PWD luria site --out build/site
+```
+
+The reason the parent cannot do it is `Config.link_base`, which is what
+`luria site` uses to tell a source from a view: a file whose links resolve
+against some *other* directory is prose rendered somewhere else, and the view
+is published instead of it. Under the root config, an example's `VALUE-001.md`
+comes back with `link_base` equal to its own directory — the root record has no
+`VALUE` scheme to know better — so the parent site would publish the fragment
+*and* its assembled view, and half of the views it published would be whatever
+a contributor's working tree happened to hold, since none is committed.
+
+`tests/test_examples.py::test_every_example_stages_its_own_site` stages each
+one and asserts the two counts that make a page readable: nothing unplaceable,
+and nothing redirected out to the repository. The second is the sharp one.
+`luria lint` checks that a relative target exists **on disk**; it has no
+opinion about whether the file it names is ever *published*. `constitution/`
+cited its values as `../values.d/VALUE-004.md` — present, lint-clean, and never
+a page, because a `render = "document"` scheme renders its sources into one
+assembled view. Staging was the only check that read those as links a reader
+would try to follow. The spelling the fixer produces,
+`../../docs/values.md#value-4`, is the anchor in the view.
+
+**A document scheme's stub must contain `{principles}`.** That is the
+placeholder `render = "document"` substitutes every member's body into, and a
+stub without it renders the prose and silently drops the documents —
+`luria index` still reports "4 VALUEs" and `luria lint` still passes, because
+the page it produced is a valid page. `constitution/docs/values.md` was eight
+lines of preamble and no values until the site test made the page count worth
+looking at.
 
 ## The merge rule these examples demonstrate
 

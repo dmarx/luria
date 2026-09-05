@@ -1,0 +1,96 @@
+# A record whose subject is the agent that maintains it.
+#
+# The documents here are one assistant's operating constitution, decomposed.
+# It is a worked example rather than a curiosity because a constitution has a
+# shape the other examples do not: its documents GOVERN EACH OTHER, and the
+# governing is the most important thing about them. "Be helpful" and "do not
+# help with this" are both instructions; what makes a constitution coherent is
+# knowing which wins.
+#
+# So precedence is a REFERENCE here, not prose. A boundary names the practices
+# it overrides, the lint follows the edge, and "this rule beats that one" is a
+# checked claim rather than an adjective ("critical", "IMPORTANT") that every
+# corpus inflates until it means nothing.
+#
+# Three schemes, split by what a document DOES rather than what it is about:
+#
+#   VALUE     a transferable claim, argued. Reads whole, so it renders as one
+#             document — you cannot skim a value out of an index.
+#   PRACTICE  a situated rule for one surface. Browsed, so: an index.
+#   BOUNDARY  a constraint that overrides instructions, including this record's
+#             own. Browsed, and the only scheme with an `overrides` edge.
+#
+# The split is load-bearing in the same way the anthology example's is: collapse
+# VALUE and PRACTICE into one scheme and a single status field has to mean both
+# "we still believe this" and "this is still how the tool works", which are
+# different facts that go stale at different rates.
+[luria]
+issue_url = "https://github.com/dmarx/luria/issues/{n}"
+
+# The values. `render = "document"` because they are read in sequence, as an
+# argument — the same reason this package renders its own design principles
+# whole rather than as a list of links.
+[luria.schemes.VALUE]
+dir      = "record/values.d"
+output   = "docs/values.md"
+render   = "document"
+
+# The practices. Each one must say which value it serves.
+#
+# Declared as a REFERENCE rather than a bare `requires`, for the reason the
+# anthology example gives about its citations: `requires` is satisfied by any
+# truthy value, so a practice grounded in "because it's better" would pass.
+# A typed field says the field names a VALUE, and the lint resolves it.
+#
+# The rule this encodes: a practice with no value behind it is a habit. Habits
+# are how a constitution accumulates rules nobody can justify and nobody dares
+# delete.
+[luria.schemes.PRACTICE]
+dir      = "record/practices.d"
+output   = "docs/practices"
+render   = "index"
+
+[luria.schemes.PRACTICE.references]
+grounds = { scheme = "VALUE", required = true }
+
+# WHERE a practice applies. Not a reference (the values are not codes), not a
+# tag (practices carry topical tags too), not a status — the third field kind,
+# a scheme-local controlled vocabulary, as `worlds` is in the world-bible.
+#
+# It earns its place here: the commonest way a constitution goes wrong is a
+# rule true of one surface being applied to another. Naming the surface makes
+# that a visible property instead of something inferred from wording.
+[luria.schemes.PRACTICE.fields.surface]
+vocabulary = "surfaces"
+many       = true
+default    = ["conversation"]
+
+# The boundaries. `overrides` is plural and optional: most boundaries override
+# nothing in particular, they simply hold. The ones that DO are the interesting
+# rows — they are where the constitution admits two of its own instructions
+# point in different directions, and says which way to go.
+[luria.schemes.BOUNDARY]
+dir      = "record/boundaries.d"
+output   = "docs/boundaries"
+render   = "index"
+
+[luria.schemes.BOUNDARY.references]
+overrides = { scheme = "PRACTICE", many = true, required = false }
+grounds   = { scheme = "VALUE", required = true }
+
+# Sessions, not a devlog: the entries are what happened in one conversation,
+# and the self-referential ones are the point — a record whose subject is the
+# agent gets to contain the agent's account of writing it.
+[luria.journals.sessions]
+dir         = "record/sessions.d"
+output      = "docs/sessions"
+granularity = "month"
+title       = "Session log"
+blurb = """What happened in a conversation, written by the participant with \
+the worse memory of it. Entries persist: a dated observation stays true even \
+after the practice it describes is superseded."""
+
+# No ADR or DP table, so this record has neither. A constitution is not a
+# decision log — its documents are not "we chose X over Y at time T", they are
+# standing claims — and a declared scheme family replaces the shipped defaults
+# rather than merging into them (LU-ADR-047).
