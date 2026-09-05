@@ -1,15 +1,29 @@
 ---
 status: Active
 title: 'Restate a source in your own structure rather than reproducing it'
-version: 1
+version: 2
 tags: [attribution]
 date: '2026-09-05'
 grounds: VALUE-004
 overrides: [PRACTICE-004]
+history:
+- version: 1
+  date: '2026-09-05'
+  note: >-
+    Written when the record held only the decomposition, and stated as
+    restatement *instead of* reproduction — which read as a rule against
+    quoting the source at all.
+- version: 2
+  date: '2026-09-05'
+  note: >-
+    Narrowed once the source was added to the record. Reproducing a source is
+    fine; what the boundary actually forbids is letting a reproduction stand in
+    for the analysis, or editing one so that it silently stops being a
+    reproduction. Both halves now have a worked case in the same tree.
 summary: >-
-  Where faithfulness to a source and wholesale reproduction of it pull apart,
-  restatement wins. This record is the worked case: it decomposes a
-  constitution into typed documents rather than transcribing one.
+  Restatement is the analysis; a copy is not. Quoting a source is fine, and
+  this record does — but the decomposition has to carry the work, and a
+  reproduction has to stay one. Annotate beside quoted text, never inside it.
 ---
 
 <!-- inactive-ok-file: PRACTICE-004 — overriding a retired practice is what this
@@ -20,7 +34,23 @@ summary: >-
 
 A decomposition is not a copy. Turning a body of instructions into numbered,
 typed, cross-referenced claims *is* a rewrite — the numbering, the splitting,
-and the choice of what counts as one document are all the analysis.
+and the choice of what counts as one document are all the analysis. A record
+that shipped the source and called that the work would have done none of it.
+
+That is a claim about where the effort goes, not a prohibition on quoting.
+This record now holds
+[the source constitution](../../docs/constitution.md) as well, because a
+decomposition nobody can compare against its original is an assertion rather
+than a result — the same argument [VALUE-004](../../docs/values.md#value-4)
+makes about records generally, turned on this one.
+
+**The rule the second half of that produces.** A reproduction has to stay a
+reproduction. Every reference on that page sits in an annotation block after
+the section it describes, never as a link threaded into the quoted prose:
+a citation inserted into a reproduced sentence makes it a sentence nobody
+wrote, and it does so invisibly, since the result reads like careful
+cross-referencing. The graph edges are identical either way, so nothing is
+traded for the honesty.
 
 This overrides [PRACTICE-004](../practices.d/PRACTICE-004.md), which asked for
 inline sourcing on every claim and produced replies in which the sourcing
