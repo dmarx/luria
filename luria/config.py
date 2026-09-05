@@ -118,6 +118,15 @@ DEFAULTS: dict = {
         # fires, which is the right behaviour for a project that has not
         # thought about it (ADR-035's warn-first posture, one step further).
         "narrow_terms": [],
+        # May `luria lint` reach the network to check what an identifier
+        # actually is? "auto" fetches only what the lockfile has no answer
+        # for — usually the one citation a contribution just added — and
+        # falls back to reporting it unchecked when the network is not
+        # there. "never" is the hermetic build, answering only from the
+        # lockfile. "require" makes an unreachable remote a finding, which
+        # is what CI wants: a green build then means the references were
+        # verified rather than merely remembered.
+        "network": "auto",
     },
     # Whole records nested inside this one (ADR-077, ADR-078). Empty for the
     # ordinary project, which contains no others.
@@ -1086,6 +1095,7 @@ class Config:
     stale_days: int
     fail_on: tuple[str, ...]            # warning classes promoted to failures
     narrow_terms: tuple[str, ...]       # this project's nouns (narrow-titles)
+    network: str                        # "auto" | "never" | "require"
     # Whole records nested inside this one — directory globs, each match
     # holding its own `luria.toml` (ADR-077, relocated by ADR-078).
     #
@@ -1389,6 +1399,7 @@ def load(root: Path | None = None, text: str | None = None) -> Config:
         stale_days=int(raw.get("stale_days", 90)),
         fail_on=tuple(raw["lint"]["fail_on"]),
         narrow_terms=tuple(raw["lint"].get("narrow_terms", [])),
+        network=str(raw["lint"].get("network", "auto")),
         include_records=tuple(raw.get("include_records", ())),
         site=_site(raw, root),
         _raw=raw,

@@ -145,40 +145,102 @@ def _title_url(remote, uid: str) -> str:
 
 
 # Metadata APIs are a courtesy, and the ones worth asking say so: arXiv's
-# terms ask for a pause between requests, and a corpus resolve is a few
-# hundred of them in a row. Backing off is also the only way to tell a rate
-# limit from a wrong identifier — without it a throttled batch writes
-# nothing and reads as "upstream has no title for this", which is the same
-# shape as the answer the check exists to find.
+# terms ask for a pause between requests. The pause is only half the job —
+# the other half is telling a throttle apart from an answer, which HTTP
+# already does and the first version of this did not.
 COURTESY = 3.0
 ATTEMPTS = 3
 
+# What came back, as a fact rather than as an absence. The distinction this
+# type exists for: "upstream has no such identifier" and "upstream would not
+# talk to me" are opposite findings, and collapsing them into `None` makes a
+# rate limit indistinguishable from the wrong-paper answer the check hunts.
+#   ok         — a title
+#   absent     — upstream says this identifier names nothing (404/410)
+#   throttled  — rate-limited or unavailable (429/503), after the retries
+#   unreachable— DNS, TLS, timeout, refused
+#   unparsed   — a 200 whose body the `title_re` did not match
+@dataclass(frozen=True)
+class Fetched:
+    status: str
+    title: str = ""
+    detail: str = ""
 
-def _fetch(url: str, pattern: str) -> str | None:
+    @property
+    def known(self) -> bool:
+        return self.status in ("ok", "absent")
+
+
+def _retry_after(error) -> float | None:
+    """Seconds a 429/503 asked us to wait, when it said."""
+    value = (getattr(error, "headers", None) or {}).get("Retry-After")
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _once(url: str, pattern: str) -> Fetched:
+    try:
+        with urllib.request.urlopen(url, timeout=60) as response:
+            body = response.read().decode("utf-8", "replace")
+    except urllib.error.HTTPError as error:
+        if error.code in (404, 410):
+            return Fetched("absent", detail=f"HTTP {error.code}")
+        if error.code in (429, 503):
+            wait = _retry_after(error)
+            return Fetched("throttled",
+                           detail=f"HTTP {error.code}"
+                                  + (f", retry after {wait:g}s" if wait else ""))
+        return Fetched("unreachable", detail=f"HTTP {error.code}")
+    except (urllib.error.URLError, OSError, ValueError) as error:
+        return Fetched("unreachable", detail=str(error)[:80])
+    if m := re.search(pattern, body, re.S):
+        return Fetched("ok", title=" ".join(m.group(1).split()))
+    return Fetched("unparsed", detail="200, but `title_re` matched nothing")
+
+
+def _fetch(url: str, pattern: str) -> Fetched:
+    """Ask, backing off only for the answers that mean "ask again later".
+
+    A 404 is an answer and is not retried; a 429 is not an answer and is. The
+    first version retried everything blindly and reported every failure the
+    same way, which is how a throttled batch of fifteen wrote nothing to the
+    lockfile and read afterwards as fifteen documents in agreement.
+    """
+    delay = COURTESY
     for attempt in range(ATTEMPTS):
-        try:
-            with urllib.request.urlopen(url, timeout=60) as response:
-                body = response.read().decode("utf-8", "replace")
-        except (urllib.error.URLError, OSError, ValueError):
-            body = ""
-        if body:
-            if m := re.search(pattern, body, re.S):
-                return " ".join(m.group(1).split())
+        got = _once(url, pattern)
+        if got.known or got.status == "unparsed":
+            return got
         if attempt < ATTEMPTS - 1:
-            time.sleep(COURTESY * (attempt + 1))
-    return None
+            time.sleep(delay)
+            delay *= 2
+    return got
+
+
+def ask(ident: "Identifier") -> Fetched | None:
+    """Ask upstream what one identifier is, or None when the remote has not
+    declared how to ask. The single place a socket is opened."""
+    remote = current().remotes.get(ident.remote)
+    if remote is None or not remote.title_re:
+        return None
+    url = _title_url(remote, ident.uid)
+    if not url:
+        return None
+    return _fetch(url, remote.title_re)
 
 
 def resolve(only: tuple[str, ...] = ()) -> list[str]:
-    """Fetch the title behind every identifier and record it in the lockfile.
+    """Fetch every identifier's title and record it in the lockfile.
 
-    The one command here that opens a socket. Returns one line per identifier
-    it could not resolve, so a network failure is reported rather than written
-    into the lockfile as an absence that later reads as agreement.
+    Returns one line per identifier that could not be settled. A `throttled`
+    or `unreachable` answer is NOT written: an entry that says nothing is
+    read later as agreement, so the absence has to stay an absence and be
+    reported here instead.
     """
     from . import remotes
-    cfg = current()
-    state = dict(remotes._read_lockfile().get("titles", {}))
+    state_now = dict(remotes._read_lockfile().get("titles", {}))
     problems: list[str] = []
     seen: set[str] = set()
     for ident in identifiers():
@@ -187,17 +249,18 @@ def resolve(only: tuple[str, ...] = ()) -> list[str]:
         if ident.key in seen:
             continue
         seen.add(ident.key)
-        remote = cfg.remotes.get(ident.remote)
-        url = _title_url(remote, ident.uid) if remote else ""
-        if not url or not remote.title_re:
+        got = ask(ident)
+        if got is None:
             continue                      # remote has not declared how to ask
-        title = _fetch(url, remote.title_re)
-        if title is None:
-            problems.append(f"{ident.key}: no title from {url}")
-            continue
-        state[ident.key] = {"title": title}
-        time.sleep(COURTESY)
-    remotes.write_lock(titles=state)
+        if got.status == "ok":
+            state_now[ident.key] = {"title": got.title}
+        elif got.status == "absent":
+            state_now[ident.key] = {"status": "absent", "detail": got.detail}
+        else:
+            problems.append(f"{ident.key}: {got.status} — {got.detail}")
+        if got.status != "absent":
+            time.sleep(COURTESY)
+    remotes.write_lock(titles=state_now)
     return problems
 
 
@@ -210,40 +273,84 @@ def state() -> dict[str, dict[str, str]]:
 # ── The offline half: what the lint reads ────────────────────────────────
 
 
-def mismatch_lines() -> tuple[list[str], list[str]]:
-    """Identifiers whose resolved title is not the one recorded, and the
-    `source-ok:` directives that no longer acknowledge anything.
+def mismatch_lines() -> tuple[list[str], list[str], list[str]]:
+    """Identifiers that disagree with upstream, identifiers nothing has
+    checked, and `source-ok:` directives that no longer acknowledge anything.
 
-    Unresolved identifiers are not reported here. A lockfile that has never
-    been populated would otherwise turn every document into a finding, which
-    teaches people to run the command to silence it rather than to read it.
+    The lockfile is a **cache with an endorsement in it**, not the boundary of
+    what may be known. An identifier it has no answer for is the interesting
+    case, not the exempt one: a citation is never more likely to be wrong than
+    in the minutes after it is typed, and the first version of this check
+    passed exactly then, because nothing had resolved it yet.
+
+    So under `[luria.lint] network = "auto"` the lint asks about what it does
+    not already know — normally the one citation a contribution added — and
+    falls back to reporting it unchecked when it cannot. "never" answers only
+    from the lockfile, for a hermetic build. "require" makes not being able to
+    ask a finding, so a green CI run means the references were verified rather
+    than remembered.
     """
-    from . import directives
+    from . import directives, remotes
     cfg = current()
-    known = state()
+    known = dict(state())
+    policy = cfg.network
     flagged: list[str] = []
+    unchecked: list[str] = []
     stale: list[str] = []
-    for path in {i.path for i in identifiers()}:
+    learned: dict[str, dict[str, str]] = {}
+
+    by_path: dict = {}
+    for ident in identifiers():
+        by_path.setdefault(ident.path, []).append(ident)
+
+    for path, idents in sorted(by_path.items(), key=lambda kv: str(kv[0])):
         text = path.read_text(encoding="utf-8")
         found = directives.find(path, text, {SOURCE_OK})
         used: set[tuple[int, str]] = set()
-        for ident in [i for i in identifiers() if i.path == path]:
+        for ident in idents:
             entry = known.get(ident.key)
-            if not entry or not entry.get("title"):
-                continue
-            upstream = entry["title"]
-            if normalize(upstream) == normalize(ident.recorded):
-                continue
+            if entry is None and policy != "never":
+                got = ask(ident)
+                if got is None:
+                    continue              # remote declares no way to ask
+                if got.status == "ok":
+                    entry = {"title": got.title}
+                elif got.status == "absent":
+                    entry = {"status": "absent", "detail": got.detail}
+                else:
+                    entry = None
+                    reason = f"{got.status} — {got.detail}"
+                if entry is not None:
+                    known[ident.key] = entry
+                    learned[ident.key] = entry
             ack = next((d for d in found
                         if d.covers(ident.line)
                         and (ident.uid in d.args or ident.key in d.args)), None)
+
+            if entry is None:
+                if policy == "never":
+                    continue              # answering only from the lockfile
+                if ack is not None:
+                    used.add((ack.line, ident.uid))
+                    continue
+                site = (f"{cfg.rel(path)}:{ident.line}: `{ident.remote.lower()}: "
+                        f"{ident.uid}`")
+                unchecked.append(f"{site} could not be checked — {reason}")
+                continue
+
+            if entry.get("status") == "absent":
+                problem = (f"names nothing upstream ({entry.get('detail', '')})")
+            elif normalize(entry.get("title", "")) == normalize(ident.recorded):
+                continue
+            else:
+                problem = (f"resolves to \u201c{entry['title']}\u201d, not "
+                           f"\u201c{ident.recorded}\u201d")
             if ack is not None:
                 used.add((ack.line, ident.uid))
                 continue
-            flagged.append(
-                f"{cfg.rel(path)}:{ident.line}: `{ident.remote.lower()}: "
-                f"{ident.uid}` resolves to “{upstream}”, not "
-                f"“{ident.recorded}”")
+            flagged.append(f"{cfg.rel(path)}:{ident.line}: "
+                           f"`{ident.remote.lower()}: {ident.uid}` {problem}")
+
         for d in found:
             problem = directives.problems(d)
             for arg in d.args:
@@ -252,4 +359,9 @@ def mismatch_lines() -> tuple[list[str], list[str]]:
                                           "identifier that disagrees")
                     stale.append(f"{cfg.rel(path)}:{d.line}: {problem}")
                     break
-    return flagged, stale
+
+    # What the lint learned is worth keeping: the next run answers from the
+    # lockfile, and the diff shows a reviewer what upstream said and when.
+    if learned:
+        remotes.write_lock(titles=known)
+    return flagged, unchecked, stale

@@ -15,6 +15,7 @@ from luria import config, lint, sources
 
 SOURCE_TOML = (
     '[luria]\nissue_url = "https://example.test/issues/{n}"\n'
+    '[luria.lint]\nnetwork = "never"\n'
     '[luria.remotes.ARXIV]\n'
     'uid = "(\\\\d{4})[.:](\\\\d{4,5})"\n'
     'url = "https://arxiv.org/abs/{1}.{2}"\n'
@@ -27,10 +28,11 @@ SOURCE_TOML = (
 )
 
 
-def _project(project, extra: str = "") -> None:
+def _project(project, extra: str = "", network: str = "never") -> None:
     (project / "record" / "literature.d").mkdir(parents=True, exist_ok=True)
     (project / "docs" / "literature").mkdir(parents=True, exist_ok=True)
-    (project / "luria.toml").write_text(SOURCE_TOML + extra)
+    (project / "luria.toml").write_text(
+        SOURCE_TOML.replace('network = "never"', f'network = "{network}"') + extra)
     config.reset()
 
 
@@ -57,7 +59,7 @@ def test_an_identifier_naming_a_different_paper_is_reported(project):
     _note(project, 99, "PaLM 2 Technical Report", "2305.10755")
     _resolved(project, {
         "ARXIV/2305.10755": "Measurement-Device-Independent Quantum Secret Sharing"})
-    flagged, _ = sources.mismatch_lines()
+    flagged, _, _ = sources.mismatch_lines()
     assert len(flagged) == 1
     assert "Quantum Secret Sharing" in flagged[0]
     assert "PaLM 2 Technical Report" in flagged[0]
@@ -68,7 +70,7 @@ def test_an_agreeing_identifier_is_silent(project):
     _note(project, 1, "Adam: A Method for Stochastic Optimization", "1412.6980")
     _resolved(project, {
         "ARXIV/1412.6980": "Adam: A Method for Stochastic Optimization"})
-    assert sources.mismatch_lines() == ([], [])
+    assert sources.mismatch_lines() == ([], [], [])
 
 
 def test_wrapping_case_and_punctuation_do_not_count_as_disagreement(project):
@@ -81,7 +83,7 @@ def test_wrapping_case_and_punctuation_do_not_count_as_disagreement(project):
     _resolved(project, {
         "ARXIV/2305.13245":
             "GQA: Training Generalized Multi-Query Transformer Models"})
-    assert sources.mismatch_lines() == ([], [])
+    assert sources.mismatch_lines() == ([], [], [])
 
 
 def test_a_truncated_title_is_a_disagreement(project):
@@ -95,7 +97,7 @@ def test_a_truncated_title_is_a_disagreement(project):
     _resolved(project, {
         "ARXIV/1803.03635":
             "The Lottery Ticket Hypothesis: Finding Sparse, Trainable Neural Networks"})
-    flagged, _ = sources.mismatch_lines()
+    flagged, _, _ = sources.mismatch_lines()
     assert len(flagged) == 1
 
 
@@ -108,7 +110,7 @@ def test_a_source_ok_directive_acknowledges_it(project):
           "1711.05101",
           directive="source-ok: 1711.05101 — the optimizer's name, kept on purpose")
     _resolved(project, {"ARXIV/1711.05101": "Decoupled Weight Decay Regularization"})
-    flagged, stale = sources.mismatch_lines()
+    flagged, _, stale = sources.mismatch_lines()
     assert flagged == [] and stale == []
 
 
@@ -121,19 +123,85 @@ def test_a_source_ok_that_excuses_nothing_is_reported(project):
           directive="source-ok: 1412.6980 — this one agrees, so it excuses nothing")
     _resolved(project, {
         "ARXIV/1412.6980": "Adam: A Method for Stochastic Optimization"})
-    flagged, stale = sources.mismatch_lines()
+    flagged, _, stale = sources.mismatch_lines()
     assert flagged == []
     assert len(stale) == 1 and "matches no identifier" in stale[0]
 
 
-def test_an_unresolved_identifier_is_not_a_finding(project):
-    """A project that has never run `--resolve` must not see every document
-    turn into a finding — that teaches people to run the command to silence
-    the lint rather than to read what it says."""
+def test_a_hermetic_build_answers_only_from_the_lockfile(project):
+    """`network = "never"` is the train, and the deliberately hermetic CI. It
+    reports what the lockfile knows and stays quiet about the rest."""
     _project(project)
     _note(project, 1, "Adam: A Method for Stochastic Optimization", "1412.6980")
     _resolved(project, {})
-    assert sources.mismatch_lines() == ([], [])
+    assert sources.mismatch_lines() == ([], [], [])
+
+
+def test_an_unchecked_identifier_is_reported_when_asking_failed(project,
+                                                                monkeypatch):
+    """The hole the first version shipped with. A citation is never more
+    likely to be wrong than in the minutes after it is typed, and back then
+    the check passed exactly then — nothing had resolved it yet, and no entry
+    read as agreement."""
+    _project(project, network="auto")
+    _note(project, 1, "Attention Is All You Need", "2401.02385")
+    _resolved(project, {})
+    monkeypatch.setattr(sources, "ask",
+                        lambda ident: sources.Fetched("throttled",
+                                                      detail="HTTP 429"))
+    flagged, unchecked, _ = sources.mismatch_lines()
+    assert flagged == []
+    assert len(unchecked) == 1 and "429" in unchecked[0]
+
+
+def test_the_lint_asks_about_what_the_lockfile_cannot_answer(project,
+                                                             monkeypatch):
+    """Under "auto" the lockfile is a cache, not the boundary of what may be
+    known — so a freshly typed wrong citation is caught on the run that adds
+    it, without anyone remembering a command."""
+    _project(project, network="auto")
+    _note(project, 8, "Attention Is All You Need", "2401.02385")
+    _resolved(project, {})
+    monkeypatch.setattr(sources, "ask",
+                        lambda ident: sources.Fetched(
+                            "ok", title="TinyLlama: An Open-Source Small Language Model"))
+    flagged, unchecked, _ = sources.mismatch_lines()
+    assert unchecked == []
+    assert len(flagged) == 1 and "TinyLlama" in flagged[0]
+
+
+def test_what_the_lint_learns_is_written_back(project, monkeypatch):
+    """So the next run answers offline, and the diff shows a reviewer what
+    upstream said and when."""
+    _project(project, network="auto")
+    _note(project, 8, "Attention Is All You Need", "2401.02385")
+    _resolved(project, {})
+    monkeypatch.setattr(sources, "ask",
+                        lambda ident: sources.Fetched("ok", title="TinyLlama"))
+    sources.mismatch_lines()
+    assert sources.state()["ARXIV/2401.02385"]["title"] == "TinyLlama"
+
+
+def test_an_identifier_upstream_does_not_have_is_its_own_finding(project):
+    """404 is an answer, and a different one from "I could not ask". Recorded
+    in the lockfile as such so it is not re-fetched forever."""
+    _project(project)
+    _note(project, 9, "A Paper That Was Withdrawn", "2401.99999")
+    _resolved(project, {})
+    (project / "remotes.lock.json").write_text(json.dumps({"titles": {
+        "ARXIV/2401.99999": {"status": "absent", "detail": "HTTP 404"}}}))
+    flagged, _, _ = sources.mismatch_lines()
+    assert len(flagged) == 1 and "names nothing upstream" in flagged[0]
+
+
+def test_a_404_is_an_answer_and_a_429_is_not(project):
+    """The distinction the first version lacked: it retried everything and
+    reported every failure alike, so a throttled batch wrote nothing and read
+    afterwards as agreement."""
+    assert sources.Fetched("absent").known
+    assert sources.Fetched("ok", title="x").known
+    assert not sources.Fetched("throttled").known
+    assert not sources.Fetched("unreachable").known
 
 
 def test_the_lint_carries_the_class(project):

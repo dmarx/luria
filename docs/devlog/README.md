@@ -6,7 +6,7 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 
 ## Currently — [September 2026](2026-09.md)
 
-- [5 Sep 20:55 — A working link to the wrong paper is invisible to every check that asks whether links work](2026-09.md#20260905205523)
+- [5 Sep 20:55 — A working link to the wrong paper is invisible to every check that asks whether links work — and the first fix had the same shape as the bug](2026-09.md#20260905205523)
 - [5 Sep 20:29 — A guard that a single exception can switch off is a guard about unanimity, not about information](2026-09.md#20260905202948)
 - [5 Sep 16:57 — A remote code in superseded_by, and a directive with nowhere to stand](2026-09.md#20260905165753)
 - [5 Sep 06:19 — The uncited principles, and the file the reference machinery could not see](2026-09.md#20260905061947)
