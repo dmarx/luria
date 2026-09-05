@@ -6,6 +6,7 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 
 ## Currently — [September 2026](2026-09.md)
 
+- [5 Sep 16:57 — A remote code in superseded_by, and a directive with nowhere to stand](2026-09.md#20260905165753)
 - [5 Sep 06:19 — The uncited principles, and the file the reference machinery could not see](2026-09.md#20260905061947)
 - [5 Sep 03:18 — Publishing the examples, and the third hand-written link the fixer would have got right](2026-09.md#20260905031807)
 - [5 Sep 01:16 — A record with no code in it, and two failures only staging could see](2026-09.md#20260905011630)
@@ -24,9 +25,9 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 
 ## All books
 
-61 entries across 2 books, newest first.
+62 entries across 2 books, newest first.
 
 | Book | Entries | First | Last |
 |---|--:|---|---|
-| [2026-09](2026-09.md) | 15 | 2026-09-03 | 2026-09-05 |
+| [2026-09](2026-09.md) | 16 | 2026-09-03 | 2026-09-05 |
 | [2026-08](2026-08.md) | 46 | 2026-08-03 | 2026-08-28 |
