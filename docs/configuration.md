@@ -324,6 +324,7 @@ that doesn't is used as it is in both modes.
 | `base_url` | `str` | *derived from `issue_url`* |
 | `source_url` | `str` | *derived from `issue_url`* |
 | `exclude` | `tuple[str, ...]` | *unset* |
+| `include_records` | `tuple[str, ...]` | *unset* |
 | `icon` | `Path \| None` | *unset* |
 | `logo` | `Path \| None` | *unset* |
 | `logo_dark` | `Path \| None` | *unset* |

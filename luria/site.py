@@ -48,10 +48,13 @@ resolver the record uses everywhere else.
 
 from __future__ import annotations
 
+import contextlib
 import fnmatch
+import io
 import posixpath
 import re
 import shutil
+import tempfile
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -335,11 +338,16 @@ class Report:
     to_source: int = 0                  # links redirected at the repository
     unplaced: list[str] = field(default_factory=list)
     lineage: int = 0                    # record lines added to scheme docs
+    nested: dict[str, int] = field(default_factory=dict)   # record → its pages
 
     def lines(self) -> list[str]:
         out = [f"{self.pages} pages, {self.assets} assets staged",
                f"{self.lineage} record lines added",
                f"{self.to_source} links redirected to the repository"]
+        if self.nested:
+            listed = ", ".join(f"{name} ({n})"
+                               for name, n in sorted(self.nested.items()))
+            out.append(f"{len(self.nested)} nested record(s) staged: {listed}")
         if self.unplaced:
             shown = sorted(self.unplaced)
             out.append(f"{len(shown)} reference(s) the site cannot place:")
@@ -415,9 +423,20 @@ def publishable(cfg=None, skip: Path | None = None) -> list[Path]:
     default `build/site` does. Without it the second run publishes the first
     run's output, and the site grows a copy of itself per build."""
     cfg = cfg or current()
+    # A nested record's files are none of this config's business. `link_base`
+    # below is the source-versus-view test, and it answers from the *reading*
+    # config's schemes — so under a parent that has no VALUE scheme, a child's
+    # `VALUE-001.md` comes back as ordinary prose and would be published
+    # alongside the assembled view it renders into, with links spelled for a
+    # directory this vault does not have. Skipping them here is what makes
+    # `include_records` a mount rather than a merge; `stage_nested` publishes
+    # each child through its own config.
+    nested = [r for r in nested_records(cfg)]
     out = []
     for path in sorted(cfg.root.rglob("*.md")):
         if skip and skip in path.parents:
+            continue
+        if any(record in path.parents for record in nested):
             continue
         rel = path.relative_to(cfg.root).as_posix()
         if _excluded(rel, cfg.site):
@@ -699,10 +718,13 @@ def brand(out: Path, cfg, report: Report) -> str:
         light="static/logo-light.svg", dark="static/logo-dark.svg")
 
 
-def stage(out: Path, cfg=None) -> Report:
+def stage(out: Path, cfg=None, nested: bool = True) -> Report:
     """Write the vault and its config under `out`. Idempotent: the content
     directory is rebuilt from scratch, so a rename in the record cannot leave
-    a stale page behind to be served forever."""
+    a stale page behind to be served forever.
+
+    `nested` is what stops a nested record from staging its own — see
+    `stage_nested`."""
     cfg = cfg or current()
     out = out.resolve()
     content = out / "content"
@@ -770,7 +792,87 @@ def stage(out: Path, cfg=None) -> Report:
     (out / "quartz.layout.ts").write_text(
         QUARTZ_LAYOUT.format(repo_url=repo_url or cfg.site.source_url),
         encoding="utf-8")
+
+    if nested:
+        stage_nested(content, cfg, report)
     return report
+
+
+def nested_records(cfg=None) -> list[Path]:
+    """Directories matched by `site.include_records` that are really records.
+
+    A glob that matches a directory without a `luria.toml` is skipped rather
+    than failed: `examples/*` is the natural way to write "every example", and
+    a stray `README.md` or a scratch directory beside them should not break the
+    publish. What *is* an error is a pattern that matches nothing at all —
+    caught in `stage_nested`, because a silently empty include is a section of
+    the site quietly not existing (DP-1)."""
+    cfg = cfg or current()
+    out = []
+    for pattern in cfg.site.include_records:
+        for path in sorted(cfg.root.glob(pattern)):
+            if path.is_dir() and (path / "luria.toml").exists():
+                out.append(path)
+    return out
+
+
+def stage_nested(content: Path, cfg, report: Report) -> None:
+    """Stage each nested record into `content/<its path>/`.
+
+    The reason this exists rather than the parent simply publishing the files:
+    a parent config cannot tell a source from a view inside a child. That test
+    is `Config.link_base`, and it answers from the *reading* config's schemes —
+    so under luria's own config an example's `VALUE-001.md` looks like ordinary
+    prose, and `publishable()` would emit both the fragment and the assembled
+    view it renders into. Each child is therefore staged by its own config,
+    and only the finished `content/` is mounted.
+
+    Two consequences worth stating.
+
+    **The child is generated in a copy, never in place.** A nested record's
+    views are not committed — that is the arrangement `examples/` exists to
+    argue for — so they have to be rendered before they can be staged, and
+    rendering them into the working tree would create exactly the stale
+    committed view the arrangement avoids.
+
+    **The child's own `include_records` is not honoured.** One level is a
+    section; two is a maze, and nothing here needs it. Said out loud because
+    the recursion would otherwise look like an oversight."""
+    records = nested_records(cfg)
+    seen = {p.relative_to(cfg.root).as_posix() for p in records}
+    for pattern in cfg.site.include_records:
+        if not any(fnmatch.fnmatch(rel, pattern) for rel in seen):
+            raise ValueError(
+                f"site.include_records: {pattern!r} matched no record. A "
+                "pattern that matches nothing is a section of the site that "
+                "quietly does not exist; fix the pattern or drop it.")
+
+    from . import adr_index
+    from .config import rooted
+
+    for record in records:
+        rel = record.relative_to(cfg.root)
+        with tempfile.TemporaryDirectory() as tmp:
+            work = Path(tmp) / record.name
+            shutil.copytree(record, work)
+            with rooted(work) as child:
+                # A child's generation is an implementation detail of staging,
+                # not news: seven "Wrote 21 file(s)" lines ahead of the report
+                # bury the only summary the caller asked for.
+                with contextlib.redirect_stdout(io.StringIO()):
+                    adr_index.run()
+                child_out = Path(tmp) / "vault"
+                child_report = stage(child_out, child, nested=False)
+            mount = content / rel
+            if mount.exists():
+                shutil.rmtree(mount)
+            shutil.copytree(child_out / "content", mount)
+        report.nested[rel.as_posix()] = child_report.pages
+        report.pages += child_report.pages
+        report.assets += child_report.assets
+        report.lineage += child_report.lineage
+        report.to_source += child_report.to_source
+        report.unplaced += [f"{rel.as_posix()}/{u}" for u in child_report.unplaced]
 
 
 def run(out: str = "build/site") -> None:

@@ -31,3 +31,10 @@ url   = "https://acme.atlassian.net/browse/{uid}"
 name = "CVE"
 uid  = "\\d{4}-\\d{4,7}"
 url  = "https://nvd.nist.gov/vuln/detail/CVE-{uid}"
+
+# Published as a section of luria's own site (`site.include_records`), staged
+# by this config rather than the parent's. The title is what names the section;
+# without it the site falls back to the repository in `issue_url`, which for an
+# example is either a fiction or the wrong project.
+[luria.site]
+title = "External citations"

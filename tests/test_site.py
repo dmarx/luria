@@ -11,7 +11,7 @@ from pathlib import Path
 
 import pytest
 
-from luria import site
+from luria import config, site
 from luria.config import current, load
 
 from _scheme import decision
@@ -327,3 +327,126 @@ def test_a_project_with_no_artwork_still_gets_a_stylesheet(project):
     assert scss.startswith("// GENERATED")
     assert '@use "./base.scss";' in scss
     assert ".page-title" not in scss
+
+
+# --- nested records (ADR-077) -------------------------------------------
+
+def parent(tmp_path, monkeypatch, include='include_records = ["sub/*"]') -> Path:
+    """A minimal record that publishes whatever `include` names."""
+    (tmp_path / "docs").mkdir(parents=True, exist_ok=True)
+    (tmp_path / "luria.toml").write_text(
+        '[luria]\nissue_url = "https://example.test/issues/{n}"\n'
+        f"[luria.site]\n{include}\n")
+    (tmp_path / "README.md").write_text("# Parent\n\nThe outer record.\n")
+    (tmp_path / "docs" / "README.md").write_text("# Docs\n\nNothing here.\n")
+    monkeypatch.setenv("LURIA_ROOT", str(tmp_path))
+    config.reset()
+    return tmp_path
+
+
+def child(root: Path, name: str) -> Path:
+    """A complete little record inside `root`, carrying a scheme the parent
+    has never heard of — which is the condition the mount exists for."""
+    place = root / "sub" / name
+    (place / "record" / "notes.d").mkdir(parents=True)
+    (place / "luria.toml").write_text(f"""
+[luria]
+issue_url = "https://example.test/{name}/issues/{{n}}"
+[luria.site]
+title = "{name}"
+[luria.schemes.NOTE]
+dir = "record/notes.d"
+output = "docs/notes.md"
+render = "document"
+""")
+    (place / "record" / "notes.d" / "NOTE-001.md").write_text(
+        "---\nstatus: Active\ntitle: 'One'\nversion: 1\ntags: [x]\n"
+        "date: '2026-01-01'\n---\n\n# NOTE-001: One\n\nBody.\n")
+    (place / "README.md").write_text(f"# {name}\n\nA nested record.\n")
+    return place
+
+
+def test_a_nested_record_is_staged_by_its_own_config(tmp_path, monkeypatch):
+    """The whole point, and the reason a merge would not do.
+
+    `publishable()` tells a source from a view with
+    `link_base(path) != path.parent`, and `link_base` answers from the
+    *reading* config's schemes. The parent has no NOTE scheme, so under the
+    parent's config `NOTE-001.md` reads as ordinary prose and would be
+    published beside `docs/notes.md`, the document it renders into. Staged by
+    the child's own config, only the view appears."""
+    root = parent(tmp_path, monkeypatch)
+    child(root, "alpha")
+    report = site.stage(tmp_path / "vault")
+    content = tmp_path / "vault" / "content"
+
+    assert (content / "sub" / "alpha" / "docs" / "notes.md").exists()
+    assert not (content / "sub" / "alpha" / "record" / "notes.d" / "NOTE-001.md").exists(), (
+        "the child's document-scheme source was published beside its assembled "
+        "view, which is what happens when the parent's config does the staging"
+    )
+    assert report.nested.get("sub/alpha", 0) > 0
+    assert report.pages > report.nested["sub/alpha"], (
+        "the parent's own pages are missing from the total"
+    )
+
+
+def test_a_nested_record_gets_its_own_landing_page(tmp_path, monkeypatch):
+    """The child's README becomes the section's index, titled from the child's
+    own `site.title`. Without it a link to the section lands on nothing — the
+    examples had no root README and mounted as a directory with no front
+    page."""
+    root = parent(tmp_path, monkeypatch)
+    child(root, "alpha")
+    site.stage(tmp_path / "vault")
+    index = tmp_path / "vault" / "content" / "sub" / "alpha" / "index.md"
+    assert index.exists(), "the nested section has no landing page"
+    text = index.read_text()
+    assert 'title: "alpha"' in text, "titled from the parent's config, not its own"
+    assert '"README"' in text, "the section's old address must keep answering"
+
+
+def test_include_records_implies_exclusion_from_the_parent_pass(tmp_path, monkeypatch):
+    """Without this the merge reintroduces what the mount solves.
+
+    Asserted against the parent's file list rather than the staged vault,
+    because from the vault the two failures are indistinguishable: a child file
+    published by the parent and one mounted by the child both land under
+    `sub/alpha/`."""
+    root = parent(tmp_path, monkeypatch)
+    place = child(root, "alpha")
+    published = site.publishable(current())
+    assert published, "the parent published nothing; the assertion below is vacuous"
+    assert not [p for p in published if place in p.parents], (
+        "the parent's own pass picked up files inside a nested record"
+    )
+
+
+def test_a_pattern_matching_no_record_is_an_error(tmp_path, monkeypatch):
+    """A silently empty include is a section of the site that does not exist,
+    and nothing else would report it (DP-1). A directory that is not a record
+    is a different case and stays a quiet skip — `sub/*` is the natural way to
+    write "every one of these", and a stray directory beside them should not
+    break a publish."""
+    root = parent(tmp_path, monkeypatch)
+    (root / "sub" / "not-a-record").mkdir(parents=True)
+    with pytest.raises(ValueError, match="matched no record"):
+        site.stage(tmp_path / "vault")
+
+    child(root, "alpha")
+    config.reset()
+    report = site.stage(tmp_path / "vault")
+    assert set(report.nested) == {"sub/alpha"}, (
+        "the non-record directory beside it should have been skipped quietly"
+    )
+
+
+def test_staging_a_child_leaves_the_parent_config_current(tmp_path, monkeypatch):
+    """`rooted()` restores what it swapped. A leaked `LURIA_ROOT` would make
+    every later call in the process read the child's record instead."""
+    root = parent(tmp_path, monkeypatch)
+    child(root, "alpha")
+    before = current().root
+    site.stage(tmp_path / "vault")
+    assert current().root == before
+    assert "NOTE" not in current().schemes
