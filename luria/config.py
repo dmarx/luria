@@ -1159,6 +1159,19 @@ class Config:
             if s.render == "index" and (path == s.index_path
                                         or path.parent == s.tag_dir):
                 return True
+            # A vocabulary's per-value pages, which render beside the tag
+            # pages and are as generated as they are. Missing here for as long
+            # as vocabularies have existed, and invisible until a *retired*
+            # document became a vocabulary member: the reference report scans
+            # what this method does not exclude, so it found a citation of a
+            # superseded document inside a page nobody can annotate — an
+            # `inactive-ok:` written there is erased by the next build. Worse,
+            # the page is written in the same pass that renders the report, so
+            # the report saw the *previous* run's copy and `luria index` stopped
+            # converging.
+            if s.render == "index" and any(path.parent == s.vocab_dir(v.name)
+                                           for v in s.vocabularies):
+                return True
             if s.output == path:
                 return True
         return any(path.parent == j.output for j in self.journals.values())

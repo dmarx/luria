@@ -14,7 +14,7 @@ from pathlib import Path
 
 import pytest
 
-from luria import adr_index, config, contract, lint, site
+from luria import adr_index, config, contract, doc_refs, lint, ref_status, site
 from luria.config import current
 
 
@@ -283,6 +283,76 @@ def test_value_pages_are_generated_views_nobody_has_to_link(tmp_path, monkeypatc
     errors = []
     lint.check_view_dirs(errors)
     assert any("Z.md" in e for e in errors), errors
+
+
+def test_a_value_page_is_generated_by_the_reference_machinery_too(tmp_path, monkeypatch):
+    """`is_generated` has to agree with `view_dirs`, and for a long time it
+    did not.
+
+    Two definitions of "the generator owns this file" existed side by side.
+    `view_dirs()` listed the vocabulary directory, so the orphan lint and the
+    docs index both knew — the test above. `Config.is_generated` did not, so
+    the *reference* machinery treated the same page as hand-written prose:
+    `doc_refs.doc_files()` filters on it, and `ref_status.scanned_files()`
+    filters on that.
+
+    Three things followed, in rising order of damage. `luria link --fix` would
+    rewrite a page the next build overwrites. A citation inside one could not
+    be excused, because an `inactive-ok:` comment written into a generated file
+    is erased. And `luria index` stopped converging: the reports render in the
+    same parallel pass as the vocabulary pages, so the report read the
+    *previous* run's copy of a page it should never have opened, and a second
+    index produced a different report than the first.
+
+    Only a *retired* document made it visible — one whose citation the report
+    would flag — so it was present from the day vocabularies shipped and found
+    about 26 hours later, by an example that happened to retire one."""
+    root = world(tmp_path, monkeypatch)
+    scene(root, 1, "worlds:\n- A")
+    adr_index.run()
+
+    page = root / "docs/scenes/worlds/A.md"
+    assert page.exists(), "no vocabulary page rendered; the assertions below prove nothing"
+
+    cfg = current()
+    assert page.parent in adr_index.view_dirs()
+    assert cfg.is_generated(page), (
+        "the vocabulary page is a view by one definition and prose by the "
+        "other; the reference machinery reads the second"
+    )
+    assert page not in doc_refs.doc_files()
+    assert page not in ref_status.scanned_files()
+
+
+def test_indexing_twice_leaves_the_reports_unchanged(tmp_path, monkeypatch):
+    """The convergence this bug actually broke, asserted end to end.
+
+    A `Superseded` scene is still a member of its world, so the world page
+    cites a retired document. While that page was scannable the reference
+    report gained a finding on the second run that the first had not seen —
+    `luria index` was not idempotent, and idempotence is the whole basis of
+    the staleness check.
+
+    The positive control is the first assertion: a run that renders no report
+    would satisfy "unchanged" trivially."""
+    root = world(tmp_path, monkeypatch)
+    scene(root, 1, "worlds:\n- A")
+    write(root, "record/scenes.d/SCENE-002.md", "\n".join([
+        "---", "status: Superseded by SCENE-001", "title: 'Scene 2'",
+        "tags:", "- record", "date: '2026-01-01'", "worlds:", "- A", "---", "",
+        "# SCENE-002: Scene 2", "", "Body citing SCENE-001.",
+    ]) + "\n")
+    adr_index.run()
+
+    report = root / "docs/reports/reference-status.md"
+    assert report.exists(), "no reference report rendered; 'unchanged' would be vacuous"
+    before = report.read_text()
+
+    adr_index.run()
+    assert report.read_text() == before, (
+        "a second `luria index` changed the reference report, so the views are "
+        "not a pure function of the sources and staleness cannot be detected"
+    )
 
 
 # --- rendered on the site ----------------------------------------------
