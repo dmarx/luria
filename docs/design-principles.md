@@ -43,6 +43,12 @@ one that has stopped applying is reported in its own right — otherwise the
 mechanism for saying "this is fine" becomes the mechanism for never hearing
 about it again.
 
+
+The reason a silent no-op is worse than a loud one is [DP-015](design-principles.md#dp-15): nothing
+happening and everything working produce the same observation, so the user's
+next move is to conclude the tool is broken rather than to look for the
+precondition.
+
 *v1 · origin: The strata-g design-language review, where tools silently no-opped on inputs that didn't meet their preconditions*
 
 <a name="dp-2"></a>
@@ -102,6 +108,12 @@ Three remedies, in order of strength:
    polarity a naive list has by default.
 
 In this package, the decision index is rung 1 and the reference lint is rung 2.
+
+
+Why fail-stale specifically is the unacceptable polarity, rather than merely
+the worst of three: it is the silent one, and [DP-015](design-principles.md#dp-15) is the general form —
+a missed entry that ships as wrong behaviour is indistinguishable from a
+complete list, so nothing about the system reports the gap.
 
 *v2 · shaped by [ADR-004](../record/decisions.d/ADR-004.md), [ADR-005](../record/decisions.d/ADR-005.md) · origin: A hardcoded type union that had drifted to 13 of 21 keys; generalized by a later arc where every one of five converted projections was already wrong*
 
@@ -175,6 +187,11 @@ broken, what the guard printed, what it printed after the repair — is the
 difference between a guard someone trusts and a guard someone re-tests from
 scratch because they can't tell whether it works.
 
+
+The general case is [DP-015](design-principles.md#dp-15). An unfired guard emits exactly what a guard
+with nothing to catch emits, so "no findings" is not evidence of a clean tree
+until something has proved the instrument can speak.
+
 *v1 · shaped by [ADR-007](../record/decisions.d/ADR-007.md) · origin: Two inert mechanisms in strata-g — an alert shape that could never fire, and a CI fast path whose fail-safe polarity made a month of inertness invisible. Both were discovered by accident rather than by the thing they guarded*
 
 <a name="dp-7"></a>
@@ -240,14 +257,10 @@ human or stateless; a rule living only in prose is discoverable by whoever
 happens to read that prose.
 
 **Diagnosis.** Affordance inconsistency is a smell to *read*, not an
-untidiness to tolerate. The same shape carrying opposite rules — one
-`README.md` you must edit and another you must not; a marked container beside
-an unmarked sibling doing the same job — says a rule has moved out of the tree
-and into somebody's memory. A file whose neighbours are the wrong kind — an
-authored `.stub` sitting beside the generated page it feeds — says something
-is filed where it doesn't belong. When an affordance feels wrong, trust the
-feeling and ask which boundary it is straddling; the discomfort is usually a
-distinction the layout has stopped expressing.
+untidiness to tolerate — the same shape carrying opposite rules, a file whose
+neighbours are the wrong kind. That reading turned out not to be about
+affordances at all: the citation graph reports the same class of fault the
+same way, so it is now [DP-016](design-principles.md#dp-16), and this is the tree half of it.
 
 Two disciplines keep the spend honest. **Structural beats documentary**: a
 comment saying "GENERATED — do not edit" is read after landing in the wrong
@@ -269,7 +282,7 @@ principle binds affordances to the truth. This one is its complement about
 *reach*: affordances are the widest channel an artifact has — spend them,
 don't merely avoid falsifying them.
 
-*v1 · shaped by [ADR-012](../record/decisions.d/ADR-012.md), [ADR-013](../record/decisions.d/ADR-013.md), [ADR-021](../record/decisions.d/ADR-021.md) · origin: An inventory of one repository's layout found the same rules expressed structurally in some places and not at all in others — two source containers marked `.d` and two unmarked, a generated document beside its own sources, an index buried under the things it indexes, and `README.md` meaning "edit me" in one directory and "never edit me" in the next. The layout had been shaping attention the whole time; nobody had been steering it*
+*v2 · shaped by [ADR-012](../record/decisions.d/ADR-012.md), [ADR-013](../record/decisions.d/ADR-013.md), [ADR-021](../record/decisions.d/ADR-021.md) · origin: An inventory of one repository's layout found the same rules expressed structurally in some places and not at all in others — two source containers marked `.d` and two unmarked, a generated document beside its own sources, an index buried under the things it indexes, and `README.md` meaning "edit me" in one directory and "never edit me" in the next. The layout had been shaping attention the whole time; nobody had been steering it*
 
 <a name="dp-10"></a>
 
@@ -307,6 +320,12 @@ The test, when a new switch appears: *what does the silent position cost,
 and who pays?* If the project pays in missed defects, on-by-default. If
 the author pays in unwanted exposure, off-by-default. A switch where both
 answers feel true is usually two switches wearing one name — split it.
+
+
+Both halves of the rule descend from [DP-015](design-principles.md#dp-15). A default is the position that
+ships when nobody reads the docs, and its failure is silent by construction —
+so the polarity question is really "which direction can announce itself?", and
+the answer sets the default.
 
 *v1 · shaped by [ADR-035](../record/decisions.d/ADR-035.md)*
 
@@ -363,62 +382,118 @@ anything, and that restraint is what keeps the licence worth having.
 
 <a name="dp-12"></a>
 
-## 12. One decision, one thing
+## 12. One document, one thing
 
-**A decision with two unrelated halves is one nobody can cite half of.**
+**A document with two unrelated halves is one nobody can cite half of.**
 
 Bundling is always cheaper at writing time. One record, one review, one merge —
 and the second half arrives free, because it was going to be written anyway.
 The cost lands later and never goes away.
 
+This was first written about decisions, and it is not about decisions. It holds
+for any document a reader is expected to name: a decision, a principle, a
+practice in a record of practices, a claim in an anthology. The unit is
+whatever gets cited.
+
 ## What it costs
 
-**The second half has no code.** A citation is how this record is used: an
+**The second half has no code.** A citation is how a record is used: an
 argument names its premise, a module names the decision it implements, a lint
-message names the rule it enforces. Half a decision cannot be named, so the
+message names the rule it enforces. Half a document cannot be named, so the
 half that was cheap to add is the half nothing can point at — and a rule
 nothing points at is a rule nobody knows applies to them.
 
-**Superseding withdraws more than intended.** A decision that changes gets
-superseded whole. If two choices share a record, retiring the one that aged out
+**Superseding withdraws more than intended.** A document that changes gets
+superseded whole. If two things share a record, retiring the one that aged out
 silently retires the one that did not, and the record now says nothing about a
 question it had answered. That is the failure the status vocabulary exists to
 prevent, reintroduced at a coarser grain.
 
-**Alternatives stop being reconstructable.** The alternatives section is the
-highest-value part of a decision, and it only works when it is the alternatives
-to *one* choice. Two choices produce a cross-product, or — far more often — an
-alternatives section that silently covers whichever half the author found more
-interesting.
+**Alternatives stop being reconstructable.** For a decision, the alternatives
+section is the highest-value part, and it only works when it is the
+alternatives to *one* choice. Two choices produce a cross-product, or — far
+more often — an alternatives section that silently covers whichever half the
+author found more interesting.
 
-## The test
+## Two tests
 
-**Could the two halves have been decided differently?** If a project could
-adopt one and reject the other, they are two decisions, however naturally they
+**Could the halves have been decided differently?** If a project could adopt
+one and reject the other, they are two documents, however naturally they
 arrived together.
 
-The tempting counterexample is the pair where one half motivated the other.
-That is exactly when to split, and it is worth being concrete: a feature was
-built to fix a defect, and a separate check would actually have *caught* that
-defect. Bundling them would have produced a record whose stated motivation was
-served by only one of its halves — and a reader asking "why does this check
-exist?" would find the answer to a different question.
+That one only fires while writing, and it depends on the author asking. Typed
+edges ([ADR-071](../record/decisions.d/ADR-071.md), [ADR-060](../record/decisions.d/ADR-060.md))
+make a second test possible, and this one fires afterwards, mechanically:
 
-Splitting them also produced something bundling would have hidden. Building the
-second after the first landed revealed an exemption the second needed *because
-of* the first, which is a relationship that only exists between two things.
+**Does an edge into this document have to name which *part* of it applies?**
+If stating what a relation asserts requires pointing at one clause of its
+target, the target is two documents.
+
+Note what this test is not. An `overrides` edge already means *where both bear,
+this one wins* — the overlap is decided by the two documents' contents, so an
+edge is not over-claiming merely by being silent about scope. The tell is
+narrower and shows up in the prose beside the edge: a body that has to explain
+which sentence of the target it is arguing with.
+
+The worked case is a record of an assistant's operating constitution, which
+contains no decisions at all. A boundary — *never infer a person's pronouns
+from their name* — declares that it `overrides` a practice titled *deliver the
+whole requested scope; state assumptions rather than narrowing*. But the
+boundary's body does not argue with delivering the whole scope. It argues with
+a different claim the same document happens to carry: *make the routine
+judgment call yourself rather than escalating it*. The override had to say so
+in prose, because the code it names covers both.
+
+Applying the first test confirms it. *Deliver the whole scope* and *make the
+routine call yourself* could be adopted separately — a project could want one
+and reject the other — so they were always two practices. They had simply
+arrived in the same paragraph of the source. Splitting them let each override
+name what it actually beats, and immediately exposed a second error: one of the
+two edges, checked against the narrower practice, turned out not to hold at all.
+
+That is the useful property. The a-priori test needs an author to stop and ask.
+This one arrives as friction while writing something else, which is when a
+granularity defect is cheapest to notice and most likely to be noticed at all.
+
+The general form is [DP-016](design-principles.md#dp-16) — an awkward structure is reporting a
+distinction the model has stopped expressing — and this is its granularity
+case. What that principle adds is the instruction not to resolve the
+awkwardness with a clarifying sentence, which is always available and always
+leaves the model wrong.
+
+## Why not just qualify the edge
+
+Because a condition on a relation is unfalsifiable in exactly the way this
+record's machinery exists to prevent. `overrides` is checked — the code must
+resolve, to a document of the declared scheme, that actually exists. A `when:`
+beside it is prose in a data field: nothing evaluates it, nothing notices when
+it stops being true, and nothing tells a reader whether the qualifier or the
+edge governs their case. It is escalating emphasis in a new costume, one level
+up, and the graph it produces is worse than no graph because it looks checked.
+
+This is why [#141](https://github.com/dmarx/luria/issues/141) puts `when`
+expressions among its non-goals, and why it refuses precedence between
+configuration surfaces — a conflict there is an error rather than something a
+tie-break rule resolves. Same move: **decline the qualifier, and remove what
+made it necessary.**
 
 ## What this is not
 
-Not an argument for small decisions. A decision covering one choice can be long,
+Not an argument for small documents. A document covering one thing can be long,
 and usually should be — the context, the alternatives and the consequences of a
-single choice are most of what makes a record worth keeping.
+single claim are most of what makes a record worth keeping.
 
-Nor is it an argument against related decisions landing together. Ship them in
+Nor is it an argument against related documents landing together. Ship them in
 one contribution if that is honest; give them separate codes so each can be
 cited, revisited, and retired on its own evidence.
 
-*v1 · shaped by [ADR-035](../record/decisions.d/ADR-035.md), [ADR-056](../record/decisions.d/ADR-056.md) · origin: Three splits in one session, each made for the same reason and none of them by rule: a lint check separated from the vocabulary it reads, two scheme audits written as two decisions rather than one, and a status feature split from the report that would have caught the bug motivating it. Each bundle would have been smaller to write and impossible to cite half of*
+And it is not a licence to split on sight. The second test is the discipline
+that keeps it honest: split when something *points* at a part rather than the
+whole, not whenever a document could conceivably be subdivided. A record of
+maximally small documents has the same problem in reverse — every claim needs
+five citations to state, and none of them means anything alone.
+
+*v2 · shaped by [ADR-035](../record/decisions.d/ADR-035.md), [ADR-056](../record/decisions.d/ADR-056.md), [ADR-060](../record/decisions.d/ADR-060.md), [ADR-071](../record/decisions.d/ADR-071.md) · origin: Three splits in one session, each made for the same reason and none of them by rule: a lint check separated from the vocabulary it reads, two scheme audits written as two decisions rather than one, and a status feature split from the report that would have caught the bug motivating it. Then, in a record of practices rather than decisions, an `overrides` edge whose prose had to name which clause of its target it argued with — the same defect, arriving as a relation instead of as a bundle*
 
 <a name="dp-13"></a>
 
@@ -533,3 +608,139 @@ reach — and reach is the point, because the projects that most need a memory
 are rarely the ones that look like yours.
 
 *v1 · shaped by [ADR-064](../record/decisions.d/ADR-064.md) · origin: A Windows user ran `luria init` and then `luria index`, and got a stack trace writing a check mark into a status report. Nothing about their project was unusual. The tool had required a UTF-8-capable platform without ever saying so*
+
+<a name="dp-15"></a>
+
+## 15. An absence reads exactly like a success — give the silent case a signal
+
+**Nothing happening and everything working produce the same observation.**
+
+This is the premise underneath a family of rules in this record, and it was
+never stated because each rule looks self-evidently right on its own. Written
+down, it explains why they are the *same* rule wearing four coats, and it
+predicts where the fifth will be.
+
+| the silent thing | what it looks like from outside |
+|---|---|
+| a tool that no-ops on an input it can't handle | a tool that ran and found nothing to do |
+| a guard nobody has ever fired | a guard that has never had cause to fire |
+| a hand list missing one entry | a hand list that is complete |
+| a default nobody chose | a default someone chose |
+| a measurement of nothing | a measurement of no change |
+
+Every row is a real bug shape, and every one passes review, because review looks
+at the output and the output is *correct-looking*. That is the whole mechanism:
+these failures are not hard to fix, they are hard to **see**, and the thing that
+hides them is the same thing in each case — the failing path emits nothing, and
+nothing is what success emits too.
+
+## What follows from it
+
+Each of these already exists here as its own principle, and each stays its own
+principle because the *remedies* differ. What they share is this diagnosis:
+
+- [DP-001](design-principles.md#dp-1) — a refusal that says nothing reads as a broken tool. Remedy: the
+  refusal explains itself.
+- [DP-003](design-principles.md#dp-3) — rung three is the polarity rule, and fail-stale is singled out as
+  the never-acceptable one precisely because it is the silent polarity. Remedy:
+  derive, or guard the property, or choose a polarity that is not silence.
+- [DP-006](design-principles.md#dp-6) — provisioned is not working; an unfired guard reports what a
+  working one reports. Remedy: sabotage it once, and record that you did.
+- [DP-010](design-principles.md#dp-10) — the silent position of a switch is the one that ships, so it
+  should be the position whose failure is visible. Remedy: guards default on,
+  disclosures default off.
+
+Four different remedies for one diagnosis, which is why folding them together
+would lose more than it saved: a merged principle's advice section would be a
+disjunction, and a reader arriving with a concrete problem would have to guess
+which arm applies.
+
+## The corollary
+
+**A test can have this shape too, and then the safety net has the bug.** An
+assertion that cannot fail passes exactly as loudly as one that can, so a suite
+can grow a hole that reports itself green — the same defect one level up, where
+it is least likely to be looked for. The strata-g record states this as its own
+principle, arrived at independently
+([SG-DP-022](https://github.com/dmarx/strata-g/blob/main/docs/design-principles.md#dp-22)): before believing a comparison,
+require a non-zero count of whatever was counted, and perturb something the
+measurement should detect to confirm the reading moves.
+
+That is the general form of the remedy, and it is worth stating as an
+instruction rather than an observation: **for any silent path, either make it
+emit, or make the emitting case the only reachable one.** Counting the deviations
+is the second-best option and is what [DP-010](design-principles.md#dp-10) settles for; it works because a
+count of zero is itself a signal.
+
+*v1 · origin: Not one episode but an audit. Four principles in this record — [DP-001](design-principles.md#dp-1), [DP-003](design-principles.md#dp-3), [DP-006](design-principles.md#dp-6), [DP-010](design-principles.md#dp-10) — each lean on the word *silent* at the load-bearing moment, and none of them says why silence is the problem. The premise had been re-derived four times without once being written down*
+
+<a name="dp-16"></a>
+
+## 16. An awkward structure is reporting a distinction the model has stopped expressing
+
+**A structure that is hard to state cleanly is telling you something about the
+model, not about your prose.**
+
+A record maintains two structures, and both are derived from the same
+decisions about what counts as a thing. The **tree** — names, placement,
+neighbours — and the **graph** — the typed edges between documents. Neither is
+merely output. Both are instruments, and both report the same class of fault:
+a distinction that the model has stopped expressing has to live *somewhere*,
+and where it goes is prose, or a comment, or nobody's notes at all.
+
+The tell is friction while writing something else. Not a review finding, not a
+lint failure — the small awkwardness of having to explain, in a sentence,
+something the structure should have carried.
+
+## In the tree
+
+Two files with the same shape and opposite rules — one `README.md` you must
+edit and one you must not. A marked container beside an unmarked sibling doing
+the same job. An authored `.stub` filed among the generated pages it feeds.
+Each is a rule that has moved out of the layout and into somebody's memory,
+and each announces itself as mild untidiness rather than as a defect.
+
+## In the graph
+
+A typed edge is a claim, and it can be awkward in the same way. The instance
+that promoted this: a boundary declared `overrides` against a practice, and its
+body then had to say *which sentence* of that practice it argued with — because
+the target carried two claims under one code. The edge was correct and the
+prose beside it was doing work the graph could not. Splitting the target let
+the edge name what it actually beat, and immediately exposed a second edge that
+did not hold at all ([DP-012](design-principles.md#dp-12) has the worked case).
+
+The same reading applies to an edge nobody can state without a condition, to a
+required reference that had to be filled with the nearest available document,
+and to a relation that needs three sentences of context to be intelligible.
+
+## What to do with the reading
+
+**Read it before absorbing it.** The instinct is to write the clarifying
+sentence and move on; the sentence is cheap and the model stays wrong. Ask
+instead which boundary the awkwardness is straddling — the answer is usually
+a distinction that was real and is no longer represented.
+
+**Then fix the model, not the prose.** Split the document, retype the field,
+move the file, add the vocabulary. The clarifying sentence is what you write
+when you have decided the distinction is not worth representing — which is a
+legitimate answer, and a different one from not having noticed.
+
+**Do not add a qualifier to the relation.** That is the failure mode specific
+to the graph half: a condition beside a checked reference is prose in a data
+field, so nothing evaluates it and nothing notices when it stops holding, while
+the edge keeps looking checked. It is escalating emphasis one rung up — which
+is why [#141](https://github.com/dmarx/luria/issues/141) puts `when` expressions among its non-goals and refuses
+precedence between configuration surfaces.
+
+## The corollary
+
+**This only works if the structures are load-bearing.** A tree nobody navigates
+and a graph nobody reads generate no friction, so they report nothing — the
+instrument has to be used to be an instrument. That is the practical argument
+for typed edges over a general "mentions" relation ([ADR-071](../record/decisions.d/ADR-071.md), [ADR-060](../record/decisions.d/ADR-060.md)),
+and for a layout the lint holds ([ADR-021](../record/decisions.d/ADR-021.md)): the checking is what makes the
+awkwardness surface at authoring time instead of at the reader's expense, a
+year later.
+
+*v1 · shaped by [ADR-060](../record/decisions.d/ADR-060.md), [ADR-071](../record/decisions.d/ADR-071.md) · origin: Extracted from [DP-009](design-principles.md#dp-9), where it had been the third of three jobs and had never once been cited — the symptom [DP-012](design-principles.md#dp-12) names. Promoted on its second substrate: [DP-009](design-principles.md#dp-9) found it in the file tree (a `.stub` beside the page it feeds, two `README.md` files with opposite rules), and a typed `overrides` edge found it again in the citation graph, where the edge's prose had to name which clause of its target it argued with*
