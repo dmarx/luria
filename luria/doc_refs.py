@@ -937,7 +937,14 @@ def doc_files() -> list[Path]:
     generated — so a bare reference written there was invisible to both checks
     at once. `link_base` already knows where a stub renders (ADR-016)."""
     cfg = current()
-    paths = [cfg.root / name for name in ("README.md", "CLAUDE.md", "AGENTS.md")]
+    # CONTRIBUTING.md joins the three agent-facing files, and is the reason
+    # this list is worth stating rather than deriving: it is prose that asserts
+    # this project's rules to a reader, so a reference in it is a claim like
+    # any other. It was invisible here for as long as the list was "the files
+    # an agent bootstraps from" — and it states DP-8, DP-6 and DP-3 almost
+    # verbatim while citing none of them, which is what being unscanned buys.
+    paths = [cfg.root / name for name in
+             ("README.md", "CLAUDE.md", "AGENTS.md", "CONTRIBUTING.md")]
     paths += [cfg.root / f.target for f in cfg.fragments.values()]
     paths += sorted(cfg.docs.rglob("*.md")) + sorted(cfg.docs.rglob("*.stub"))
     # A scheme's directory need not sit under docs/ — the record layout puts
