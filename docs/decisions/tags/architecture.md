@@ -2,8 +2,9 @@
 
 # ADRs tagged `architecture`
 
-1 of 77 decisions. Back to the [full index](../README.md).
+2 of 78 decisions. Back to the [full index](../README.md).
 
 | # | Title | Summary | Status |
 |---|---|---|---|
 | [ADR-077](../../../record/decisions.d/ADR-077.md) | Publish a nested record as a section of its parent site, staged by its own config | `site.include_records` mounts a whole record inside another's vault. Each is staged by its own config, because the source-versus-view test reads from the *reading* config's schemes — so a parent publishing a child's files directly emits both a fragment and the view it renders into. | Active |
+| [ADR-078](../../../record/decisions.d/ADR-078.md) | A nested record's views are generated and committed with the parent's | `luria index` regenerates every nested record's views from the root, and `--check` fails on a stale one, so they are committed like this project's own. `include_records` moves out of `[luria.site]` in the same change: it says a project contains other projects, which generation needs as much as publishing does. | Active |

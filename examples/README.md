@@ -10,6 +10,12 @@ runs the real `luria index` and `luria lint` against it, and asserts what
 came out. So every configuration here is one CI proves, not one someone
 believed at the time of writing.
 
+Their generated views are **committed**, and `luria index` at the repository
+root regenerates them along with everything else ([[ADR-078]]) — so each
+example can be read here as a finished record, and `luria index --check` fails
+if one goes stale. They were gitignored until that was true, on an argument
+that turned out to conflate *committed* with *hand-maintained*.
+
 | example | what it demonstrates |
 |---|---|
 | [`rfcs-and-specs/`](rfcs-and-specs/) | two document families beside each other, one browsed as an index and one read as a single document |

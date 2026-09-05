@@ -409,7 +409,7 @@ def _link(code: str, base: Path) -> str:
     return os.path.relpath(path, base) if path else ""
 
 
-def view_dirs() -> list[Path]:
+def view_dirs(nested: bool = True) -> list[Path]:
     """Every directory the generator owns outright. Anything in one of these
     it didn't render is an orphan — a stale tag page, a book from an old
     granularity, or a hand-written file that will read as generated (ADR-021).
@@ -429,6 +429,13 @@ def view_dirs() -> list[Path]:
     # in their directory would read as generated, and a report from a retired
     # filename would linger as truth.
     dirs.append(cfg.reports)
+    # Same reasoning as `outputs`: an orphan in a nested record's view
+    # directory is an orphan in this project.
+    if nested:
+        from .config import rooted
+        for record in cfg.nested_records():
+            with rooted(record):
+                dirs += view_dirs(nested=False)
     return dirs
 
 
@@ -482,7 +489,7 @@ def _render_scheme(scheme) -> dict[Path, str]:
     return out
 
 
-def outputs() -> dict[Path, str]:
+def outputs(nested: bool = True) -> dict[Path, str]:
     """Every generated view, across every scheme — one place, so the lint's
     staleness check covers a new scheme the moment it is configured.
 
@@ -511,6 +518,21 @@ def outputs() -> dict[Path, str]:
     out: dict[Path, str] = {}
     for rendered in pmap(lambda u: u(), units):
         out.update(rendered)
+    # A nested record's views are this project's views too (ADR-078): rendered
+    # here so `run` writes them and `staleness` compares them, with no second
+    # implementation of either. Rendered under the CHILD's config, which is the
+    # only one that knows its schemes — the parent would render nothing at all
+    # for a scheme it has never heard of, and "nothing" is indistinguishable
+    # from "current" (DP-15).
+    #
+    # `nested=False` on the recursion: one level is a section, two is a maze,
+    # and the flag is what says so out loud rather than letting the absent
+    # recursion look like an oversight.
+    if nested:
+        from .config import rooted
+        for record in cfg.nested_records():
+            with rooted(record):
+                out.update(outputs(nested=False))
     return out
 
 
@@ -607,6 +629,14 @@ def run(check: bool = False) -> None:
     counted = ", ".join(
         [f"{len(load_scheme(s))} {p}s" for p, s in sorted(cfg.schemes.items())]
         + [f"{c} {n} entr{'y' if c == 1 else 'ies'}" for n, c in filed.items()])
+    # Nested records are named rather than folded into the tally: "78 files
+    # from 77 ADRs" is arithmetic nobody can check, and a record that silently
+    # rendered nothing would look exactly like one that rendered correctly
+    # (DP-1, DP-15).
+    nested = cfg.nested_records()
+    if nested:
+        counted += ", plus " + ", ".join(
+            sorted(r.relative_to(cfg.root).as_posix() for r in nested))
     print(f"Wrote {len(rendered)} file(s) from {counted}.")
     # The README's badge counts are derived from the same frontmatter, so they
     # are regenerated here rather than by a command someone has to remember

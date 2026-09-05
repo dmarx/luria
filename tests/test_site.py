@@ -11,8 +11,8 @@ from pathlib import Path
 
 import pytest
 
-from luria import config, site
-from luria.config import current, load
+from luria import adr_index, config, site
+from luria.config import current, load, rooted
 
 from _scheme import decision
 
@@ -332,11 +332,15 @@ def test_a_project_with_no_artwork_still_gets_a_stylesheet(project):
 # --- nested records (ADR-077) -------------------------------------------
 
 def parent(tmp_path, monkeypatch, include='include_records = ["sub/*"]') -> Path:
-    """A minimal record that publishes whatever `include` names."""
+    """A minimal record that publishes whatever `include` names.
+
+    `include_records` sits in `[luria]`, not `[luria.site]`: it says this
+    project contains other projects, which `luria index` needs as much as the
+    site does (ADR-078)."""
     (tmp_path / "docs").mkdir(parents=True, exist_ok=True)
     (tmp_path / "luria.toml").write_text(
         '[luria]\nissue_url = "https://example.test/issues/{n}"\n'
-        f"[luria.site]\n{include}\n")
+        f"{include}\n")
     (tmp_path / "README.md").write_text("# Parent\n\nThe outer record.\n")
     (tmp_path / "docs" / "README.md").write_text("# Docs\n\nNothing here.\n")
     monkeypatch.setenv("LURIA_ROOT", str(tmp_path))
@@ -363,6 +367,12 @@ render = "document"
         "---\nstatus: Active\ntitle: 'One'\nversion: 1\ntags: [x]\n"
         "date: '2026-01-01'\n---\n\n# NOTE-001: One\n\nBody.\n")
     (place / "README.md").write_text(f"# {name}\n\nA nested record.\n")
+    # A nested record's views are committed and regenerated with the parent's
+    # (ADR-078), so staging reads them rather than building them. Generating
+    # here is what a `luria index` at the root would have done.
+    with rooted(place):
+        adr_index.run()
+    config.reset()
     return place
 
 
@@ -450,3 +460,72 @@ def test_staging_a_child_leaves_the_parent_config_current(tmp_path, monkeypatch)
     site.stage(tmp_path / "vault")
     assert current().root == before
     assert "NOTE" not in current().schemes
+
+
+def test_a_nested_record_is_regenerated_by_the_parents_index(tmp_path, monkeypatch):
+    """`luria index` at the root writes a nested record's views too (ADR-078).
+
+    This is the half that makes committing them safe. A committed view is only
+    as good as the thing that regenerates it, and before this the parent's
+    index did not know the child existed — so the views were gitignored, and
+    the examples were the one place in this repository where a view could not
+    be browsed at all.
+    """
+    root = parent(tmp_path, monkeypatch)
+    place = child(root, "alpha")
+    view = place / "docs" / "notes.md"
+    assert view.exists(), "the fixture did not generate; the rest proves nothing"
+
+    view.write_text("stale\n")
+    config.reset()
+    assert adr_index.staleness().stale, (
+        "a stale view inside a nested record is invisible to the parent's "
+        "staleness check, so nothing would ever notice it drifting"
+    )
+
+    adr_index.run()
+    assert not adr_index.staleness().stale
+    # The child's document, rendered by the child's config. `render_document`
+    # demotes the fragment's H1 and renumbers it, so the code does not survive
+    # literally — the stable anchor does, which is the point of having one.
+    text = view.read_text()
+    assert '<a name="note-1">' in text and "Body." in text, (
+        "the parent's index wrote the file but rendered none of the child's "
+        "documents into it — which is what happens when the PARENT's config "
+        "does the rendering, since it has no NOTE scheme"
+    )
+
+
+def test_an_orphan_in_a_nested_view_directory_is_an_orphan(tmp_path, monkeypatch):
+    """`view_dirs` reaches into nested records for the same reason `outputs`
+    does: a stale page left in a child's view directory reads as generated,
+    and the parent is the only thing running the check.
+
+    An index-render scheme, because only those own a view *directory* — a
+    document scheme owns one file, and a stray beside it is somebody's prose,
+    not an orphan."""
+    root = parent(tmp_path, monkeypatch)
+    place = root / "sub" / "beta"
+    (place / "record" / "memos.d").mkdir(parents=True)
+    (place / "luria.toml").write_text(
+        '[luria]\nissue_url = "https://example.test/beta/issues/{n}"\n'
+        '[luria.schemes.MEMO]\ndir = "record/memos.d"\n'
+        'output = "docs/memos"\nrender = "index"\n')
+    (place / "record" / "memos.d" / "MEMO-001.md").write_text(
+        "---\nstatus: Active\ntitle: 'One'\nversion: 1\ntags: [x]\n"
+        "date: '2026-01-01'\n---\n\n# MEMO-001: One\n\nBody.\n")
+    (place / "README.md").write_text("# beta\n\nA nested record.\n")
+    with rooted(place):
+        adr_index.run()
+    config.reset()
+
+    assert not adr_index.staleness().orphaned, (
+        "already orphaned before the stray was planted; the assertion below "
+        "would pass for the wrong reason"
+    )
+    stray = place / "docs" / "memos" / "ZZZ.md"
+    stray.write_text("# stray\n")
+    config.reset()
+    assert any(p.name == "ZZZ.md" for p in adr_index.staleness().orphaned), (
+        "an unrendered file in a nested record's view directory went unreported"
+    )

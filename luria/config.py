@@ -119,6 +119,9 @@ DEFAULTS: dict = {
         # thought about it (ADR-035's warn-first posture, one step further).
         "narrow_terms": [],
     },
+    # Whole records nested inside this one (ADR-077, ADR-078). Empty for the
+    # ordinary project, which contains no others.
+    "include_records": [],
     # The published site (ADR-042). Every key is derivable from `issue_url`
     # for a GitHub project, so the conventional case needs no `[luria.site]`
     # table at all — a default nobody has to read the docs to get.
@@ -127,7 +130,6 @@ DEFAULTS: dict = {
         "base_url": "",
         "source_url": "",
         "exclude": [],
-        "include_records": [],
         # Branding. All optional: unset means the generator's own look.
         "icon": "",
         "logo": "",
@@ -1043,11 +1045,6 @@ class Site:
     base_url: str
     source_url: str
     exclude: tuple[str, ...] = ()
-    # Whole records nested inside this one, published as sections of this site
-    # (ADR-077). Globs against directories, each of which must hold its own
-    # `luria.toml`: the point is that a nested record is staged with *its own*
-    # config, which is the only config that knows a source from a view in it.
-    include_records: tuple[str, ...] = ()
     icon: Path | None = None
     logo: Path | None = None
     logo_dark: Path | None = None
@@ -1071,8 +1068,47 @@ class Config:
     stale_days: int
     fail_on: tuple[str, ...]            # warning classes promoted to failures
     narrow_terms: tuple[str, ...]       # this project's nouns (narrow-titles)
-    site: Site
+    # Whole records nested inside this one — directory globs, each match
+    # holding its own `luria.toml` (ADR-077, relocated by ADR-078).
+    #
+    # This lived under `[luria.site]` for as long as publishing was the only
+    # thing that needed it. It isn't a site fact: it says this project contains
+    # other projects, which is what `luria index` needs in order to regenerate
+    # their views and what `--check` needs in order to notice a stale one. A
+    # key that `index` has to reach into the site table to read is DP-16's
+    # awkwardness — a distinction the layout had stopped expressing.
+    include_records: tuple[str, ...] = ()
+    site: Site = None  # type: ignore[assignment]
     _raw: dict = field(default_factory=dict, repr=False)
+
+    def nested_records(self) -> list[Path]:
+        """Directories matched by `include_records` that are really records.
+
+        One authoritative answer, because three callers need it and they must
+        agree: `luria index` regenerates these, `luria index --check` compares
+        them, and `luria site` mounts them. Two implementations of "which
+        directories are nested records" would drift into a state where a record
+        is published but never regenerated (DP-4).
+
+        A match without a `luria.toml` is skipped rather than failed —
+        `examples/*` is the natural way to write "every example", and a stray
+        directory beside them should not break a build. A *pattern* matching
+        nothing is an error, raised by the callers, because an include that
+        silently covers no record is a section of the project quietly not
+        maintained (DP-1, DP-15)."""
+        out = []
+        for pattern in self.include_records:
+            for path in sorted(self.root.glob(pattern)):
+                if path.is_dir() and (path / CONFIG_NAME).exists():
+                    out.append(path)
+        return out
+
+    def unmatched_record_patterns(self) -> list[str]:
+        """Patterns in `include_records` that name no record at all."""
+        import fnmatch
+        found = {p.relative_to(self.root).as_posix() for p in self.nested_records()}
+        return [pat for pat in self.include_records
+                if not any(fnmatch.fnmatch(rel, pat) for rel in found)]
 
     def _index_scheme(self):
         return next((s for s in self.schemes.values() if s.render == "index"),
@@ -1334,6 +1370,7 @@ def load(root: Path | None = None, text: str | None = None) -> Config:
         stale_days=int(raw.get("stale_days", 90)),
         fail_on=tuple(raw["lint"]["fail_on"]),
         narrow_terms=tuple(raw["lint"].get("narrow_terms", [])),
+        include_records=tuple(raw.get("include_records", ())),
         site=_site(raw, root),
         _raw=raw,
     )
@@ -1397,7 +1434,6 @@ def _site(raw: dict, root: Path) -> Site:
         source_url=spec.get("source_url")
         or (f"https://github.com/{owner}/{repo}/blob/HEAD" if owner else ""),
         exclude=tuple(spec.get("exclude", ())),
-        include_records=tuple(spec.get("include_records", ())),
         icon=root / spec["icon"] if spec.get("icon") else None,
         logo=root / spec["logo"] if spec.get("logo") else None,
         logo_dark=root / spec["logo_dark"] if spec.get("logo_dark") else None,
