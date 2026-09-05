@@ -452,9 +452,9 @@ def status_sections() -> list[tuple[str, str, list[str]]]:
     if uniform:
         sections.append((
             "inert-status",
-            f"{len(uniform)} scheme(s) file every record at one status, so "
-            "nothing there can ever be retired and the citation checks cannot "
-            "fire", uniform))
+            f"{len(uniform)} scheme(s) file effectively every record at one "
+            "status, so the field is predictable without reading it and the "
+            "citation checks have almost nothing to fire on", uniform))
 
     # Schemes whose uniformity a human has vouched for with `uniform_ok`. The
     # fact is unchanged — nothing there is being judged — so it is still

@@ -389,6 +389,17 @@ class Scheme:
     # directive — silence that carries no argument is indistinguishable from
     # an oversight.
     uniform_ok: str | None = None
+    # The share of records at one status above which the field stops carrying
+    # information. 1.0 — the default — is the original rule: report only when
+    # EVERY record agrees, on the argument that a corpus whose claims all
+    # survive is legitimate and one retirement proves a judgement is being
+    # made. That argument holds for a young or genuinely stable scheme and
+    # fails for a large one: a registry at 133/144 `Active` has a 92% prior
+    # before you read a status, and eleven exceptions are enough to silence
+    # the check permanently while a quarter of its entries go unexamined.
+    # Lowering this asks the sharper question — is the vocabulary *exercised*
+    # — and is opt-in because the answer is a matter of what a scheme is for.
+    uniform_share: float = 1.0
 
     @property
     def view(self) -> Path:
@@ -1403,6 +1414,7 @@ def _schemes(raw: dict, root: Path) -> dict[str, Scheme]:
                                  root / spec["dir"], root, refs),
             field_groups=_field_groups(prefix, spec.get("field_groups", {})),
             uniform_ok=(spec.get("uniform_ok") or None),
+            uniform_share=float(spec.get("uniform_share", 1.0)),
         )
     for prefix, scheme in schemes.items():
         for ref in scheme.references:
