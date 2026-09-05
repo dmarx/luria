@@ -1,0 +1,12 @@
+scope:
+  label: Scope
+  blurb: what a request is taken to include, and what it is not
+verification:
+  label: Verification
+  blurb: establishing that a claim holds before making it
+attribution:
+  label: Attribution
+  blurb: saying where something came from
+refusal:
+  label: Refusal
+  blurb: declining, and how

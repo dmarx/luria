@@ -21,11 +21,11 @@ from pathlib import Path
 
 import pytest
 
-from luria import adr_index, config, doc_refs, lint, statuses
+from luria import adr_index, config, doc_refs, lint, site, statuses
 
 EXAMPLES = Path(__file__).resolve().parents[1] / "examples"
 NAMES = ["rfcs-and-specs", "collocated", "many-journals", "external-citations",
-         "knowledge-base", "world-bible"]
+         "knowledge-base", "world-bible", "constitution"]
 
 
 @pytest.fixture
@@ -46,15 +46,55 @@ def example(tmp_path, monkeypatch):
 
 
 def lint_errors() -> list[str]:
-    """`luria lint`'s failures, as a list rather than an exit code."""
+    """`luria lint`'s failures, as a list rather than an exit code.
+
+    Every check `lint.run()` runs, in its order. Naming a subset here would
+    make these tests pass on records the real command rejects — which is the
+    same drift the examples exist to catch, one level up."""
     errors: list[str] = []
     lint.check_docs_index(errors)
     lint.check_frontmatter(errors)
+    lint.check_status_vocabulary(errors)
+    lint.check_contracts(errors)
     lint.check_view_dirs(errors)
     lint.check_journals(errors)
+    lint.check_version_history(errors)
     lint.check_bare_refs(errors)
     lint.check_wikilinks(errors)
     return errors
+
+
+def assert_published(report, name: str) -> None:
+    """A staging run that published something, and placed all of it.
+
+    Both halves, in order. A vault with no pages places nothing by definition,
+    so `unplaced == []` from an empty run reads exactly like a clean one — the
+    assertion has to prove it measured before it is allowed to conclude."""
+    assert report.pages > 0, (
+        f"{name} staged {report.pages} pages, so 'no unplaced references' below "
+        "is true for the boring reason and proves nothing about the record"
+    )
+    assert report.unplaced == [], (
+        f"{name} publishes {report.pages} pages carrying "
+        f"{len(report.unplaced)} link(s) to nothing a reader can open:\n  "
+        + "\n  ".join(sorted(report.unplaced))
+    )
+    # And the quieter failure. A link the site *can* place, at the repository,
+    # is a working link in the parent record — it is how luria's own site
+    # reaches its workflows and its licence. In an example it is a mistake by
+    # construction: an example is a standalone record with no repository, so
+    # `source_url` resolves against dmarx/luria and the reader lands on a path
+    # that does not exist there. It is also where the real bug landed —
+    # constitution cited `../values.d/VALUE-001.md`, a file that exists, lints
+    # clean, and is never published because a document scheme renders its
+    # sources into one page. `unplaced` stayed empty throughout; only this
+    # count moved.
+    assert report.to_source == 0, (
+        f"{name} sends {report.to_source} link(s) out to the repository. In an "
+        "example that means a target the site had no page for — most likely a "
+        "document-scheme source cited by filename instead of by its anchor in "
+        "the assembled view. `luria link --fix` spells the right one."
+    )
 
 
 @pytest.mark.parametrize("name", NAMES)
@@ -360,3 +400,122 @@ def test_a_paper_with_only_a_url_has_a_source(example):
     lint.check_contracts(errors)
     assert any("no `source`" in e and "`url:`" in e and "LIT-003" in e
                for e in errors), errors
+
+
+def test_precedence_is_an_edge_the_lint_follows(example):
+    """A record whose documents govern each other.
+
+    The constitution example's distinguishing claim: which rule wins is a
+    declared, resolved reference rather than an adjective. Every other corpus
+    of instructions expresses precedence by escalating emphasis — IMPORTANT,
+    then CRITICAL, then capitals — which inflates until it no longer sorts
+    anything.
+    """
+    root = example("constitution")
+
+    boundaries = (root / "docs" / "boundaries" / "README.md").read_text()
+    assert "BOUNDARY-001" in boundaries and "BOUNDARY-002" in boundaries
+
+    # The override resolves to a real document, so a boundary overriding
+    # something that does not exist is a finding rather than a sentence.
+    src = (root / "record" / "boundaries.d" / "BOUNDARY-002.md").read_text()
+    assert "overrides: [PRACTICE-004]" in src
+    assert (root / "record" / "practices.d" / "PRACTICE-004.md").exists()
+
+
+def test_a_required_reference_makes_an_ungrounded_rule_a_finding(example):
+    """`grounds` is a typed reference, not `requires`.
+
+    Same rule the knowledge-base example states about citations: `requires` is
+    satisfied by any truthy value, so a practice grounded in "because it reads
+    better" would pass. Only a typed reference can say the value must name a
+    VALUE — and both rule-shaped schemes declare it, so no rule in this record
+    stands on its own authority.
+    """
+    root = example("constitution")
+    cfg = config.current()
+    for scheme in ("PRACTICE", "BOUNDARY"):
+        grounds, = [r for r in cfg.schemes[scheme].references if r.field == "grounds"]
+        assert grounds.scheme == "VALUE", scheme
+        assert grounds.required, scheme
+
+    rogue = root / "record" / "practices.d" / "PRACTICE-009.md"
+    rogue.write_text(
+        "---\nstatus: Active\ntitle: 'A rule nobody can justify'\n"
+        "version: 1\ntags: [scope]\ncreated: '2026-09-05'\n"
+        "summary: >-\n  No grounds field.\n---\n\n"
+        "# PRACTICE-009: A rule nobody can justify\n\nBody.\n"
+    )
+    config.reset()
+    errors = lint_errors()
+    assert any("PRACTICE-009" in e for e in errors), (
+        "a practice with no value behind it must be a lint finding, not a habit: "
+        + "\n".join(errors)
+    )
+
+    # And a *typed* one: naming something that is not a VALUE fails too, which
+    # is the whole difference from `requires = ["grounds"]`.
+    rogue.write_text(rogue.read_text().replace(
+        "version: 1", "version: 1\ngrounds: PRACTICE-001"))
+    config.reset()
+    errors = lint_errors()
+    assert any("PRACTICE-009" in e for e in errors), (
+        "grounding a practice in another practice satisfied the check, so the "
+        "reference is behaving like `requires` rather than a typed edge: "
+        + "\n".join(errors)
+    )
+
+
+def test_a_document_may_be_superseded_across_schemes(example):
+    """A PRACTICE retired by a BOUNDARY.
+
+    Worth pinning because it is not obvious that it should work: `superseded_by`
+    resolves across schemes, so the record can say "the rule was replaced by a
+    limit" rather than forcing the successor into the predecessor's family — and
+    the generated index renders the successor's link from the other scheme's
+    view directory.
+    """
+    root = example("constitution")
+    assert lint_errors() == []
+
+    meta = adr_index.parse_frontmatter(
+        (root / "record" / "practices.d" / "PRACTICE-004.md").read_text())[0]
+    status = statuses.of(meta)
+    assert status.value == "Superseded"
+    assert "BOUNDARY-002" in status.superseded_by
+
+    # The rendered view, not just the frontmatter: a relation nothing displays
+    # is a relation nobody reads.
+    index = (root / "docs" / "practices" / "README.md").read_text()
+    assert "PRACTICE-004" in index
+    assert "BOUNDARY-002" in index, (
+        "the practices index retires PRACTICE-004 without naming what replaced "
+        "it, so the cross-scheme edge exists only in the source"
+    )
+
+
+@pytest.mark.parametrize("name", NAMES)
+def test_every_example_stages_its_own_site(example, tmp_path, name):
+    """Each example is a whole record, so each publishes as its own site.
+
+    The root `luria.toml` excludes `examples/**` from *this project's* site,
+    and that reads like the examples cannot be published. It is the opposite
+    claim: they are excluded because each is a separate record, and the parent
+    config cannot stage a child's. `Config.link_base` is the reason — the
+    parent has no VALUE, SCENE or LIT scheme, so an example's document-scheme
+    sources come back with `link_base == path.parent` and `publishable()`
+    cannot tell a source from a view. It would publish both, and half of the
+    views it published would be whatever a contributor's working tree happened
+    to hold, since none of them is committed.
+
+    Pointing `LURIA_ROOT` at the example instead is all it takes. Asserted per
+    example rather than described once, because the interesting number is
+    what staging counts. `luria lint` checks that a relative target exists *on
+    disk*; it has no opinion about whether the file it names is ever published.
+    Constitution's four VALUE citations pointed at `../values.d/VALUE-00N.md` —
+    present, lint-clean, and never a page, because a document scheme renders
+    its sources into one assembled view. Staging is the only check that reads
+    them as links a reader would try to follow.
+    """
+    example(name)
+    assert_published(site.stage(tmp_path / "vault", config.current()), name)
