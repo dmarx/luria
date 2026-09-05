@@ -39,6 +39,7 @@ all five words, no legend.
 from __future__ import annotations
 
 import re
+from collections import Counter
 from dataclasses import dataclass
 
 import yaml
@@ -288,14 +289,46 @@ def legend(scheme) -> str:
 FLOOR = 10
 
 
-def uniform(scheme) -> tuple[str, int] | None:
-    """`(status, count)` when every record in the scheme shares one status.
+def _observed(scheme) -> list[str]:
+    """Every record's status value in the scheme, trailing notes stripped."""
+    from . import adr_index
+    found: list[str] = []
+    for path in [*scheme.documents().values(), *scheme.temp_documents().values()]:
+        meta, _ = adr_index.parse_frontmatter(path.read_text(encoding="utf-8"))
+        if status := of(meta).value:
+            found.append(status)
+    return found
+
+
+def spread(found: list[str]) -> str:
+    """`8 Proposed, 2 Superseded, 1 Deferred` — the tail behind a modal status.
+
+    The finding is about a distribution, so the row has to show one. "Every
+    record is Active" is a fact a reader can act on; "133/144 at Active" alone
+    invites the reply that eleven exceptions exist, and naming them answers it
+    in advance."""
+    counts = Counter(found).most_common()
+    return ", ".join(f"{n} {status}" for status, n in counts[1:])
+
+
+def uniform(scheme) -> tuple[str, int, int] | None:
+    """`(modal status, its count, the total)` when the status field has
+    stopped carrying information.
 
     A status field where every record agrees is indistinguishable from no
     status field, and the difference matters because other machinery reads it:
     `active` decides what counts as retired, and `retired-citations` fires off
     that. A scheme in this state has an enforcement mechanism that cannot fire,
     and the build is green *because* nothing is being judged (#104).
+
+    "Every record" was the original test, on the argument that a corpus whose
+    claims all survive is legitimate and so a single retirement proves the
+    judgement is live. `uniform_share` is the dial that argument needs at
+    scale: a scheme at 133/144 `Active` reads as a tracked attribute and
+    behaves as a constant, and the eleven exceptions that silence the check
+    are no evidence that the other 133 were ever examined. The default is
+    1.0 — exactly the original rule — because lowering it is a claim about
+    what a scheme is for, and that belongs to the project.
 
     `None` below the floor, for a scheme rendered as one document (a
     design-principles page where everything is in force is the expected state,
@@ -304,20 +337,17 @@ def uniform(scheme) -> tuple[str, int] | None:
     `uniform_ok` — the acknowledgement this finding lacked. See
     `acknowledged_rows` for where that reason surfaces instead.
     """
-    from . import adr_index
     if scheme.render == "document" or scheme.uniform_ok:
         return None
-    vocab = declared(scheme)
-    if len(vocab) == 1:
+    if len(declared(scheme)) == 1:
         return None
-    found: list[str] = []
-    for path in [*scheme.documents().values(), *scheme.temp_documents().values()]:
-        meta, _ = adr_index.parse_frontmatter(path.read_text(encoding="utf-8"))
-        if status := of(meta).value:
-            found.append(status)
-    if len(found) < FLOOR or len(set(found)) != 1:
+    found = _observed(scheme)
+    if len(found) < FLOOR:
         return None
-    return found[0], len(found)
+    status, count = Counter(found).most_common(1)[0]
+    if count / len(found) < scheme.uniform_share:
+        return None
+    return status, count, len(found)
 
 
 def uniform_rows() -> list[str]:
@@ -326,8 +356,11 @@ def uniform_rows() -> list[str]:
     rows = []
     for prefix, scheme in current().schemes.items():
         if hit := uniform(scheme):
-            status, count = hit
-            rows.append(f"{prefix}: {count}/{count} at `{status}`")
+            status, count, total = hit
+            row = f"{prefix}: {count}/{total} at `{status}`"
+            if tail := spread(_observed(scheme)):
+                row += f" — {tail}"
+            rows.append(row)
     return rows
 
 
@@ -342,18 +375,15 @@ def acknowledged_rows() -> list[str]:
     mandatory, and it renders where the finding would have.
     """
     from .config import current
-    from . import adr_index
     rows = []
     for prefix, scheme in current().schemes.items():
         if not scheme.uniform_ok:
             continue
-        found = []
-        for path in [*scheme.documents().values(),
-                     *scheme.temp_documents().values()]:
-            meta, _ = adr_index.parse_frontmatter(path.read_text(encoding="utf-8"))
-            if status := of(meta).value:
-                found.append(status)
-        if len(found) >= FLOOR and len(set(found)) == 1:
-            rows.append(f"{prefix}: {len(found)}/{len(found)} at "
-                        f"`{found[0]}` — {scheme.uniform_ok}")
+        found = _observed(scheme)
+        if len(found) < FLOOR:
+            continue
+        status, count = Counter(found).most_common(1)[0]
+        if count / len(found) >= scheme.uniform_share:
+            rows.append(f"{prefix}: {count}/{len(found)} at "
+                        f"`{status}` — {scheme.uniform_ok}")
     return rows

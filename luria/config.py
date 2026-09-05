@@ -118,6 +118,15 @@ DEFAULTS: dict = {
         # fires, which is the right behaviour for a project that has not
         # thought about it (ADR-035's warn-first posture, one step further).
         "narrow_terms": [],
+        # May `luria lint` reach the network to check what an identifier
+        # actually is? "auto" fetches only what the lockfile has no answer
+        # for — usually the one citation a contribution just added — and
+        # falls back to reporting it unchecked when the network is not
+        # there. "never" is the hermetic build, answering only from the
+        # lockfile. "require" makes an unreachable remote a finding, which
+        # is what CI wants: a green build then means the references were
+        # verified rather than merely remembered.
+        "network": "auto",
     },
     # Whole records nested inside this one (ADR-077, ADR-078). Empty for the
     # ordinary project, which contains no others.
@@ -389,6 +398,17 @@ class Scheme:
     # directive — silence that carries no argument is indistinguishable from
     # an oversight.
     uniform_ok: str | None = None
+    # The share of records at one status above which the field stops carrying
+    # information. 1.0 — the default — is the original rule: report only when
+    # EVERY record agrees, on the argument that a corpus whose claims all
+    # survive is legitimate and one retirement proves a judgement is being
+    # made. That argument holds for a young or genuinely stable scheme and
+    # fails for a large one: a registry at 133/144 `Active` has a 92% prior
+    # before you read a status, and eleven exceptions are enough to silence
+    # the check permanently while a quarter of its entries go unexamined.
+    # Lowering this asks the sharper question — is the vocabulary *exercised*
+    # — and is opt-in because the answer is a matter of what a scheme is for.
+    uniform_share: float = 1.0
 
     @property
     def view(self) -> Path:
@@ -638,6 +658,13 @@ class Remote:
     # vouch that a URL is content-stable; unset, only a GitHub file
     # construction can be pinned.
     pin_url: str = ""
+    # How to read a title out of what `uris.title` serves: a regex whose first
+    # group is the title. Declared rather than derived, for the same reason
+    # `pin_url` is — only the project can vouch that a URL serves metadata in
+    # a shape worth trusting, and guessing per host would be magic that fails
+    # silently when a provider changes its response. The two recipes that
+    # matter are in the documentation; both are one line.
+    title_re: str = ""
     # Content-pin every cited reference to this remote (#135). Set here it
     # covers the whole namespace; set on one of the remote's schemes, just
     # that code family. Registration in config rather than per code, because
@@ -1068,6 +1095,7 @@ class Config:
     stale_days: int
     fail_on: tuple[str, ...]            # warning classes promoted to failures
     narrow_terms: tuple[str, ...]       # this project's nouns (narrow-titles)
+    network: str                        # "auto" | "never" | "require"
     # Whole records nested inside this one — directory globs, each match
     # holding its own `luria.toml` (ADR-077, relocated by ADR-078).
     #
@@ -1336,6 +1364,7 @@ def load(root: Path | None = None, text: str | None = None) -> Config:
                 delim=spec.get("delim", "-"),
                 uid=spec.get("uid", ""),
                 pin_url=spec.get("pin_url", ""),
+                title_re=spec.get("title_re", ""),
                 pin=bool(spec.get("pin", False)),
                 uris=_fold_uris(spec, f"remotes.{prefix.upper()}"),
                 schemes={
@@ -1370,6 +1399,7 @@ def load(root: Path | None = None, text: str | None = None) -> Config:
         stale_days=int(raw.get("stale_days", 90)),
         fail_on=tuple(raw["lint"]["fail_on"]),
         narrow_terms=tuple(raw["lint"].get("narrow_terms", [])),
+        network=str(raw["lint"].get("network", "auto")),
         include_records=tuple(raw.get("include_records", ())),
         site=_site(raw, root),
         _raw=raw,
@@ -1403,6 +1433,7 @@ def _schemes(raw: dict, root: Path) -> dict[str, Scheme]:
                                  root / spec["dir"], root, refs),
             field_groups=_field_groups(prefix, spec.get("field_groups", {})),
             uniform_ok=(spec.get("uniform_ok") or None),
+            uniform_share=float(spec.get("uniform_share", 1.0)),
         )
     for prefix, scheme in schemes.items():
         for ref in scheme.references:

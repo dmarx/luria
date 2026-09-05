@@ -52,7 +52,7 @@ import sys
 from . import adr_index as builder
 from . import (adr_pending, badges, ci, contract, doc_refs, journal,
                link_targets, narrow_titles, pins, ref_status, remotes,
-               statuses)
+               sources, statuses)
 from .config import current
 
 # The closed status vocabulary (ADR-003). `Active` is the in-force state; the
@@ -357,6 +357,7 @@ def check_bare_refs(errors: list[str]) -> None:
 # accounting.
 FAILABLE = ("retired-citations", "unresolved-codes", "hand-written-urls",
             "broken-targets", "remote-drift", "inert-status",
+            "source-mismatch", "source-unchecked",
             "legacy-spellings", "narrow-titles", "stale-directives",
             "pending-documents", "unlinted-files", "workflow-temp-codes")
 
@@ -444,6 +445,28 @@ def status_sections() -> list[tuple[str, str, list[str]]]:
             "where the prose renders (`luria link --fix` spells code targets; "
             "`target-ok:` acknowledges a deliberate one)", dead))
 
+    # An identifier that resolves to a different paper than the one the
+    # document names (#166). Read from the committed lockfile, never fetched
+    # here — `luria remotes --resolve` is what opens the socket.
+    wrong, unchecked, stale_sources = sources.mismatch_lines()
+    if wrong:
+        sections.append((
+            "source-mismatch",
+            f"{len(wrong)} identifier(s) name a different document than the "
+            "one recorded (`source-ok:` acknowledges a deliberate one, "
+            "`luria remotes --resolve` refreshes what upstream serves)", wrong))
+
+    # Not the same finding, and the difference is the whole point: this one
+    # says nobody has ever asked. Under `network = "require"` it is a failure,
+    # so a green CI run means the citations were verified rather than merely
+    # remembered from whenever someone last ran the command.
+    if unchecked:
+        sections.append((
+            "source-unchecked",
+            f"{len(unchecked)} identifier(s) nothing has verified — upstream "
+            "could not be reached and the lockfile has no answer "
+            "(`luria remotes --resolve` when the network is back)", unchecked))
+
     # A status field where every record agrees is indistinguishable from no
     # status field — and `active` is what `retired-citations` reads, so the
     # build is green because nothing is being judged rather than because
@@ -452,9 +475,9 @@ def status_sections() -> list[tuple[str, str, list[str]]]:
     if uniform:
         sections.append((
             "inert-status",
-            f"{len(uniform)} scheme(s) file every record at one status, so "
-            "nothing there can ever be retired and the citation checks cannot "
-            "fire", uniform))
+            f"{len(uniform)} scheme(s) file effectively every record at one "
+            "status, so the field is predictable without reading it and the "
+            "citation checks have almost nothing to fire on", uniform))
 
     # Schemes whose uniformity a human has vouched for with `uniform_ok`. The
     # fact is unchanged — nothing there is being judged — so it is still
@@ -492,7 +515,7 @@ def status_sections() -> list[tuple[str, str, list[str]]]:
 
     # A directive that silently does nothing is worse than no directive.
     stale = ref_status.stale_annotations(result, docs) + stale_urls \
-        + stale_targets + pins.flag_problems()
+        + stale_targets + stale_sources + pins.flag_problems()
     for path in doc_refs.doc_files():
         stale += doc_refs.directive_problems(path, path.read_text(encoding="utf-8"))
     if stale:
@@ -520,6 +543,12 @@ def report_warnings(errors: list[str]) -> None:
     `[luria.lint] fail_on`, and its unacknowledged rows become violations;
     the acknowledgement directives keep working either way."""
     fail = set(current().fail_on)
+    # `network = "require"` is a statement about what a green build means:
+    # that the references were checked, not that nobody could check them. It
+    # promotes the one class that says "nobody asked", without the project
+    # having to name it in `fail_on` as well — the setting already said it.
+    if current().network == "require":
+        fail.add("source-unchecked")
     for name in sorted(fail - set(FAILABLE)):
         # A dial set to a notch that doesn't exist must not silently enforce
         # nothing (DP-1).
@@ -528,8 +557,13 @@ def report_warnings(errors: list[str]) -> None:
 
     for name, headline, lines in status_sections():
         if name in fail:
-            errors.append(f"{headline} — failing: `fail_on` names "
-                          f"{name!r} in luria.toml")
+            # Name the dial that actually did it: `network = "require"`
+            # promotes one class on its own, and blaming `fail_on` would send
+            # a reader to a list their project never wrote.
+            why = ("`network = \"require\"`"
+                   if name == "source-unchecked" and name not in set(current().fail_on)
+                   else f"`fail_on` names {name!r}")
+            errors.append(f"{headline} — failing: {why} in luria.toml")
             errors.extend(lines)
         else:
             print(f"luria: {headline}", file=sys.stderr)

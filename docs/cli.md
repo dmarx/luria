@@ -211,9 +211,10 @@ its acknowledgement route (see [directives](directives.md)) and listed in
 full in the [reports](reports/reference-status.md):
 
 `retired-citations` · `unresolved-codes` · `hand-written-urls` ·
-`broken-targets` · `inert-status` · `legacy-spellings` · `narrow-titles` ·
-`stale-directives` · `pending-documents` · `unlinted-files` ·
-`workflow-temp-codes`
+`broken-targets` · `source-mismatch` · `source-unchecked` ·
+`inert-status` · `legacy-spellings` ·
+`narrow-titles` · `stale-directives` · `pending-documents` ·
+`unlinted-files` · `workflow-temp-codes`
 
 Any of those class names listed in `[luria.lint] fail_on` fails the build
 instead. Only unacknowledged findings ever reach a class, so
@@ -294,6 +295,52 @@ registrations — endorsing what is newly registered, re-observing what
 exists, dropping what nothing cites or flags — and it never re-endorses
 drifted content: that always takes the explicit command, so a scheduled
 sweep cannot quietly launder a drift finding.
+
+`--resolve` asks what each identifier actually *is*. Where `--pin` watches
+for a document changing, this watches for a citation that was never right:
+it fetches the title behind every `arxiv:`/`doi:` field — any frontmatter
+key named after a configured remote — and records it in the lockfile, which
+`luria lint` compares against the title the document claims. A disagreement
+is the `source-mismatch` warning class; `source-ok:` acknowledges a
+deliberate one, which the legitimate cases need — a nickname the project
+prefers (`AdamW: Decoupled Weight Decay Regularization`), a subtitle
+trimmed, a v1 title that changed between versions.
+
+The lockfile is a cache with an endorsement in it, not the boundary of what
+may be known, and `[luria.lint] network` says how far the lint may go:
+
+| | |
+|---|---|
+| `auto` (default) | ask about identifiers the lockfile has no answer for — normally the one citation a contribution just added — and write what comes back. Falls back to `source-unchecked` when the network is not there. |
+| `never` | answer only from the lockfile. The hermetic build. |
+| `require` | not being able to ask is a finding, promoted to a failure without needing `fail_on`. A green CI run then means the references were verified rather than remembered. |
+
+An identifier nothing has verified is `source-unchecked` rather than silent,
+because a citation is likeliest wrong in the minutes after it is typed —
+exactly when nothing has resolved it yet.
+
+Failure kinds are told apart by status: 404/410 is upstream saying the
+identifier names nothing (an answer, recorded and not retried), while
+429/503 is retried with backoff, honouring `Retry-After`, and reported as
+unchecked if it persists rather than written down as an absence.
+
+A remote declares how to ask, for the same reason `pin_url` is declared
+rather than derived — only the project can vouch that a URL serves metadata
+worth trusting:
+
+```toml
+[luria.remotes.ARXIV]
+uris.title = "https://export.arxiv.org/api/query?id_list={1}.{2}"
+title_re   = "<entry>.*?<title>(.*?)</title>"
+
+[luria.remotes.DOI]
+uris.title = "https://api.crossref.org/works/{uid}"
+title_re   = '"title":\s*\[\s*"(.*?)"'
+```
+
+`title_re`'s first capture group is the title, matched with `re.DOTALL`. A
+remote that declares neither is skipped entirely: most remotes are records,
+not metadata APIs, and with no way to ask the check has no opinion.
 
 What gets hashed is the construction's *stable bytes*, not the page a
 reader lands on. A GitHub file construction qualifies on its own; any

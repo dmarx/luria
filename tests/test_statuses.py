@@ -21,15 +21,16 @@ from pathlib import Path
 from luria import repair, adr_index, config, lint, statuses
 
 
-def _project(root: Path, monkeypatch) -> None:
+def _project(root: Path, monkeypatch, uniform_share: float | None = None) -> None:
     (root / "record" / "values.d").mkdir(parents=True, exist_ok=True)
     (root / "docs").mkdir(parents=True, exist_ok=True)
+    share = "" if uniform_share is None else f"uniform_share = {uniform_share}\n"
     (root / "luria.toml").write_text(
         '[luria]\nissue_url = "https://example.test/issues/{n}"\n'
         '[luria.schemes.VP]\n'
         'dir = "record/values.d"\n'
         'render = "index"\n'
-        'output = "docs/values"\n')
+        'output = "docs/values"\n' + share)
     monkeypatch.setenv("LURIA_ROOT", str(root))
     config.reset()
 
@@ -159,7 +160,7 @@ def test_a_uniform_status_field_is_reported(tmp_path, monkeypatch):
     _project(tmp_path, monkeypatch)
     _values(tmp_path, 12)
     hit = statuses.uniform(_scheme())
-    assert hit == ("Active", 12)
+    assert hit == ("Active", 12, 12)
     assert "inert-status" in {n for n, _, _ in lint.status_sections()}
 
 
@@ -173,6 +174,54 @@ def test_one_dissenting_record_clears_it(tmp_path, monkeypatch):
     assert statuses.uniform(_scheme()) is None
 
 
+def test_one_dissenter_still_clears_it_at_the_default_share(tmp_path,
+                                                           monkeypatch):
+    """`uniform_share` defaults to 1.0, which IS the original rule. A project
+    that never sets it sees exactly the behaviour it saw before, so turning
+    the dial into a dial cannot start reporting on anyone."""
+    _project(tmp_path, monkeypatch)
+    _values(tmp_path, 12)
+    _value(tmp_path, 12, "Rejected")
+    assert statuses.uniform(_scheme()) is None
+
+
+def test_a_lowered_share_reports_a_near_constant_field(tmp_path, monkeypatch):
+    """The case the default cannot see. Eleven records in force and one
+    retired is 92% — a status a reader can predict without looking, and a
+    vocabulary whose other values are decorative. A project that says so with
+    `uniform_share` gets told."""
+    _project(tmp_path, monkeypatch, uniform_share=0.9)
+    _values(tmp_path, 12)
+    _value(tmp_path, 12, "Rejected")
+    hit = statuses.uniform(_scheme())
+    assert hit == ("Active", 11, 12)
+    assert "inert-status" in {n for n, _, _ in lint.status_sections()}
+
+
+def test_a_genuinely_mixed_scheme_passes_a_lowered_share(tmp_path,
+                                                         monkeypatch):
+    """The check still has to be silent on a scheme that exercises its
+    vocabulary, or lowering the share would just be a tax on large schemes."""
+    _project(tmp_path, monkeypatch, uniform_share=0.9)
+    _values(tmp_path, 12)
+    for i in (10, 11, 12):
+        _value(tmp_path, i, "Rejected")
+    assert statuses.uniform(_scheme()) is None
+
+
+def test_the_row_names_the_tail_it_is_reporting_against(tmp_path, monkeypatch):
+    """A distributional finding has to show a distribution. "133/144 at
+    Active" invites the reply that exceptions exist; naming them answers it
+    in the row."""
+    _project(tmp_path, monkeypatch, uniform_share=0.8)
+    _values(tmp_path, 12)
+    _value(tmp_path, 11, "Rejected")
+    _value(tmp_path, 12, "Superseded")
+    row, = statuses.uniform_rows()
+    assert "10/12 at `Active`" in row
+    assert "1 Rejected" in row and "1 Superseded" in row
+
+
 def test_a_trailing_note_does_not_look_like_variety(tmp_path, monkeypatch):
     """`Superseded — by X` and `Superseded — by Y` are one status wearing two
     strings. Comparing whole values would call that variety and clear a scheme
@@ -180,7 +229,7 @@ def test_a_trailing_note_does_not_look_like_variety(tmp_path, monkeypatch):
     _project(tmp_path, monkeypatch)
     for i in range(1, 13):
         _value(tmp_path, i, f"Active — since revision {i}")
-    assert statuses.uniform(_scheme()) == ("Active", 12)
+    assert statuses.uniform(_scheme()) == ("Active", 12, 12)
 
 
 def test_a_young_scheme_is_not_reported(tmp_path, monkeypatch):
