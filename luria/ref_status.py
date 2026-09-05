@@ -30,9 +30,12 @@ Write the reference scheme's full code, never a bare number, inside a comment:
 
     <!-- inactive-ok: ADR-012 — the decision this ADR replaced -->
     // inactive-ok: ADR-028 — proposed, but this is what shipped
+    # inactive-ok: ADR-012 — a YAML comment, for a site in the frontmatter
 
 `inactive-ok:` is **line-scoped**: it covers its own line and the line below, so
-it can sit above the sentence it excuses. `inactive-ok-file:` is
+it can sit above the sentence it excuses — or above the frontmatter field
+(`superseded_by:` naming a document that was itself later retired) that is the
+site. `inactive-ok-file:` is
 **document-scoped** and covers the whole file:
 
     <!-- inactive-ok-file: ADR-012, ADR-020 — this page is supersession history -->

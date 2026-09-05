@@ -166,3 +166,72 @@ def test_shaped_spans_match_examples_too():
     text = "```\n<!-- inactive-ok: RFC-012 -->\n```\n"
     assert directives.shaped_spans(text, {"inactive-ok"})
     assert directives.shaped_spans(text, {"unexempt"}) == []
+
+
+# ── Frontmatter ──────────────────────────────────────────────────────────
+
+
+def test_a_yaml_comment_in_frontmatter_is_a_comment():
+    """A reference field is a citation site, and the frontmatter is YAML —
+    so the comment that answers a finding there is a `#` one, line-scoped
+    like everywhere else: its own line and the field below it."""
+    text = ("---\n"
+            "status: Superseded\n"
+            "# inactive-ok: RFC-012 — the successor was itself later retired\n"
+            "superseded_by: RFC-012\n"
+            "title: 'Issue #12 is data, not a comment'\n"
+            "---\n"
+            "\n"
+            "# RFC-013: A heading is not a comment either\n"
+            "\n"
+            "Body per RFC-012.\n")
+    d, = find(text)
+    assert d.name == "inactive-ok" and d.args == ("RFC-012",)
+    assert d.reason == "the successor was itself later retired"
+    assert d.line == 3 and d.lines == frozenset({3, 4})
+
+
+def test_a_directive_shaped_heading_in_the_body_does_not_fire():
+    """`#` opens a heading outside the frontmatter. The scan never leaves the
+    frontmatter, so prose *about* the syntax stays prose."""
+    assert find("---\ntitle: t\n---\n\n# inactive-ok: RFC-012 — a heading\n") == []
+
+
+def test_no_frontmatter_means_no_yaml_comments():
+    assert find("# inactive-ok: RFC-012 — a heading in a file with no frontmatter\n") == []
+
+
+def test_frontmatter_and_html_comments_are_both_read_in_order():
+    text = ("---\n"
+            "# inactive-ok: RFC-012 — in the frontmatter\n"
+            "status: Active\n"
+            "---\n"
+            "\n"
+            "<!-- inactive-ok: RFC-020 — in the body -->\n"
+            "RFC-020 here.\n")
+    assert [(d.line, d.args) for d in find(text)] == [(2, ("RFC-012",)), (6, ("RFC-020",))]
+
+
+def test_in_frontmatter_the_line_below_is_the_whole_entry():
+    """`luria repair` writes `superseded_by:` as a list, so the code sits on
+    the line after the key; a directive above the key has to reach it."""
+    text = ("---\n"
+            "status: Superseded\n"
+            "# inactive-ok: RFC-012 — the chain is deliberate\n"
+            "superseded_by:\n"
+            "- RFC-012\n"
+            "- RFC-020\n"
+            "status_note: >-\n"
+            "  a folded note\n"
+            "  on two lines\n"
+            "title: t\n"
+            "---\n"
+            "\n"
+            "RFC-012 in the body is not reached.\n")
+    d, = find(text)
+    assert d.lines == frozenset({3, 4, 5, 6})
+
+
+def test_in_prose_the_line_below_is_still_one_line():
+    d, = find("<!-- inactive-ok: RFC-012 — x -->\n- RFC-012\n- RFC-020\n")
+    assert d.lines == frozenset({1, 2})

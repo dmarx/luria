@@ -433,3 +433,56 @@ def test_describe_lists_the_group_with_its_provenance(tmp_path, monkeypatch):
     line, = contract.describe(contract.for_scheme(config.current().schemes["LIT"]))
     assert line.startswith("`source` — at least one of `arxiv`, `doi`, `url`")
     assert "schemes.LIT.field_groups.source" in line
+
+
+# --- remote codes in reference fields --------------------------------------
+
+REMOTES = '''
+[luria.remotes.ARXIV]
+uid = "(\\\\d{4})[.:](\\\\d{4,5})"
+url = "https://arxiv.org/abs/{1}.{2}"
+
+[luria.remotes.DOI]
+uid = "10\\\\.\\\\d{4,9}/[^\\\\s\\\\]\\\\)>,;]+"
+delim = ":"
+url = "https://doi.org/{uid}"
+'''
+
+
+def test_a_remote_code_is_read_whole(tmp_path, monkeypatch):
+    """A uid remote's tail is opaque, so the scheme-shaped pattern read
+    `ARXIV-2110` out of the first and nothing out of the second."""
+    project(tmp_path, monkeypatch, REMOTES)
+    assert contract.reference_code("ARXIV-2110.08058") == "ARXIV-2110.08058"
+    assert contract.reference_code("DOI:10.1145/3600006.3613165") == "DOI:10.1145/3600006.3613165"
+    assert contract.reference_code(
+        "[ARXIV-2110.08058](https://arxiv.org/abs/2110.08058)") == "ARXIV-2110.08058"
+    assert contract.reference_code("LIT-041") == "LIT-041"
+    assert contract.reference_code("[LIT-041](LIT-041.md)") == "LIT-041"
+
+
+def test_a_scheme_code_is_still_read_without_any_remote(tmp_path, monkeypatch):
+    project(tmp_path, monkeypatch)
+    assert contract.reference_code("LIT-041") == "LIT-041"
+    assert contract.reference_code("not a code") is None
+
+
+def test_superseded_by_may_name_remote_documents(tmp_path, monkeypatch):
+    """The docstring always said "or a remote code"; the reader truncated it
+    before the check could see it, so a paper superseded by a paper failed
+    as "names no scheme or remote"."""
+    root = project(tmp_path, monkeypatch, REMOTES)
+    doc(root, "record/literature.d/LIT-001.md", code="LIT-001", tags=["record"],
+        extra="superseded_by:\n- ARXIV-2110.08058\n- DOI:10.1145/3600006.3613165")
+    errors: list[str] = []
+    lint.check_contracts(errors)
+    assert not [e for e in errors if "superseded_by" in e], errors
+
+
+def test_an_undeclared_prefix_in_superseded_by_is_still_a_finding(tmp_path, monkeypatch):
+    root = project(tmp_path, monkeypatch, REMOTES)
+    doc(root, "record/literature.d/LIT-001.md", code="LIT-001", tags=["record"],
+        extra="superseded_by: FAKE-2110.08058")
+    errors: list[str] = []
+    lint.check_contracts(errors)
+    assert any("superseded_by" in e and "names no scheme or remote" in e for e in errors), errors

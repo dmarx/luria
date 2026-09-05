@@ -12,6 +12,7 @@ once:
     <!-- inactive-ok-file: ADR-012 — this page is that history -->
     <!-- unexempt-block: codeblock — the snippet below cites real decisions -->
     // inactive-ok: ADR-028 — proposed, but this is what shipped
+    # inactive-ok: ADR-012 — in a note's frontmatter, above the field it excuses
 
 Shape
 -----
@@ -147,7 +148,8 @@ def comment_fragments(path: Path, text: str) -> list[tuple[int, int, str]]:
                 continue
             out.append((text.count("\n", 0, m.start()) + 1, m.start(),
                         m.group(0)[4:-3]))
-        return out
+        out += _frontmatter_comments(text)
+        return sorted(out)
     if suffix == ".py":
         try:
             offsets = _line_offsets(text)
@@ -162,6 +164,39 @@ def comment_fragments(path: Path, text: str) -> list[tuple[int, int, str]]:
     for n, line in enumerate(text.splitlines(), 1):
         for m in COMMENT_MARKER_RE.finditer(line):
             out.append((n, offsets[n - 1] + m.end(), line[m.end():]))
+    return out
+
+
+# A whole-line YAML comment: `#` first on the line. A `#` inside a value is
+# data (`title: 'Issue #12'`), and a `#` in the body is a heading — the scan
+# never leaves the frontmatter, so neither is ever read as a comment.
+_YAML_COMMENT_RE = re.compile(r"^[ \t]*#(.*)$")
+
+
+def _frontmatter_comments(text: str) -> list[tuple[int, int, str]]:
+    """YAML comments in a markdown file's frontmatter, as comment fragments.
+
+    A reference field is a citation site — `superseded_by:` naming a retired
+    document is reported at its line like any sentence would be — but the
+    only comment the markdown scan read was an HTML one, and frontmatter
+    is YAML. The directive that could answer the finding in place had no
+    place to stand, and the file-scoped one was the only spelling left. The
+    frontmatter has its own comment syntax; this reads it, so a line-scoped
+    directive works there the way it does in a `.py` file:
+
+        # inactive-ok: ADR-012 — the successor was itself later retired
+        superseded_by: ADR-012
+    """
+    from . import doc_refs
+    span = doc_refs._frontmatter_span(text)
+    if span is None:
+        return []
+    out = []
+    offsets = _line_offsets(text)
+    for n, line in enumerate(text[:span[1]].splitlines(), 1):
+        m = _YAML_COMMENT_RE.match(line)
+        if m:
+            out.append((n, offsets[n - 1] + m.start(1), m.group(1)))
     return out
 
 
@@ -201,7 +236,7 @@ def _governed(scope: str, line: int, spans: list[tuple[int, int]],
     if scope == FILE:
         return frozenset(range(1, len(text.splitlines()) + 1))
     if scope == LINE:
-        return frozenset({line, line + 1})
+        return frozenset({line} | _entry_below(text, line))
     own = next((s for s in spans if s[0] <= line <= s[1]), (line, line))
     # A directive standing alone between blank lines has no content block of its
     # own, so the block it means is the one it introduces. This is the reading of
@@ -211,6 +246,26 @@ def _governed(scope: str, line: int, spans: list[tuple[int, int]],
         nxt = next((s for s in spans if s[0] > own[1]), None)
         own = nxt if nxt else own
     return frozenset(range(own[0], own[1] + 1))
+
+
+def _entry_below(text: str, line: int) -> set[int]:
+    """The lines "the next line" means: one, in prose — but in frontmatter a
+    field is an entry, and a `superseded_by:` written as a list carries its
+    code on the line after its key. A comment above the key that reached
+    only the key would excuse nothing, and `luria repair` writes exactly
+    that list shape. So inside the frontmatter the line below extends over
+    the entry's continuation lines: indented ones, and `- ` items."""
+    from . import doc_refs
+    lines = text.splitlines()
+    below = {line + 1}
+    span = doc_refs._frontmatter_span(text)
+    if span is None or line + 1 > text.count("\n", 0, span[1]):
+        return below
+    n = line + 1                                  # 1-based; lines[n] is n+1
+    while n < len(lines) and re.match(r"[ \t]+\S|- ", lines[n]):
+        n += 1
+        below.add(n)
+    return below
 
 
 def _directive_only(text: str, span: tuple[int, int], path: Path) -> bool:

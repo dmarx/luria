@@ -8,8 +8,9 @@ the reason survives, and the report still counts what was acknowledged.
 
 ## Shape
 
-A directive lives in a comment — HTML comments in markdown, `#`, `//`,
-`/* */` or `--` comments in code — and reads:
+A directive lives in a comment — HTML comments in markdown, `#` comments
+in a record document's YAML frontmatter, `#`, `//`, `/* */` or `--`
+comments in code — and reads:
 
 ```
 <!-- inactive-ok: ADR-012 — the rejection is the point being made -->
@@ -27,6 +28,19 @@ Scope is how much text the directive governs:
 | `name:` | its own line and the next line |
 | `name-block:` | the paragraph (blank-line-delimited block) it sits in, or the following block when the comment stands alone |
 | `name-file:` | the whole file |
+
+A citation site can be a frontmatter field: `superseded_by:` naming a
+document that was itself later retired is reported at that line like any
+sentence. The line-scoped form answers it in place, as a YAML comment
+directly above the field:
+
+```yaml
+# inactive-ok: ADR-012 — the successor was itself later rejected; the chain is deliberate
+superseded_by: ADR-012
+```
+
+Only a whole-line `#` comment inside the frontmatter counts; a `#` inside
+a value is data, and a `#` in the body is a heading.
 
 A directive that no longer matches anything — the document went `Active`
 again, the hand-written URL was fixed, the argument has a typo — is itself

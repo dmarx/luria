@@ -235,7 +235,22 @@ _REF_CODE_RE = re.compile(
 
 
 def reference_code(value: str) -> str | None:
-    m = _REF_CODE_RE.search(value.strip())
+    """The code a reference field holds: a scheme code, or a remote one.
+
+    Remotes are read first, through the one reader of their anatomy. A uid
+    remote's tail is opaque — `ARXIV-2110.08058`, `DOI:10.1145/3600006` —
+    and the scheme-shaped pattern, tried alone, read `ARXIV-2110` out of
+    the first and nothing out of the second, so a `superseded_by:` naming a
+    paper failed as "names no scheme or remote" while the same code in
+    prose resolved. Any truthy value was never the contract; a remote code
+    always was (`_any_scheme_violations`)."""
+    text = value.strip()
+    from . import remotes
+    if current().remotes:
+        refs = remotes.references(text)
+        if refs:
+            return refs[0].composed
+    m = _REF_CODE_RE.search(text)
     return m.group(1) if m else None
 
 
