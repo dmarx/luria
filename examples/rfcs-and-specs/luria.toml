@@ -23,3 +23,10 @@ render = "document"
 # There is no ADR table here, so there is no ADR scheme: a declared `schemes`
 # family replaces the shipped defaults rather than merging into them
 # (LU-ADR-047). This record is RFCs and SPECs, and nothing else renders.
+
+# Published as a section of luria's own site (`site.include_records`), staged
+# by this config rather than the parent's. The title is what names the section;
+# without it the site falls back to the repository in `issue_url`, which for an
+# example is either a fiction or the wrong project.
+[luria.site]
+title = "RFCs and specs"

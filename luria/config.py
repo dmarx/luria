@@ -57,6 +57,7 @@ from __future__ import annotations
 import os
 import re
 import tomllib
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from functools import lru_cache
 from pathlib import Path
@@ -126,6 +127,7 @@ DEFAULTS: dict = {
         "base_url": "",
         "source_url": "",
         "exclude": [],
+        "include_records": [],
         # Branding. All optional: unset means the generator's own look.
         "icon": "",
         "logo": "",
@@ -1041,6 +1043,11 @@ class Site:
     base_url: str
     source_url: str
     exclude: tuple[str, ...] = ()
+    # Whole records nested inside this one, published as sections of this site
+    # (ADR-077). Globs against directories, each of which must hold its own
+    # `luria.toml`: the point is that a nested record is staged with *its own*
+    # config, which is the only config that knows a source from a view in it.
+    include_records: tuple[str, ...] = ()
     icon: Path | None = None
     logo: Path | None = None
     logo_dark: Path | None = None
@@ -1390,6 +1397,7 @@ def _site(raw: dict, root: Path) -> Site:
         source_url=spec.get("source_url")
         or (f"https://github.com/{owner}/{repo}/blob/HEAD" if owner else ""),
         exclude=tuple(spec.get("exclude", ())),
+        include_records=tuple(spec.get("include_records", ())),
         icon=root / spec["icon"] if spec.get("icon") else None,
         logo=root / spec["logo"] if spec.get("logo") else None,
         logo_dark=root / spec["logo_dark"] if spec.get("logo_dark") else None,
@@ -1407,3 +1415,30 @@ def current() -> Config:
 def reset() -> None:
     """Drop the cache — for tests that point `LURIA_ROOT` at a fixture."""
     current.cache_clear()
+
+
+@contextmanager
+def rooted(root: Path):
+    """Run a block with `root` as the current project, then put it back.
+
+    `load(root)` already builds any project's config, but that is not enough
+    to *operate* on one: the modules underneath — `doc_refs.link_base`,
+    `edges.graph`, the renderers — call `current()` for themselves, by design,
+    since threading a config through every call site would be its own kind of
+    mess. So switching projects means switching the global, and the honest
+    thing is to make that a bounded, restoring operation with a name rather
+    than have callers set the environment variable and hope.
+
+    Reentrant by construction: the previous value is captured and restored,
+    including its absence."""
+    before = os.environ.get("LURIA_ROOT")
+    os.environ["LURIA_ROOT"] = str(Path(root).resolve())
+    reset()
+    try:
+        yield current()
+    finally:
+        if before is None:
+            os.environ.pop("LURIA_ROOT", None)
+        else:
+            os.environ["LURIA_ROOT"] = before
+        reset()

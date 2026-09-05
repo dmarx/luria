@@ -33,3 +33,10 @@ follows = { scheme = "SCENE", many = true, required = false }
 vocabulary = "worlds"
 many       = true
 default    = ["B"]
+
+# Published as a section of luria's own site (`site.include_records`), staged
+# by this config rather than the parent's. The title is what names the section;
+# without it the site falls back to the repository in `issue_url`, which for an
+# example is either a fiction or the wrong project.
+[luria.site]
+title = "World bible"
