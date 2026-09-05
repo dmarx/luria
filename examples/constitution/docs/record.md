@@ -26,13 +26,13 @@ Beyond the standard fields, what each scheme's entries must carry — compiled f
 
 **`PRACTICE`**
 
-- `grounds` — required, a `VALUE` code (luria.toml: schemes.PRACTICE.references.grounds)
+- `grounds` — required, one or more `VALUE` codes (luria.toml: schemes.PRACTICE.references.grounds)
 - `surface` — one or more of `conversation`, `harness`, `repository`, `record`; absent means `conversation` (luria.toml: schemes.PRACTICE.fields.surface; record/practices.d/surfaces.yaml: values)
 
 **`BOUNDARY`**
 
 - `overrides` — optional, one or more `PRACTICE` codes when present (luria.toml: schemes.BOUNDARY.references.overrides)
-- `grounds` — required, a `VALUE` code (luria.toml: schemes.BOUNDARY.references.grounds)
+- `grounds` — required, one or more `VALUE` codes (luria.toml: schemes.BOUNDARY.references.grounds)
 
 ## Journals
 
