@@ -16,6 +16,7 @@ until these examples found them missing. Reference checking used to know three
 hardcoded patterns, so a configured `RFC` scheme was rendered, scaffolded and
 indexed — and never linted.
 """
+import re
 import shutil
 from pathlib import Path
 
@@ -519,3 +520,44 @@ def test_every_example_stages_its_own_site(example, tmp_path, name):
     """
     example(name)
     assert_published(site.stage(tmp_path / "vault", config.current()), name)
+
+
+def test_every_active_document_accounts_for_something_in_the_source(example):
+    """`constitution/` carries the document it decomposes, so the decomposition
+    can be checked rather than believed.
+
+    The claim a record like this makes is that each of its documents accounts
+    for part of the source. Nothing enforced that until the source was in the
+    repository, and it is not the sort of thing a schema can express: the
+    reference the lint follows runs `PRACTICE → VALUE`, not `PRACTICE →
+    the text it was drawn from`. Asserted here instead, in the direction that
+    can actually go wrong — a document nobody derived, invented because it
+    sounded like a principle.
+
+    Retired documents are exempt and that is the point of the exemption: a
+    superseded practice is history, and history is not required to still
+    explain the current source.
+    """
+    root = example("constitution")
+    source = (root / "docs" / "constitution.md").read_text()
+    cited = set(re.findall(r"\b((?:VALUE|PRACTICE|BOUNDARY)-\d+)\b", source))
+    assert cited, "no codes in the source document; the assertion below is vacuous"
+
+    cfg = config.current()
+    missing = []
+    for name, scheme in cfg.schemes.items():
+        for path in sorted(scheme.dir.glob(f"{name}-*.md")):
+            meta = adr_index.parse_frontmatter(path.read_text())[0]
+            if statuses.of(meta).value != scheme.active:
+                continue
+            if path.stem not in cited:
+                missing.append(path.stem)
+
+    assert not missing, (
+        "these documents are in force but account for no part of the source "
+        "constitution, so nothing says where they came from: "
+        + ", ".join(sorted(missing))
+        + ". Either cite them from the section they were drawn from, or retire "
+        "them — a rule with no source is the habit this record exists to make "
+        "visible."
+    )

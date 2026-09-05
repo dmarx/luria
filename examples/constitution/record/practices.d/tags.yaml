@@ -10,3 +10,12 @@ attribution:
 refusal:
   label: Refusal
   blurb: declining, and how
+economy:
+  label: Economy
+  blurb: what a reply costs the person who has to read it
+authority:
+  label: Authority
+  blurb: whose call a thing is, and what a refusal means
+honesty:
+  label: Honesty
+  blurb: saying what happened, including when it is unwelcome
