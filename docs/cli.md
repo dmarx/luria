@@ -211,9 +211,9 @@ its acknowledgement route (see [directives](directives.md)) and listed in
 full in the [reports](reports/reference-status.md):
 
 `retired-citations` · `unresolved-codes` · `hand-written-urls` ·
-`broken-targets` · `inert-status` · `legacy-spellings` · `narrow-titles` ·
-`stale-directives` · `pending-documents` · `unlinted-files` ·
-`workflow-temp-codes`
+`broken-targets` · `source-mismatch` · `inert-status` · `legacy-spellings` ·
+`narrow-titles` · `stale-directives` · `pending-documents` ·
+`unlinted-files` · `workflow-temp-codes`
 
 Any of those class names listed in `[luria.lint] fail_on` fails the build
 instead. Only unacknowledged findings ever reach a class, so
@@ -294,6 +294,36 @@ registrations — endorsing what is newly registered, re-observing what
 exists, dropping what nothing cites or flags — and it never re-endorses
 drifted content: that always takes the explicit command, so a scheduled
 sweep cannot quietly launder a drift finding.
+
+`--resolve` asks what each identifier actually *is*. Where `--pin` watches
+for a document changing, this watches for a citation that was never right:
+it fetches the title behind every `arxiv:`/`doi:` field — any frontmatter
+key named after a configured remote — and records it in the lockfile, so
+`luria lint` can compare it against the title the document claims, offline.
+A disagreement is the `source-mismatch` warning class; `source-ok:`
+acknowledges a deliberate one, which the legitimate cases need — a nickname
+the project prefers (`AdamW: Decoupled Weight Decay Regularization`), a
+subtitle trimmed, a v1 title that changed between versions.
+
+A remote declares how to ask, for the same reason `pin_url` is declared
+rather than derived — only the project can vouch that a URL serves metadata
+worth trusting:
+
+```toml
+[luria.remotes.ARXIV]
+uris.title = "https://export.arxiv.org/api/query?id_list={1}.{2}"
+title_re   = "<entry>.*?<title>(.*?)</title>"
+
+[luria.remotes.DOI]
+uris.title = "https://api.crossref.org/works/{uid}"
+title_re   = '"title":\s*\[\s*"(.*?)"'
+```
+
+`title_re`'s first capture group is the title, matched with `re.DOTALL`. A
+remote that declares neither is skipped: most remotes are records, not
+metadata APIs. Identifiers the lockfile has no title for are not findings —
+a project that has never run `--resolve` sees nothing, rather than every
+document at once.
 
 What gets hashed is the construction's *stable bytes*, not the page a
 reader lands on. A GitHub file construction qualifies on its own; any

@@ -52,7 +52,7 @@ import sys
 from . import adr_index as builder
 from . import (adr_pending, badges, ci, contract, doc_refs, journal,
                link_targets, narrow_titles, pins, ref_status, remotes,
-               statuses)
+               sources, statuses)
 from .config import current
 
 # The closed status vocabulary (ADR-003). `Active` is the in-force state; the
@@ -357,6 +357,7 @@ def check_bare_refs(errors: list[str]) -> None:
 # accounting.
 FAILABLE = ("retired-citations", "unresolved-codes", "hand-written-urls",
             "broken-targets", "remote-drift", "inert-status",
+            "source-mismatch",
             "legacy-spellings", "narrow-titles", "stale-directives",
             "pending-documents", "unlinted-files", "workflow-temp-codes")
 
@@ -444,6 +445,17 @@ def status_sections() -> list[tuple[str, str, list[str]]]:
             "where the prose renders (`luria link --fix` spells code targets; "
             "`target-ok:` acknowledges a deliberate one)", dead))
 
+    # An identifier that resolves to a different paper than the one the
+    # document names (#166). Read from the committed lockfile, never fetched
+    # here — `luria remotes --resolve` is what opens the socket.
+    wrong, stale_sources = sources.mismatch_lines()
+    if wrong:
+        sections.append((
+            "source-mismatch",
+            f"{len(wrong)} identifier(s) resolve to a different document than "
+            "the one recorded (`source-ok:` acknowledges a deliberate one, "
+            "`luria remotes --resolve` refreshes what upstream serves)", wrong))
+
     # A status field where every record agrees is indistinguishable from no
     # status field — and `active` is what `retired-citations` reads, so the
     # build is green because nothing is being judged rather than because
@@ -492,7 +504,7 @@ def status_sections() -> list[tuple[str, str, list[str]]]:
 
     # A directive that silently does nothing is worse than no directive.
     stale = ref_status.stale_annotations(result, docs) + stale_urls \
-        + stale_targets + pins.flag_problems()
+        + stale_targets + stale_sources + pins.flag_problems()
     for path in doc_refs.doc_files():
         stale += doc_refs.directive_problems(path, path.read_text(encoding="utf-8"))
     if stale:

@@ -238,6 +238,7 @@ different pair of lines, not a different subsystem.
 | `delim` | `str` | `"-"` |
 | `uid` | `str` | *unset* |
 | `pin_url` | `str` | *unset* |
+| `title_re` | `str` | *unset* |
 | `pin` | `bool` | `False` |
 | `uris` | `dict[str, str]` | *unset* |
 | `schemes` | `dict[str, RemoteScheme]` | *unset* |

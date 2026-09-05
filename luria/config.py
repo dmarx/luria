@@ -649,6 +649,13 @@ class Remote:
     # vouch that a URL is content-stable; unset, only a GitHub file
     # construction can be pinned.
     pin_url: str = ""
+    # How to read a title out of what `uris.title` serves: a regex whose first
+    # group is the title. Declared rather than derived, for the same reason
+    # `pin_url` is — only the project can vouch that a URL serves metadata in
+    # a shape worth trusting, and guessing per host would be magic that fails
+    # silently when a provider changes its response. The two recipes that
+    # matter are in the documentation; both are one line.
+    title_re: str = ""
     # Content-pin every cited reference to this remote (#135). Set here it
     # covers the whole namespace; set on one of the remote's schemes, just
     # that code family. Registration in config rather than per code, because
@@ -1347,6 +1354,7 @@ def load(root: Path | None = None, text: str | None = None) -> Config:
                 delim=spec.get("delim", "-"),
                 uid=spec.get("uid", ""),
                 pin_url=spec.get("pin_url", ""),
+                title_re=spec.get("title_re", ""),
                 pin=bool(spec.get("pin", False)),
                 uris=_fold_uris(spec, f"remotes.{prefix.upper()}"),
                 schemes={
