@@ -43,6 +43,12 @@ one that has stopped applying is reported in its own right — otherwise the
 mechanism for saying "this is fine" becomes the mechanism for never hearing
 about it again.
 
+
+The reason a silent no-op is worse than a loud one is [DP-015](design-principles.md#dp-15): nothing
+happening and everything working produce the same observation, so the user's
+next move is to conclude the tool is broken rather than to look for the
+precondition.
+
 *v1 · origin: The strata-g design-language review, where tools silently no-opped on inputs that didn't meet their preconditions*
 
 <a name="dp-2"></a>
@@ -102,6 +108,12 @@ Three remedies, in order of strength:
    polarity a naive list has by default.
 
 In this package, the decision index is rung 1 and the reference lint is rung 2.
+
+
+Why fail-stale specifically is the unacceptable polarity, rather than merely
+the worst of three: it is the silent one, and [DP-015](design-principles.md#dp-15) is the general form —
+a missed entry that ships as wrong behaviour is indistinguishable from a
+complete list, so nothing about the system reports the gap.
 
 *v2 · shaped by [ADR-004](../record/decisions.d/ADR-004.md), [ADR-005](../record/decisions.d/ADR-005.md) · origin: A hardcoded type union that had drifted to 13 of 21 keys; generalized by a later arc where every one of five converted projections was already wrong*
 
@@ -174,6 +186,11 @@ benefit it exists for.
 broken, what the guard printed, what it printed after the repair — is the
 difference between a guard someone trusts and a guard someone re-tests from
 scratch because they can't tell whether it works.
+
+
+The general case is [DP-015](design-principles.md#dp-15). An unfired guard emits exactly what a guard
+with nothing to catch emits, so "no findings" is not evidence of a clean tree
+until something has proved the instrument can speak.
 
 *v1 · shaped by [ADR-007](../record/decisions.d/ADR-007.md) · origin: Two inert mechanisms in strata-g — an alert shape that could never fire, and a CI fast path whose fail-safe polarity made a month of inertness invisible. Both were discovered by accident rather than by the thing they guarded*
 
@@ -307,6 +324,12 @@ The test, when a new switch appears: *what does the silent position cost,
 and who pays?* If the project pays in missed defects, on-by-default. If
 the author pays in unwanted exposure, off-by-default. A switch where both
 answers feel true is usually two switches wearing one name — split it.
+
+
+Both halves of the rule descend from [DP-015](design-principles.md#dp-15). A default is the position that
+ships when nobody reads the docs, and its failure is silent by construction —
+so the polarity question is really "which direction can announce itself?", and
+the answer sets the default.
 
 *v1 · shaped by [ADR-035](../record/decisions.d/ADR-035.md)*
 
@@ -583,3 +606,68 @@ reach — and reach is the point, because the projects that most need a memory
 are rarely the ones that look like yours.
 
 *v1 · shaped by [ADR-064](../record/decisions.d/ADR-064.md) · origin: A Windows user ran `luria init` and then `luria index`, and got a stack trace writing a check mark into a status report. Nothing about their project was unusual. The tool had required a UTF-8-capable platform without ever saying so*
+
+<a name="dp-15"></a>
+
+## 15. An absence reads exactly like a success — give the silent case a signal
+
+**Nothing happening and everything working produce the same observation.**
+
+This is the premise underneath a family of rules in this record, and it was
+never stated because each rule looks self-evidently right on its own. Written
+down, it explains why they are the *same* rule wearing four coats, and it
+predicts where the fifth will be.
+
+| the silent thing | what it looks like from outside |
+|---|---|
+| a tool that no-ops on an input it can't handle | a tool that ran and found nothing to do |
+| a guard nobody has ever fired | a guard that has never had cause to fire |
+| a hand list missing one entry | a hand list that is complete |
+| a default nobody chose | a default someone chose |
+| a measurement of nothing | a measurement of no change |
+
+Every row is a real bug shape, and every one passes review, because review looks
+at the output and the output is *correct-looking*. That is the whole mechanism:
+these failures are not hard to fix, they are hard to **see**, and the thing that
+hides them is the same thing in each case — the failing path emits nothing, and
+nothing is what success emits too.
+
+## What follows from it
+
+Each of these already exists here as its own principle, and each stays its own
+principle because the *remedies* differ. What they share is this diagnosis:
+
+- [DP-001](design-principles.md#dp-1) — a refusal that says nothing reads as a broken tool. Remedy: the
+  refusal explains itself.
+- [DP-003](design-principles.md#dp-3) — rung three is the polarity rule, and fail-stale is singled out as
+  the never-acceptable one precisely because it is the silent polarity. Remedy:
+  derive, or guard the property, or choose a polarity that is not silence.
+- [DP-006](design-principles.md#dp-6) — provisioned is not working; an unfired guard reports what a
+  working one reports. Remedy: sabotage it once, and record that you did.
+- [DP-010](design-principles.md#dp-10) — the silent position of a switch is the one that ships, so it
+  should be the position whose failure is visible. Remedy: guards default on,
+  disclosures default off.
+
+Four different remedies for one diagnosis, which is why folding them together
+would lose more than it saved: a merged principle's advice section would be a
+disjunction, and a reader arriving with a concrete problem would have to guess
+which arm applies.
+
+## The corollary
+
+**A test can have this shape too, and then the safety net has the bug.** An
+assertion that cannot fail passes exactly as loudly as one that can, so a suite
+can grow a hole that reports itself green — the same defect one level up, where
+it is least likely to be looked for. The strata-g record states this as its own
+principle, arrived at independently
+([SG-DP-022](https://github.com/dmarx/strata-g/blob/main/docs/design-principles.md#dp-22)): before believing a comparison,
+require a non-zero count of whatever was counted, and perturb something the
+measurement should detect to confirm the reading moves.
+
+That is the general form of the remedy, and it is worth stating as an
+instruction rather than an observation: **for any silent path, either make it
+emit, or make the emitting case the only reachable one.** Counting the deviations
+is the second-best option and is what [DP-010](design-principles.md#dp-10) settles for; it works because a
+count of zero is itself a signal.
+
+*v1 · origin: Not one episode but an audit. Four principles in this record — [DP-001](design-principles.md#dp-1), [DP-003](design-principles.md#dp-3), [DP-006](design-principles.md#dp-6), [DP-010](design-principles.md#dp-10) — each lean on the word *silent* at the load-bearing moment, and none of them says why silence is the problem. The premise had been re-derived four times without once being written down*
