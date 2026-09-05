@@ -101,6 +101,38 @@ def test_a_truncated_title_is_a_disagreement(project):
     assert len(flagged) == 1
 
 
+def test_an_escaped_title_is_not_a_mismatch(project):
+    """Found by running the check on a real corpus: arXiv's Atom feed returns
+    "Better &amp; Faster", and comparing that against what a person typed
+    reported a mismatch on the escaping. A false positive is how a check gets
+    switched off, so entities are unescaped at the fetch."""
+    _project(project)
+    _note(project, 7, "Better & Faster Large Language Models via Multi-token Prediction",
+          "2404.19737")
+    _resolved(project, {"ARXIV/2404.19737":
+                        "Better & Faster Large Language Models via Multi-token Prediction"})
+    assert sources.mismatch_lines() == ([], [], [])
+
+
+def test_html_entities_are_unescaped_at_the_fetch(project, monkeypatch):
+    """The fix belongs at the fetch, not at the comparison: the lockfile
+    should record what the title IS, so a reader of the diff sees a title
+    rather than markup."""
+    _project(project)
+    body = "<entry><title>Better &amp; Faster Models</title></entry>"
+    monkeypatch.setattr(sources.urllib.request, "urlopen",
+                        lambda *a, **k: _FakeResponse(body))
+    got = sources._once("https://example.test/x", "<entry>.*?<title>(.*?)</title>")
+    assert got.title == "Better & Faster Models"
+
+
+class _FakeResponse:
+    def __init__(self, body): self._body = body.encode()
+    def read(self): return self._body
+    def __enter__(self): return self
+    def __exit__(self, *a): return False
+
+
 def test_a_source_ok_directive_acknowledges_it(project):
     """A nickname the project prefers is legitimate and common — 22 of the 53
     were this class. Without an acknowledgement the check is noisy enough to
