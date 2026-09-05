@@ -2,6 +2,12 @@
 # record, which is the only way the machinery gets exercised before a consumer
 # hits the bug (DP-6).
 [luria]
+# Whole records nested inside this one (ADR-077, relocated by ADR-078). Each
+# is a complete project with its own `luria.toml`: `luria index` regenerates
+# its views, `--check` notices when one goes stale, and `luria site` mounts it
+# under `examples/<name>/`. Not a site key — publishing was just the first
+# thing that needed to know.
+include_records = ["examples/*"]
 issue_url = "https://github.com/dmarx/luria/issues/{n}"
 
 # The read/write boundary (ADR-021): `docs/` is where a reader browses —
@@ -46,12 +52,6 @@ person would otherwise rediscover. Generated from the entries in \
 # visitor protection from.
 [luria.site]
 exclude = ["template/**"]
-
-# The examples are published as sections of this site rather than left out of
-# it. Each is a whole record with its own `luria.toml`, and each is staged by
-# that config — which is the only one that can tell a source from a view
-# inside it. `luria site` mounts the finished vault under `examples/<name>/`.
-include_records = ["examples/*"]
 # The brainslug kit is the identity; the site wears it rather than the
 # generator's. `icon` is the vector master — the favicon is rasterized from it
 # at build time, so no derived PNG is committed here to drift out of step
