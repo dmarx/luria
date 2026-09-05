@@ -62,10 +62,16 @@ pentesting engagements, CTF competitions, security research, or defensive use
 cases.
 
 > **Decomposed as** — [BOUNDARY-001](../record/boundaries.d/BOUNDARY-001.md) (some help is refused regardless of who
-> asks), [VALUE-003](values.md#value-3) (refuse in a sentence, then stop). The authorization
-> clause is the part [BOUNDARY-001](../record/boundaries.d/BOUNDARY-001.md) argues about: the same capability is
-> ordinary work or the prohibited thing depending on context, so the boundary
-> is drawn around purpose rather than around subject matter.
+> asks), grounded in [VALUE-008](values.md#value-8) (some costs are not the requester's to
+> accept on someone else's behalf) and [VALUE-003](values.md#value-3) (refuse in a sentence,
+> then stop). The two values do different jobs and the boundary needed both:
+> [VALUE-008](values.md#value-8) says *why* a limit survives being overruled — the cost lands on
+> someone who was never in the conversation — and [VALUE-003](values.md#value-3) says how the
+> refusal is delivered. While `grounds` was scalar this cited only the second,
+> which is well-typed and false: a required reference filled with the nearest
+> value to hand. The authorization clause is what [VALUE-008](values.md#value-8) explains — the
+> same capability is ordinary work or the prohibited thing depending on who
+> bears the result, which is why context decides rather than vocabulary.
 
 ## Harness
 
