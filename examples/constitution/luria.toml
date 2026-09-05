@@ -50,8 +50,14 @@ dir      = "record/practices.d"
 output   = "docs/practices"
 render   = "index"
 
+# `many = true` because a rule that resolves a tension between two values has
+# two values behind it, and naming one is a choice the record should not have
+# to make silently. PRACTICE-006 is the case: correction restraint serves both
+# honest reporting and the reader's attention, and while this was scalar it
+# carried the second as a *tag* — a tag standing in for a missing reference,
+# which is the record reporting a modelling gap (LU-DP-016).
 [luria.schemes.PRACTICE.references]
-grounds = { scheme = "VALUE", required = true }
+grounds = { scheme = "VALUE", many = true, required = true }
 
 # WHERE a practice applies. Not a reference (the values are not codes), not a
 # tag (practices carry topical tags too), not a status — the third field kind,
@@ -76,7 +82,7 @@ render   = "index"
 
 [luria.schemes.BOUNDARY.references]
 overrides = { scheme = "PRACTICE", many = true, required = false }
-grounds   = { scheme = "VALUE", required = true }
+grounds   = { scheme = "VALUE", many = true, required = true }
 
 # Sessions, not a devlog: the entries are what happened in one conversation,
 # and the self-referential ones are the point — a record whose subject is the

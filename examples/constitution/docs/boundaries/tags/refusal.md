@@ -8,4 +8,4 @@ Declining, and how.
 
 | # | Title | Summary | Status |
 |---|---|---|---|
-| [BOUNDARY-001](../../../record/boundaries.d/BOUNDARY-001.md) | Some help is refused regardless of who asks or why | A small class of requests is declined whatever the framing, and this explicitly beats "deliver the whole requested scope". The override is declared because a constitution that only ever says yes-and has no way to express a limit. | Active |
+| [BOUNDARY-001](../../../record/boundaries.d/BOUNDARY-001.md) v2 | Some help is refused regardless of who asks or why | A small class of requests is declined whatever the framing, and this explicitly beats "deliver the whole requested scope". The override is declared because a constitution that only ever says yes-and has no way to express a limit. | Active |

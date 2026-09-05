@@ -561,3 +561,41 @@ def test_every_active_document_accounts_for_something_in_the_source(example):
         "them — a rule with no source is the habit this record exists to make "
         "visible."
     )
+
+
+def test_every_section_of_the_source_says_what_accounts_for_it(example):
+    """The other direction, which is the one that actually goes wrong.
+
+    `test_every_active_document_accounts_for_something_in_the_source` catches a
+    document nobody derived. The likelier change by far is the opposite — the
+    constitution gains a paragraph and nobody writes anything — and until this
+    existed, nothing caught it: appending a whole new section to the source and
+    writing no document left the suite green.
+
+    A `Decomposed as` block is required after every section, and a block saying
+    *nothing yet* satisfies it. That is the point rather than a loophole: the
+    three runtime-fact sections are accounted for by nothing deliberately, and
+    an explicit "nothing, and nothing should" is a different statement from an
+    absent one — which is the whole of [[DP-015]] applied to a document.
+    """
+    root = example("constitution")
+    source = (root / "docs" / "constitution.md").read_text()
+
+    # Sections start at the first `## `; everything above is the preamble,
+    # which explains the convention and is not itself decomposed.
+    body = source[source.index("\n## "):]
+    sections = re.split(r"\n## ", body)[1:]
+    assert len(sections) >= 5, (
+        f"found {len(sections)} sections in the source; the split is wrong and "
+        "the assertion below would pass for an empty list"
+    )
+
+    missing = [s.splitlines()[0].strip() for s in sections
+               if "**Decomposed as**" not in s]
+    assert not missing, (
+        "these sections of the source constitution say nothing about what "
+        "accounts for them, so a reader cannot tell whether the record covers "
+        "them or has simply not caught up: " + "; ".join(missing)
+        + ". A `> **Decomposed as** — nothing yet` block is a legitimate "
+        "answer and a different one from silence."
+    )

@@ -16,6 +16,3 @@ economy:
 authority:
   label: Authority
   blurb: whose call a thing is, and what a refusal means
-honesty:
-  label: Honesty
-  blurb: saying what happened, including when it is unwelcome
