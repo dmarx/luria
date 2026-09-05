@@ -314,3 +314,40 @@ def test_a_directive_naming_a_code_is_not_citing_it(project):
     itself and can never go stale."""
     docs, result = scan(project, "<!-- unresolved-ok: ADR-777 — why -->\n")
     assert result.dangling == {}
+
+
+# ── Frontmatter sites ────────────────────────────────────────────────────
+
+
+def test_a_frontmatter_field_is_a_site_that_a_yaml_comment_can_excuse(project):
+    """`superseded_by:` naming a document that was itself later retired is
+    reported at its line like a sentence would be. Before the frontmatter's
+    own comments were read, the only spelling that reached it was the
+    file-scoped one — broader than the finding."""
+    decision(project, 12, "Rejected", "The successor, itself retired")
+    scheme = current().schemes["ADR"]
+    path = scheme.dir / "ADR-013.md"
+    path.write_text(
+        "---\n"
+        "status: Superseded\n"
+        "# inactive-ok: ADR-012 — the successor was itself later rejected; the chain is deliberate\n"
+        "superseded_by: ADR-012\n"
+        "title: 'The replaced one'\n"
+        "tags:\n- record\n"
+        "date: '2026-01-01'\n"
+        "---\n\n# ADR-013: The replaced one\n\nBody.\n")
+    docs = ref_status.load_docs()
+    result = ref_status.scan([path], docs)
+    site, = result.cited["ADR-012"]
+    assert site.line == 4 and site.excused_by is not None
+    assert [d.code for d, _, _ in ref_status.flagged(result, docs)] == []
+
+
+def test_a_frontmatter_site_without_a_comment_is_still_reported(project):
+    decision(project, 12, "Rejected", "The successor, itself retired")
+    path = decision(project, 13, "Superseded", "The replaced one", superseded_by="ADR-012")
+    docs = ref_status.load_docs()
+    result = ref_status.scan([path], docs)
+    site, = result.cited["ADR-012"]
+    assert site.excused_by is None
+    assert [d.code for d, _, _ in ref_status.flagged(result, docs)] == ["ADR-012"]
