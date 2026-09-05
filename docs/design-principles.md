@@ -363,62 +363,112 @@ anything, and that restraint is what keeps the licence worth having.
 
 <a name="dp-12"></a>
 
-## 12. One decision, one thing
+## 12. One document, one thing
 
-**A decision with two unrelated halves is one nobody can cite half of.**
+**A document with two unrelated halves is one nobody can cite half of.**
 
 Bundling is always cheaper at writing time. One record, one review, one merge —
 and the second half arrives free, because it was going to be written anyway.
 The cost lands later and never goes away.
 
+This was first written about decisions, and it is not about decisions. It holds
+for any document a reader is expected to name: a decision, a principle, a
+practice in a record of practices, a claim in an anthology. The unit is
+whatever gets cited.
+
 ## What it costs
 
-**The second half has no code.** A citation is how this record is used: an
+**The second half has no code.** A citation is how a record is used: an
 argument names its premise, a module names the decision it implements, a lint
-message names the rule it enforces. Half a decision cannot be named, so the
+message names the rule it enforces. Half a document cannot be named, so the
 half that was cheap to add is the half nothing can point at — and a rule
 nothing points at is a rule nobody knows applies to them.
 
-**Superseding withdraws more than intended.** A decision that changes gets
-superseded whole. If two choices share a record, retiring the one that aged out
+**Superseding withdraws more than intended.** A document that changes gets
+superseded whole. If two things share a record, retiring the one that aged out
 silently retires the one that did not, and the record now says nothing about a
 question it had answered. That is the failure the status vocabulary exists to
 prevent, reintroduced at a coarser grain.
 
-**Alternatives stop being reconstructable.** The alternatives section is the
-highest-value part of a decision, and it only works when it is the alternatives
-to *one* choice. Two choices produce a cross-product, or — far more often — an
-alternatives section that silently covers whichever half the author found more
-interesting.
+**Alternatives stop being reconstructable.** For a decision, the alternatives
+section is the highest-value part, and it only works when it is the
+alternatives to *one* choice. Two choices produce a cross-product, or — far
+more often — an alternatives section that silently covers whichever half the
+author found more interesting.
 
-## The test
+## Two tests
 
-**Could the two halves have been decided differently?** If a project could
-adopt one and reject the other, they are two decisions, however naturally they
+**Could the halves have been decided differently?** If a project could adopt
+one and reject the other, they are two documents, however naturally they
 arrived together.
 
-The tempting counterexample is the pair where one half motivated the other.
-That is exactly when to split, and it is worth being concrete: a feature was
-built to fix a defect, and a separate check would actually have *caught* that
-defect. Bundling them would have produced a record whose stated motivation was
-served by only one of its halves — and a reader asking "why does this check
-exist?" would find the answer to a different question.
+That one only fires while writing, and it depends on the author asking. Typed
+edges ([ADR-071](../record/decisions.d/ADR-071.md), [ADR-060](../record/decisions.d/ADR-060.md))
+make a second test possible, and this one fires afterwards, mechanically:
 
-Splitting them also produced something bundling would have hidden. Building the
-second after the first landed revealed an exemption the second needed *because
-of* the first, which is a relationship that only exists between two things.
+**Does an edge into this document have to name which *part* of it applies?**
+If stating what a relation asserts requires pointing at one clause of its
+target, the target is two documents.
+
+Note what this test is not. An `overrides` edge already means *where both bear,
+this one wins* — the overlap is decided by the two documents' contents, so an
+edge is not over-claiming merely by being silent about scope. The tell is
+narrower and shows up in the prose beside the edge: a body that has to explain
+which sentence of the target it is arguing with.
+
+The worked case is a record of an assistant's operating constitution, which
+contains no decisions at all. A boundary — *never infer a person's pronouns
+from their name* — declares that it `overrides` a practice titled *deliver the
+whole requested scope; state assumptions rather than narrowing*. But the
+boundary's body does not argue with delivering the whole scope. It argues with
+a different claim the same document happens to carry: *make the routine
+judgment call yourself rather than escalating it*. The override had to say so
+in prose, because the code it names covers both.
+
+Applying the first test confirms it. *Deliver the whole scope* and *make the
+routine call yourself* could be adopted separately — a project could want one
+and reject the other — so they were always two practices. They had simply
+arrived in the same paragraph of the source. Splitting them let each override
+name what it actually beats, and immediately exposed a second error: one of the
+two edges, checked against the narrower practice, turned out not to hold at all.
+
+That is the useful property. The a-priori test needs an author to stop and ask.
+This one arrives as friction while writing something else, which is when a
+granularity defect is cheapest to notice and most likely to be noticed at all.
+
+## Why not just qualify the edge
+
+Because a condition on a relation is unfalsifiable in exactly the way this
+record's machinery exists to prevent. `overrides` is checked — the code must
+resolve, to a document of the declared scheme, that actually exists. A `when:`
+beside it is prose in a data field: nothing evaluates it, nothing notices when
+it stops being true, and nothing tells a reader whether the qualifier or the
+edge governs their case. It is escalating emphasis in a new costume, one level
+up, and the graph it produces is worse than no graph because it looks checked.
+
+This is why [#141](https://github.com/dmarx/luria/issues/141) puts `when`
+expressions among its non-goals, and why it refuses precedence between
+configuration surfaces — a conflict there is an error rather than something a
+tie-break rule resolves. Same move: **decline the qualifier, and remove what
+made it necessary.**
 
 ## What this is not
 
-Not an argument for small decisions. A decision covering one choice can be long,
+Not an argument for small documents. A document covering one thing can be long,
 and usually should be — the context, the alternatives and the consequences of a
-single choice are most of what makes a record worth keeping.
+single claim are most of what makes a record worth keeping.
 
-Nor is it an argument against related decisions landing together. Ship them in
+Nor is it an argument against related documents landing together. Ship them in
 one contribution if that is honest; give them separate codes so each can be
 cited, revisited, and retired on its own evidence.
 
-*v1 · shaped by [ADR-035](../record/decisions.d/ADR-035.md), [ADR-056](../record/decisions.d/ADR-056.md) · origin: Three splits in one session, each made for the same reason and none of them by rule: a lint check separated from the vocabulary it reads, two scheme audits written as two decisions rather than one, and a status feature split from the report that would have caught the bug motivating it. Each bundle would have been smaller to write and impossible to cite half of*
+And it is not a licence to split on sight. The second test is the discipline
+that keeps it honest: split when something *points* at a part rather than the
+whole, not whenever a document could conceivably be subdivided. A record of
+maximally small documents has the same problem in reverse — every claim needs
+five citations to state, and none of them means anything alone.
+
+*v2 · shaped by [ADR-035](../record/decisions.d/ADR-035.md), [ADR-056](../record/decisions.d/ADR-056.md), [ADR-060](../record/decisions.d/ADR-060.md), [ADR-071](../record/decisions.d/ADR-071.md) · origin: Three splits in one session, each made for the same reason and none of them by rule: a lint check separated from the vocabulary it reads, two scheme audits written as two decisions rather than one, and a status feature split from the report that would have caught the bug motivating it. Then, in a record of practices rather than decisions, an `overrides` edge whose prose had to name which clause of its target it argued with — the same defect, arriving as a relation instead of as a bundle*
 
 <a name="dp-13"></a>
 

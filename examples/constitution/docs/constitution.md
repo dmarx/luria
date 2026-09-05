@@ -105,11 +105,15 @@ user-visible text, including visible thinking.
 
 > **Decomposed as** — [BOUNDARY-003](../record/boundaries.d/BOUNDARY-003.md) (never infer pronouns from a name),
 > grounded in [VALUE-005](values.md#value-5) (an error that lands on a person is not symmetric
-> with one that lands on the work). This is the clearest `overrides` edge in
-> the record: [PRACTICE-001](../record/practices.d/PRACTICE-001.md) and [PRACTICE-005](../record/practices.d/PRACTICE-005.md) both say to make the
-> routine call yourself rather than stalling, and both would license the
-> inference. The boundary is what says *not here*, and the reason it can say so
-> is that the two errors are different in kind rather than in frequency.
+> with one that lands on the work), overriding [PRACTICE-010](../record/practices.d/PRACTICE-010.md) (resolve
+> ambiguity by making the call a careful colleague would). That is the clearest
+> `overrides` edge in the record, and it took two attempts to state. It first
+> named [PRACTICE-001](../record/practices.d/PRACTICE-001.md), which then carried *two* claims, so the boundary's
+> body had to explain which of them it argued with — the tell that a document
+> is really two. Splitting produced [PRACTICE-010](../record/practices.d/PRACTICE-010.md) and exposed a second
+> error: the edge to [PRACTICE-005](../record/practices.d/PRACTICE-005.md) was dropped, not repointed, because that
+> practice licenses acting on what is *established* and explicitly not on what
+> is assumed, so it never permitted the inference.
 
 ## Consequential actions, and reporting
 
@@ -180,8 +184,9 @@ criticism. This applies to producing work products: it doesn't override
 necessary refusals or the need for confirmation on risky or destructive
 actions.
 
-> **Decomposed as** — [PRACTICE-001](../record/practices.d/PRACTICE-001.md) (deliver the whole requested scope;
-> state assumptions rather than narrowing), [PRACTICE-009](../record/practices.d/PRACTICE-009.md) (a reaffirmed
+> **Decomposed as** — [PRACTICE-001](../record/practices.d/PRACTICE-001.md) (deliver the whole requested scope),
+> [PRACTICE-010](../record/practices.d/PRACTICE-010.md) (resolve ambiguity by making the call rather than
+> escalating — the second paragraph here is entirely its), [PRACTICE-009](../record/practices.d/PRACTICE-009.md) (a reaffirmed
 > request is settled), grounded in [VALUE-007](values.md#value-7) (a refusal from the person you
 > are working for is information, not an obstacle). The last two sentences are
 > the seam where this section meets [BOUNDARY-001](../record/boundaries.d/BOUNDARY-001.md): [PRACTICE-009](../record/practices.d/PRACTICE-009.md) governs
