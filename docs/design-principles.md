@@ -257,14 +257,10 @@ human or stateless; a rule living only in prose is discoverable by whoever
 happens to read that prose.
 
 **Diagnosis.** Affordance inconsistency is a smell to *read*, not an
-untidiness to tolerate. The same shape carrying opposite rules — one
-`README.md` you must edit and another you must not; a marked container beside
-an unmarked sibling doing the same job — says a rule has moved out of the tree
-and into somebody's memory. A file whose neighbours are the wrong kind — an
-authored `.stub` sitting beside the generated page it feeds — says something
-is filed where it doesn't belong. When an affordance feels wrong, trust the
-feeling and ask which boundary it is straddling; the discomfort is usually a
-distinction the layout has stopped expressing.
+untidiness to tolerate — the same shape carrying opposite rules, a file whose
+neighbours are the wrong kind. That reading turned out not to be about
+affordances at all: the citation graph reports the same class of fault the
+same way, so it is now [DP-016](design-principles.md#dp-16), and this is the tree half of it.
 
 Two disciplines keep the spend honest. **Structural beats documentary**: a
 comment saying "GENERATED — do not edit" is read after landing in the wrong
@@ -286,7 +282,7 @@ principle binds affordances to the truth. This one is its complement about
 *reach*: affordances are the widest channel an artifact has — spend them,
 don't merely avoid falsifying them.
 
-*v1 · shaped by [ADR-012](../record/decisions.d/ADR-012.md), [ADR-013](../record/decisions.d/ADR-013.md), [ADR-021](../record/decisions.d/ADR-021.md) · origin: An inventory of one repository's layout found the same rules expressed structurally in some places and not at all in others — two source containers marked `.d` and two unmarked, a generated document beside its own sources, an index buried under the things it indexes, and `README.md` meaning "edit me" in one directory and "never edit me" in the next. The layout had been shaping attention the whole time; nobody had been steering it*
+*v2 · shaped by [ADR-012](../record/decisions.d/ADR-012.md), [ADR-013](../record/decisions.d/ADR-013.md), [ADR-021](../record/decisions.d/ADR-021.md) · origin: An inventory of one repository's layout found the same rules expressed structurally in some places and not at all in others — two source containers marked `.d` and two unmarked, a generated document beside its own sources, an index buried under the things it indexes, and `README.md` meaning "edit me" in one directory and "never edit me" in the next. The layout had been shaping attention the whole time; nobody had been steering it*
 
 <a name="dp-10"></a>
 
@@ -458,6 +454,12 @@ two edges, checked against the narrower practice, turned out not to hold at all.
 That is the useful property. The a-priori test needs an author to stop and ask.
 This one arrives as friction while writing something else, which is when a
 granularity defect is cheapest to notice and most likely to be noticed at all.
+
+The general form is [DP-016](design-principles.md#dp-16) — an awkward structure is reporting a
+distinction the model has stopped expressing — and this is its granularity
+case. What that principle adds is the instruction not to resolve the
+awkwardness with a clarifying sentence, which is always available and always
+leaves the model wrong.
 
 ## Why not just qualify the edge
 
@@ -671,3 +673,74 @@ is the second-best option and is what [DP-010](design-principles.md#dp-10) settl
 count of zero is itself a signal.
 
 *v1 · origin: Not one episode but an audit. Four principles in this record — [DP-001](design-principles.md#dp-1), [DP-003](design-principles.md#dp-3), [DP-006](design-principles.md#dp-6), [DP-010](design-principles.md#dp-10) — each lean on the word *silent* at the load-bearing moment, and none of them says why silence is the problem. The premise had been re-derived four times without once being written down*
+
+<a name="dp-16"></a>
+
+## 16. An awkward structure is reporting a distinction the model has stopped expressing
+
+**A structure that is hard to state cleanly is telling you something about the
+model, not about your prose.**
+
+A record maintains two structures, and both are derived from the same
+decisions about what counts as a thing. The **tree** — names, placement,
+neighbours — and the **graph** — the typed edges between documents. Neither is
+merely output. Both are instruments, and both report the same class of fault:
+a distinction that the model has stopped expressing has to live *somewhere*,
+and where it goes is prose, or a comment, or nobody's notes at all.
+
+The tell is friction while writing something else. Not a review finding, not a
+lint failure — the small awkwardness of having to explain, in a sentence,
+something the structure should have carried.
+
+## In the tree
+
+Two files with the same shape and opposite rules — one `README.md` you must
+edit and one you must not. A marked container beside an unmarked sibling doing
+the same job. An authored `.stub` filed among the generated pages it feeds.
+Each is a rule that has moved out of the layout and into somebody's memory,
+and each announces itself as mild untidiness rather than as a defect.
+
+## In the graph
+
+A typed edge is a claim, and it can be awkward in the same way. The instance
+that promoted this: a boundary declared `overrides` against a practice, and its
+body then had to say *which sentence* of that practice it argued with — because
+the target carried two claims under one code. The edge was correct and the
+prose beside it was doing work the graph could not. Splitting the target let
+the edge name what it actually beat, and immediately exposed a second edge that
+did not hold at all ([DP-012](design-principles.md#dp-12) has the worked case).
+
+The same reading applies to an edge nobody can state without a condition, to a
+required reference that had to be filled with the nearest available document,
+and to a relation that needs three sentences of context to be intelligible.
+
+## What to do with the reading
+
+**Read it before absorbing it.** The instinct is to write the clarifying
+sentence and move on; the sentence is cheap and the model stays wrong. Ask
+instead which boundary the awkwardness is straddling — the answer is usually
+a distinction that was real and is no longer represented.
+
+**Then fix the model, not the prose.** Split the document, retype the field,
+move the file, add the vocabulary. The clarifying sentence is what you write
+when you have decided the distinction is not worth representing — which is a
+legitimate answer, and a different one from not having noticed.
+
+**Do not add a qualifier to the relation.** That is the failure mode specific
+to the graph half: a condition beside a checked reference is prose in a data
+field, so nothing evaluates it and nothing notices when it stops holding, while
+the edge keeps looking checked. It is escalating emphasis one rung up — which
+is why [#141](https://github.com/dmarx/luria/issues/141) puts `when` expressions among its non-goals and refuses
+precedence between configuration surfaces.
+
+## The corollary
+
+**This only works if the structures are load-bearing.** A tree nobody navigates
+and a graph nobody reads generate no friction, so they report nothing — the
+instrument has to be used to be an instrument. That is the practical argument
+for typed edges over a general "mentions" relation ([ADR-071](../record/decisions.d/ADR-071.md), [ADR-060](../record/decisions.d/ADR-060.md)),
+and for a layout the lint holds ([ADR-021](../record/decisions.d/ADR-021.md)): the checking is what makes the
+awkwardness surface at authoring time instead of at the reader's expense, a
+year later.
+
+*v1 · shaped by [ADR-060](../record/decisions.d/ADR-060.md), [ADR-071](../record/decisions.d/ADR-071.md) · origin: Extracted from [DP-009](design-principles.md#dp-9), where it had been the third of three jobs and had never once been cited — the symptom [DP-012](design-principles.md#dp-12) names. Promoted on its second substrate: [DP-009](design-principles.md#dp-9) found it in the file tree (a `.stub` beside the page it feeds, two `README.md` files with opposite rules), and a typed `overrides` edge found it again in the citation graph, where the edge's prose had to name which clause of its target it argued with*
