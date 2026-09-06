@@ -52,7 +52,7 @@ import sys
 from . import adr_index as builder
 from . import (adr_pending, badges, chains, ci, contract, doc_refs, journal,
                link_targets, narrow_titles, pins, ref_status, remotes,
-               sources, statuses)
+               sources, statuses, templates)
 from .config import current
 
 # The closed status vocabulary (ADR-003). `Active` is the in-force state; the
@@ -359,7 +359,7 @@ FAILABLE = ("retired-citations", "unresolved-codes", "hand-written-urls",
             "broken-targets", "remote-drift", "inert-status",
             "source-mismatch", "source-unchecked",
             "legacy-spellings", "narrow-titles", "stale-directives",
-            "broken-chains",
+            "template-drift", "broken-chains",
             "pending-documents", "unlinted-files", "workflow-temp-codes")
 
 
@@ -525,6 +525,18 @@ def status_sections() -> list[tuple[str, str, list[str]]]:
             f"{len(broken)} declared relation(s) contradict themselves "
             "(a succession that loops, or a comparison only one side holds)",
             broken))
+
+    # A scheme's form against the scheme's contract. The template is exempt
+    # from every document check, so this is the only pass that reads it —
+    # and it is the file every document is a copy of, which is why a drift
+    # here is reported once and shows up as nothing at all downstream.
+    drift = templates.rows()
+    if drift:
+        sections.append((
+            "template-drift",
+            f"{len(drift)} scaffolded field(s) contradict the scheme's own "
+            "contract (a document copied from the form starts in the wrong "
+            "shape)", drift))
 
     # A directive that silently does nothing is worse than no directive.
     stale = ref_status.stale_annotations(result, docs) + stale_urls \

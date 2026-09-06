@@ -59,6 +59,7 @@ class, which is more than enough noise to get a check switched off.
 
 from __future__ import annotations
 
+import html
 import re
 import time
 import urllib.error
@@ -196,7 +197,11 @@ def _once(url: str, pattern: str) -> Fetched:
     except (urllib.error.URLError, OSError, ValueError) as error:
         return Fetched("unreachable", detail=str(error)[:80])
     if m := re.search(pattern, body, re.S):
-        return Fetched("ok", title=" ".join(m.group(1).split()))
+        # Metadata APIs serve XML and JSON, so a title arrives escaped: arXiv's
+        # Atom feed returns "Better &amp; Faster". Comparing that against a
+        # title a person typed reports a mismatch on the escaping, which is a
+        # false positive — and a check that cries wolf is a check nobody reads.
+        return Fetched("ok", title=" ".join(html.unescape(m.group(1)).split()))
     return Fetched("unparsed", detail="200, but `title_re` matched nothing")
 
 
