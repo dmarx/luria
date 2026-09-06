@@ -6,6 +6,7 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 
 ## Currently — [September 2026](2026-09.md)
 
+- [6 Sep 20:24 — What the vocabulary migration hits](2026-09.md#20260906202404)
 - [6 Sep 18:38 — The constraint was about the field, not the direction](2026-09.md#20260906183842)
 - [6 Sep 18:15 — The symmetry check became a fixer](2026-09.md#20260906181524)
 - [6 Sep 04:39 — The mechanism was built on a premise it did not enforce](2026-09.md#20260906043920)
@@ -35,9 +36,9 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 
 ## All books
 
-72 entries across 2 books, newest first.
+73 entries across 2 books, newest first.
 
 | Book | Entries | First | Last |
 |---|--:|---|---|
-| [2026-09](2026-09.md) | 26 | 2026-09-03 | 2026-09-06 |
+| [2026-09](2026-09.md) | 27 | 2026-09-03 | 2026-09-06 |
 | [2026-08](2026-08.md) | 46 | 2026-08-03 | 2026-08-28 |

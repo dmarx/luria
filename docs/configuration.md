@@ -97,6 +97,8 @@ carries its prefix, so a second scheme is an entry here (ADR-006).
 | `prefix` | `str` | *the table's own name* |
 | `dir` | `Path` | *required* |
 | `active` | `str` | `"Active"` |
+| `successor` | `str` | `"superseded_by"` |
+| `retires_on` | `str` | `"Superseded"` |
 | `render` | `str` | `"index"` |
 | `output` | `Path \| None` | *unset* |
 | `allocate` | `str` | `"filing"` |
