@@ -22,9 +22,12 @@ Nothing unacknowledged. ✅
 
 A reference the reader cannot follow: the code names no document in this record. A typo, a number carried in from another project, and an illustrative code in an example all look identical from here — telling them apart takes a human, so this is a report, not an error.
 
-**0 codes unaccounted for.** Not listed: 58 mentions marked deliberate with an `unresolved-ok:` comment (same syntax and scopes as `inactive-ok:` above).
+**1 code unaccounted for.** Not listed: 58 mentions marked deliberate with an `unresolved-ok:` comment (same syntax and scopes as `inactive-ok:` above).
 
-Every code resolves. ✅
+
+### ADR-000 — resolves to nothing (1 unmarked site · 2 other mentions marked deliberate)
+
+- [`tests/test_lint.py:417`](../../tests/test_lint.py)
 
 ## Files that opt out of reference checking
 
