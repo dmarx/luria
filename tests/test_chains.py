@@ -337,3 +337,140 @@ def test_prose_naming_a_retired_step_is_still_a_citation(
     result = ref_status.scan()
     sites = [c.path.name for c in result.cited.get("LIT-001", [])]
     assert "LIT-002.md" in sites, sites
+
+
+# --- Annotating a step with a declared field (#173) -------------------------
+#
+# A chain renders order, title and status. A record that carries a second axis
+# — how far the *field* has converged, as against what this record asserts —
+# has the fork/trunk distinction in its data and no way to show it: the page
+# renders an agreed trunk and a disputed branch identically.
+
+SHOWN = """
+[luria.chains.lineage]
+scheme   = "LIT"
+relation = "extends"
+sibling  = "compared_against"
+output   = "docs/lineage.md"
+title    = "Lines of work"
+facet_by = ["status", "consensus"]
+"""
+
+VOCAB = """
+[luria.schemes.LIT.fields.consensus]
+vocabulary = "consensus"
+default    = "unassessed"
+"""
+
+
+def _showing(tmp_path, monkeypatch):
+    root = project(tmp_path, monkeypatch, RELATIONS + VOCAB + SHOWN)
+    write(root, "record/literature.d/consensus.yaml",
+          "unassessed:\n  label: Not judged\ncontested:\n  label: In dispute\n"
+          "converged:\n  label: Agreed\n")
+    config.reset()
+    return root
+
+
+def _note(root, number, title, *, consensus=None, **kw):
+    path = note(root, number, title, **kw)
+    if consensus:
+        t = path.read_text().replace("tags:", f"consensus: {consensus}\ntags:", 1)
+        path.write_text(t)
+    return path
+
+
+def test_a_step_shows_each_named_field(tmp_path, monkeypatch):
+    root = _showing(tmp_path, monkeypatch)
+    _note(root, 1, "The trunk", consensus="converged")
+    _note(root, 2, "The fork", consensus="contested", extends=["LIT-001"])
+    page = chains.outputs()[root / "docs/lineage.md"]
+    assert "converged" in page and "contested" in page
+
+
+def test_the_default_is_shown_like_any_other_value(tmp_path, monkeypatch):
+    """ADR-076: a field with a default is never absent, so a step that says
+    nothing still has a value, and hiding it would make the page disagree
+    with the record."""
+    root = _showing(tmp_path, monkeypatch)
+    _note(root, 1, "The trunk")
+    _note(root, 2, "The fork", extends=["LIT-001"])
+    page = chains.outputs()[root / "docs/lineage.md"]
+    assert page.count("unassessed") == 2
+
+
+def test_nothing_declared_renders_status_alone(tmp_path, monkeypatch):
+    root = project(tmp_path, monkeypatch)
+    note(root, 1, "The original")
+    note(root, 2, "The replacement", extends=["LIT-001"])
+    page = chains.outputs()[root / "docs/lineage.md"]
+    assert "*(Active)*" in page
+
+
+def test_showing_a_field_the_scheme_does_not_declare_is_a_config_error(
+        tmp_path, monkeypatch):
+    """Same reason a chain over an undeclared relation is: it would render
+    nothing, and nothing looks exactly like correct (DP-15)."""
+    with pytest.raises(ValueError, match="consensus"):
+        project(tmp_path, monkeypatch, RELATIONS + SHOWN)
+        config.current()
+
+
+def test_facet_by_names_every_axis_including_status(
+        tmp_path, monkeypatch):
+    """`status` has no privileged place on this page.
+
+    It rendered implicitly before, with `facet_by` naming "the other one" —
+    which made the chain the last thing still treating `status` as a
+    built-in axis after #181 made it a declared vocabulary like any other.
+    The chain names what it shows; `status` is in that list or it is not."""
+    root = project(tmp_path, monkeypatch, RELATIONS + VOCAB + """
+[luria.chains.lineage]
+scheme   = "LIT"
+relation = "extends"
+output   = "docs/lineage.md"
+facet_by = ["consensus"]
+""")
+    write(root, "record/literature.d/consensus.yaml",
+          "unassessed:\n  label: Not judged\ncontested:\n  label: In dispute\n")
+    config.reset()
+    _note(root, 1, "The trunk", consensus="contested")
+    _note(root, 2, "The fork", extends=["LIT-001"])
+    page = chains.outputs()[root / "docs/lineage.md"]
+    assert "contested" in page
+    assert "Active" not in page, page
+
+
+def test_facet_by_defaults_to_status_alone(tmp_path, monkeypatch):
+    """So a chain that says nothing renders what it always rendered."""
+    root = project(tmp_path, monkeypatch)
+    note(root, 1, "The original")
+    note(root, 2, "The replacement", extends=["LIT-001"])
+    assert config.current().chains["lineage"].facet_by == ("status",)
+    page = chains.outputs()[root / "docs/lineage.md"]
+    assert "*(Active)*" in page
+
+
+def test_a_scalar_facet_by_still_reads(tmp_path, monkeypatch):
+    """One field is a list of one, written the shorter way."""
+    root = project(tmp_path, monkeypatch, RELATIONS + """
+[luria.chains.lineage]
+scheme   = "LIT"
+relation = "extends"
+output   = "docs/lineage.md"
+facet_by = "status"
+""")
+    config.reset()
+    assert config.current().chains["lineage"].facet_by == ("status",)
+
+
+def test_a_facet_naming_nothing_is_refused(tmp_path, monkeypatch):
+    with pytest.raises(ValueError, match="nowhere"):
+        project(tmp_path, monkeypatch, RELATIONS + """
+[luria.chains.lineage]
+scheme   = "LIT"
+relation = "extends"
+output   = "docs/lineage.md"
+facet_by = ["status", "nowhere"]
+""")
+        config.current()
