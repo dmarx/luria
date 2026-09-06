@@ -1,5 +1,5 @@
 # tests/test_relations.py
-"""A relation and its converse (#180).
+"""A relation and its converse (#178, #180).
 
 `compared_against` is symmetric and `extends` is not, and the first
 implementation drew the wrong conclusion from that: it completed the
@@ -281,7 +281,7 @@ def test_the_class_is_promotable_and_wired(tmp_path, monkeypatch):
     assert "one-sided-relations" in {n for n, _, _ in lint.status_sections()}
 
 
-# --- Adding versus removing (#181) -----------------------------------------
+# --- Adding versus removing (#180) -----------------------------------------
 #
 # The first cut of this mechanism was monotonic: it wrote a missing side and
 # had no idea a side could go away. Delete `extends: LIT-001` from LIT-002,

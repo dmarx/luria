@@ -283,7 +283,7 @@ class Reference:
     is what symmetry *is*. Declaring it is what licenses `luria link --fix`
     to write one side from the other, and what makes a one-sided pair a
     finding; a relation with no declared converse is left entirely alone,
-    because its reverse edge would be a guess (#180).
+    because its reverse edge would be a guess (#178).
 
     `many` says the field holds a list of codes rather than one. Without it
     a list was stringified and its first code checked, the rest ignored —

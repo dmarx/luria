@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """A relation and its converse: the fact stated once, written where it is
-true (#180).
+true (#178); a relation being removed propagates too (#180).
 
 A reference field is a typed relation, and most relations have a name for
 being read backwards. If A `extends` B then B is `extended_by` A. If A is

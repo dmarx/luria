@@ -153,7 +153,7 @@ def test_a_cycle_does_not_crash_the_walk(tmp_path, monkeypatch):
 
 def test_a_one_sided_relation_is_not_this_check_s_business(
         tmp_path, monkeypatch):
-    """It moved to `relations.py` (#180). A declared pair is one-sided or it
+    """It moved to `relations.py` (#178). A declared pair is one-sided or it
     is not, whether or not a chain walks it — so the finding belongs to the
     relation, and `broken-chains` keeps only what is about the sequence."""
     from luria import relations
