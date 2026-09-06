@@ -50,7 +50,7 @@ import re
 import sys
 
 from . import adr_index as builder
-from . import (adr_pending, badges, ci, contract, doc_refs, journal,
+from . import (adr_pending, badges, chains, ci, contract, doc_refs, journal,
                link_targets, narrow_titles, pins, ref_status, remotes,
                sources, statuses, templates)
 from .config import current
@@ -357,7 +357,7 @@ FAILABLE = ("retired-citations", "unresolved-codes", "hand-written-urls",
             "broken-targets", "remote-drift", "inert-status",
             "source-mismatch", "source-unchecked",
             "legacy-spellings", "narrow-titles", "stale-directives",
-            "template-drift",
+            "template-drift", "broken-chains",
             "pending-documents", "unlinted-files", "workflow-temp-codes")
 
 
@@ -511,6 +511,18 @@ def status_sections() -> list[tuple[str, str, list[str]]]:
             f"{len(narrow)} title(s) name a project noun in a scheme whose "
             "documents claim to transfer (`broad-ok:` acknowledges another "
             "sense)", narrow))
+
+    # A declared sequence contradicting itself: a succession that loops, or
+    # a comparison one side declares and the other does not. Both are
+    # structural, so neither needs an acknowledgement — there is no reading
+    # under which either is what the author meant.
+    broken = chains.rows()
+    if broken:
+        sections.append((
+            "broken-chains",
+            f"{len(broken)} declared relation(s) contradict themselves "
+            "(a succession that loops, or a comparison only one side holds)",
+            broken))
 
     # A scheme's form against the scheme's contract. The template is exempt
     # from every document check, so this is the only pass that reads it —
