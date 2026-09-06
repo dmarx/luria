@@ -6,6 +6,8 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 
 ## Currently — [September 2026](2026-09.md)
 
+- [6 Sep 18:38 — The constraint was about the field, not the direction](2026-09.md#20260906183842)
+- [6 Sep 18:15 — The symmetry check became a fixer](2026-09.md#20260906181524)
 - [6 Sep 04:39 — The mechanism was built on a premise it did not enforce](2026-09.md#20260906043920)
 - [6 Sep 00:38 — The rebase was the wrong fix; the field was already split](2026-09.md#20260906003842)
 - [6 Sep 00:30 — Every fixture passed and every rendered link was broken](2026-09.md#20260906003013)
@@ -33,9 +35,9 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 
 ## All books
 
-70 entries across 2 books, newest first.
+72 entries across 2 books, newest first.
 
 | Book | Entries | First | Last |
 |---|--:|---|---|
-| [2026-09](2026-09.md) | 24 | 2026-09-03 | 2026-09-06 |
+| [2026-09](2026-09.md) | 26 | 2026-09-03 | 2026-09-06 |
 | [2026-08](2026-08.md) | 46 | 2026-08-03 | 2026-08-28 |
