@@ -163,11 +163,13 @@ uncommitted view cannot be stale.)
 ## luria link
 
 ```
-luria link [PATHS…] [--fix]
+luria link [PATHS…] [--fix] [--links-only]
 ```
 
-Finds every linkable reference in the given files (default: every
-non-generated markdown file the record knows about): bare codes
+Spells out what the record left implicit, in two places.
+
+**Links.** Finds every linkable reference in the given files (default:
+every non-generated markdown file the record knows about): bare codes
 (`ADR-012`, `DP-3`), temporary codes, remote codes (`LU-ADR-013`),
 issue numbers, and `[[wikilinks]]`. Prints per-file counts; with `--fix`,
 rewrites them into links whose relative targets are computed *for the
@@ -176,6 +178,19 @@ hand-writing targets is the one thing the workflow forbids.
 
 References inside backticks, fences, existing links, HTML comments, and
 frontmatter (except designated prose fields) are left alone.
+
+**Back-references.** A chain's `sibling` relation is symmetric: "this
+paper was compared against that one" is a fact both documents hold, and
+one side declaring it alone is the `broken-chains` finding. `--fix`
+writes the missing side, so you declare a comparison once — on the
+document that ran it — rather than opening every other member to record
+it. The chain's `relation` is never mirrored: succession is directed,
+and a back-reference there would manufacture a cycle.
+
+Completion reads every document of a chain's scheme, because that is
+what "missing" is defined against, so `PATHS` narrows the linking only.
+`--links-only` skips it entirely — the behaviour `--fix` had before
+completion existed, for a run that must touch nothing but link text.
 
 ## luria lint
 

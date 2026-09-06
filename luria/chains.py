@@ -30,10 +30,27 @@ Two shapes, and the difference matters:
   against another is a fact both documents hold, so one side declaring it
   alone is one document updated and one not — which is the failure the field
   exists to end, reappearing inside the mechanism. It is a finding.
+
+**The symmetry is completed, not demanded.** Requiring the author to write
+both sides was the wrong remedy and the first consumer proved it: a later
+paper compares itself to an earlier one, the earlier one cannot possibly have
+declared a comparison to work that did not exist, and the fifth rival in a
+family means opening four existing notes to file one paper. Three documents
+were edited there for one comparison. That is the edit-N-places shape this
+module exists to remove, reappearing as field churn instead of paragraph
+churn.
+
+So the finding stays — it is a true statement about the record — and
+`luria link --fix` satisfies it, the way `legacy-spellings` is reported with
+"`luria link --fix` upgrades them". You declare a comparison once, on the
+document that ran it; the fixer writes the back-references. `completions()`
+is what it does, and it never touches `relation`: succession is directed, and
+mirroring it would invent a cycle.
 """
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 
 from .adr_index import Adr, load_scheme, prefix_for
@@ -55,6 +72,91 @@ class Line:
     @property
     def members(self) -> list[Adr]:
         return self.spine + self.alongside
+
+
+@dataclass(frozen=True)
+class Completion:
+    """One back-reference a symmetric relation is missing: write `code` into
+    `path`'s `field`."""
+    path: object
+    field: str
+    code: str
+
+
+def completions() -> list[Completion]:
+    """Every back-reference a `sibling` relation is missing, deduplicated and
+    ordered so a run is reproducible.
+
+    Only `sibling`. `relation` is directed — A extends B does not make B
+    extend A — and mirroring it would manufacture the cycle the lint reports.
+    A cycle is the other `broken-chains` finding and is deliberately not
+    completable: which of two steps came first is not recoverable from the
+    data, only from a person."""
+    out: list[Completion] = []
+    for chain in current().chains.values():
+        if not chain.sibling:
+            continue
+        docs, _, cross = _load(chain)
+        for code in sorted(docs):
+            for other in sorted(cross[code]):
+                if code not in cross[other]:
+                    out.append(Completion(docs[other].path, chain.sibling,
+                                          code))
+    return sorted(set(out), key=lambda c: (str(c.path), c.field, c.code))
+
+
+def _add_to_field(text: str, name: str, code: str) -> str:
+    """Add one code to a list-valued frontmatter field, creating the field
+    when it is absent and widening a scalar rather than replacing it.
+
+    A `many` field accepts one code written as a scalar (a list of one), so
+    the scalar case is real and overwriting it would silently delete a
+    relation — the quiet kind of loss this whole module is about."""
+    if not text.startswith("---\n"):
+        return text
+    end = text.index("\n---\n", 3) + 1
+    head, rest = text[4:end], text[end:]
+    lines = head.splitlines(keepends=True)
+    out, at, done = [], 0, False
+    while at < len(lines):
+        line = lines[at]
+        if not done and re.match(rf"^{re.escape(name)}\s*:", line):
+            value = line.split(":", 1)[1].strip()
+            at += 1
+            items = []
+            while at < len(lines) and lines[at].startswith("- "):
+                items.append(lines[at])
+                at += 1
+            out.append(f"{name}:\n")
+            if value:
+                out.append(f"- {value}\n")
+            out.extend(items)
+            out.append(f"- {code}\n")
+            done = True
+            continue
+        out.append(line)
+        at += 1
+    if not done:
+        out.append(f"{name}:\n- {code}\n")
+    return "---\n" + "".join(out) + rest
+
+
+def complete(fix: bool = False) -> list[Completion]:
+    """Write every missing back-reference; report them without `fix`.
+
+    Grouped per file so a document missing several gains them in one write,
+    and re-read from disk between chains so a second pass finds nothing."""
+    todo = completions()
+    if fix:
+        by_path: dict = {}
+        for entry in todo:
+            by_path.setdefault(entry.path, []).append(entry)
+        for path, entries in by_path.items():
+            text = path.read_text(encoding="utf-8")
+            for entry in entries:
+                text = _add_to_field(text, entry.field, entry.code)
+            path.write_text(text, encoding="utf-8")
+    return todo
 
 
 def _codes(doc: Adr, name: str, contract) -> list[str]:
@@ -181,7 +283,8 @@ def rows() -> list[str]:
                         f"{cfg.rel(docs[other].path)}: {code} declares "
                         f"`{chain.sibling}: {other}` and {other} does not "
                         f"declare {code} — a comparison is a fact both "
-                        f"documents hold")
+                        f"documents hold (`luria link --fix` writes the "
+                        f"back-reference)")
     return sorted(set(found))
 
 

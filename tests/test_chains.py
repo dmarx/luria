@@ -336,3 +336,130 @@ def test_prose_naming_a_retired_step_is_still_a_citation(
     result = ref_status.scan()
     sites = [c.path.name for c in result.cited.get("LIT-001", [])]
     assert "LIT-002.md" in sites, sites
+
+
+# --- Completing a symmetric relation (#178) ---------------------------------
+#
+# `compared_against` is a fact both documents hold, so a one-sided declaration
+# is a finding. Requiring the author to write both sides is the wrong remedy:
+# a later paper compares itself to an earlier one, the earlier one cannot have
+# declared a comparison to work that did not exist, and the fifth rival in a
+# family means opening four existing notes to file one paper. That is the
+# edit-N-places shape this feature exists to remove, reappearing as field
+# churn instead of paragraph churn.
+#
+# So the finding stays and the fixer satisfies it, the way `legacy-spellings`
+# is reported with "`luria link --fix` upgrades them".
+
+def test_a_one_sided_comparison_is_a_completion(tmp_path, monkeypatch):
+    root = project(tmp_path, monkeypatch)
+    note(root, 1, "One design")
+    note(root, 2, "The other", compared_against=["LIT-001"])
+    todo = chains.completions()
+    assert len(todo) == 1
+    assert todo[0].path.name == "LIT-001.md"
+    assert todo[0].field == "compared_against" and todo[0].code == "LIT-002"
+
+
+def test_completing_writes_the_back_reference(tmp_path, monkeypatch):
+    root = project(tmp_path, monkeypatch)
+    note(root, 1, "One design")
+    note(root, 2, "The other", compared_against=["LIT-001"])
+    assert chains.complete(fix=True)
+    config.reset()
+    assert chains.rows() == []
+    assert "LIT-002" in (root / "record/literature.d/LIT-001.md").read_text()
+
+
+def test_completing_is_idempotent(tmp_path, monkeypatch):
+    root = project(tmp_path, monkeypatch)
+    note(root, 1, "One design")
+    note(root, 2, "The other", compared_against=["LIT-001"])
+    chains.complete(fix=True)
+    config.reset()
+    assert chains.complete(fix=True) == []
+
+
+def test_without_fix_nothing_is_written(tmp_path, monkeypatch):
+    root = project(tmp_path, monkeypatch)
+    note(root, 1, "One design")
+    note(root, 2, "The other", compared_against=["LIT-001"])
+    before = (root / "record/literature.d/LIT-001.md").read_text()
+    assert chains.complete(fix=False)
+    assert (root / "record/literature.d/LIT-001.md").read_text() == before
+
+
+def test_a_scalar_field_becomes_a_list_rather_than_losing_a_value(
+        tmp_path, monkeypatch):
+    """`many` accepts one code written as a scalar. Appending must keep the
+    value that was there — the failure would be silent and would delete a
+    relation."""
+    root = project(tmp_path, monkeypatch)
+    note(root, 1, "One design")
+    note(root, 2, "The other")
+    note(root, 3, "The third", compared_against=["LIT-001"])
+    p = root / "record/literature.d/LIT-001.md"
+    p.write_text(p.read_text().replace("tags:", "compared_against: LIT-002\ntags:", 1))
+    config.reset()
+    chains.complete(fix=True)
+    config.reset()
+    docs, _, cross = chains._load(config.current().chains["lineage"])
+    assert set(cross["LIT-001"]) == {"LIT-002", "LIT-003"}
+
+
+def test_the_spine_relation_is_never_mirrored(tmp_path, monkeypatch):
+    """Succession is directed. Mirroring `extends` would invent a cycle."""
+    root = project(tmp_path, monkeypatch)
+    note(root, 1, "The original")
+    note(root, 2, "The replacement", extends=["LIT-001"])
+    assert chains.completions() == []
+
+
+def test_a_cycle_is_not_something_the_fixer_can_repair(tmp_path, monkeypatch):
+    """The other `broken-chains` finding needs a person: which of the two
+    steps came first is not recoverable from the data."""
+    root = project(tmp_path, monkeypatch)
+    note(root, 1, "A", extends=["LIT-002"])
+    note(root, 2, "B", extends=["LIT-001"])
+    assert chains.completions() == []
+    assert len(chains.rows()) == 1
+
+
+def test_the_finding_names_the_fixer(tmp_path, monkeypatch):
+    root = project(tmp_path, monkeypatch)
+    note(root, 1, "One design")
+    note(root, 2, "The other", compared_against=["LIT-001"])
+    assert "luria link --fix" in chains.rows()[0]
+
+
+def test_link_fix_completes_by_default(tmp_path, monkeypatch):
+    from luria import link_refs
+    root = project(tmp_path, monkeypatch)
+    note(root, 1, "One design")
+    note(root, 2, "The other", compared_against=["LIT-001"])
+    link_refs.run(fix=True)
+    config.reset()
+    assert chains.rows() == []
+
+
+def test_links_only_reproduces_the_old_behaviour(tmp_path, monkeypatch):
+    """The escape hatch: exactly what `--fix` did before completion existed."""
+    from luria import link_refs
+    root = project(tmp_path, monkeypatch)
+    note(root, 1, "One design")
+    note(root, 2, "The other", compared_against=["LIT-001"])
+    before = (root / "record/literature.d/LIT-001.md").read_text()
+    link_refs.run(fix=True, links_only=True)
+    config.reset()
+    assert (root / "record/literature.d/LIT-001.md").read_text() == before
+    assert len(chains.rows()) == 1
+
+
+def test_completion_needs_fix_just_like_linking(tmp_path, monkeypatch):
+    from luria import link_refs
+    root = project(tmp_path, monkeypatch)
+    note(root, 1, "One design")
+    note(root, 2, "The other", compared_against=["LIT-001"])
+    before = (root / "record/literature.d/LIT-001.md").read_text()
+    link_refs.run()
+    assert (root / "record/literature.d/LIT-001.md").read_text() == before
