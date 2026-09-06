@@ -459,3 +459,17 @@ def test_the_finding_says_which_way_the_fixer_will_go(tmp_path, monkeypatch):
     edit(root, 2, "extends:\n- LIT-001\n")
     row, = relations.rows()
     assert "remove" in row or "stale" in row, row
+
+
+def test_a_converse_field_is_not_a_citation_site(tmp_path, monkeypatch):
+    """`extends:` is exempt because a predecessor being retired is what a
+    line looks like. `extended_by:` says the same fact from the far end, so
+    exempting one and not the other would report every completed edge."""
+    from luria import ref_status
+    root = project(tmp_path, monkeypatch)
+    note(root, 1, "The original", extended_by=["LIT-002"])
+    p = note(root, 2, "The replacement", extends=["LIT-001"])
+    p.write_text(p.read_text().replace("status: Active", "status: Proposed"))
+    config.reset()
+    cited = ref_status.scan().cited.get("LIT-002", [])
+    assert cited == [], [str(c.path) for c in cited]

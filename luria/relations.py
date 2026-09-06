@@ -398,3 +398,46 @@ def complete(fix: bool = False) -> list[Repair]:
                         else _drop_from_field(text, entry.field, entry.code))
             path.write_text(text, encoding="utf-8")
     return todo
+
+
+def relation_spans(path, text: str) -> list[tuple[int, int]]:
+    """Where a document declares its place in a line, as character spans.
+
+    Not a citation site. `extends:` names the step this work builds on, and
+    that step being retired is what a line *looks like* — a successor's
+    predecessor is superseded by construction. Reporting it would hand back
+    one "cites a retired document" finding per retired step in every chain,
+    at the field whose entire job is to name it, and the only way to quiet
+    them would be an acknowledgement comment per edge. `compared_against:`
+    goes the same way: a comparison against a design that has since been
+    retired stayed true when the design was retired.
+
+    The codes are still checked — that a reference resolves, and resolves in
+    the declared scheme, is the contract's business and unaffected. What is
+    suppressed is only the reading of these fields as *citations*, the way a
+    `formerly:` entry and a code inside a URL already are.
+
+    Both halves of a declared pair, not just the one a chain names: the
+    converse states the same fact from the far end, so exempting one and
+    reporting the other would hand back a finding for every edge the fixer
+    completes."""
+    cfg = current()
+    fields = {f for chain in cfg.chains.values()
+              for f in (chain.relation, chain.sibling)
+              if f and path.parent == cfg.schemes[chain.scheme].dir}
+    fields |= {f for prefix, field, back in pairs()
+               for f in (field, back)
+               if path.parent == cfg.schemes[prefix].dir}
+    if not fields:
+        return []
+    spans, at, active = [], 0, False
+    for line in text.splitlines(keepends=True):
+        stripped = line.split(":", 1)[0]
+        if active and not (line.startswith(("- ", "  ")) or not line.strip()):
+            active = False
+        if stripped in fields and line.rstrip().endswith(":"):
+            active = True
+        elif active:
+            spans.append((at, at + len(line)))
+        at += len(line)
+    return spans

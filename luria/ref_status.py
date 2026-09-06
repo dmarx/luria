@@ -308,8 +308,8 @@ def scan(files: list[Path] | None = None, docs: dict[str, Doc] | None = None) ->
         # The step it extends is superseded by construction, so reading the
         # field as a citation would report one finding per retired step in
         # every chain, at the field whose job is to name it (#171).
-        from . import chains as _chains
-        text = _blank(text, _chains.relation_spans(path, text))
+        from . import relations as _relations
+        text = _blank(text, _relations.relation_spans(path, text))
         # `LU-ADR-013` names the remote's decision 13, not this project's.
         # Blanking the composed span is what stops the local scheme pattern
         # reading a foreign code out of the middle of it (ADR-016) — but a
