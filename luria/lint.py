@@ -52,7 +52,7 @@ import sys
 from . import adr_index as builder
 from . import (adr_pending, badges, chains, ci, contract, doc_refs, journal,
                link_targets, narrow_titles, pins, ref_status, remotes,
-               sources, statuses, templates)
+               relations, sources, statuses, templates)
 from .config import current
 
 # The closed status vocabulary (ADR-003). `Active` is the in-force state; the
@@ -358,6 +358,7 @@ FAILABLE = ("retired-citations", "unresolved-codes", "hand-written-urls",
             "source-mismatch", "source-unchecked",
             "legacy-spellings", "narrow-titles", "stale-directives",
             "template-drift", "broken-chains",
+            "one-sided-relations",
             "pending-documents", "unlinted-files", "workflow-temp-codes")
 
 
@@ -520,9 +521,18 @@ def status_sections() -> list[tuple[str, str, list[str]]]:
     if broken:
         sections.append((
             "broken-chains",
-            f"{len(broken)} declared relation(s) contradict themselves "
-            "(a succession that loops, or a comparison only one side holds)",
-            broken))
+            f"{len(broken)} succession(s) loop — a step that comes before "
+            "itself, so the sequence has no earliest member", broken))
+
+    # A relation and its declared converse are one fact written in two
+    # places. One place holding it is not a disagreement to adjudicate, it
+    # is a write nobody has made yet — hence the fixer in the wording.
+    lopsided = relations.rows()
+    if lopsided:
+        sections.append((
+            "one-sided-relations",
+            f"{len(lopsided)} declared relation(s) are held by one side "
+            "only (`luria link --fix` writes the other)", lopsided))
 
     # A scheme's form against the scheme's contract. The template is exempt
     # from every document check, so this is the only pass that reads it —

@@ -1,20 +1,28 @@
 #!/usr/bin/env python3
-"""Rewrite bare ADR / design-principle / issue references in the docs as links.
+"""Spell what the record left implicit: bare references become links, and
+a relation held by one side gains its converse.
 
-    luria link            # report what would change
-    luria link --fix      # write it
+    luria link                    # report what would change
+    luria link --fix              # write it
+    luria link --fix --links-only # links only, no relation completion
 
-The scanning and masking rules live in `doc_refs.py`, shared with
-`luria.lint` so the linter and the fixer can never disagree. This is
-the one-shot migration tool plus the escape hatch for "lint says I left a bare
-reference": run it with `--fix` instead of hand-editing (ADR-005).
+`--fix` repairs both because both are the same kind of mistake: a fact the
+author stated once that the record needs written in a particular place. The
+scanning and masking rules live in `doc_refs.py`, shared with `luria.lint` so
+the linter and the fixer can never disagree; the relation completion lives in
+`relations.py` beside the check that reports it. This is the one-shot migration
+tool plus the escape hatch for "lint says I left a bare reference": run it
+with `--fix` instead of hand-editing (ADR-005).
+
+`--links-only` is that escape hatch's own escape hatch — the pre-completion
+behaviour, for a run that must touch nothing but link text.
 """
 
 from __future__ import annotations
 
 from pathlib import Path
 
-from . import doc_refs
+from . import doc_refs, relations
 from .config import current
 
 
@@ -37,13 +45,30 @@ def linkify_files(paths: list[Path], fix: bool = False) -> tuple[int, list[Path]
     return total, written
 
 
-def run(*paths: str, fix: bool = False) -> None:
-    """Rewrite bare references as links — every doc, or just PATHS.
-    Reports what would change; --fix writes it."""
+def run(*paths: str, fix: bool = False, links_only: bool = False) -> None:
+    """Rewrite bare references as links and complete declared relations —
+    every doc, or just PATHS. Reports what would change; --fix writes it.
+    --links-only skips the relation completion.
+
+    Completion is whole-record: it reads every document of a scheme to know
+    what is missing, so PATHS narrows the linking only."""
     files = [Path(p).resolve() for p in paths] or doc_refs.doc_files()
     total, _ = linkify_files(files, fix)
     verb = "linked" if fix else "would link"
     print(f"{verb} {total} reference(s) in {len(files)} file(s)")
+    if links_only:
+        return
+    repairs = relations.complete(fix=fix)
+    if repairs:
+        files = len({str(r.path) for r in repairs})
+        added = sum(1 for r in repairs if r.op == "add")
+        dropped = len(repairs) - added
+        did = "wrote" if fix else "would write"
+        parts = ([f"{did} {added} back-reference(s)"] if added else [])
+        if dropped:
+            parts.append(f"{'removed' if fix else 'would remove'} "
+                         f"{dropped} stale one(s)")
+        print(f"{' and '.join(parts)} in {files} file(s)")
 
 
 if __name__ == "__main__":

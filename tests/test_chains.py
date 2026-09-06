@@ -35,8 +35,9 @@ title    = "Lines of work"
 
 RELATIONS = """
 [luria.schemes.LIT.references]
-extends = { scheme = "LIT", required = false, many = true }
-compared_against = { scheme = "LIT", required = false, many = true }
+extends = { scheme = "LIT", required = false, many = true, converse = "extended_by" }
+extended_by = { scheme = "LIT", required = false, many = true, converse = "extends" }
+compared_against = { scheme = "LIT", required = false, many = true, converse = "compared_against" }
 """
 
 
@@ -150,17 +151,17 @@ def test_a_cycle_does_not_crash_the_walk(tmp_path, monkeypatch):
     assert {d.code for d in line.spine} == {"LIT-001", "LIT-002"}
 
 
-def test_a_one_sided_comparison_is_a_finding(tmp_path, monkeypatch):
-    """Comparison is symmetric in a way succession is not, so one side
-    declaring it is one document updated and one not — the exact failure the
-    field exists to prevent."""
+def test_a_one_sided_relation_is_not_this_check_s_business(
+        tmp_path, monkeypatch):
+    """It moved to `relations.py` (#178). A declared pair is one-sided or it
+    is not, whether or not a chain walks it — so the finding belongs to the
+    relation, and `broken-chains` keeps only what is about the sequence."""
+    from luria import relations
     root = project(tmp_path, monkeypatch)
     note(root, 1, "One design")
     note(root, 2, "The other", compared_against=["LIT-001"])
-    rows = chains.rows()
-    assert len(rows) == 1
-    assert "LIT-001" in rows[0] and "LIT-002" in rows[0]
-    assert "compared_against" in rows[0]
+    assert chains.rows() == []
+    assert len(relations.rows()) == 1
 
 
 def test_a_two_sided_comparison_is_clean(tmp_path, monkeypatch):
@@ -264,8 +265,8 @@ def test_the_class_is_promotable_and_wired(tmp_path, monkeypatch):
     from luria import lint
     assert "broken-chains" in lint.FAILABLE
     root = project(tmp_path, monkeypatch)
-    note(root, 1, "One design")
-    note(root, 2, "The other", compared_against=["LIT-001"])
+    note(root, 1, "A", extends=["LIT-002"])
+    note(root, 2, "B", extends=["LIT-001"])
     assert "broken-chains" in {n for n, _, _ in lint.status_sections()}
 
 

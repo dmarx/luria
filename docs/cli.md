@@ -163,11 +163,13 @@ uncommitted view cannot be stale.)
 ## luria link
 
 ```
-luria link [PATHS…] [--fix]
+luria link [PATHS…] [--fix] [--links-only]
 ```
 
-Finds every linkable reference in the given files (default: every
-non-generated markdown file the record knows about): bare codes
+Spells out what the record left implicit, in two places.
+
+**Links.** Finds every linkable reference in the given files (default:
+every non-generated markdown file the record knows about): bare codes
 (`ADR-012`, `DP-3`), temporary codes, remote codes (`LU-ADR-013`),
 issue numbers, and `[[wikilinks]]`. Prints per-file counts; with `--fix`,
 rewrites them into links whose relative targets are computed *for the
@@ -176,6 +178,65 @@ hand-writing targets is the one thing the workflow forbids.
 
 References inside backticks, fences, existing links, HTML comments, and
 frontmatter (except designated prose fields) are left alone.
+
+**Back-references.** A reference field may declare its `converse` — the
+field holding the same relation read backwards:
+
+```toml
+[luria.schemes.LIT.references]
+extends          = { scheme = "LIT", many = true, converse = "extended_by" }
+extended_by      = { scheme = "LIT", many = true, converse = "extends" }
+compared_against = { scheme = "LIT", many = true, converse = "compared_against" }
+```
+
+A relation naming *itself* is what symmetry is, so there is one rule and
+not two. `--fix` writes the side that is missing, in either direction, so
+the author states the relation once on whichever document they were
+holding. One side holding it alone is the `one-sided-relations` finding.
+
+A relation with **no declared converse is left entirely alone** — nothing
+written, nothing reported. Its reverse edge would be a guess, and a guess
+in the record is worse than an absence, because an absence looks like one.
+
+**Adding and removing are both propagated.** A one-sided pair means one of
+two opposite things — somebody wrote the relation and the other side has
+not caught up, or somebody *deleted* it and the other side is stale — and
+the working tree holds neither answer. Which side changed since the last
+commit does, so `--fix` reads it from git:
+
+| since HEAD | `--fix` does |
+|---|---|
+| a side gained the relation | writes it to the other side |
+| a side lost it | removes it from the other side |
+| one side gained while the other lost | nothing — reports the conflict |
+| nothing changed | writes the missing side |
+
+The last row is what a corpus predating the fixer needs. It can read a
+deletion wrong when that deletion was committed before `--fix` ran, and it
+is self-correcting: delete it once more and the deletion *is* a change.
+With no repository or no commit yet, every relation reads as added, which
+is right for a document git has never seen.
+
+**`--fix` never makes `luria lint` worse.** The fixer edits frontmatter and
+frontmatter is what the contract judges, so a repair can move a document
+from satisfying its scheme to violating it — a back-reference added into a
+field group that permits only one of two fields, or a stale one removed out
+of a field the document's status requires. Any repair that would introduce a
+*new* violation is not applied; the pair stays one-sided and the finding
+says which two rules disagree. A document already in breach elsewhere still
+gets its back-references, or one unrelated mistake would freeze every
+relation it stands in.
+
+The one thing `--fix` will not touch is a contradiction: a document naming
+another in both directions of one pair, two documents each claiming to
+come first, or a relation withdrawn on one side and asserted on the other
+in the same working tree. Nothing is missing there — two incompatible
+things are present, and the data does not say which was meant.
+
+Completion reads every document of a scheme, because that is what
+"missing" is defined against, so `PATHS` narrows the linking only.
+`--links-only` skips it entirely — the behaviour `--fix` had before
+completion existed, for a run that must touch nothing but link text.
 
 ## luria lint
 
