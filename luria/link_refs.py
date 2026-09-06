@@ -58,11 +58,17 @@ def run(*paths: str, fix: bool = False, links_only: bool = False) -> None:
     print(f"{verb} {total} reference(s) in {len(files)} file(s)")
     if links_only:
         return
-    filled = relations.complete(fix=fix)
-    if filled:
-        verb = "completed" if fix else "would complete"
-        print(f"{verb} {len(filled)} back-reference(s) in "
-              f"{len({str(c.path) for c in filled})} file(s)")
+    repairs = relations.complete(fix=fix)
+    if repairs:
+        files = len({str(r.path) for r in repairs})
+        added = sum(1 for r in repairs if r.op == "add")
+        dropped = len(repairs) - added
+        did = "wrote" if fix else "would write"
+        parts = ([f"{did} {added} back-reference(s)"] if added else [])
+        if dropped:
+            parts.append(f"{'removed' if fix else 'would remove'} "
+                         f"{dropped} stale one(s)")
+        print(f"{' and '.join(parts)} in {files} file(s)")
 
 
 if __name__ == "__main__":

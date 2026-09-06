@@ -198,10 +198,30 @@ A relation with **no declared converse is left entirely alone** — nothing
 written, nothing reported. Its reverse edge would be a guess, and a guess
 in the record is worse than an absence, because an absence looks like one.
 
+**Adding and removing are both propagated.** A one-sided pair means one of
+two opposite things — somebody wrote the relation and the other side has
+not caught up, or somebody *deleted* it and the other side is stale — and
+the working tree holds neither answer. Which side changed since the last
+commit does, so `--fix` reads it from git:
+
+| since HEAD | `--fix` does |
+|---|---|
+| a side gained the relation | writes it to the other side |
+| a side lost it | removes it from the other side |
+| one side gained while the other lost | nothing — reports the conflict |
+| nothing changed | writes the missing side |
+
+The last row is what a corpus predating the fixer needs. It can read a
+deletion wrong when that deletion was committed before `--fix` ran, and it
+is self-correcting: delete it once more and the deletion *is* a change.
+With no repository or no commit yet, every relation reads as added, which
+is right for a document git has never seen.
+
 The one thing `--fix` will not touch is a contradiction: a document naming
-another in both directions of one pair, or two documents each claiming to
-come first. Nothing is missing there — two incompatible things are
-present, and the data does not say which was meant.
+another in both directions of one pair, two documents each claiming to
+come first, or a relation withdrawn on one side and asserted on the other
+in the same working tree. Nothing is missing there — two incompatible
+things are present, and the data does not say which was meant.
 
 Completion reads every document of a scheme, because that is what
 "missing" is defined against, so `PATHS` narrows the linking only.

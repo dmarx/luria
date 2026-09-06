@@ -37,21 +37,24 @@ no side to write and which reading was meant is not in the data.
 from __future__ import annotations
 
 import re
+import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
-from .adr_index import Adr, load_scheme
+from .adr_index import Adr, load_scheme, parse_frontmatter
 from .config import current
 from .contract import for_scheme, values_of
 
 
 @dataclass(frozen=True)
-class Completion:
-    """One back-reference a declared pair is missing: write `code` into
-    `path`'s `field`."""
+class Repair:
+    """One edit that makes a declared pair agree: add `code` to `path`'s
+    `field`, or remove it. Which of the two depends on what *changed* — see
+    `_intents`."""
     path: Path
     field: str
     code: str
+    op: str = "add"
 
 
 def pairs() -> list[tuple[str, str, str]]:
@@ -139,51 +142,175 @@ def _contradictions(field: str, back: str, held: dict) -> set[tuple[str, str]]:
     return clash
 
 
-def completions() -> list[Completion]:
-    """Every back-reference a declared pair is missing, deduplicated and
-    ordered so a run is reproducible.
+def _at_head(prefix: str, fields: set[str]) -> dict[str, str] | None:
+    """The committed text of every document of this scheme that declared one
+    of these fields at HEAD, keyed by path relative to the root.
 
-    A contradiction is skipped rather than completed: when a document names
-    another in both directions of one pair, nothing is absent — two
-    incompatible things are present, and choosing between them is a person's
-    job."""
-    out: list[Completion] = []
+    `None` means there is no baseline to compare against — no repository, or
+    no commit yet. Narrowed with `git grep` because the answer only depends
+    on documents that declared a relation, which is a handful of a corpus."""
+    cfg = current()
+    if not fields:
+        return {}
+    args = ["git", "grep", "-l", "-E",
+            f"^({'|'.join(sorted(re.escape(f) for f in fields))}):",
+            "HEAD", "--", str(cfg.schemes[prefix].dir)]
+    found = subprocess.run(args, cwd=cfg.root, capture_output=True, text=True)
+    if found.returncode > 1:          # 1 is "no matches", which is an answer
+        return None
+    out = {}
+    for line in found.stdout.splitlines():
+        _, _, rel = line.partition(":")
+        blob = subprocess.run(["git", "show", f"HEAD:{rel}"], cwd=cfg.root,
+                              capture_output=True, text=True)
+        if blob.returncode == 0:
+            out[rel] = blob.stdout
+    return out
+
+
+def _committed(prefix: str, field: str, back: str) -> tuple[set, set] | None:
+    """The two edge sets as HEAD held them: declared forward, and declared
+    from the converse side. `None` when there is no baseline."""
+    texts = _at_head(prefix, {field, back})
+    if texts is None:
+        return None
+    cfg, held = current(), {}
+    for rel, text in texts.items():
+        meta = parse_frontmatter(text)[0]
+        code = Path(rel).stem
+        held[code] = {f: _listed(meta.get(f)) for f in (field, back)}
+    forward = {(a, b) for a, f in held.items() for b in f[field]}
+    reverse = {(a, b) for b, f in held.items() for a in f[back]}
+    return forward, reverse
+
+
+def _listed(value) -> list[str]:
+    """Codes from a raw frontmatter value, list or scalar. Deliberately not
+    contract-resolved: HEAD's config is not necessarily this one's, and all
+    that is wanted here is what the text said."""
+    if value is None:
+        return []
+    if isinstance(value, list):
+        return [str(v).strip() for v in value]
+    return [str(value).strip()]
+
+
+def _now(field: str, back: str, held: dict) -> tuple[set, set]:
+    """The same two edge sets as the working tree holds them."""
+    forward = {(a, b) for a, others in held[field].items() for b in others}
+    reverse = {(a, b) for b, others in held[back].items() for a in others}
+    return forward, reverse
+
+
+def _intents(prefix: str, field: str, back: str, docs: dict, held: dict
+             ) -> tuple[list[Repair], list[tuple[str, str]]]:
+    """What to do about every edge either side declares, and the conflicts.
+
+    The rule is about *change*, not about state. A one-sided edge means one
+    of two opposite things — somebody wrote it and the other side has not
+    caught up, or somebody deleted it and the other side is stale — and the
+    working tree holds neither answer. What changed since the last commit
+    does.
+
+    Added on either side wins by being written to both. Removed on either
+    side wins by being taken from both. Added on one side while removed on
+    the other is two deliberate edits that contradict: reported, never
+    resolved, because writing either loses the other.
+
+    An edge nothing has touched falls through to adding, which is what a
+    corpus predating the fixer needs. That reading can be wrong — a deletion
+    committed before the fixer ran looks like nothing changed — but it is
+    self-correcting: delete it once more and the deletion *is* a change."""
+    now_f, now_b = _now(field, back, held)
+    base = _committed(prefix, field, back)
+    was_f, was_b = base if base else (set(), set())
+    repairs: list[Repair] = []
+    clashes: list[tuple[str, str]] = []
+    # A directed relation asserted both ways is a contradiction whichever
+    # fields carry it: A extends B and B extends A leaves neither earlier.
+    # Completing it would only write the second half of the cycle.
+    both_ways = ({e for e in now_f | now_b if e[::-1] in (now_f | now_b)}
+                 if field != back else set())
+    for a, b in sorted(now_f | now_b | was_f | was_b):
+        if a not in docs or b not in docs:
+            continue
+        edge = (a, b)
+        if edge in both_ways:
+            if a < b:
+                clashes.append(edge)
+            continue
+        added = ((edge in now_f and edge not in was_f)
+                 or (edge in now_b and edge not in was_b))
+        gone = ((edge in was_f and edge not in now_f)
+                or (edge in was_b and edge not in now_b))
+        if added and gone:
+            clashes.append(edge)
+        elif gone:
+            if edge in now_f:
+                repairs.append(Repair(docs[a].path, field, b, "remove"))
+            if edge in now_b:
+                repairs.append(Repair(docs[b].path, back, a, "remove"))
+        else:
+            if edge not in now_f:
+                repairs.append(Repair(docs[a].path, field, b, "add"))
+            if edge not in now_b:
+                repairs.append(Repair(docs[b].path, back, a, "add"))
+    return repairs, clashes
+
+
+def _mutual(field: str, back: str, held: dict,
+            edge: tuple[str, str]) -> bool:
+    """Whether this clash is the relation asserted in both directions, as
+    opposed to one side withdrawn while the other was asserted."""
+    if field == back:
+        return False
+    now_f, now_b = _now(field, back, held)
+    return edge[::-1] in (now_f | now_b)
+
+
+def completions() -> list[Repair]:
+    """Every edit a declared pair needs, deduplicated and ordered so a run is
+    reproducible. Empty when every pair already agrees."""
+    out: list[Repair] = []
     for prefix, field, back in pairs():
         docs, held = _held(prefix)
-        clash = _contradictions(field, back, held)
-        for code in sorted(docs):
-            for other in sorted(held[field][code]):
-                if (min(code, other), max(code, other)) in clash:
-                    continue
-                if code not in held[back].get(other, set()):
-                    out.append(Completion(docs[other].path, back, code))
-    return sorted(set(out), key=lambda c: (str(c.path), c.field, c.code))
+        out += _intents(prefix, field, back, docs, held)[0]
+    return sorted(set(out), key=lambda r: (str(r.path), r.field, r.code, r.op))
 
 
 def rows() -> list[str]:
-    """A declared pair that only one document holds, plus the contradictions
-    nothing can repair — reported in the record's own paths."""
+    """A declared pair the two documents do not agree on, said in the
+    record's own paths and naming what the fixer will do about it."""
     cfg = current()
     found: list[str] = []
     for prefix, field, back in pairs():
         docs, held = _held(prefix)
-        clash = _contradictions(field, back, held)
-        for both in sorted(clash):
-            one, two = both
-            found.append(
-                f"{cfg.rel(docs[one].path)}: {one} and {two} each stand "
-                f"before the other in `{field}`/`{back}` — one of the two "
-                f"declarations is wrong and the data does not say which")
-        for code in sorted(docs):
-            for other in sorted(held[field][code]):
-                if (min(code, other), max(code, other)) in clash:
-                    continue
-                if code not in held[back].get(other, set()):
-                    found.append(
-                        f"{cfg.rel(docs[other].path)}: {code} declares "
-                        f"`{field}: {other}` and {other} does not declare "
-                        f"`{back}: {code}` — a relation and its converse are "
-                        f"one fact (`luria link --fix` writes the other side)")
+        repairs, clashes = _intents(prefix, field, back, docs, held)
+        for a, b in clashes:
+            if _mutual(field, back, held, (a, b)):
+                found.append(
+                    f"{cfg.rel(docs[a].path)}: {a} and {b} each stand before "
+                    f"the other in `{field}`/`{back}` — one of the two "
+                    f"declarations is wrong and the data does not say which")
+            else:
+                found.append(
+                    f"{cfg.rel(docs[a].path)}: `{field}: {b}` was withdrawn "
+                    f"on one side and asserted on the other since the last "
+                    f"commit — two deliberate edits contradict, and resolving "
+                    f"it either way discards one of them")
+        for repair in repairs:
+            if repair.op == "add":
+                found.append(
+                    f"{cfg.rel(repair.path)}: does not declare "
+                    f"`{repair.field}: {repair.code}`, which the other side "
+                    f"of the pair holds — a relation and its converse are one "
+                    f"fact (`luria link --fix` writes it)")
+            else:
+                found.append(
+                    f"{cfg.rel(repair.path)}: `{repair.field}: "
+                    f"{repair.code}` is stale — the other side of the pair "
+                    f"was withdrawn since the last commit "
+                    f"(`luria link --fix` removes it)")
     return sorted(set(found))
 
 
@@ -223,18 +350,51 @@ def _add_to_field(text: str, name: str, code: str) -> str:
     return "---\n" + "".join(out) + rest
 
 
-def complete(fix: bool = False) -> list[Completion]:
-    """Write every missing back-reference; report them without `fix`.
+def _drop_from_field(text: str, name: str, code: str) -> str:
+    """Take one code out of a list-valued frontmatter field, removing the
+    field itself when that was its last entry.
 
-    Grouped per file so a document missing several gains them in one write."""
+    A field left standing with nothing under it is not a relation held by
+    nobody — it is invalid frontmatter, and the next reader gets a parse
+    error instead of the tidy record the deletion was meant to leave."""
+    if not text.startswith("---\n"):
+        return text
+    end = text.index("\n---\n", 3) + 1
+    head, rest = text[4:end], text[end:]
+    lines, out, at = head.splitlines(keepends=True), [], 0
+    while at < len(lines):
+        line = lines[at]
+        if not re.match(rf"^{re.escape(name)}\s*:", line):
+            out.append(line)
+            at += 1
+            continue
+        value = line.split(":", 1)[1].strip()
+        at += 1
+        kept = [value] if value else []
+        while at < len(lines) and lines[at].startswith("- "):
+            kept.append(lines[at][2:].strip())
+            at += 1
+        kept = [k for k in kept if k != code]
+        if kept:
+            out.append(f"{name}:\n")
+            out += [f"- {k}\n" for k in kept]
+    return "---\n" + "".join(out) + rest
+
+
+def complete(fix: bool = False) -> list[Repair]:
+    """Make every declared pair agree; report the edits without `fix`.
+
+    Grouped per file so a document needing several is written once."""
     todo = completions()
     if fix:
-        by_path: dict[Path, list[Completion]] = {}
+        by_path: dict[Path, list[Repair]] = {}
         for entry in todo:
             by_path.setdefault(entry.path, []).append(entry)
         for path, entries in by_path.items():
             text = path.read_text(encoding="utf-8")
             for entry in entries:
-                text = _add_to_field(text, entry.field, entry.code)
+                text = (_add_to_field(text, entry.field, entry.code)
+                        if entry.op == "add"
+                        else _drop_from_field(text, entry.field, entry.code))
             path.write_text(text, encoding="utf-8")
     return todo

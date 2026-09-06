@@ -132,6 +132,56 @@ relation with its declared converse. A one-sided declaration therefore
 renders correctly before anyone runs the fixer; completion makes the
 documents agree on disk afterwards.
 
+## Which side changed, not which side is empty
+
+The first implementation of this was monotonic, and that made it hostile:
+delete `extends: LIT-001` from the document that declared it, run
+`luria link --fix`, and it came back. The record fought the author, silently.
+
+The cause is that a one-sided pair has two opposite readings — a write the
+other side has not caught up with, or a deletion the other side is stale
+about — and **the working tree holds neither**. Which side *changed* does,
+and that lives in the last committed state. This record is in git, the
+workflow is branch-then-pull-request, and `luria` already shells to git in
+five modules, so HEAD is available and is the right baseline: it is the last
+state the record was consistent in.
+
+So the rule is about change, not about state:
+
+| since HEAD | the fixer |
+|---|---|
+| a side gained the relation | writes it to the other side |
+| a side lost it | removes it from the other side |
+| one gained while the other lost | reports; touches nothing |
+| nothing changed | writes the missing side |
+
+The last row is the migration path — a corpus predating the fixer is
+one-sided at HEAD too — and it is the one reading that can be wrong: a
+deletion committed *before* the fixer ran looks like nothing changed, and
+gets written back. It is self-correcting rather than sticky, because
+deleting it a second time is a change and prunes both sides. Stated here
+because it is the sharp edge, not because it is acceptable in silence.
+
+No repository, or no commit yet, means no baseline, and everything reads as
+added. That is right for a document git has never seen and keeps the fixer
+working outside a repository rather than refusing to.
+
+### Alternatives for this half
+
+**A separate `--prune` flag.** Rejected: the failure it guards against is
+silent re-addition, so it is the flag you only learn to pass after it has
+already bitten you — the same argument that made completion the default
+rather than an opt-in.
+
+**Make one side authoritative and the other derived.** Rejected: it gives up
+the symmetric case, where there is no canonical side, and it gives up
+declaring the relation from whichever document you happen to be holding —
+which is most of the value.
+
+**Report a one-sided pair and never write it.** Rejected: honest, but it
+gives up the whole mechanism to avoid one ambiguous case, and leaves every
+pre-existing one-sided pair permanently on the report.
+
 ## Consequences
 
 A project that declares a converse opts into stored redundancy, and should

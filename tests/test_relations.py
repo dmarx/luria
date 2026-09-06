@@ -19,6 +19,8 @@ from pathlib import Path
 
 import pytest
 
+import subprocess
+
 from luria import config, relations
 
 
@@ -277,3 +279,183 @@ def test_the_class_is_promotable_and_wired(tmp_path, monkeypatch):
     note(root, 1, "The original")
     note(root, 2, "The replacement", extends=["LIT-001"])
     assert "one-sided-relations" in {n for n, _, _ in lint.status_sections()}
+
+
+# --- Adding versus removing (#181) -----------------------------------------
+#
+# The first cut of this mechanism was monotonic: it wrote a missing side and
+# had no idea a side could go away. Delete `extends: LIT-001` from LIT-002,
+# run `--fix`, and it came back — because a one-sided pair has two readings
+# and the working tree holds neither of them. Which side *changed* is the
+# missing fact, and it lives in the last committed state.
+
+
+def commit(root: Path, message: str = "state") -> None:
+    for args in (["init", "-q", "-b", "main"], ["add", "-A"],
+                 ["-c", "user.email=t@t", "-c", "user.name=t",
+                  "commit", "-q", "-m", message]):
+        subprocess.run(["git", *args], cwd=root, check=False,
+                       capture_output=True)
+
+
+def edit(root: Path, number: int, old: str, new: str = "") -> None:
+    p = root / f"record/literature.d/LIT-{number:03d}.md"
+    p.write_text(p.read_text().replace(old, new))
+    config.reset()
+
+
+def test_a_side_added_since_the_last_commit_is_propagated(
+        tmp_path, monkeypatch):
+    root = project(tmp_path, monkeypatch)
+    note(root, 1, "The original")
+    note(root, 2, "The replacement")
+    commit(root)
+    edit(root, 2, "tags:", "extends:\n- LIT-001\ntags:")
+    relations.complete(fix=True)
+    assert "extended_by:" in (root / "record/literature.d/LIT-001.md").read_text()
+
+
+def test_a_side_removed_since_the_last_commit_prunes_the_other(
+        tmp_path, monkeypatch):
+    """The bug this exists to fix. The author deletes the relation from the
+    document that declared it; the back-reference must go, not come back."""
+    root = project(tmp_path, monkeypatch)
+    note(root, 1, "The original")
+    note(root, 2, "The replacement", extends=["LIT-001"])
+    relations.complete(fix=True)
+    config.reset()
+    commit(root)
+    edit(root, 2, "extends:\n- LIT-001\n")
+    relations.complete(fix=True)
+    first = (root / "record/literature.d/LIT-001.md").read_text()
+    second = (root / "record/literature.d/LIT-002.md").read_text()
+    assert "LIT-002" not in first, "the stale back-reference survived"
+    assert "LIT-001" not in second, "the deleted relation was written back"
+
+
+def test_pruning_is_idempotent(tmp_path, monkeypatch):
+    root = project(tmp_path, monkeypatch)
+    note(root, 1, "The original")
+    note(root, 2, "The replacement", extends=["LIT-001"])
+    relations.complete(fix=True)
+    config.reset()
+    commit(root)
+    edit(root, 2, "extends:\n- LIT-001\n")
+    relations.complete(fix=True)
+    config.reset()
+    assert relations.complete(fix=True) == []
+
+
+def test_a_pruned_field_that_empties_is_removed_entirely(
+        tmp_path, monkeypatch):
+    """A bare `extended_by:` with nothing under it is not valid frontmatter
+    for a reference field, and reads as a relation nobody can name."""
+    root = project(tmp_path, monkeypatch)
+    note(root, 1, "The original")
+    note(root, 2, "The replacement", extends=["LIT-001"])
+    relations.complete(fix=True)
+    config.reset()
+    commit(root)
+    edit(root, 2, "extends:\n- LIT-001\n")
+    relations.complete(fix=True)
+    assert "extended_by" not in (
+        root / "record/literature.d/LIT-001.md").read_text()
+
+
+def test_a_pruned_field_keeps_its_other_codes(tmp_path, monkeypatch):
+    root = project(tmp_path, monkeypatch)
+    note(root, 1, "The original")
+    note(root, 2, "One replacement", extends=["LIT-001"])
+    note(root, 3, "Another replacement", extends=["LIT-001"])
+    relations.complete(fix=True)
+    config.reset()
+    commit(root)
+    edit(root, 2, "extends:\n- LIT-001\n")
+    relations.complete(fix=True)
+    text = (root / "record/literature.d/LIT-001.md").read_text()
+    assert "LIT-003" in text and "LIT-002" not in text
+
+
+def test_removing_both_sides_needs_no_repair(tmp_path, monkeypatch):
+    root = project(tmp_path, monkeypatch)
+    note(root, 1, "The original")
+    note(root, 2, "The replacement", extends=["LIT-001"])
+    relations.complete(fix=True)
+    config.reset()
+    commit(root)
+    edit(root, 2, "extends:\n- LIT-001\n")
+    edit(root, 1, "extended_by:\n- LIT-002\n")
+    assert relations.completions() == []
+    assert relations.rows() == []
+
+
+def test_one_side_added_while_the_other_was_removed_is_a_conflict(
+        tmp_path, monkeypatch):
+    """Both edits are deliberate and they contradict. Writing either loses
+    one of them, so the fixer reports and touches nothing."""
+    root = project(tmp_path, monkeypatch)
+    note(root, 1, "The original")
+    note(root, 2, "The replacement", extends=["LIT-001"])
+    commit(root)
+    # one editor withdraws the relation, another asserts it from the far side
+    edit(root, 2, "extends:\n- LIT-001\n")
+    edit(root, 1, "tags:", "extended_by:\n- LIT-002\ntags:")
+    before = (root / "record/literature.d/LIT-001.md").read_text()
+    assert relations.completions() == []
+    assert any("contradict" in r or "both" in r for r in relations.rows())
+    relations.complete(fix=True)
+    assert (root / "record/literature.d/LIT-001.md").read_text() == before
+
+
+def test_an_unchanged_one_sided_pair_still_completes(tmp_path, monkeypatch):
+    """The migration path: a record that predates the fixer has one-sided
+    pairs at HEAD too, and nothing has changed. Adding is the safe reading —
+    a deletion the author repeats becomes a change, and prunes."""
+    root = project(tmp_path, monkeypatch)
+    note(root, 1, "The original")
+    note(root, 2, "The replacement", extends=["LIT-001"])
+    commit(root)
+    assert len(relations.completions()) == 1
+
+
+def test_a_document_git_has_never_seen_reads_as_added(tmp_path, monkeypatch):
+    root = project(tmp_path, monkeypatch)
+    note(root, 1, "The original")
+    commit(root)
+    note(root, 2, "The replacement", extends=["LIT-001"])
+    config.reset()
+    assert len(relations.completions()) == 1
+
+
+def test_without_git_everything_reads_as_added(tmp_path, monkeypatch):
+    """No repository, no baseline — the fixer keeps its old behaviour rather
+    than refusing to work."""
+    root = project(tmp_path, monkeypatch)
+    note(root, 1, "The original")
+    note(root, 2, "The replacement", extends=["LIT-001"])
+    assert len(relations.completions()) == 1
+
+
+def test_a_symmetric_relation_prunes_too(tmp_path, monkeypatch):
+    root = project(tmp_path, monkeypatch)
+    note(root, 1, "One design")
+    note(root, 2, "The other", compared_against=["LIT-001"])
+    relations.complete(fix=True)
+    config.reset()
+    commit(root)
+    edit(root, 2, "compared_against:\n- LIT-001\n")
+    relations.complete(fix=True)
+    assert "LIT-002" not in (
+        root / "record/literature.d/LIT-001.md").read_text()
+
+
+def test_the_finding_says_which_way_the_fixer_will_go(tmp_path, monkeypatch):
+    root = project(tmp_path, monkeypatch)
+    note(root, 1, "The original")
+    note(root, 2, "The replacement", extends=["LIT-001"])
+    relations.complete(fix=True)
+    config.reset()
+    commit(root)
+    edit(root, 2, "extends:\n- LIT-001\n")
+    row, = relations.rows()
+    assert "remove" in row or "stale" in row, row
