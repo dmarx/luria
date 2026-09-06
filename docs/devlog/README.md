@@ -6,6 +6,8 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 
 ## Currently — [September 2026](2026-09.md)
 
+- [6 Sep 00:09 — A status says what a record believes; nothing said what would change its mind](2026-09.md#20260906000901)
+- [6 Sep 00:01 — The form was the only file stating the schema that nothing compared to it](2026-09.md#20260906000146)
 - [5 Sep 20:55 — A working link to the wrong paper is invisible to every check that asks whether links work — and the first fix had the same shape as the bug](2026-09.md#20260905205523)
 - [5 Sep 20:29 — A guard that a single exception can switch off is a guard about unanimity, not about information](2026-09.md#20260905202948)
 - [5 Sep 16:57 — A remote code in superseded_by, and a directive with nowhere to stand](2026-09.md#20260905165753)
@@ -27,9 +29,9 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 
 ## All books
 
-64 entries across 2 books, newest first.
+66 entries across 2 books, newest first.
 
 | Book | Entries | First | Last |
 |---|--:|---|---|
-| [2026-09](2026-09.md) | 18 | 2026-09-03 | 2026-09-05 |
+| [2026-09](2026-09.md) | 20 | 2026-09-03 | 2026-09-06 |
 | [2026-08](2026-08.md) | 46 | 2026-08-03 | 2026-08-28 |
