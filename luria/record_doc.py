@@ -247,10 +247,12 @@ SECTIONS = (
      "know where the document renders.",
      schemes_section),
     ("What an entry must carry",
-     "Beyond the standard fields, what each scheme's entries must carry — "
-     "compiled from `luria.toml` into the contract `luria lint` checks, "
-     "with where each obligation was declared. A finding cites the same "
-     "line.",
+     "Every entry carries `status`, `title`, `tags` and `date`, and one "
+     "standard field is conditional: `superseded_by` is required when "
+     "`status` is `Superseded` (ADR-071). Beyond those, what each scheme's "
+     "entries must carry — compiled from `luria.toml` into the contract "
+     "`luria lint` checks, with where each obligation was declared. A "
+     "finding cites the same line.",
      contracts_section),
     ("Journals",
      "Dated observations. An entry is true about the day it was written and "
