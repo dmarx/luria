@@ -190,3 +190,25 @@ def test_a_form_that_agrees_reports_nothing(tmp_path, monkeypatch):
     root = project(tmp_path, monkeypatch, PLURAL)
     template(root, "record/practices.d", "source:\n- LIT-000")
     assert "template-drift" not in {n for n, _, _ in lint.status_sections()}
+
+
+def test_a_conditionally_required_field_is_demanded_at_the_forms_own_status(
+        tmp_path, monkeypatch):
+    """The form scaffolds `status: Proposed`, and a proposed entry in this
+    scheme must say what would settle it — so the form has to prompt for it
+    (#170 meeting #169)."""
+    root = project(tmp_path, monkeypatch,
+                   '[luria.schemes.SOTA.fields.promote_when]\n'
+                   'required_when = { status = ["Proposed"] }\n')
+    template(root, "record/practices.d")
+    rows = templates.rows()
+    assert len(rows) == 1 and "promote_when" in rows[0]
+
+
+def test_it_is_not_demanded_when_the_form_starts_elsewhere(
+        tmp_path, monkeypatch):
+    root = project(tmp_path, monkeypatch,
+                   '[luria.schemes.SOTA.fields.promote_when]\n'
+                   'required_when = { status = ["Deferred"] }\n')
+    template(root, "record/practices.d")
+    assert templates.rows() == []

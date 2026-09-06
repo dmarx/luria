@@ -131,12 +131,10 @@ def check_frontmatter(errors: list[str]) -> None:
                     f"{rel}: status {status.value!r} is not one the "
                     f"{scheme.prefix} scheme declares (see "
                     f"{cfg.rel(scheme.statuses_yaml)})")
-            elif status.value == "Superseded" and not status.superseded_by:
-                # The successor is structure, not a sentence: the field is
-                # what the edge, the index and the site read (ADR-071).
-                errors.append(
-                    f"{rel}: Superseded, but `superseded_by:` names nothing "
-                    f"— write the successor's code there")
+            # "Superseded names its successor" used to be a branch here.
+            # It is a `required_when` on the built-in field now, checked with
+            # every other obligation in `check_contracts` (ADR-071 stated
+            # with the mechanism rather than beside it).
             if not (meta.get("tags") or []):
                 errors.append(f"{rel}: no `tags:` in frontmatter (see ADR-003)")
 

@@ -157,6 +157,7 @@ whether the config can state it instead:
 | exactly one primary category | `tag_groups` with `require = "exactly-one"` | a violation |
 | at most one of these, they are an axis | `require = "at-most-one"` | a violation |
 | saying it failed contradicts saying it holds | `excluded_by` | a violation |
+| a field is required only while the entry is unsettled | `fields` with `required_when = { status = ["Proposed", "Deferred"] }` | a violation naming the value that fired it |
 | this scheme only uses three of the five statuses | `statuses.yaml` | a violation |
 | a principle should not name one subsystem | `titles_generalize` + `narrow_terms` | `narrow-titles` |
 | citing something not in force should be deliberate | (always on) | `retired-citations` |
