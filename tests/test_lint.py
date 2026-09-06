@@ -69,12 +69,14 @@ def test_the_check_covers_every_scheme(project):
         '[luria]\nissue_url = "https://example.test/issues/{n}"\n'
         '[luria.schemes.ADR]\ndir = "docs/decisions"\n'
         '[luria.schemes.VP]\ndir = "docs/values"\n'
-        'render = "document"\noutput = "docs/values.md"\n')
+        'render = "document"\noutput = "docs/values.md"\n'
+        '[luria.schemes.VP.fields.status]\nvocabulary = "statuses"\n')
+    path = project / "docs" / "values" / "VP-001.md"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    (path.parent / "statuses.yaml").write_text("Active:\n  blurb: in force\n")
     from luria import config
     config.reset()
 
-    path = project / "docs" / "values" / "VP-001.md"
-    path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text("---\nstatus: Active\ntitle: 'A value'\ntags:\n- record\n"
                     "---\n\n# VP-001: A different value\n\nBody.\n")
     errors = errors_for(project)
