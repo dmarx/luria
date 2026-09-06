@@ -51,6 +51,7 @@ import re
 from dataclasses import dataclass, field
 
 from .adr_index import Adr, load_scheme, prefix_for
+from . import statuses
 from .config import current
 from .contract import for_scheme, values_of
 from . import relations
@@ -220,14 +221,18 @@ def _link(doc: Adr, chain) -> str:
 
 
 def _annotation(doc: Adr, chain) -> str:
-    """The chain's second axis for one step, read as the contract reads it —
-    so a field with a `default` shows its default rather than a blank, which
-    is what ADR-076 means by "never absent"."""
-    if not chain.annotate:
-        return ""
+    """Every field this chain shows for one step, in the order it names them.
+
+    Read through the compiled contract rather than raw frontmatter, so a
+    field with a `default` shows its default rather than a blank — what
+    ADR-076 means by an effective value never being absent — and a `status:`
+    carrying a qualifying note reads as its word."""
     obligations = for_scheme(current().schemes[chain.scheme])
-    values = obligations.reading(chain.annotate, doc.meta)
-    return f", {', '.join(str(v) for v in values)}" if values else ""
+    meta = statuses.normalised(doc.meta)
+    shown: list[str] = []
+    for field in chain.annotate:
+        shown += [str(v) for v in (obligations.reading(field, meta) or ())]
+    return ", ".join(shown)
 
 
 def _step(doc: Adr, chain, lead: str = "") -> str:
@@ -243,8 +248,9 @@ def _step(doc: Adr, chain, lead: str = "") -> str:
     renders somewhere else, which is a thing to rebase rather than a thing
     to want. `status_value` is the field, and the fields are why it is
     there to ask for."""
-    return (f"{lead}[{doc.code}]({_link(doc, chain)}) — {doc.title} "
-            f"*({doc.status_value}{_annotation(doc, chain)})*")
+    shown = _annotation(doc, chain)
+    return (f"{lead}[{doc.code}]({_link(doc, chain)}) — {doc.title}"
+            + (f" *({shown})*" if shown else ""))
 
 
 def _render(chain, lines: list[Line]) -> str:

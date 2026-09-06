@@ -1206,7 +1206,13 @@ class Chain:
     # converged, as against what the record itself asserts — and without this
     # the page renders an agreed trunk and a disputed branch identically,
     # which is the one distinction a line of work exists to show.
-    annotate: str = ""
+    #
+    # Every field the step shows, in order — `status` included, and named
+    # rather than assumed. It rendered implicitly once, with this key
+    # meaning "the OTHER field", which left the chain page as the last
+    # thing treating `status` as a built-in axis after #181 made it a
+    # declared vocabulary like any other. A chain names what it shows.
+    annotate: tuple[str, ...] = ("status",)
 
 
 @dataclass(frozen=True)
@@ -1633,19 +1639,22 @@ def _chains(raw: dict, schemes: dict, root: Path) -> dict[str, Chain]:
             raise ValueError(f"{where}: scheme {prefix!r} is not declared "
                              f"(have: {', '.join(sorted(schemes))})")
         declared = {r.field for r in schemes[prefix].references}
-        annotate = str(spec.get("annotate", ""))
-        if annotate:
-            # `status` is not named here: it is a declared vocabulary since
-            # #181, so it arrives through `vocabularies` like any other. Only
-            # `tags` is still an axis the code assumes.
-            known = ({v.field for v in schemes[prefix].vocabularies}
-                     | {f.field for f in schemes[prefix].plain_fields}
-                     | set(schemes[prefix].requires) | declared | {"tags"})
-            if annotate not in known:
+        raw_annotate = spec.get("annotate", ("status",))
+        annotate = tuple(str(f) for f in (
+            [raw_annotate] if isinstance(raw_annotate, str) else raw_annotate))
+        # `status` is nameable because it is a declared vocabulary since
+        # #181, arriving through `vocabularies` like any other field. Only
+        # `tags` is still an axis the code assumes.
+        known = ({v.field for v in schemes[prefix].vocabularies}
+                 | {f.field for f in schemes[prefix].plain_fields}
+                 | set(schemes[prefix].requires) | declared
+                 | {"tags", "status"})
+        for field in annotate:
+            if field not in known:
                 raise ValueError(
-                    f"{where}: `annotate = \"{annotate}\"` is not a field "
-                    f"{prefix} declares, so every step would render blank "
-                    f"(declared: {', '.join(sorted(known))})")
+                    f"{where}: `annotate` names {field!r}, which {prefix} "
+                    f"does not declare, so every step would render it blank "
+                    f"(nameable: {', '.join(sorted(known))})")
         for key in ("relation", "sibling"):
             field = str(spec.get(key, ""))
             if key == "sibling" and not field:

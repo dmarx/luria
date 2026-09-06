@@ -353,7 +353,7 @@ relation = "extends"
 sibling  = "compared_against"
 output   = "docs/lineage.md"
 title    = "Lines of work"
-annotate = "consensus"
+annotate = ["status", "consensus"]
 """
 
 VOCAB = """
@@ -413,4 +413,64 @@ def test_annotating_a_field_the_scheme_does_not_declare_is_a_config_error(
     nothing, and nothing looks exactly like correct (DP-15)."""
     with pytest.raises(ValueError, match="consensus"):
         project(tmp_path, monkeypatch, RELATIONS + ANNOTATED)
+        config.current()
+
+
+def test_annotate_names_every_field_shown_including_status(
+        tmp_path, monkeypatch):
+    """`status` has no privileged place on this page.
+
+    It rendered implicitly before, with `annotate` naming "the other one" —
+    which made the chain the last thing still treating `status` as a
+    built-in axis after #181 made it a declared vocabulary like any other.
+    The chain names what it shows; `status` is in that list or it is not."""
+    root = project(tmp_path, monkeypatch, RELATIONS + VOCAB + """
+[luria.chains.lineage]
+scheme   = "LIT"
+relation = "extends"
+output   = "docs/lineage.md"
+annotate = ["consensus"]
+""")
+    write(root, "record/literature.d/consensus.yaml",
+          "unassessed:\n  label: Not judged\ncontested:\n  label: In dispute\n")
+    config.reset()
+    _note(root, 1, "The trunk", consensus="contested")
+    _note(root, 2, "The fork", extends=["LIT-001"])
+    page = chains.outputs()[root / "docs/lineage.md"]
+    assert "contested" in page
+    assert "Active" not in page, page
+
+
+def test_annotate_defaults_to_status_alone(tmp_path, monkeypatch):
+    """So a chain that says nothing renders what it always rendered."""
+    root = project(tmp_path, monkeypatch)
+    note(root, 1, "The original")
+    note(root, 2, "The replacement", extends=["LIT-001"])
+    assert config.current().chains["lineage"].annotate == ("status",)
+    page = chains.outputs()[root / "docs/lineage.md"]
+    assert "*(Active)*" in page
+
+
+def test_a_scalar_annotate_still_reads(tmp_path, monkeypatch):
+    """One field is a list of one, written the shorter way."""
+    root = project(tmp_path, monkeypatch, RELATIONS + """
+[luria.chains.lineage]
+scheme   = "LIT"
+relation = "extends"
+output   = "docs/lineage.md"
+annotate = "status"
+""")
+    config.reset()
+    assert config.current().chains["lineage"].annotate == ("status",)
+
+
+def test_an_annotate_naming_nothing_is_refused(tmp_path, monkeypatch):
+    with pytest.raises(ValueError, match="nowhere"):
+        project(tmp_path, monkeypatch, RELATIONS + """
+[luria.chains.lineage]
+scheme   = "LIT"
+relation = "extends"
+output   = "docs/lineage.md"
+annotate = ["status", "nowhere"]
+""")
         config.current()
