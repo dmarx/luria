@@ -36,7 +36,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from .adr_index import Adr, load_scheme, prefix_for, rebase_links
+from .adr_index import Adr, load_scheme, prefix_for
 from .config import current
 from .contract import for_scheme, values_of
 
@@ -248,13 +248,21 @@ def _link(doc: Adr, chain) -> str:
     return prefix_for(scheme, chain.output.parent) + doc.path.name
 
 
-def _step(doc: Adr, chain, prefix: str, lead: str = "") -> str:
-    """One line of the rendered list. The status is rebased like any other
-    prose: a `Superseded — by [LIT-140](LIT-140.md)` note carries a link
-    authored in the source's frame, and leaving it alone broke it on this
-    page exactly as it once broke on the tag pages."""
+def _step(doc: Adr, chain, lead: str = "") -> str:
+    """One line of the rendered list: the code, the title, and the status
+    *value*.
+
+    `Adr.status` is the composed display form — `Superseded — by [X](…);
+    note` — and this page wants none of that. The successor is the next
+    line, so linking it here says twice what the shape already says; and the
+    note is an argument about why the step happened, which is the half this
+    view deliberately leaves on the document. Rendering the composed form
+    also dragged a link authored in the source's frame onto a page that
+    renders somewhere else, which is a thing to rebase rather than a thing
+    to want. `status_value` is the field, and the fields are why it is
+    there to ask for."""
     return (f"{lead}[{doc.code}]({_link(doc, chain)}) — {doc.title} "
-            f"*({rebase_links(doc.status, prefix)})*")
+            f"*({doc.status_value})*")
 
 
 def _render(chain, lines: list[Line]) -> str:
@@ -263,16 +271,15 @@ def _render(chain, lines: list[Line]) -> str:
            f"{count}, walked from `{chain.relation}:` on {chain.scheme} "
            f"documents. Each step explains itself; this page is the order "
            f"they came in.", ""]
-    prefix = prefix_for(current().schemes[chain.scheme], chain.output.parent)
     for line in lines:
         head = line.spine[0] if line.spine else line.alongside[0]
         out.append(f"## From {head.title}")
         out.append("")
         for doc in line.spine:
             out.append("  " * line.depth[doc.code] + "- "
-                       + _step(doc, chain, prefix))
+                       + _step(doc, chain))
         for doc in line.alongside:
-            out.append(_step(doc, chain, prefix, lead="- alongside: "))
+            out.append(_step(doc, chain, lead="- alongside: "))
         out.append("")
     return "\n".join(out).rstrip() + "\n"
 

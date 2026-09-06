@@ -279,19 +279,23 @@ def test_the_page_is_part_of_the_generated_views(tmp_path, monkeypatch):
     assert root / "docs/lineage.md" in adr_index.outputs()
 
 
-def test_a_status_note_carrying_a_link_is_rebased(tmp_path, monkeypatch):
-    """A `Superseded — by [LIT-001](LIT-001.md)` note is prose authored in
-    the source's frame; leaving it alone broke it on this page exactly as it
-    once broke on the tag pages. Found by the first real corpus."""
+def test_only_the_status_value_is_rendered(tmp_path, monkeypatch):
+    """`status`, `superseded_by` and `status_note` are three fields, and the
+    composed display form is one reading of them. This page wants the value:
+    the successor is the next line, and the note is the argument this view
+    leaves on the document. Rendering the composed form also dragged a link
+    authored in the source's frame onto a page that renders elsewhere."""
     import re
     root = project(tmp_path, monkeypatch)
     note(root, 1, "The original")
     write(root, "record/literature.d/LIT-002.md",
           "---\nstatus: 'Superseded'\nsuperseded_by:\n- LIT-001\n"
-          "status_note: 'by [LIT-001](LIT-001.md)'\n"
+          "status_note: 'The original was replaced; [LIT-001](LIT-001.md) says why'\n"
           "title: 'The replacement'\ntags:\n- record\ndate: '2026-01-01'\n"
           "extends:\n- LIT-001\n---\n\n# LIT-002: The replacement\n\nBody.\n")
     page = chains.outputs()[root / "docs/lineage.md"]
+    assert "*(Superseded)*" in page
+    assert "The original was replaced" not in page, "the note is not this view's"
     for target in re.findall(r"\]\(([^)]+)\)", page):
         assert (root / "docs" / target).resolve().exists(), target
 
