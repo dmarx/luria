@@ -395,9 +395,8 @@ def spent_upgrades() -> list[str]:
     for name, entry in upgrade.SUNSET.items():
         writes, lines, _ = upgrade._plan(current().root)
         if not writes and not lines:
-            out.append(f"`luria upgrade {name}` has nothing left to do here "
-                       f"— delete it once every record has run it "
-                       f"({entry.sunset})")
+            out.append(f"`luria upgrade {name}` has nothing left to do "
+                       f"here — remove it at {entry.sunset}")
     return out
 
 

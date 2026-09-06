@@ -781,4 +781,4 @@ def test_a_spent_upgrade_says_it_can_be_deleted(tmp_path, monkeypatch):
     upgrade.run("statuses", root=str(tmp_path))
     config.reset()
     rows = lint.spent_upgrades()
-    assert any("statuses" in r and "delete" in r for r in rows), rows
+    assert any("statuses" in r and "remove it at" in r for r in rows), rows
