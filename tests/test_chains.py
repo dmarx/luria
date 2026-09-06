@@ -304,3 +304,31 @@ def test_the_page_is_not_a_citing_site(tmp_path, monkeypatch):
     note(root, 1, "The original")
     note(root, 2, "The replacement", extends=["LIT-001"])
     assert config.current().is_generated(root / "docs/lineage.md")
+
+
+def test_a_relation_naming_a_retired_step_is_not_a_citation(
+        tmp_path, monkeypatch):
+    """A successor's predecessor is superseded by construction. Reading
+    `extends:` as a citation hands back one finding per retired step in every
+    chain, at the field whose whole job is to name it."""
+    from luria import ref_status
+    root = project(tmp_path, monkeypatch)
+    note(root, 1, "The original", status="Superseded")
+    note(root, 2, "The replacement", extends=["LIT-001"])
+    result = ref_status.scan()
+    sites = [c.path.name for c in result.cited.get("LIT-001", [])]
+    assert "LIT-002.md" not in sites, sites
+
+
+def test_prose_naming_a_retired_step_is_still_a_citation(
+        tmp_path, monkeypatch):
+    """Only the field is exempt. A paragraph pointing at a retired document
+    is the finding this record adopted the check to get."""
+    from luria import ref_status
+    root = project(tmp_path, monkeypatch)
+    note(root, 1, "The original", status="Superseded")
+    path = note(root, 2, "The replacement", extends=["LIT-001"])
+    path.write_text(path.read_text() + "\nThis replaces LIT-001.\n")
+    result = ref_status.scan()
+    sites = [c.path.name for c in result.cited.get("LIT-001", [])]
+    assert "LIT-002.md" in sites, sites

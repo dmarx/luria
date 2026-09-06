@@ -6,6 +6,7 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 
 ## Currently — [September 2026](2026-09.md)
 
+- [6 Sep 00:30 — Every fixture passed and every rendered link was broken](2026-09.md#20260906003013)
 - [6 Sep 00:15 — A line is a DAG, and a rival that succeeds nothing still belongs to it](2026-09.md#20260906001537)
 - [6 Sep 00:09 — A status says what a record believes; nothing said what would change its mind](2026-09.md#20260906000901)
 - [6 Sep 00:01 — The form was the only file stating the schema that nothing compared to it](2026-09.md#20260906000146)
@@ -30,9 +31,9 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 
 ## All books
 
-67 entries across 2 books, newest first.
+68 entries across 2 books, newest first.
 
 | Book | Entries | First | Last |
 |---|--:|---|---|
-| [2026-09](2026-09.md) | 21 | 2026-09-03 | 2026-09-06 |
+| [2026-09](2026-09.md) | 22 | 2026-09-03 | 2026-09-06 |
 | [2026-08](2026-08.md) | 46 | 2026-08-03 | 2026-08-28 |
