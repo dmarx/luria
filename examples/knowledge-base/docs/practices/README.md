@@ -5,6 +5,8 @@
 **[Optimization](tags/optimization.md)** (2) — optimizers, schedules, batch size:
 [001](../../record/practices.d/SOTA-001.md) · [002](../../record/practices.d/SOTA-002.md)
 
+**By status:** [Current practice](statuses/Active.md) (1) · [Not yet judged](statuses/Deferred.md) (1) · [Replaced](statuses/Superseded.md) (0)
+
 What the status column means in this scheme — the words are luria's, the meanings are this project's.
 
 | Status | | Means |

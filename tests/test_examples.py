@@ -262,8 +262,8 @@ def test_active_selects_a_status_the_vocabulary_holds(example):
     rfc.write_text(rfc.read_text().replace("status: Active", "status: Accepted"))
 
     errors: list[str] = []
-    lint.check_frontmatter(errors)
-    assert any("'Accepted'" in e and "not one the" in e for e in errors), errors
+    lint.check_contracts(errors)
+    assert any("Accepted" in e and "statuses" in e for e in errors), errors
 
 
 def test_a_declared_family_replaces_the_defaults(example):

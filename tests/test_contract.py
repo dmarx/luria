@@ -166,10 +166,18 @@ def test_a_satisfied_contract_is_silent(tmp_path, monkeypatch):
 
 
 def test_the_shipped_record_is_clean_through_the_contract():
-    """No behaviour change on the corpus that runs this: every scheme here
-    declares no contract, so the pass compiles to nothing and finds nothing."""
+    """This record declares one thing now — its status vocabulary (#181) —
+    and nothing else, so the pass still finds nothing to report on it.
+
+    `empty` stopped being true here when `status:` became a field a scheme
+    declares rather than one the code assumes. That is the change working:
+    the record page lists the five words and cites `statuses.yaml`, where
+    before it said "nothing beyond the standard fields" and the words were
+    not readable from the record at all."""
     for scheme in config.current().schemes.values():
-        assert contract.for_scheme(scheme).empty
+        declared = [f.name for f in contract.for_scheme(scheme).fields
+                    if not f.builtin]
+        assert declared == ["status"], (scheme.prefix, declared)
     errors: list[str] = []
     lint.check_contracts(errors)
     assert errors == []

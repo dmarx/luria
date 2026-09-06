@@ -25,11 +25,13 @@ Every entry carries `status`, `title`, `tags` and `date`, and one standard field
 
 **`LIT`**
 
+- `status` — optional, one of `Active`, `Rejected`, `Superseded` (luria.toml: schemes.LIT.fields.status; record/literature.d/statuses.yaml: values)
 - `source` — at least one of `arxiv`, `doi`, `url` (luria.toml: schemes.LIT.field_groups.source)
 
 **`SOTA`**
 
 - `source` — required, a `LIT` code (luria.toml: schemes.SOTA.references.source)
+- `status` — optional, one of `Active`, `Deferred`, `Superseded` (luria.toml: schemes.SOTA.fields.status; record/practices.d/statuses.yaml: values)
 - `primary_topic` — exactly one of `optimization`, `stability`, `systems` (luria.toml: schemes.SOTA.tag_groups.primary_topic)
 
 ## Journals

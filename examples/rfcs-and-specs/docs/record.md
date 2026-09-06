@@ -23,7 +23,13 @@ A code — `ADR-012` — resolves to a document, and every reference to it in th
 
 Every entry carries `status`, `title`, `tags` and `date`, and one standard field is conditional: `superseded_by` is required when `status` is `Superseded` (ADR-071). Beyond those, what each scheme's entries must carry — compiled from `luria.toml` into the contract `luria lint` checks, with where each obligation was declared. A finding cites the same line.
 
-*Nothing beyond the standard fields — `status`, `title`, `tags`, `date`. A scheme asks for more with `requires`, `references` and `tag_groups`; see the [schema](https://github.com/dmarx/luria/blob/main/docs/configuration.md).*
+**`RFC`**
+
+- `status` — optional, one of `Active`, `Proposed`, `Deferred`, `Superseded`, `Rejected` (luria.toml: schemes.RFC.fields.status; record/rfcs.d/statuses.yaml: values)
+
+**`SPEC`**
+
+- `status` — optional, one of `Active`, `Proposed`, `Deferred`, `Superseded`, `Rejected` (luria.toml: schemes.SPEC.fields.status; record/specs.d/statuses.yaml: values)
 
 ## Journals
 
