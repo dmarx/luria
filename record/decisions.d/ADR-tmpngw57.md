@@ -68,13 +68,29 @@ one check and ignored by the next is exactly the failure the compiled
 contract ([#141](https://github.com/dmarx/luria/issues/141)) exists to end, and the fix is that there is one place to
 ask.
 
-**The comparison is normalised, not literal.** A `status:` carrying a
-qualifying note is still that status, and the note is its own field
-([ADR-072](ADR-072.md)), so `Proposed — pending a
-replication` matches `Proposed`. Comparing raw strings would have read a
-qualified status as some other status and exempted the document silently,
-which is the class of bug this decision exists to remove rather than
-introduce.
+**The compared value is the field's effective value, not its raw one.**
+Resolution goes through the compiled contract — the same path the checks and
+the record page use — so a condition sees what the rest of the machinery
+sees. Three consequences worth stating, because each is a decision:
+
+- A `status:` carrying a qualifying note is still that status, and the note
+  is its own field ([ADR-072](ADR-072.md)), so `Proposed — pending a replication` matches
+  `Proposed`. Comparing raw strings would have read a qualified status as
+  some other status and exempted the document silently.
+- A vocabulary field with a `default` is never absent ([ADR-076](ADR-076.md)), so a
+  document that omits it reads as the default. Reading raw frontmatter made
+  a condition on such a field never hold, for precisely the documents it was
+  written about.
+- A list-valued field — `tags` — matches on **any** element, and an absent
+  field is "the condition does not hold" rather than an error. The
+  missing-field finding belongs to the document check, not to the condition.
+
+**The condition itself is validated at load.** Shape alone was not enough,
+and this decision's own reasoning is why: a condition that can never hold
+surfaces as no violations. `{ staus = [...] }` and `{ status = ["proposed"] }`
+are the two likeliest authoring mistakes; both are refused, against the
+fields the scheme can name and — where a closed set exists — the values that
+field takes.
 
 ## Alternatives considered
 
@@ -83,6 +99,18 @@ which fields each status demands. Reads well for exactly this case and badly
 for every other: `statuses.yaml` is a vocabulary file, and making it a
 requirements file too gives it two jobs. It also puts the rule somewhere the
 person declaring the field would not think to look.
+
+**One field per condition, with the repetition foreseen.** The rule is
+declared per field, so a scheme with three fields that all apply while
+provisional — `promote_when`, `blocked_by`, `retracted_because` — restates
+`{ status = ["Proposed", "Deferred"] }` three times, and the three sets can
+drift apart. That is the duplicated-projection shape [DP-003](../../docs/design-principles.md#dp-3) names, and it is
+expected rather than overlooked. It is **not** an argument for moving the
+rule to the status side, which the next paragraph rejects for reasons that
+do not weaken as the count grows. The fix when it arrives keeps the
+field-side placement: either a `field_groups` entry that carries a
+`required_when` for its members, or a condition named once and cited by
+field. Neither needs building for one field.
 
 **A general predicate language** — negation, conjunction, comparison across
 fields. Rejected. The entire value of this rule is that a reader sees it in
@@ -101,6 +129,27 @@ can be met automatically is a condition that can be met accidentally.
 **Require the field of every document, not just the conditional ones.** Most
 documents would carry a key with nothing to put in it, and a field that is
 usually empty is a field readers learn to skip.
+
+## Deferred: the condition that outlives its status
+
+A `promote_when:` still sitting on a document that has since gone `Active` is
+a condition whose purpose is over — the same shape as a directive that no
+longer matches anything, which this record already reports as
+`stale-directives`. Nothing here reports it, and that is a choice rather than
+an oversight.
+
+Not an error, because the old condition can be worth keeping: what the
+document was waiting for is part of why it was promoted, and deleting it on
+promotion loses that. A warning class on the `fail_on` dial ([ADR-035](ADR-035.md)) is the
+shape that fits — reported, acknowledgeable, enforced only by a project that
+wants it. It is deferred because one field on one scheme is not enough
+evidence to design the acknowledgement around, and a class that fires on
+every deliberate case is a class people switch off.
+
+The consumer record's own rule — remove the field when the practice goes
+`Active`, and put what happened in the body and the version history — is for
+now a convention, which is exactly the kind of thing this decision exists to
+say should eventually be a check.
 
 ## What this does not do
 

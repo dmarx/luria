@@ -28,7 +28,8 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
-from .config import TEMP_TAIL, FieldGroup, TagGroup, current
+from .config import (TEMP_TAIL, FieldGroup, RequiredWhen, TagGroup,
+                     current)
 
 
 @dataclass(frozen=True)
@@ -63,15 +64,7 @@ class Field:
     required_when: object | None = None
     because: tuple[str, ...] = ()
 
-    def demanded(self, meta: dict) -> bool:
-        """Whether this document must carry the field. Consulted everywhere
-        `required` used to be read directly, so a conditional requirement
-        cannot be honoured by one check and ignored by the next — which is
-        the failure mode `contract.py` was written to end."""
-        if self.required:
-            return True
-        return (self.required_when is not None
-                and self.required_when.holds(meta))
+
 
 
 @dataclass(frozen=True)
@@ -90,6 +83,49 @@ class Contract:
     # (`primary_for`, ADR-060), relative to the project; "" when none.
     vocabulary: str = ""
 
+    def demands(self, field: Field, meta: dict) -> bool:
+        """Whether this document must carry the field. Consulted everywhere
+        `required` used to be read directly, so a conditional requirement
+        cannot be honoured by one check and ignored by the next — which is
+        the failure mode this module was written to end.
+
+        A method on the contract rather than on the field, because deciding
+        whether a condition holds needs the *effective* value of the field it
+        names, and only the compiled contract knows how to resolve that."""
+        if field.required:
+            return True
+        when = field.required_when
+        if when is None:
+            return False
+        return any(str(v) in when.values for v in self.reading(when.on, meta))
+
+    def reading(self, name: str, meta: dict) -> list:
+        """What a field is read as on one document — the same resolution the
+        checks and the record page use, so a condition sees the value the
+        rest of the machinery sees.
+
+        Three cases, and the first two are why this cannot read raw
+        frontmatter. A `status:` carrying a qualifying note is still that
+        status and the note is its own field (ADR-072), so
+        `Proposed — pending a replication` reads as `Proposed`. A vocabulary
+        field with a `default` is never absent (ADR-076), so a document that
+        omits it reads as the default — and reading raw made a condition on
+        such a field never hold, for precisely the documents it was written
+        about. Everything else is what the document says: a list reads as its
+        elements, and an absent field reads as nothing, which is "the
+        condition does not hold" rather than an error (the missing-field
+        finding is the document check's, not this one's)."""
+        if name == "status":
+            from .statuses import of
+            return [of(meta).value]
+        spec = next((f for f in self.fields if f.name == name), None)
+        raw = meta.get(name)
+        if spec is not None and spec.vocabulary is not None:
+            return effective_values(spec, raw) or []
+        if raw is None or raw == "":
+            return []
+        return list(raw) if isinstance(raw, list) else [raw]
+
     @property
     def empty(self) -> bool:
         """True for every scheme that declares nothing — which is every
@@ -106,9 +142,18 @@ ANY_SCHEME = "*"
 # The fields every scheme has. `superseded_by` holds one code or a list —
 # the successor is structure, written and checked as a reference, and the
 # typed edge the index and the site render (ADR-071).
+#
+# ADR-071's other half — a Superseded document *names* its successor — was a
+# hand-written branch in `lint.check_frontmatter` for as long as there was no
+# way to declare it. `required_when` is that way (#170), so the rule is stated
+# here instead of implemented twice: one implementation (DP-4), and the
+# built-in gets this module's finding wording, `because:` provenance and
+# record-page line for nothing.
 BUILT_IN = (
     Field("superseded_by", required=False, reference=ANY_SCHEME, many=True,
-          builtin=True, because=("built in: `superseded_by` (ADR-071)",)),
+          builtin=True,
+          required_when=RequiredWhen("status", ("Superseded",)),
+          because=("built in: `superseded_by` (ADR-071)",)),
 )
 
 
@@ -224,8 +269,13 @@ def explain(contract: Contract, field: Field, meta: dict | None = None) -> str:
     if field.reference is None:
         return (f"the {contract.scheme} scheme requires it{why} "
                 f"{_cite(field.because)}")
-    return (f"the {contract.scheme} scheme declares it a {field.reference} "
-            f"reference{why} {_cite(field.because)}")
+    what = ("names a document in any scheme" if field.reference == ANY_SCHEME
+            else f"declares it a {field.reference} reference")
+    lead = ("" if field.reference == ANY_SCHEME
+            else f"the {contract.scheme} scheme ")
+    if field.reference == ANY_SCHEME:
+        return f"`{field.name}` {what}{why} {_cite(field.because)}"
+    return f"{lead}{what}{why} {_cite(field.because)}"
 
 
 def describe(contract: Contract) -> list[str]:
@@ -234,6 +284,12 @@ def describe(contract: Contract) -> list[str]:
     What `docs/record.md` prints under "what an entry must carry"."""
     lines = []
     for field in contract.fields:
+        # Built-ins stay out: this describes what a scheme declares *beyond*
+        # the standard fields, and the page says so in as many words. The
+        # built-in conditional is real and worth a reader's attention, so
+        # `record_doc` states it once alongside the standard fields rather
+        # than repeating it under every scheme as though it were declared
+        # there (review of #172).
         if field.builtin:
             continue
         if field.vocabulary is not None:
@@ -349,11 +405,17 @@ def is_remote(code: str) -> bool:
 
 
 def _any_scheme_violations(contract: Contract, field: Field, rel: str, raw,
-                           known: dict[str, set[str]]) -> list[str]:
+                           known: dict[str, set[str]],
+                           meta: dict | None = None) -> list[str]:
     """A built-in reference into any scheme: one code or a list, each a
-    code that resolves in the scheme it names, or a remote code."""
+    code that resolves in the scheme it names, or a remote code — and
+    present at all when the contract demands it."""
     out = []
-    for value in values_of(field, raw) or []:
+    values = values_of(field, raw) or []
+    if not values and contract.demands(field, meta or {}):
+        return [f"{rel}: no `{field.name}:` in frontmatter — "
+                f"{explain(contract, field, meta)}"]
+    for value in values:
         code = reference_code(str(value))
         if code is None:
             out.append(f"{rel}: `{field.name}: {value}` is not a code — "
@@ -383,12 +445,13 @@ def violations(contract: Contract, rel: str, meta: dict,
             continue
         target = field.reference
         if target is None:
-            if not raw and field.demanded(meta):
+            if not raw and contract.demands(field, meta):
                 out.append(f"{rel}: no `{field.name}:` in frontmatter — "
                            f"{explain(contract, field, meta)}")
             continue
         if target == ANY_SCHEME:
-            out.extend(_any_scheme_violations(contract, field, rel, raw, known))
+            out.extend(_any_scheme_violations(contract, field, rel, raw, known,
+                                              meta))
             continue
         values = values_of(field, raw)
         if values is None:
@@ -399,7 +462,7 @@ def violations(contract: Contract, rel: str, meta: dict,
                 f"there if it should hold several")
             continue
         if not values:
-            if field.demanded(meta):
+            if contract.demands(field, meta):
                 out.append(f"{rel}: no `{field.name}:` in frontmatter — "
                            f"{explain(contract, field, meta)}")
             continue
@@ -461,7 +524,7 @@ def _vocabulary_violations(contract: Contract, field: Field, rel: str,
                 f"value {_cite(field.because)} — set `many = true` there if "
                 f"it should hold several"]
     if not values:
-        if field.demanded(meta or {}) and field.default is None:
+        if contract.demands(field, meta or {}) and field.default is None:
             return [f"{rel}: no `{field.name}:` in frontmatter — "
                     f"{explain(contract, field, meta)}"]
         return []

@@ -446,11 +446,26 @@ def test_the_repair_keeps_a_note_that_says_more_than_the_code(project):
 
 
 def test_superseded_without_a_successor_is_a_finding(tmp_path, monkeypatch):
+    """ADR-071's rule, now stated as a `required_when` on the built-in field
+    rather than a hand-written branch — so it is checked with every other
+    obligation, in `check_contracts`, and carries the same wording and
+    provenance as any declared one (#170, review of #172)."""
+    _project(tmp_path, monkeypatch)
+    _value(tmp_path, 1, "Superseded")
+    errors: list[str] = []
+    lint.check_contracts(errors)
+    assert any("no `superseded_by:` in frontmatter" in e for e in errors), errors
+    assert any("`status: Superseded`" in e for e in errors), errors
+
+
+def test_the_supersession_rule_is_no_longer_a_branch_in_frontmatter(
+        tmp_path, monkeypatch):
+    """One implementation (DP-4): the check moved, it did not get copied."""
     _project(tmp_path, monkeypatch)
     _value(tmp_path, 1, "Superseded")
     errors: list[str] = []
     lint.check_frontmatter(errors)
-    assert any("`superseded_by:` names nothing" in e for e in errors), errors
+    assert not any("superseded_by" in e for e in errors), errors
 
 
 def test_a_successor_that_resolves_to_nothing_is_a_finding(tmp_path, monkeypatch):
