@@ -362,6 +362,7 @@ def _scheme_files(scheme: Scheme) -> dict[Path, str]:
             scheme.dir / "_template.md": _read("record/decisions.d/_template.md"),
             scheme.stub: _read("record/decisions.d/README.stub"),
             scheme.tags_yaml: _read("record/decisions.d/tags.yaml"),
+            scheme.statuses_yaml: _statuses_yaml(scheme),
         }
     if scheme.prefix == "DP" and scheme.render == "document":
         return {scheme.dir / src.name: src.read_text(encoding="utf-8")
@@ -374,7 +375,53 @@ def _scheme_files(scheme: Scheme) -> dict[Path, str]:
     for key, value in subs.items():
         template = template.replace(key, value)
     return {scheme.dir / "_template.md": template,
-            scheme.stub: stub.replace("{PREFIX}", scheme.prefix)}
+            scheme.stub: stub.replace("{PREFIX}", scheme.prefix),
+            scheme.statuses_yaml: _statuses_yaml(scheme)}
+
+
+# What each status means, written into the scaffold rather than inherited
+# from the code (ADR-tmpstat1). The five are a default, and a default nobody
+# can read is the trap `template-drift` and `inert-status` were both filed
+# about: a capability that is live, enforced and invisible. Editing this file
+# changes what the lint accepts — that is the point of writing it.
+_STATUS_BLURBS = {
+    "Active": "in force — the current answer, and what a citation should "
+              "normally point at",
+    "Proposed": "not in force yet — an open question, so citing it as "
+                "settled is the thing the report catches",
+    "Deferred": "not in force and not being worked on; the question is real "
+                "and the answer is waiting on something",
+    "Superseded": "no longer in force because something replaced it; the "
+                  "successor is named in the field, not the prose",
+    "Rejected": "no longer in force and nothing replaced it — kept because a "
+                "rejection is worth being able to point at",
+}
+
+
+def _statuses_yaml(scheme) -> str:
+    """The scheme's vocabulary as a file it owns.
+
+    Written from `statuses.DEFAULT_STATUSES` so the scaffold and the fallback
+    cannot drift into two lists — the duplicated projection DP-3 names."""
+    from . import statuses
+    lines = [
+        "# The words this scheme's documents may use, and what each means.",
+        "#",
+        "# A DEFAULT, not a law: rename these, drop the ones you do not want,",
+        "# add your own. Every check reads this file. The one rule is that the",
+        "# scheme's `active` word (luria.toml) has to appear here — it is how",
+        "# everything decides what is in force, so a vocabulary without it",
+        "# means no document ever is.",
+        "#",
+        "# `superseded_by:` is named by `successor` in luria.toml, and the",
+        "# status demanding it by `retires_on`. Rename the word here and",
+        "# those two together and the record speaks your language throughout.",
+        "",
+    ]
+    for word in statuses.DEFAULT_STATUSES:
+        lines.append(f"{word}:")
+        lines.append(f"  blurb: {_STATUS_BLURBS[word]}")
+    return "\n".join(lines) + "\n"
 
 
 def _views(cfg: Config) -> str:

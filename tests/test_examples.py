@@ -248,20 +248,22 @@ def test_exactly_one_primary_category_is_enforced(example):
 
 # --- the two limits, pinned ---------------------------------------------
 
-def test_active_selects_a_status_it_does_not_define(example):
-    """`active = "Accepted"` does not make `Accepted` legal.
+def test_active_selects_a_status_the_vocabulary_holds(example):
+    """`active` picks the in-force state *from* the vocabulary — it does not
+    invent one.
 
-    The five statuses are closed and lint-enforced on purpose (ADR-003) — an
-    audit found thirty spellings of "this one counts" across 121 files. So
-    `active` picks the in-force state *from* the vocabulary. Documented in
-    `examples/README.md`; pinned here so it cannot quietly stop being true."""
+    The five are a default now rather than a law, so a project may name its
+    own words in `statuses.yaml`. What it may not do is point `active` at a
+    word the vocabulary does not hold: no document could ever be in force,
+    which silences the citation checks while looking configured. Documented
+    in `examples/README.md`; pinned here so it cannot quietly stop."""
     root = example("rfcs-and-specs")
     rfc = root / "record" / "rfcs.d" / "RFC-001.md"
     rfc.write_text(rfc.read_text().replace("status: Active", "status: Accepted"))
 
     errors: list[str] = []
     lint.check_frontmatter(errors)
-    assert any("nonstandard status" in e for e in errors)
+    assert any("'Accepted'" in e and "not one the" in e for e in errors), errors
 
 
 def test_a_declared_family_replaces_the_defaults(example):

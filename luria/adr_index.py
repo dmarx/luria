@@ -181,23 +181,23 @@ class Adr:
         and `superseded_by` are the fields."""
         from . import statuses
         return statuses.display(
-            statuses.of(self.meta),
+            statuses.of(self.meta, self.scheme),
             link=lambda c: f"[{c}]({t})" if (t := _link(c, self.scheme.dir)) else c)
 
     @property
     def superseded_by(self) -> tuple[str, ...]:
         from . import statuses
-        return statuses.of(self.meta).superseded_by
+        return statuses.of(self.meta, self.scheme).superseded_by
 
     @property
     def status_value(self) -> str:
         from . import statuses
-        return statuses.of(self.meta).value
+        return statuses.of(self.meta, self.scheme).value
 
     @property
     def status_note(self) -> str:
         from . import statuses
-        return statuses.of(self.meta).note
+        return statuses.of(self.meta, self.scheme).note
 
     @property
     def tags(self) -> list[str]:

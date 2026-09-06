@@ -149,12 +149,23 @@ ANY_SCHEME = "*"
 # here instead of implemented twice: one implementation (DP-4), and the
 # built-in gets this module's finding wording, `because:` provenance and
 # record-page line for nothing.
-BUILT_IN = (
-    Field("superseded_by", required=False, reference=ANY_SCHEME, many=True,
-          builtin=True,
-          required_when=RequiredWhen("status", ("Superseded",)),
-          because=("built in: `superseded_by` (ADR-071)",)),
-)
+def built_in(scheme) -> tuple[Field, ...]:
+    """The fields a scheme gets without asking — today, the one naming what
+    replaced a retired document.
+
+    A **default**, not a law (ADR-tmpstat1). The field's name and the status
+    that demands it come from the scheme (`successor` and `retires_on`,
+    themselves defaulting to `superseded_by` and `Superseded`), and a scheme
+    declaring the field in its own `references` table replaces this outright
+    — `for_scheme` merges these last, with `setdefault`.
+
+    `active` set that precedent long ago: which word means *in force* was
+    always the project's to choose. What generic code needs is the role, not
+    the word."""
+    return (Field(scheme.successor, required=False, reference=ANY_SCHEME,
+                  many=True, builtin=True,
+                  required_when=RequiredWhen("status", (scheme.retires_on,)),
+                  because=(f"built in: `{scheme.successor}` (ADR-071)",)),)
 
 
 def for_scheme(scheme) -> Contract:
@@ -204,7 +215,7 @@ def for_scheme(scheme) -> Contract:
             many=plain.many or (prior is not None and prior.many),
             reference=prior.reference if prior is not None else None,
             required_when=plain.required_when, because=because)
-    for field in BUILT_IN:
+    for field in built_in(scheme):
         fields.setdefault(field.name, field)
     return Contract(scheme.prefix, tuple(fields.values()), scheme.tag_groups,
                     field_groups=scheme.field_groups,

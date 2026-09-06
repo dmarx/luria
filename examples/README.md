@@ -124,7 +124,13 @@ five statuses (`Active`, `Proposed`, `Deferred`, `Superseded`, `Rejected`)
 are fixed and enforced by the lint, deliberately
 ([LU-ADR-003](https://github.com/dmarx/luria/blob/main/record/decisions.d/ADR-003.md)):
 an audit across 121 files found thirty distinct spellings of "this one
-counts". So `active = "Accepted"` does not make `Accepted` a legal status —
-it names a state no document can hold, and every document in the scheme
-fails the lint. What `active` *is* for is a scheme whose in-force state is
-one of the five but not `Active`.
+counts". The five are the *default* vocabulary rather than a closed law: a
+project whose decisions are `Accepted` and `Withdrawn` declares those words
+in `statuses.yaml` and every check follows them.
+
+What `active` does is pick the in-force state *from* whatever vocabulary is
+in effect — it does not add a word to it. `active = "Accepted"` with the
+default five names a state no document can hold, so no document is ever in
+force and the citation checks go quiet while the configuration looks
+deliberate. That is reported once, against the configuration, rather than
+as one finding per document.
