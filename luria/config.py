@@ -89,6 +89,10 @@ DEFAULTS: dict = {
         "ADR": {"dir": "record/decisions.d", "output": "docs/decisions",
                 "active": "Active", "render": "index"},
     },
+    # Sequences rendered from a relation the schemes already declare
+    # (ADR-011 in the consumer record, #171). Empty for a project that
+    # declares no relation worth walking, which is every project today.
+    "chains": {},
     # Other projects whose records this one cites, keyed by a short prefix. A
     # reference then composes: `LU-ADR-013` is that remote's decision 13
     # (ADR-016).
@@ -1113,6 +1117,35 @@ def _fragment(spec) -> Fragment:
 
 
 @dataclass(frozen=True)
+class Chain:
+    """A relation walked transitively and rendered as sequences (#171).
+
+        [luria.chains.lineage]
+        scheme   = "LIT"                    # whose documents are the nodes
+        relation = "extends"                # the spine: A extends B, B first
+        sibling  = "compared_against"        # optional: rivals off the spine
+        output   = "docs/lineage.md"         # one page, a section per line
+        title    = "Lines of work"
+
+    `edges.py` already reads a reference field as a typed relation, and the
+    site already renders each page's neighbours. What no view answered is
+    *what sequence is this document a step in* — and that is the question the
+    documents themselves were answering, one prose paragraph each, until two
+    of them went stale on the same fact and had to be corrected in two
+    places.
+
+    Both fields must be declared references on the scheme; a chain over a
+    field nothing declares would render nothing, and nothing looks exactly
+    like current (DP-15)."""
+    name: str
+    scheme: str
+    relation: str
+    output: Path
+    sibling: str = ""
+    title: str = ""
+
+
+@dataclass(frozen=True)
 class Journal:
     """Dated entries that persist, rendered into books (ADR-020).
 
@@ -1197,6 +1230,7 @@ class Config:
     schemes: dict[str, Scheme]
     remotes: dict[str, Remote]
     journals: dict[str, Journal]
+    chains: dict[str, Chain]
     stale_days: int
     fail_on: tuple[str, ...]            # warning classes promoted to failures
     narrow_terms: tuple[str, ...]       # this project's nouns (narrow-titles)
@@ -1421,7 +1455,7 @@ class Config:
 
 # The tables whose entries a project names, as opposed to the settings tables
 # whose keys Luria names. The distinction decides the merge rule (ADR-047).
-FAMILIES = ("schemes", "fragments", "journals", "remotes")
+FAMILIES = ("schemes", "fragments", "journals", "remotes", "chains")
 
 
 def load(root: Path | None = None, text: str | None = None) -> Config:
@@ -1457,7 +1491,7 @@ def load(root: Path | None = None, text: str | None = None) -> Config:
         fragments={k: _fragment(v) for k, v in raw["fragments"].items()},
         code_globs=tuple(raw["code"]["globs"]),
         historical=frozenset(root / p for p in raw["code"]["historical"]),
-        schemes=_schemes(raw["schemes"], root),
+        schemes=(schemes := _schemes(raw["schemes"], root)),
         remotes={
             prefix.upper(): Remote(
                 prefix.upper(),
@@ -1501,6 +1535,7 @@ def load(root: Path | None = None, text: str | None = None) -> Config:
             )
             for name, spec in raw.get("journals", {}).items()
         },
+        chains=_chains(raw.get("chains", {}), schemes, root),
         stale_days=int(raw.get("stale_days", 90)),
         fail_on=tuple(raw["lint"]["fail_on"]),
         narrow_terms=tuple(raw["lint"].get("narrow_terms", [])),
@@ -1509,6 +1544,42 @@ def load(root: Path | None = None, text: str | None = None) -> Config:
         site=_site(raw, root),
         _raw=raw,
     )
+
+
+def _chains(raw: dict, schemes: dict, root: Path) -> dict[str, Chain]:
+    """Every declared chain, checked against the schemes it walks.
+
+    Validated here for the reason every other declaration is: a chain over a
+    scheme nothing declares, or over a field that is not a reference, renders
+    an empty page — and an empty page is indistinguishable from a correct
+    one (DP-15)."""
+    out = {}
+    for name, spec in raw.items():
+        where = f"luria.toml: chains.{name}"
+        prefix = str(spec.get("scheme", "")).upper()
+        if prefix not in schemes:
+            raise ValueError(f"{where}: scheme {prefix!r} is not declared "
+                             f"(have: {', '.join(sorted(schemes))})")
+        declared = {r.field for r in schemes[prefix].references}
+        for key in ("relation", "sibling"):
+            field = str(spec.get(key, ""))
+            if key == "sibling" and not field:
+                continue
+            if field not in declared:
+                raise ValueError(
+                    f"{where}: `{key} = \"{field}\"` is not a reference "
+                    f"{prefix} declares — a chain over a field nothing types "
+                    f"walks no edges and renders an empty page "
+                    f"(declared: {', '.join(sorted(declared)) or 'none'})")
+        if not spec.get("output"):
+            raise ValueError(f"{where}: needs an `output` — the page the "
+                             f"sequences render to")
+        out[name] = Chain(name=name, scheme=prefix,
+                          relation=str(spec["relation"]),
+                          sibling=str(spec.get("sibling", "")),
+                          output=root / str(spec["output"]),
+                          title=str(spec.get("title", "")) or name.title())
+    return out
 
 
 def _schemes(raw: dict, root: Path) -> dict[str, Scheme]:
