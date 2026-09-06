@@ -36,7 +36,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from .adr_index import Adr, load_scheme
+from .adr_index import Adr, load_scheme, prefix_for, rebase_links
 from .config import current
 from .contract import for_scheme, values_of
 
@@ -200,36 +200,44 @@ def _reaches(start: str, spine: dict[str, list[str]]) -> set[str]:
 
 
 def _link(doc: Adr, chain) -> str:
-    """A target that resolves from where the page renders, not from where the
-    sources live — the frame problem `luria link --fix` exists for, met here
-    by construction because the generator knows both ends."""
+    """A target that resolves from where the page renders.
+
+    It points at the *source* document, not at the scheme's view directory:
+    an index-rendered scheme puts a README and its tag pages there, never a
+    page per document, so `docs/literature/LIT-140.md` resolves to nothing.
+    The index's own rows have always linked this way, through `prefix_for`,
+    and the first version of this function inventing a second convention was
+    caught by the first real corpus it met — no fixture had checked that a
+    rendered target exists."""
     scheme = current().schemes[chain.scheme]
-    view = scheme.view
-    page = chain.output.parent
-    try:
-        rel = view.relative_to(page)
-    except ValueError:
-        import os
-        rel = os.path.relpath(view, page)
-    return f"{rel}/{doc.code}.md"
+    return prefix_for(scheme, chain.output.parent) + doc.path.name
+
+
+def _step(doc: Adr, chain, prefix: str, lead: str = "") -> str:
+    """One line of the rendered list. The status is rebased like any other
+    prose: a `Superseded — by [LIT-140](LIT-140.md)` note carries a link
+    authored in the source's frame, and leaving it alone broke it on this
+    page exactly as it once broke on the tag pages."""
+    return (f"{lead}[{doc.code}]({_link(doc, chain)}) — {doc.title} "
+            f"*({rebase_links(doc.status, prefix)})*")
 
 
 def _render(chain, lines: list[Line]) -> str:
+    count = f"{len(lines)} line" + ("" if len(lines) == 1 else "s")
     out = [MARKER, "", f"# {chain.title}", "",
-           f"{len(lines)} line(s), walked from `{chain.relation}:` on "
-           f"{chain.scheme} documents. Each step explains itself; this page "
-           f"is the order they came in.", ""]
+           f"{count}, walked from `{chain.relation}:` on {chain.scheme} "
+           f"documents. Each step explains itself; this page is the order "
+           f"they came in.", ""]
+    prefix = prefix_for(current().schemes[chain.scheme], chain.output.parent)
     for line in lines:
         head = line.spine[0] if line.spine else line.alongside[0]
-        out.append(f"## {head.title}")
+        out.append(f"## From {head.title}")
         out.append("")
         for doc in line.spine:
-            indent = "  " * line.depth[doc.code]
-            out.append(f"{indent}- [{doc.code}]({_link(doc, chain)}) — "
-                       f"{doc.title} *({doc.status})*")
+            out.append("  " * line.depth[doc.code] + "- "
+                       + _step(doc, chain, prefix))
         for doc in line.alongside:
-            out.append(f"- alongside: [{doc.code}]({_link(doc, chain)}) — "
-                       f"{doc.title} *({doc.status})*")
+            out.append(_step(doc, chain, prefix, lead="- alongside: "))
         out.append("")
     return "\n".join(out).rstrip() + "\n"
 
