@@ -136,3 +136,36 @@ def test_generated_stub_placeholders_are_single_braced(tmp_path):
     stub = (tmp_path / "record" / "rfcs.d" / "README.stub").read_text()
     assert "{categories}" in stub and "{table}" in stub
     assert "{{" not in stub and "}}" not in stub
+
+
+# --- the defaults arrive as text, not as behaviour (#183) --------------------
+
+def test_init_writes_the_status_vocabulary(tmp_path, monkeypatch):
+    """The binding constraint on turning built-ins into defaults.
+
+    `template-drift` and `inert-status` both came from a capability that was
+    live but invisible: nobody used it because nothing showed it. A default
+    inherited from code is that trap again — the project cannot read what it
+    is getting, so it never occurs to anyone that it is theirs to change. So
+    `luria init` writes the vocabulary down."""
+    from luria import config, statuses
+    init.run(into=str(tmp_path))
+    repoint(tmp_path, monkeypatch)
+    for scheme in config.current().schemes.values():
+        if scheme.render != "index":
+            continue
+        assert scheme.statuses_yaml.exists(), scheme.prefix
+        assert tuple(statuses.declared(scheme)) == statuses.DEFAULT_STATUSES
+
+
+def test_the_written_vocabulary_is_the_one_in_force(tmp_path, monkeypatch):
+    """Written, not decorative: editing the file changes what lints."""
+    from luria import config, lint, statuses
+    init.run(into=str(tmp_path))
+    repoint(tmp_path, monkeypatch)
+    scheme = config.current().schemes["ADR"]
+    scheme.statuses_yaml.write_text(
+        "Active:\n  blurb: in force\nWithdrawn:\n  blurb: taken back\n")
+    config.reset()
+    assert statuses.undeclared(config.current().schemes["ADR"], "Superseded")
+    assert not statuses.undeclared(config.current().schemes["ADR"], "Withdrawn")

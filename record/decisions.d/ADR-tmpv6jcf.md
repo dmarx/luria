@@ -1,0 +1,185 @@
+---
+# Don't copy this file by hand — run `luria new adr`, which assigns the
+# identity and fills in the fields a machine can compute. WHICH identity
+# depends on the scheme's `allocate` mode: `filing` (the default) takes the
+# next free number on the spot, `merge` mints a temporary code that
+# `luria concretize` numbers where merges serialize (ADR-049). The kinds are the
+# config: every scheme, fragment directory and journal in luria.toml is one, so
+# `luria new <kind>` works for a scheme the moment it is declared.
+#
+# Numbering is sequential and carries information (it's the order decisions were
+# made). The filename is the code and nothing else; the title goes in `title:`
+# below, where correcting it costs an edit rather than a rename plus every link
+# (ADR-013).
+#
+# This frontmatter is the ONLY place these facts live. The index and the per-tag
+# pages are generated from it (ADR-004) — never edit them by hand; run
+# `luria index`.
+
+# Active | Proposed | Deferred | Superseded | Rejected. Supersede when the
+# CHOICE changes: set the old one to `status: Superseded`, name the successor
+# in `superseded_by: ADR-tmpv6jcf` (a reference field: checked, resolved, an edge
+# the index and the site render), and leave its body intact. A qualifying
+# note for anything the field cannot say goes in `status_note:` — prose,
+# like `summary:`, so a code in it is a citation. When the
+# choice stands and only a REASON was wrong, correct this body in place and
+# bump `version:` below — the rule objects to silent revision, not to editing.
+status: Proposed
+
+# What the index shows in place of the code. Repeat it as the body's `# ADR-tmpv6jcf:`
+# heading — someone reading the file alone needs one — and `luria lint` checks
+# that the two agree, because two copies of a string is a projection that drifts.
+title: 'Status is an ordinary controlled vocabulary; a built-in is a declaration nobody wrote'
+
+# Which revision of this decision's claim you are reading. Standard frontmatter
+# for every scheme, and it moves rarely here: a decision that CHANGES is
+# superseded by a new one, not edited. Bump it when the same choice is restated
+# more broadly — scope widened, wording generalized — and say what changed in a
+# `history:` entry. Shown in the index only when it is not 1.
+version: 1
+
+# Browsing categories, pushed down onto the decision itself. One is normal; more
+# than one is fine. A tag not listed in tags.yaml still works.
+tags:
+- record
+
+date: '2026-09-06'
+
+# Optional. The issue(s) this decision came from: '#123'.
+issue: '#000'
+
+# Optional but wanted: the one-blob description the index table shows. Without
+# it the table falls back to the title, which is usually too terse to browse by.
+# Say what was decided AND what was rejected — the index is read far more often
+# than the decision, and "why not the obvious thing" is what people come for.
+# This field is prose, so it carries links like any other prose; the rest of the
+# frontmatter is data and stays plain. (`origin:` on a principle is
+# prose for the same reason — the generator renders it.)
+summary: >-
+  One-paragraph description of the decision, the cost that motivated it, and the
+  alternatives that lost. Written to be read in a table row.
+---
+
+# ADR-tmpv6jcf: Status is an ordinary controlled vocabulary; a built-in is a declaration nobody wrote
+
+## Context
+
+[ADR-076](ADR-076.md) gave a scheme a way to declare a frontmatter field backed by a
+controlled vocabulary — values in a YAML file beside the records, wiring in
+`luria.toml`, closed by default, a page rendered per value. In deciding it,
+it made two observations about the fields that already existed:
+
+> `statuses.yaml` ([ADR-056](ADR-056.md)) is a closed single-valued vocabulary backing the
+> `status:` field; `tags.yaml` is an open multi-valued vocabulary backing
+> `tags:`. Each pairs a frontmatter field with a scheme-local YAML file that
+> says what the values mean, and **each was built as a special case.**
+
+and, rejecting a parallel `vocabularies` table:
+
+> Rejected on review… **`status` and `tags` are themselves vocabulary-backed
+> fields**, the contract has one `Field` shape with a type in it.
+
+It then carved them out:
+
+> The built-in axes — `status`, `tags` — cannot be redeclared here; they have
+> their own files and their own rules.
+
+So the mechanism was generalized *from* two special cases and neither was
+migrated onto it. `status` is the clearer of the two: a closed,
+single-valued vocabulary, which is exactly what the mechanism does. The
+duplication is not theoretical. Wiring a scheme's `status:` to a vocabulary
+and giving a document a bad word produces **two findings for one value** —
+one from the bespoke `statuses.undeclared`, one from the generic
+`_vocabulary_violations`. That is the duplicated projection [DP-3](../../docs/design-principles.md#dp-3) names,
+running in production.
+
+The same shape appears in three more places. `_check_conditions` has a
+hand-written `if when.on == "status"` branch immediately beside the generic
+`elif when.on in vocab_of` that would do the same job. `lint.STATUS_RE` was
+a second spelling of the five words. And `statuses.CLOSED` made the
+vocabulary a law: `statuses.yaml` could only *narrow* the five, so a project
+whose decisions are `Accepted` and `Withdrawn` could not say so, and one
+that retires them into `supplanted_by:` could not either.
+
+Nothing generic needed those words. The retired-citation check — the reason
+this project exists — reads only `scheme.active` and treats everything else
+as out of force; remotes check existence and never status. `active` has been
+the project's to choose since it was added. The rest was hardcoded and bought
+nothing `active` was not already buying.
+
+## Decision
+
+**A project's own rules belong in its own configuration.** Where Luria's code
+states a rule about how a record works, that rule moves to config, and the
+code keeps only the role the rule fills.
+
+Three parts.
+
+**`status:` is declared, not built in.**
+
+    [luria.schemes.ADR.fields.status]
+    vocabulary = "statuses"
+
+`statuses.yaml` becomes an ordinary vocabulary file, and the bespoke reader,
+the bespoke validation and the second spelling of the word list are deleted.
+`BUILT_IN_AXES` stops refusing the declaration.
+
+**A built-in is a declaration nobody wrote — so make them write it.** The
+absence of a `status` declaration is an error naming its own remedy, not a
+silent fallback to the five. A default inherited from code cannot be read,
+so nobody learns it is theirs to change: that is the `template-drift` and
+`inert-status` failure — live, enforced and invisible — and this decision
+refuses to add a third instance of it.
+
+**The break ships with the fix.** `luria upgrade statuses` writes the
+declaration and the vocabulary file into an existing project. It must not go
+through `load()`, because the config it repairs is the config that now
+refuses to load. It is **temporary by construction**: it exists to carry
+records across one version boundary, and carries a marker so it is removed
+rather than accumulating. Luria has one user today, so that window is short
+and the marker is what makes it close.
+
+## Consequences
+
+Three obstacles are known and are the work, not surprises:
+
+- **The `— note` form.** `status: Deferred — until the audit` means the raw
+  frontmatter value is not the vocabulary value. The generic check compares
+  the whole string, so it double-reports beside the existing "carries a
+  note" finding. Status's value has to be parsed before it is checked — the
+  one genuinely status-specific thing in the way, and the reason this is not
+  a pure deletion.
+- **`Contract.empty` flips.** Declaring `status` makes a scheme's contract
+  non-empty, so the record page stops saying "nothing beyond the standard
+  fields". Arguably more honest, and it changes every project's generated
+  docs.
+- **A page per status value** appears in every index-rendered scheme, beside
+  the tag pages. Free, correct, and it moves outbound links the site tests
+  pin.
+
+**`tags:` is deliberately out of scope.** It needs two things `status` does
+not, and neither is the faceted views — those are already generic. It needs
+a way to be **open** ([ADR-054](ADR-054.md) deferred even a `closed` flag, and an open
+vocabulary is a contradiction in the mechanism's current terms), and it needs
+**groups over a subset of values** — `TagGroup`'s "exactly one of these
+seven", which a `Vocabulary` cannot express. Note that `field_groups` is
+already the same idea over *fields*, so a value-group is a third instance of
+a pattern with two spellings. Both are their own decision.
+
+## Alternatives
+
+**Leave `status` built in.** What [ADR-076](ADR-076.md) chose, and the cost has since
+become visible: two findings for one value, a hand-written condition branch
+beside the generic one, and a vocabulary a project cannot name. The carve-out
+was reasonable when the mechanism was new and had one consumer; it is not
+now that it has three.
+
+**Default the declaration instead of requiring it** — every scheme gets
+`vocabulary = "statuses"` implicitly. Nothing breaks, no upgrade command, no
+marker to remove. Rejected: it is the built-in with an extra step. The
+project cannot read what it is getting, so the words stay effectively fixed,
+and the whole point is that they are the project's.
+
+**Migrate `tags` at the same time.** Rejected on the prerequisites above:
+open vocabularies and value-groups are each a decision, and bundling three
+decisions into one migration is how a migration stops being reviewable.

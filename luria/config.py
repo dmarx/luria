@@ -384,6 +384,13 @@ class Scheme:
     prefix: str
     dir: Path
     active: str = "Active"
+    # The retirement pair, defaults rather than laws (ADR-tmpstat1). A
+    # project whose decisions are `Supplanted` and point at their
+    # replacement through `supplanted_by:` says so here, and every check,
+    # edge and rendering follows its words. `active` set the precedent long
+    # before: which word means in force was already the project's to choose.
+    successor: str = "superseded_by"
+    retires_on: str = "Superseded"
     # How this scheme's generated view is built. "index" is a table of links
     # plus per-tag pages — right when the documents are browsed and read one at
     # a time. "document" concatenates the bodies into one page — right when the
@@ -1651,8 +1658,7 @@ def _check_conditions(prefix: str, scheme) -> None:
     and a field the scheme backs with one. A free-text field
     (`stage = ["blocked"]`) has nothing to check against, and refusing on
     that ground would forbid the ordinary case."""
-    from .statuses import CLOSED
-    from .statuses import declared as declared_statuses
+    from .statuses import vocabulary as status_words
     from .vocabularies import declared as declared_values
 
     nameable = {*BUILT_IN_CONDITION_FIELDS, *scheme.requires,
@@ -1670,7 +1676,7 @@ def _check_conditions(prefix: str, scheme) -> None:
                 f"required (nameable: {', '.join(sorted(nameable))})")
         allowed: tuple[str, ...] | None = None
         if when.on == "status":
-            allowed = tuple(declared_statuses(scheme)) or CLOSED
+            allowed = status_words(scheme)
         elif when.on in vocab_of:
             allowed = tuple(declared_values(vocab_of[when.on].file))
         if allowed is None:
@@ -1706,6 +1712,8 @@ def _schemes(raw: dict, root: Path) -> dict[str, Scheme]:
             prefix=prefix,
             dir=root / spec["dir"],
             active=spec.get("active", "Active"),
+            successor=str(spec.get("successor", "superseded_by")),
+            retires_on=str(spec.get("retires_on", "Superseded")),
             render=spec.get("render", "index"),
             output=root / spec["output"] if spec.get("output") else None,
             allocate=spec.get("allocate", "filing"),

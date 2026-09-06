@@ -44,8 +44,12 @@ from dataclasses import dataclass
 
 import yaml
 
-# ADR-003's vocabulary. This module narrows it and never extends it.
-CLOSED = ("Active", "Proposed", "Deferred", "Superseded", "Rejected")
+# ADR-003's five, kept as the DEFAULT rather than the law (ADR-tmpstat1).
+# A project whose decisions are `Accepted` and `Withdrawn` says so in its own
+# `statuses.yaml`, and every check follows its words. What generic code needs
+# is not a word but a role: which status means *in force*, and that is
+# `active` on the scheme, declared and defaulted long before this.
+DEFAULT_STATUSES = ("Active", "Proposed", "Deferred", "Superseded", "Rejected")
 
 # ADR-003's shape: the word, then optionally an em-dash and a note.
 _NOTE_RE = re.compile(r"\s+—\s+")
@@ -99,16 +103,25 @@ def parse(raw) -> Status:
     return Status(word.strip(), rest[0].strip() if rest else "")
 
 
-def of(meta: dict) -> Status:
+def successor_field(scheme=None) -> str:
+    """The field a retiring document names its replacement in. The scheme's
+    where one is given, the default otherwise — this module is called from
+    places that have no scheme in hand, and defaulting is the whole point."""
+    return getattr(scheme, "successor", None) or "superseded_by"
+
+
+def of(meta: dict, scheme=None) -> Status:
     """A document's status from its frontmatter, whichever form it wrote.
 
     `status_note:` wins when present; a note still riding in `status:` is
     read too, so nothing breaks between the field arriving and the file
-    being moved."""
+    being moved. `scheme` says what the successor field is called; without
+    one the default name is read, which is what every project not renaming
+    it uses."""
     meta = meta or {}
     parsed = parse(meta.get("status"))
     note = str(meta.get("status_note") or "").strip()
-    raw = meta.get("superseded_by")
+    raw = meta.get(successor_field(scheme))
     codes = raw if isinstance(raw, list) else ([raw] if raw not in (None, "") else [])
     return Status(parsed.value, note or parsed.note,
                   tuple(str(c).strip() for c in codes if str(c).strip()))
@@ -131,7 +144,7 @@ _BY_RE = re.compile(r"^by\s+")
 
 
 def set_status(text: str, value: str, note: str = "",
-               superseded_by=()) -> str:
+               superseded_by=(), scheme=None) -> str:
     """The file text with its status written in the three-field form.
 
     The one writer of the fields, so the shape has one spelling: the
@@ -141,7 +154,7 @@ def set_status(text: str, value: str, note: str = "",
     lines = f"status: {value}"
     fields = {}
     if superseded_by:
-        fields["superseded_by"] = [str(c) for c in superseded_by]
+        fields[successor_field(scheme)] = [str(c) for c in superseded_by]
     if note:
         fields["status_note"] = note
     if fields:
@@ -233,31 +246,43 @@ def declared(scheme) -> dict[str, dict]:
     return {k: (v or {}) for k, v in loaded.items()}
 
 
-def problems(scheme) -> list[str]:
-    """Keys a scheme declares that are not statuses.
+def vocabulary(scheme) -> tuple[str, ...]:
+    """The words this scheme's documents may use: its own if it declares
+    any, the default five otherwise.
 
-    The one place this module can catch a project trying to invent a word. It
-    is worth catching loudly: a `statuses.yaml` naming `Accepted` would render a
-    legend and silence nothing, so the file would look like it was working.
-    """
+    Distinct from `declared()`, which stays "what the file says" — the legend
+    renders only for a project that asked for one, and a default nobody wrote
+    is not something to publish as though they had."""
+    return tuple(declared(scheme)) or DEFAULT_STATUSES
+
+
+def problems(scheme) -> list[str]:
+    """The one thing a declared vocabulary cannot leave out.
+
+    The words are the project's now, but `active` is how every check decides
+    what is in force — it is the role the whole citation apparatus rests on.
+    A vocabulary omitting it means nothing is ever in force, which silences
+    the retired-citation check completely while looking like a working
+    configuration. That is the failure this guard exists for; inventing a
+    word is not."""
     from .config import current
-    bad = [k for k in declared(scheme) if k not in CLOSED]
-    if not bad:
+    words = vocabulary(scheme)
+    if scheme.active in words:
         return []
-    rel = current().rel(scheme.statuses_yaml)
-    return [f"{rel}: {k!r} is not a status (want one of: "
-            f"{', '.join(CLOSED)}) — the vocabulary is closed (ADR-003)"
-            for k in bad]
+    where = (current().rel(scheme.statuses_yaml) if declared(scheme)
+             else "the default vocabulary")
+    return [f"luria.toml: schemes.{scheme.prefix}.active is "
+            f"{scheme.active!r}, which {where} does not contain — the "
+            f"vocabulary has to hold the word that means in force, or no "
+            f"document ever is (have: {', '.join(words)})"]
 
 
 def undeclared(scheme, status: str) -> bool:
-    """True when the scheme declares a vocabulary and this status is not in it.
+    """True when this status is not a word the scheme may use.
 
     `status` is the bare word: ADR-003 allows a trailing ` — note`, and the
-    note is a qualifier on the word rather than part of it.
-    """
-    vocab = declared(scheme)
-    return bool(vocab) and parse(status).value not in vocab
+    note is a qualifier on the word rather than part of it."""
+    return parse(status).value not in vocabulary(scheme)
 
 
 def legend(scheme) -> str:

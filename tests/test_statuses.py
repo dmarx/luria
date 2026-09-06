@@ -18,19 +18,28 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from luria import repair, adr_index, config, lint, statuses
+from luria import repair, adr_index, config, contract, lint, statuses
 
 
-def _project(root: Path, monkeypatch, uniform_share: float | None = None) -> None:
+def _project(root: Path, monkeypatch, uniform_share: float | None = None,
+             active: str | None = None, successor: str | None = None,
+             retires_on: str | None = None) -> None:
     (root / "record" / "values.d").mkdir(parents=True, exist_ok=True)
     (root / "docs").mkdir(parents=True, exist_ok=True)
     share = "" if uniform_share is None else f"uniform_share = {uniform_share}\n"
+    extra = share
+    if active is not None:
+        extra += f'active = "{active}"\n'
+    if successor is not None:
+        extra += f'successor = "{successor}"\n'
+    if retires_on is not None:
+        extra += f'retires_on = "{retires_on}"\n'
     (root / "luria.toml").write_text(
         '[luria]\nissue_url = "https://example.test/issues/{n}"\n'
         '[luria.schemes.VP]\n'
         'dir = "record/values.d"\n'
         'render = "index"\n'
-        'output = "docs/values"\n' + share)
+        'output = "docs/values"\n' + extra)
     monkeypatch.setenv("LURIA_ROOT", str(root))
     config.reset()
 
@@ -101,17 +110,68 @@ def test_a_trailing_note_does_not_defeat_the_check(tmp_path, monkeypatch):
     assert len(errors) == 1 and "'Deferred'" in errors[0]
 
 
-def test_the_vocabulary_cannot_be_extended(tmp_path, monkeypatch):
-    """The one thing this feature must not become. A file naming `Accepted`
-    would render a legend and silence nothing, so it would look like it was
-    working — which is why this is an error rather than a warning."""
-    _project(tmp_path, monkeypatch)
-    _declare(tmp_path, "Active:\n  blurb: in force\nAccepted:\n  blurb: ditto\n")
-    _value(tmp_path, 1)
+def test_a_scheme_may_name_its_own_words(tmp_path, monkeypatch):
+    """The five were a law and are now a default (#183). A project whose
+    decisions are `Accepted` and `Withdrawn` says so, and the checks follow
+    its words rather than telling it those words do not exist."""
+    _project(tmp_path, monkeypatch, active="Accepted")
+    _declare(tmp_path, "Accepted:\n  blurb: in force\nWithdrawn:\n  blurb: not\n")
+    _value(tmp_path, 1, "Accepted")
+    errors: list[str] = []
+    lint.check_status_vocabulary(errors)
+    assert errors == []
+
+
+def test_a_vocabulary_without_the_in_force_word_is_a_config_error(
+        tmp_path, monkeypatch):
+    """The invariant that replaces "the vocabulary is closed". `active` is
+    how every check decides what is in force, so a vocabulary that omits it
+    means nothing is ever in force — silently, and catastrophically for the
+    citation checks."""
+    _project(tmp_path, monkeypatch, active="Accepted")
+    _declare(tmp_path, "Proposed:\n  blurb: pending\nWithdrawn:\n  blurb: not\n")
+    _value(tmp_path, 1, "Proposed")
     errors: list[str] = []
     lint.check_status_vocabulary(errors)
     assert len(errors) == 1
-    assert "'Accepted'" in errors[0] and "closed" in errors[0]
+    assert "Accepted" in errors[0] and "active" in errors[0]
+
+
+def test_an_active_word_outside_the_default_is_a_config_error_too(
+        tmp_path, monkeypatch):
+    """The same invariant when the project declares nothing. `active` naming
+    a word the default vocabulary does not contain means no document can
+    ever be in force — reported once, at the configuration, rather than as
+    one finding per document."""
+    _project(tmp_path, monkeypatch, active="Accepted")
+    _value(tmp_path, 1, "Active")
+    errors: list[str] = []
+    lint.check_status_vocabulary(errors)
+    assert len(errors) == 1
+    assert "Accepted" in errors[0] and "active" in errors[0]
+
+
+def test_a_word_outside_the_declared_vocabulary_is_still_reported(
+        tmp_path, monkeypatch):
+    """Replacing the list does not mean abandoning the check — it means the
+    check reads the project's list."""
+    _project(tmp_path, monkeypatch, active="Accepted")
+    _declare(tmp_path, "Accepted:\n  blurb: in force\nWithdrawn:\n  blurb: not\n")
+    _value(tmp_path, 1, "Superseded")
+    errors: list[str] = []
+    lint.check_frontmatter(errors)
+    assert any("Superseded" in e for e in errors), errors
+
+
+def test_the_default_five_still_apply_when_nothing_is_declared(
+        tmp_path, monkeypatch):
+    """A default, not an absence: an unconfigured project keeps exactly the
+    behaviour it had, including the rejection of a word nobody declared."""
+    _project(tmp_path, monkeypatch)
+    _value(tmp_path, 1, "Accepted")
+    errors: list[str] = []
+    lint.check_frontmatter(errors)
+    assert any("Accepted" in e for e in errors), errors
 
 
 def test_the_meaning_reaches_the_generated_index(tmp_path, monkeypatch):
@@ -484,3 +544,95 @@ def test_display_composes_the_successor_and_the_note(project):
     assert statuses.display(s, link=lambda c: f"[[{c}]]") == \
         "Superseded — by [[ADR-002]]; the capital never burned"
     assert statuses.Status("Active").display == "Active"
+
+
+# --- The successor field is the scheme's too (#183) --------------------------
+#
+# `superseded_by` was a module constant with `Superseded` baked into its
+# `required_when`. A project that renames the status but cannot rename the
+# field gets half a vocabulary: `Supplanted` documents, pointing at each
+# other through a field named for a word the project no longer uses.
+
+def test_a_scheme_names_its_own_successor_field(tmp_path, monkeypatch):
+    _project(tmp_path, monkeypatch, successor="supplanted_by",
+             retires_on="Supplanted")
+    _declare(tmp_path, "Active:\n  blurb: in force\nSupplanted:\n  blurb: replaced\n")
+    path = tmp_path / "record" / "values.d" / "VP-001.md"
+    path.write_text("---\nstatus: Supplanted\nsupplanted_by:\n- VP-002\n"
+                    "title: 'A value'\ntags:\n- craft\ndate: '2026-01-01'\n"
+                    "---\n\n# VP-001: A value\n\nBody.\n")
+    _value(tmp_path, 2)
+    config.reset()
+    errors: list[str] = []
+    lint.check_frontmatter(errors)
+    lint.check_contracts(errors)
+    lint.check_status_vocabulary(errors)
+    assert errors == [], errors
+
+
+def test_the_renamed_field_carries_the_successor_rule(tmp_path, monkeypatch):
+    """ADR-071 follows the words: a retiring document must still name what
+    replaced it, in whatever field the project calls it."""
+    _project(tmp_path, monkeypatch, successor="supplanted_by",
+             retires_on="Supplanted")
+    _declare(tmp_path, "Active:\n  blurb: in force\nSupplanted:\n  blurb: replaced\n")
+    path = tmp_path / "record" / "values.d" / "VP-001.md"
+    path.write_text("---\nstatus: Supplanted\ntitle: 'A value'\ntags:\n"
+                    "- craft\ndate: '2026-01-01'\n---\n\n# VP-001: A value\n\nBody.\n")
+    config.reset()
+    errors: list[str] = []
+    lint.check_contracts(errors)
+    assert any("supplanted_by" in e for e in errors), errors
+    assert not any("superseded_by" in e for e in errors), errors
+
+
+def test_the_renamed_field_is_read_as_the_successor(tmp_path, monkeypatch):
+    _project(tmp_path, monkeypatch, successor="supplanted_by",
+             retires_on="Supplanted")
+    _declare(tmp_path, "Active:\n  blurb: in force\nSupplanted:\n  blurb: replaced\n")
+    path = tmp_path / "record" / "values.d" / "VP-001.md"
+    path.write_text("---\nstatus: Supplanted\nsupplanted_by:\n- VP-002\n"
+                    "title: 'A value'\ntags:\n- craft\ndate: '2026-01-01'\n"
+                    "---\n\n# VP-001: A value\n\nBody.\n")
+    _value(tmp_path, 2)
+    config.reset()
+    scheme = _scheme()
+    doc = adr_index.Adr(path, scheme)
+    assert doc.superseded_by == ("VP-002",)
+    assert "VP-002" in doc.status
+
+
+def test_the_renamed_field_draws_the_succession_edge(tmp_path, monkeypatch):
+    from luria import edges
+    _project(tmp_path, monkeypatch, successor="supplanted_by",
+             retires_on="Supplanted")
+    _declare(tmp_path, "Active:\n  blurb: in force\nSupplanted:\n  blurb: replaced\n")
+    path = tmp_path / "record" / "values.d" / "VP-001.md"
+    path.write_text("---\nstatus: Supplanted\nsupplanted_by:\n- VP-002\n"
+                    "title: 'A value'\ntags:\n- craft\ndate: '2026-01-01'\n"
+                    "---\n\n# VP-001: A value\n\nBody.\n")
+    _value(tmp_path, 2)
+    config.reset()
+    drawn = edges.outbound(adr_index.Adr(path, _scheme()))
+    assert [(e.relation, e.target) for e in drawn] == [("supplanted_by", "VP-002")]
+
+
+def test_declaring_the_field_yourself_replaces_the_default(tmp_path, monkeypatch):
+    """The point of calling it a default: a scheme that declares the field in
+    its own `references` table owns it outright, and the default adds
+    nothing beside it."""
+    (tmp_path / "record" / "values.d").mkdir(parents=True, exist_ok=True)
+    (tmp_path / "docs").mkdir(parents=True, exist_ok=True)
+    (tmp_path / "luria.toml").write_text(
+        '[luria]\nissue_url = "https://example.test/issues/{n}"\n'
+        '[luria.schemes.VP]\ndir = "record/values.d"\nrender = "index"\n'
+        'output = "docs/values"\n'
+        '[luria.schemes.VP.references]\n'
+        'superseded_by = { scheme = "VP", required = false, many = true }\n')
+    monkeypatch.setenv("LURIA_ROOT", str(tmp_path))
+    config.reset()
+    fields = [f for f in contract.for_scheme(_scheme()).fields
+              if f.name == "superseded_by"]
+    assert len(fields) == 1, fields
+    assert not fields[0].builtin
+    assert fields[0].reference == "VP"

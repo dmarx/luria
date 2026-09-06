@@ -55,12 +55,6 @@ from . import (adr_pending, badges, chains, ci, contract, doc_refs, journal,
                relations, sources, statuses, templates)
 from .config import current
 
-# The closed status vocabulary (ADR-003). `Active` is the in-force state; the
-# rest are the ways a decision can be out of force, each meaning something a
-# reader needs. The qualifying note is its own field, `status_note:`, and
-# prose; a note still riding in `status:` is reported below.
-STATUS_RE = re.compile(r"^(Active|Proposed|Deferred|Superseded|Rejected)$")
-
 # Pages deliberately absent from the index: the index itself.
 INDEX_EXEMPT = {"README.md"}
 
@@ -112,7 +106,7 @@ def check_frontmatter(errors: list[str]) -> None:
                 errors.append(f"{rel}: no YAML frontmatter (see _template.md)")
                 continue
             check_title(errors, rel, meta, body)
-            status = statuses.of(meta)
+            status = statuses.of(meta, scheme)
             if not status.value:
                 errors.append(f"{rel}: no `status:` in frontmatter")
             elif statuses.combined(meta):
@@ -121,16 +115,21 @@ def check_frontmatter(errors: list[str]) -> None:
                 errors.append(
                     f"{rel}: `status:` carries a note — `luria repair` moves "
                     f"it to `status_note:`")
-            elif not STATUS_RE.match(status.value):
-                errors.append(
-                    f"{rel}: nonstandard status {status.value!r} (want: "
-                    "Active|Proposed|Deferred|Superseded|Rejected; the "
-                    "note goes in `status_note:`)")
             elif statuses.undeclared(scheme, status.value):
+                # One list, read once. The vocabulary is the scheme's own
+                # where it declares one and the default five otherwise, so
+                # this used to be two checks against two spellings of the
+                # same words — a duplicated projection (DP-3).
+                where = (f"see {cfg.rel(scheme.statuses_yaml)}"
+                         if statuses.declared(scheme)
+                         else "the default; declare "
+                              f"{cfg.rel(scheme.statuses_yaml)} to use "
+                              "other words")
                 errors.append(
                     f"{rel}: status {status.value!r} is not one the "
-                    f"{scheme.prefix} scheme declares (see "
-                    f"{cfg.rel(scheme.statuses_yaml)})")
+                    f"{scheme.prefix} scheme uses — want "
+                    f"{'|'.join(statuses.vocabulary(scheme))} ({where}); "
+                    f"a qualifying note goes in `status_note:`")
             # "Superseded names its successor" used to be a branch here.
             # It is a `required_when` on the built-in field now, checked with
             # every other obligation in `check_contracts` (ADR-071 stated

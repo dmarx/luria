@@ -57,7 +57,7 @@ import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from . import doc_refs, edges
+from . import doc_refs, edges, statuses
 from .adr_index import parse_frontmatter
 from .config import Site, current
 
@@ -473,22 +473,29 @@ def _alias(path: Path, cfg) -> str | None:
 
 # How an inbound edge reads on the page it lands on. A declared reference
 # field has no built-in inverse, so it is named for the field.
-_INBOUND = {edges.SUPERSEDED_BY: "Supersedes",
-            edges.INFLUENCED_BY: "Influenced"}
-_INBOUND_ORDER = (edges.SUPERSEDED_BY, edges.INFLUENCED_BY)
+#
+# The successor field is the scheme's to name (ADR-tmpstat1), so the label
+# follows the role rather than the word: a project retiring documents into
+# `supplanted_by:` still reads "Supersedes" on the page that replaced one,
+# because that is what the edge means.
+def _inbound_labels(scheme) -> tuple[dict[str, str], tuple[str, ...]]:
+    successor = statuses.successor_field(scheme)
+    return ({successor: "Supersedes", edges.INFLUENCED_BY: "Influenced"},
+            (successor, edges.INFLUENCED_BY))
 
 
-def _edge_bits(outbound, inbound) -> list[str]:
+def _edge_bits(outbound, inbound, scheme=None) -> list[str]:
     """The typed edges as record-line fragments, wikilinks and all.
 
     Supersession and influence already read from the page's own frontmatter
     (the status note, `influenced_by:`), so outbound only adds the declared
     reference fields — the one direction the site otherwise loses, since
     frontmatter renders as nothing."""
+    labels, order_of = _inbound_labels(scheme)
     bits = []
     out: dict[str, list[str]] = {}
     for edge in outbound:
-        if edge.relation not in _INBOUND:
+        if edge.relation not in labels:
             out.setdefault(edge.relation, []).append(edge.target)
     for relation, targets in out.items():
         label = relation.replace("_", " ").capitalize()
@@ -498,15 +505,21 @@ def _edge_bits(outbound, inbound) -> list[str]:
         grouped.setdefault(edge.relation, []).append(edge.source)
 
     def order(relation: str) -> tuple[int, str]:
-        built_in = relation in _INBOUND_ORDER
-        return (_INBOUND_ORDER.index(relation) if built_in
-                else len(_INBOUND_ORDER), relation)
+        known = relation in order_of
+        return (order_of.index(relation) if known else len(order_of), relation)
 
     for relation in sorted(grouped, key=order):
-        label = _INBOUND.get(relation) or f"Cited as `{relation}` by"
+        label = labels.get(relation) or f"Cited as `{relation}` by"
         codes = " · ".join(f"[[{c}]]" for c in sorted(set(grouped[relation])))
         bits.append(f"**{label}** {codes}")
     return bits
+
+
+def _scheme_of(source: Path):
+    """The index-rendered scheme whose directory holds this document, if
+    any. Where the successor field's name comes from."""
+    return next((s for s in current().schemes.values()
+                 if s.render == "index" and source.parent == s.dir), None)
 
 
 def _vocabulary_bits(meta: dict, source: Path) -> list[str]:
@@ -542,8 +555,8 @@ def record_line(meta: dict, source: Path, outbound=(), inbound=()) -> str:
     here — the fixer owns every target in this record, and a second speller
     would be the drift DP-4 names."""
     bits = []
-    from . import statuses
-    if status := statuses.display(statuses.of(meta), link=lambda c: f"[[{c}]]"):
+    if status := statuses.display(statuses.of(meta, _scheme_of(source)),
+                                  link=lambda c: f"[[{c}]]"):
         bits.append(f"**Status** {status}")
     # Shown only when it isn't 1, the same rule the index follows (ADR-016).
     # A version that isn't a number is somebody's mistake, not this function's
@@ -562,7 +575,7 @@ def record_line(meta: dict, source: Path, outbound=(), inbound=()) -> str:
         codes = " · ".join(f"[[{code}]]" for code in influenced if code)
         bits.append(f"**Influenced by** {codes}")
     bits += _vocabulary_bits(meta, source)
-    bits += _edge_bits(outbound, inbound)
+    bits += _edge_bits(outbound, inbound, _scheme_of(source))
     if not bits:
         return ""
     expanded, _ = doc_refs.expand_wikilinks("> " + " · ".join(bits), source)
