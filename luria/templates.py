@@ -76,12 +76,13 @@ def rows() -> list[str]:
             # twice in two vocabularies.
             continue
         where = cfg.rel(path)
-        for field in for_scheme(scheme).fields:
+        obligations = for_scheme(scheme)
+        for field in obligations.fields:
             if field.builtin:
                 continue
             cite = _cite(field.because)
             if field.name not in meta:
-                if field.demanded(meta):
+                if obligations.demands(field, meta):
                     found.append(
                         f"{where}:1: `{field.name}:` is required but not "
                         f"scaffolded — a document copied from this form starts "

@@ -250,26 +250,16 @@ class RequiredWhen:
     One field against a set of literal values, and no more than that. Not
     negation, not conjunction, not an expression: a config that can state
     arbitrary predicates is a config nobody reads at a glance, and the whole
-    value of this one is that a reader sees the rule in the line."""
+    value of this one is that a reader sees the rule in the line.
+
+    Pure data. Deciding whether it holds of a document needs the field's
+    *effective* value — a status carrying a note is still that status, a
+    vocabulary field with a default is never absent — and only the compiled
+    contract knows how to resolve that. `Contract.demands` does it, which
+    also keeps this module from reaching up into ones that depend on it.
+    """
     on: str
     values: tuple[str, ...]
-
-    def holds(self, meta: dict) -> bool:
-        """Whether the condition is met by a document's frontmatter. The
-        compared value is normalised the way the field's own machinery
-        normalises it — a `status:` carrying a qualifying note is still that
-        status (ADR-003), and matching the raw string would read
-        `Proposed — pending a replication` as some other status and exempt
-        the document silently."""
-        raw = meta.get(self.on)
-        if raw is None:
-            return False
-        if self.on == "status":
-            from .statuses import parse
-            return parse(str(raw)).value in self.values
-        if isinstance(raw, list):
-            return any(str(v) in self.values for v in raw)
-        return str(raw) in self.values
 
 
 @dataclass(frozen=True)
@@ -1511,6 +1501,67 @@ def load(root: Path | None = None, text: str | None = None) -> Config:
     )
 
 
+# The two axes every scheme has, whatever else it declares.
+BUILT_IN_CONDITION_FIELDS = ("status", "tags")
+
+
+def _check_conditions(prefix: str, scheme) -> None:
+    """Every `required_when` on a scheme, against what that scheme can
+    actually say — checked once the whole scheme is assembled, because a
+    condition may name a field declared in a different table.
+
+    Shape validation alone was not enough, and the module's own reason for
+    validating eagerly is why: a condition that can never hold "surfaces as
+    no violations". `{ staus = ["Proposed"] }` and `{ status = ["proposed"] }`
+    are the two likeliest authoring mistakes, and both used to be accepted,
+    never hold, and leave the field silently never required — the exact
+    outcome the declaration exists to remove (review of #172).
+
+    Values are checked only where a closed set exists: the status vocabulary,
+    and a field the scheme backs with one. A free-text field
+    (`stage = ["blocked"]`) has nothing to check against, and refusing on
+    that ground would forbid the ordinary case."""
+    from .statuses import CLOSED
+    from .statuses import declared as declared_statuses
+    from .vocabularies import declared as declared_values
+
+    nameable = {*BUILT_IN_CONDITION_FIELDS, *scheme.requires,
+                *(r.field for r in scheme.references),
+                *(v.field for v in scheme.vocabularies),
+                *(f.field for f in scheme.plain_fields)}
+    vocab_of = {v.field: v for v in scheme.vocabularies}
+
+    for field, when in _conditions(scheme):
+        where = f"luria.toml: schemes.{prefix}.fields.{field}.required_when"
+        if when.on not in nameable:
+            raise ValueError(
+                f"{where}: `{when.on}` is not a field {prefix} declares, so "
+                f"the condition can never hold and `{field}` is never "
+                f"required (nameable: {', '.join(sorted(nameable))})")
+        allowed: tuple[str, ...] | None = None
+        if when.on == "status":
+            allowed = tuple(declared_statuses(scheme)) or CLOSED
+        elif when.on in vocab_of:
+            allowed = tuple(declared_values(vocab_of[when.on].file))
+        if allowed is None:
+            continue
+        if bad := [v for v in when.values if v not in allowed]:
+            raise ValueError(
+                f"{where}: {', '.join(repr(v) for v in bad)} is not a value "
+                f"`{when.on}` takes, so the condition can never hold and "
+                f"`{field}` is never required "
+                f"(values: {', '.join(allowed)})")
+
+
+def _conditions(scheme):
+    """Every (field name, condition) this scheme declares, across the tables
+    a condition can be written in."""
+    for group in (scheme.references, scheme.vocabularies, scheme.plain_fields):
+        for entry in group:
+            if entry.required_when is not None:
+                yield entry.field, entry.required_when
+
+
 def _schemes(raw: dict, root: Path) -> dict[str, Scheme]:
     """Every declared scheme, with the cross-scheme checks that need them all.
 
@@ -1542,6 +1593,7 @@ def _schemes(raw: dict, root: Path) -> dict[str, Scheme]:
             uniform_share=float(spec.get("uniform_share", 1.0)),
         )
     for prefix, scheme in schemes.items():
+        _check_conditions(prefix, scheme)
         for ref in scheme.references:
             if ref.scheme not in schemes:
                 raise ValueError(
