@@ -43,7 +43,9 @@ from pathlib import Path
 
 from .adr_index import Adr, load_scheme, parse_frontmatter
 from .config import current
-from .contract import for_scheme, values_of
+from .contract import (ANY_SCHEME, for_scheme, resolvable, values_of,
+                       violations)
+from .field_edit import add_to_field, drop_from_field
 
 
 @dataclass(frozen=True)
@@ -268,13 +270,76 @@ def _mutual(field: str, back: str, held: dict,
     return edge[::-1] in (now_f | now_b)
 
 
-def completions() -> list[Repair]:
-    """Every edit a declared pair needs, deduplicated and ordered so a run is
-    reproducible. Empty when every pair already agrees."""
+def _applied(meta: dict, entries: list[Repair]) -> dict:
+    """`meta` as it would read after these repairs, without touching disk."""
+    out = dict(meta)
+    for entry in entries:
+        held = _listed(out.get(entry.field))
+        if entry.op == "add":
+            held = held + [entry.code]
+        else:
+            held = [c for c in held if c != entry.code]
+        if held:
+            out[entry.field] = held
+        else:
+            out.pop(entry.field, None)
+    return out
+
+
+def _blocked(prefix: str, docs: dict, repairs: list[Repair]
+             ) -> tuple[list[Repair], list[tuple[Repair, str]]]:
+    """Split repairs into the ones that are safe to write and the ones that
+    would break the document they land in.
+
+    The fixer edits frontmatter, and frontmatter is what the contract judges,
+    so an edit can move a document from satisfying its scheme to violating
+    it — a back-reference added into a field group that allows only one of
+    two fields, or a stale one removed out of a field the status requires.
+    Neither is the author's mistake and neither should be made silently.
+
+    Only *new* violations block. A document already in breach somewhere else
+    still gets its back-references, or one unrelated mistake would freeze
+    every relation it stands in."""
+    scheme = current().schemes[prefix]
+    contract = for_scheme(scheme)
+    # `superseded_by` names any scheme, which has no one set of codes to
+    # resolve against — the same exemption the lint makes.
+    known = {f.reference: resolvable(f.reference) for f in contract.fields
+             if f.reference and f.reference != ANY_SCHEME}
+    by_path: dict[Path, list[Repair]] = {}
+    for entry in repairs:
+        by_path.setdefault(entry.path, []).append(entry)
+    safe, held_back = [], []
+    for path, entries in by_path.items():
+        rel = current().rel(path)
+        meta = parse_frontmatter(path.read_text(encoding="utf-8"))[0]
+        was = set(violations(contract, rel, meta, known))
+        now = violations(contract, rel, _applied(meta, entries), known)
+        fresh = [v for v in now if v not in was]
+        if fresh:
+            held_back += [(e, fresh[0]) for e in entries]
+        else:
+            safe += entries
+    return safe, held_back
+
+
+def _all_repairs() -> tuple[list[Repair], list[tuple[Repair, str]]]:
+    """Every edit the declared pairs need, and every one held back."""
     out: list[Repair] = []
+    stopped: list[tuple[Repair, str]] = []
     for prefix, field, back in pairs():
         docs, held = _held(prefix)
-        out += _intents(prefix, field, back, docs, held)[0]
+        safe, blocked = _blocked(prefix, docs,
+                                 _intents(prefix, field, back, docs, held)[0])
+        out += safe
+        stopped += blocked
+    return out, stopped
+
+
+def completions() -> list[Repair]:
+    """Every edit a declared pair needs and the contract permits, ordered so
+    a run is reproducible. Empty when every pair already agrees."""
+    out = _all_repairs()[0]
     return sorted(set(out), key=lambda r: (str(r.path), r.field, r.code, r.op))
 
 
@@ -283,9 +348,18 @@ def rows() -> list[str]:
     record's own paths and naming what the fixer will do about it."""
     cfg = current()
     found: list[str] = []
+    for entry, breach in _all_repairs()[1]:
+        did = "writing" if entry.op == "add" else "removing"
+        found.append(
+            f"{cfg.rel(entry.path)}: {did} `{entry.field}: {entry.code}` "
+            f"would leave this document in breach of its scheme "
+            f"({breach.split(': ', 1)[-1]}), so the pair is left one-sided — "
+            f"the relation and the contract disagree, and which gives is a "
+            f"person's call")
     for prefix, field, back in pairs():
         docs, held = _held(prefix)
         repairs, clashes = _intents(prefix, field, back, docs, held)
+        repairs = _blocked(prefix, docs, repairs)[0]
         for a, b in clashes:
             if _mutual(field, back, held, (a, b)):
                 found.append(
@@ -314,73 +388,6 @@ def rows() -> list[str]:
     return sorted(set(found))
 
 
-def _add_to_field(text: str, name: str, code: str) -> str:
-    """Add one code to a list-valued frontmatter field, creating the field
-    when it is absent and widening a scalar rather than replacing it.
-
-    A `many` field accepts one code written as a scalar (a list of one), so
-    the scalar case is real and overwriting it would silently delete a
-    relation — the quiet kind of loss this module exists to end."""
-    if not text.startswith("---\n"):
-        return text
-    end = text.index("\n---\n", 3) + 1
-    head, rest = text[4:end], text[end:]
-    lines = head.splitlines(keepends=True)
-    out, at, done = [], 0, False
-    while at < len(lines):
-        line = lines[at]
-        if not done and re.match(rf"^{re.escape(name)}\s*:", line):
-            value = line.split(":", 1)[1].strip()
-            at += 1
-            items = []
-            while at < len(lines) and lines[at].startswith("- "):
-                items.append(lines[at])
-                at += 1
-            out.append(f"{name}:\n")
-            if value:
-                out.append(f"- {value}\n")
-            out.extend(items)
-            out.append(f"- {code}\n")
-            done = True
-            continue
-        out.append(line)
-        at += 1
-    if not done:
-        out.append(f"{name}:\n- {code}\n")
-    return "---\n" + "".join(out) + rest
-
-
-def _drop_from_field(text: str, name: str, code: str) -> str:
-    """Take one code out of a list-valued frontmatter field, removing the
-    field itself when that was its last entry.
-
-    A field left standing with nothing under it is not a relation held by
-    nobody — it is invalid frontmatter, and the next reader gets a parse
-    error instead of the tidy record the deletion was meant to leave."""
-    if not text.startswith("---\n"):
-        return text
-    end = text.index("\n---\n", 3) + 1
-    head, rest = text[4:end], text[end:]
-    lines, out, at = head.splitlines(keepends=True), [], 0
-    while at < len(lines):
-        line = lines[at]
-        if not re.match(rf"^{re.escape(name)}\s*:", line):
-            out.append(line)
-            at += 1
-            continue
-        value = line.split(":", 1)[1].strip()
-        at += 1
-        kept = [value] if value else []
-        while at < len(lines) and lines[at].startswith("- "):
-            kept.append(lines[at][2:].strip())
-            at += 1
-        kept = [k for k in kept if k != code]
-        if kept:
-            out.append(f"{name}:\n")
-            out += [f"- {k}\n" for k in kept]
-    return "---\n" + "".join(out) + rest
-
-
 def complete(fix: bool = False) -> list[Repair]:
     """Make every declared pair agree; report the edits without `fix`.
 
@@ -393,9 +400,9 @@ def complete(fix: bool = False) -> list[Repair]:
         for path, entries in by_path.items():
             text = path.read_text(encoding="utf-8")
             for entry in entries:
-                text = (_add_to_field(text, entry.field, entry.code)
+                text = (add_to_field(text, entry.field, entry.code)
                         if entry.op == "add"
-                        else _drop_from_field(text, entry.field, entry.code))
+                        else drop_from_field(text, entry.field, entry.code))
             path.write_text(text, encoding="utf-8")
     return todo
 

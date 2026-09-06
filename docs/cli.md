@@ -217,6 +217,16 @@ is self-correcting: delete it once more and the deletion *is* a change.
 With no repository or no commit yet, every relation reads as added, which
 is right for a document git has never seen.
 
+**`--fix` never makes `luria lint` worse.** The fixer edits frontmatter and
+frontmatter is what the contract judges, so a repair can move a document
+from satisfying its scheme to violating it — a back-reference added into a
+field group that permits only one of two fields, or a stale one removed out
+of a field the document's status requires. Any repair that would introduce a
+*new* violation is not applied; the pair stays one-sided and the finding
+says which two rules disagree. A document already in breach elsewhere still
+gets its back-references, or one unrelated mistake would freeze every
+relation it stands in.
+
 The one thing `--fix` will not touch is a contradiction: a document naming
 another in both directions of one pair, two documents each claiming to
 come first, or a relation withdrawn on one side and asserted on the other

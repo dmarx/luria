@@ -473,3 +473,81 @@ def test_a_converse_field_is_not_a_citation_site(tmp_path, monkeypatch):
     config.reset()
     cited = ref_status.scan().cited.get("LIT-002", [])
     assert cited == [], [str(c.path) for c in cited]
+
+
+# --- Never make the lint worse (#182) ---------------------------------------
+#
+# The fixer writes and deletes frontmatter, and until now it did so without
+# consulting the scheme's contract — so it could move a document from
+# satisfying its contract to violating it, in either direction. Adding a
+# back-reference can break a field group that allows only one of two fields;
+# removing one can empty a field the scheme requires.
+#
+# The rule is one rule: a repair that would introduce a violation is not
+# applied. Running `--fix` never makes `luria lint` worse.
+
+GROUPED = PAIRED + """
+[luria.schemes.LIT.references]
+note = { scheme = "LIT", required = false, many = true }
+
+[luria.schemes.LIT.field_groups.provenance]
+fields  = ["extended_by", "note"]
+require = "at-most-one"
+"""
+
+
+def grouped(tmp_path, monkeypatch) -> Path:
+    body = PAIRED.replace("[luria.schemes.LIT.references]\n", "") + ""
+    return project(tmp_path, monkeypatch, """
+[luria.schemes.LIT.references]
+extends = { scheme = "LIT", required = false, many = true, converse = "extended_by" }
+extended_by = { scheme = "LIT", required = false, many = true, converse = "extends" }
+compared_against = { scheme = "LIT", required = false, many = true, converse = "compared_against" }
+note = { scheme = "LIT", required = false, many = true }
+
+[luria.schemes.LIT.field_groups.provenance]
+fields  = ["extended_by", "note"]
+require = "at-most-one"
+""")
+
+
+def test_a_repair_that_would_break_a_document_is_not_applied(
+        tmp_path, monkeypatch):
+    root = grouped(tmp_path, monkeypatch)
+    note(root, 1, "The original", note=["LIT-002"])
+    note(root, 2, "The replacement", extends=["LIT-001"])
+    before = (root / "record/literature.d/LIT-001.md").read_text()
+    relations.complete(fix=True)
+    assert (root / "record/literature.d/LIT-001.md").read_text() == before
+
+
+def test_a_blocked_repair_says_which_rule_stopped_it(tmp_path, monkeypatch):
+    root = grouped(tmp_path, monkeypatch)
+    note(root, 1, "The original", note=["LIT-002"])
+    note(root, 2, "The replacement", extends=["LIT-001"])
+    assert any("provenance" in r for r in relations.rows()), relations.rows()
+
+
+def test_a_repair_that_breaks_nothing_is_still_applied(tmp_path, monkeypatch):
+    """The guard must not stop the ordinary case."""
+    root = grouped(tmp_path, monkeypatch)
+    note(root, 1, "The original")
+    note(root, 2, "The replacement", extends=["LIT-001"])
+    relations.complete(fix=True)
+    assert "extended_by:" in (
+        root / "record/literature.d/LIT-001.md").read_text()
+
+
+def test_a_document_already_in_violation_is_not_held_hostage(
+        tmp_path, monkeypatch):
+    """Only *new* violations block. A document that already breaches its
+    contract elsewhere still gets its back-reference, or one pre-existing
+    mistake would freeze every relation the document is in."""
+    root = grouped(tmp_path, monkeypatch)
+    note(root, 1, "The original")
+    p = note(root, 2, "The replacement", extends=["LIT-001"])
+    p.write_text(p.read_text().replace("status: Active", "status: Superseded"))
+    config.reset()
+    relations.complete(fix=True)
+    assert "extended_by:" in (
+        root / "record/literature.d/LIT-001.md").read_text()

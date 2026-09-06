@@ -182,6 +182,38 @@ which is most of the value.
 gives up the whole mechanism to avoid one ambiguous case, and leaves every
 pre-existing one-sided pair permanently on the report.
 
+## A repair never breaks the document it lands in
+
+The fixer writes and deletes frontmatter, and frontmatter is what the
+contract judges. So a repair can move a document from satisfying its scheme
+to violating it, in either direction — and both are reachable with legal
+configuration:
+
+- a back-reference **added** into a field group that permits only one of two
+  fields;
+- a stale back-reference **removed** out of a field the document's status
+  requires (`required_when`).
+
+Neither is the author's mistake, and a fixer that manufactures a lint
+failure and exits zero is the silent failure this whole decision is about.
+
+**A repair that would introduce a new violation is not applied.** The pair
+stays one-sided, and the finding names both rules, because a relation that
+must be written and a contract that forbids writing it is a genuine conflict
+between two things the project declared — not something a tool should
+resolve by picking one.
+
+The property this buys is worth stating plainly: **running `luria link
+--fix` never makes `luria lint` worse.**
+
+Only *new* violations block. A document already in breach somewhere else
+still gets its back-references; otherwise one unrelated mistake would freeze
+every relation that document stands in.
+
+The check is written against the compiled `Contract` rather than against any
+particular rule, so it covers `requires`, `field_groups` and `required_when`
+alike, including rules added later.
+
 ## Consequences
 
 A project that declares a converse opts into stored redundancy, and should
