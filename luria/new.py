@@ -71,23 +71,57 @@ def default_kind() -> str | None:
     return journals[0] if len(journals) == 1 else None
 
 
-def _sub_line(text: str, field: str, value) -> str:
+def _sub_line(text: str, field: str, value, many: bool = False) -> str:
     """Replace a single-line frontmatter field, or a block one (`>-` /
-    list) through its indented continuation lines.
+    list) through its indented continuation lines. A field the form does not
+    scaffold is appended rather than dropped — substitution on no match used
+    to lose the value and report success.
 
     `value` may arrive as a tuple: Fire reads `--tags record,mechanism` as
-    a Python literal, and that is the spelling the help text invites."""
+    a Python literal, and that is the spelling the help text invites.
+
+    `many` is the contract's word for the field's shape (#169). Without it
+    a comma-separated value became the single string `'LIT-1, LIT-2'` — a
+    list stringified and half-read, which is the finding #141 added, written
+    by the tool that scaffolds the document."""
     pattern = re.compile(rf"^{field}:.*(?:\n(?:  |- ).*)*", re.MULTILINE)
     if isinstance(value, (tuple, list)):
         value = ", ".join(str(v) for v in value)
-    if field == "tags":
-        replacement = "tags:\n" + "\n".join(
-            f"- {t.strip()}" for t in value.split(",") if t.strip())
+    if field == "tags" or many:
+        items = [v.strip() for v in str(value).split(",") if v.strip()]
+        replacement = f"{field}:\n" + "\n".join(f"- {v}" for v in items)
     elif field == "summary":
         replacement = f"summary: >-\n  {value}"
     else:
         replacement = f"{field}: {value!r}"
-    return pattern.sub(replacement, text, count=1)
+    if pattern.search(text):
+        return pattern.sub(replacement, text, count=1)
+    return _append_field(text, replacement)
+
+
+def _append_field(text: str, block: str) -> str:
+    """Add a field at the end of the frontmatter, where a reader looks for
+    what the form did not prompt for."""
+    end = text.find("\n---\n", 3) if text.startswith("---\n") else -1
+    if end == -1:
+        return text
+    return text[:end + 1] + block + "\n" + text[end + 1:]
+
+
+def plural_fields(scheme) -> frozenset[str]:
+    """The fields this scheme's contract declares hold a list. Read from the
+    contract rather than named here, so the scaffold and the lint cannot
+    disagree about a field's shape — which is the whole of #169."""
+    from .contract import for_scheme
+    return frozenset(f.name for f in for_scheme(scheme).fields if f.many)
+
+
+def declared_fields(scheme) -> tuple[str, ...]:
+    """Every field a scheme names, for `luria new` to accept as a flag and
+    to refuse anything else by. The kinds are the config (ADR-036); so are
+    the flags."""
+    from .contract import for_scheme
+    return tuple(f.name for f in for_scheme(scheme).fields if not f.builtin)
 
 
 def _mint_tail(scheme) -> str:
@@ -135,6 +169,7 @@ def new_scheme_doc(scheme, fields: dict[str, str]) -> Path:
         text = FALLBACK.format(code=code, date=today,
                                title="Stated as the thing you did")
 
+    plural = plural_fields(scheme)
     title = fields.pop("title", None)
     if title is not None:
         old_title = None
@@ -145,7 +180,7 @@ def new_scheme_doc(scheme, fields: dict[str, str]) -> Path:
         if old_title:
             text = text.replace(f"# {code}: {old_title}", f"# {code}: {title}")
     for field, value in fields.items():
-        text = _sub_line(text, field, value)
+        text = _sub_line(text, field, value, many=field in plural)
 
     path = scheme.dir / f"{stem}.md"
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -242,14 +277,38 @@ def new_entry(kind: str | None, fields: dict[str, str],
     return journal_mod.new(target, title, dt.datetime.now())
 
 
+UNIVERSAL = ("title", "status", "summary", "tags")
+
+
 def run(kind: str = None, title: str = None, status: str = None,
-        summary: str = None, tags: str = None, name: str = None) -> None:
+        summary: str = None, tags: str = None, name: str = None,
+        **declared) -> None:
     """Scaffold an entry and print its path. KIND defaults to the journal;
     the other kinds come from luria.toml (scheme prefixes, fragment dirs).
-    Field flags are optional — content belongs to your editor."""
+    Field flags are optional — content belongs to your editor.
+
+    Beyond the four universal flags, a scheme's own declared fields are
+    accepted by name — `--source LIT-134,LIT-140` where the SOTA scheme
+    declares `source` — and written in the shape the contract declares
+    (#169). An undeclared flag is refused rather than written, because a key
+    the scheme has no opinion about, scaffolded by a script, is exactly the
+    kind of thing nothing downstream would ever report."""
     fields = {k: v for k, v in
               [("title", title), ("status", status),
                ("summary", summary), ("tags", tags)] if v}
+    if declared:
+        kinds_ = kinds()
+        resolved = (kind or default_kind() or "").lower()
+        entry = kinds_.get(resolved)
+        accepted = declared_fields(entry[1]) if entry and entry[0] == "scheme" \
+            else ()
+        unknown = [f for f in declared if f not in accepted]
+        if unknown:
+            known = ", ".join(f"--{f}" for f in (*UNIVERSAL, *accepted))
+            sys.exit(f"luria new {resolved or ''}: no such field "
+                     f"{', '.join(repr(u) for u in unknown)} "
+                     f"(this kind accepts: {known})")
+        fields.update({k: v for k, v in declared.items() if v})
     print(current().rel(new_entry(kind, fields, name)))
 
 

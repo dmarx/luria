@@ -117,3 +117,79 @@ def test_a_comma_separated_tags_flag_survives_fire(project):
     path = new.new_entry("adr", {"tags": ("record", "mechanism")}, None)
     text = path.read_text()
     assert "tags:\n- record\n- mechanism\n" in text
+
+
+# --- Reference fields as flags (#169) ---------------------------------------
+#
+# `new` accepted four flags and nothing else, so a tool driving the CLI could
+# not set a reference field at all; and had it been able to, `_sub_line` would
+# have rendered `--source LIT-1,LIT-2` as the string `'LIT-1, LIT-2'` — the
+# stringified list #141 made a finding of. The scaffold has to know the shape
+# the contract declares, for the same reason the template does.
+
+def _plural_project(project, many: bool = True):
+    (project / "luria.toml").write_text(
+        '[luria]\nissue_url = "https://example.test/issues/{n}"\n\n'
+        '[luria.schemes.LIT]\ndir = "record/literature.d"\n\n'
+        '[luria.schemes.SOTA]\ndir = "record/practices.d"\n\n'
+        '[luria.schemes.SOTA.references]\n'
+        f'source = {{ scheme = "LIT", required = true, many = {str(many).lower()} }}\n')
+    from luria import config
+    config.reset()
+    scheme = current().schemes["SOTA"]
+    scheme.dir.mkdir(parents=True, exist_ok=True)
+    (scheme.dir / "_template.md").write_text(
+        "---\nstatus: Proposed\ntitle: 'A placeholder'\ntags:\n- record\n"
+        "date: '2026-01-01'\n"
+        + ("source:\n- LIT-000\n" if many else "source: LIT-000\n")
+        + "---\n\n# SOTA-NNN: A placeholder\n\nBody.\n")
+    return scheme
+
+
+def test_a_plural_reference_flag_is_written_as_a_list(project):
+    _plural_project(project)
+    path = new_mod.new_entry("sota", {"source": "LIT-134,LIT-140"}, None)
+    text = path.read_text()
+    assert "source:\n- LIT-134\n- LIT-140\n" in text, text
+    assert "'LIT-134, LIT-140'" not in text
+
+
+def test_one_code_for_a_plural_reference_is_still_a_list(project):
+    _plural_project(project)
+    text = new_mod.new_entry("sota", {"source": "LIT-134"}, None).read_text()
+    assert "source:\n- LIT-134\n" in text
+
+
+def test_a_scalar_reference_flag_stays_scalar(project):
+    _plural_project(project, many=False)
+    text = new_mod.new_entry("sota", {"source": "LIT-134"}, None).read_text()
+    assert "source: 'LIT-134'" in text
+    assert "\n- LIT-134" not in text
+
+
+def test_a_field_absent_from_the_template_is_added_not_dropped(project):
+    """`_sub_line` substitutes; a field the form does not scaffold matched
+    nothing and the value vanished with the command reporting success."""
+    _plural_project(project)
+    scheme = current().schemes["SOTA"]
+    (scheme.dir / "_template.md").write_text(
+        "---\nstatus: Proposed\ntitle: 'A placeholder'\ntags:\n- record\n"
+        "date: '2026-01-01'\n---\n\n# SOTA-NNN: A placeholder\n\nBody.\n")
+    text = new_mod.new_entry("sota", {"source": "LIT-134"}, None).read_text()
+    assert "source:\n- LIT-134\n" in text, text
+
+
+def test_an_undeclared_flag_is_refused_by_name(project):
+    """Silently accepting an unknown field would write a key the scheme has
+    no opinion about into every document a script files."""
+    _plural_project(project)
+    with pytest.raises(SystemExit) as caught:
+        new_mod.run(kind="sota", sauce="LIT-134")
+    assert "sauce" in str(caught.value) and "source" in str(caught.value)
+
+
+def test_a_declared_flag_reaches_the_document_through_run(project, capsys):
+    _plural_project(project)
+    new_mod.run(kind="sota", source="LIT-134,LIT-140")
+    written = (current().root / capsys.readouterr().out.strip()).read_text()
+    assert "source:\n- LIT-134\n- LIT-140\n" in written
