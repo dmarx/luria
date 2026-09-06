@@ -57,7 +57,21 @@ class Field:
     # (ADR-071). Checked like any other; not a declaration, so it stays
     # out of `Contract.empty`.
     builtin: bool = False
+    # When the requirement applies, if not always (`RequiredWhen`, #170).
+    # `required` stays the unconditional flag; this is the other way a field
+    # can be demanded, and the two are exclusive by construction in config.
+    required_when: object | None = None
     because: tuple[str, ...] = ()
+
+    def demanded(self, meta: dict) -> bool:
+        """Whether this document must carry the field. Consulted everywhere
+        `required` used to be read directly, so a conditional requirement
+        cannot be honoured by one check and ignored by the next — which is
+        the failure mode `contract.py` was written to end."""
+        if self.required:
+            return True
+        return (self.required_when is not None
+                and self.required_when.holds(meta))
 
 
 @dataclass(frozen=True)
@@ -119,7 +133,8 @@ def for_scheme(scheme) -> Contract:
         fields[ref.field] = Field(
             ref.field,
             required=ref.required or (prior is not None and prior.required),
-            reference=ref.scheme, many=ref.many, because=because)
+            reference=ref.scheme, many=ref.many,
+            required_when=ref.required_when, because=because)
     from .vocabularies import declared
     for vocab in scheme.vocabularies:
         prior = fields.get(vocab.field)
@@ -132,7 +147,18 @@ def for_scheme(scheme) -> Contract:
             required=vocab.required or (prior is not None and prior.required),
             many=vocab.many, vocabulary=vocab.name,
             values=tuple(declared(vocab.file)), default=vocab.default,
-            because=because)
+            required_when=vocab.required_when, because=because)
+    for plain in scheme.plain_fields:
+        prior = fields.get(plain.field)
+        because = (f"{where}.fields.{plain.field}",)
+        if prior is not None:
+            because = prior.because + because
+        fields[plain.field] = Field(
+            plain.field,
+            required=plain.required or (prior is not None and prior.required),
+            many=plain.many or (prior is not None and prior.many),
+            reference=prior.reference if prior is not None else None,
+            required_when=plain.required_when, because=because)
     for field in BUILT_IN:
         fields.setdefault(field.name, field)
     return Contract(scheme.prefix, tuple(fields.values()), scheme.tag_groups,
@@ -171,20 +197,35 @@ def group_because(contract: Contract, group: TagGroup) -> str:
     return f"({cite})"
 
 
-def explain(contract: Contract, field: Field) -> str:
+def _condition(field: Field, meta: dict | None) -> str:
+    """Why a conditional requirement fired, in the document's own words:
+    the field that decided and the value it held. A finding that recites only
+    the rule leaves the reader to work out which of their fields turned it
+    on."""
+    when = field.required_when
+    if when is None:
+        return ""
+    if meta and (held := meta.get(when.on)) is not None:
+        return f", because `{when.on}: {held}`"
+    return f", when `{when.on}` is {', '.join(when.values)}"
+
+
+def explain(contract: Contract, field: Field, meta: dict | None = None) -> str:
     """Why a field is demanded, in the words the finding has always used,
     plus the key that said so.
 
     The provenance is read out of the obligation rather than spelled here,
     so the day one comes from somewhere other than `luria.toml` the finding
     says so without this function learning about it."""
+    why = _condition(field, meta)
     if field.vocabulary is not None:
         return (f"the {contract.scheme} scheme declares it a `{field.vocabulary}` "
-                f"value {_cite(field.because)}")
+                f"value{why} {_cite(field.because)}")
     if field.reference is None:
-        return f"the {contract.scheme} scheme requires it {_cite(field.because)}"
+        return (f"the {contract.scheme} scheme requires it{why} "
+                f"{_cite(field.because)}")
     return (f"the {contract.scheme} scheme declares it a {field.reference} "
-            f"reference {_cite(field.because)}")
+            f"reference{why} {_cite(field.because)}")
 
 
 def describe(contract: Contract) -> list[str]:
@@ -198,13 +239,19 @@ def describe(contract: Contract) -> list[str]:
         if field.vocabulary is not None:
             members = ", ".join(f"`{v}`" for v in field.values)
             what = ("required, " if field.required
+                    else (f"required when `{field.required_when.on}` is "
+                          + ", ".join(f"`{v}`" for v in field.required_when.values)
+                          + ", ") if field.required_when is not None
                     else "" if field.default else "optional, ")
             what += ("one or more of " if field.many else "one of ") + members
             if field.default:
                 what += "; absent means " + ", ".join(f"`{d}`" for d in field.default)
             lines.append(f"`{field.name}` — {what} {_cite(field.because)}")
             continue
-        what = "required" if field.required else "optional"
+        what = ("required" if field.required else
+                (f"required when `{field.required_when.on}` is "
+                 + ", ".join(f"`{v}`" for v in field.required_when.values))
+                if field.required_when is not None else "optional")
         if field.reference is not None:
             what += (f", one or more `{field.reference}` codes" if field.many
                      else f", a `{field.reference}` code")
@@ -332,13 +379,13 @@ def violations(contract: Contract, rel: str, meta: dict,
     for field in contract.fields:
         raw = meta.get(field.name)
         if field.vocabulary is not None:
-            out.extend(_vocabulary_violations(contract, field, rel, raw))
+            out.extend(_vocabulary_violations(contract, field, rel, raw, meta))
             continue
         target = field.reference
         if target is None:
-            if not raw and field.required:
+            if not raw and field.demanded(meta):
                 out.append(f"{rel}: no `{field.name}:` in frontmatter — "
-                           f"{explain(contract, field)}")
+                           f"{explain(contract, field, meta)}")
             continue
         if target == ANY_SCHEME:
             out.extend(_any_scheme_violations(contract, field, rel, raw, known))
@@ -352,9 +399,9 @@ def violations(contract: Contract, rel: str, meta: dict,
                 f"there if it should hold several")
             continue
         if not values:
-            if field.required:
+            if field.demanded(meta):
                 out.append(f"{rel}: no `{field.name}:` in frontmatter — "
-                           f"{explain(contract, field)}")
+                           f"{explain(contract, field, meta)}")
             continue
         for value in values:
             code = reference_code(str(value))
@@ -403,7 +450,7 @@ def violations(contract: Contract, rel: str, meta: dict,
 
 
 def _vocabulary_violations(contract: Contract, field: Field, rel: str,
-                           raw) -> list[str]:
+                           raw, meta: dict | None = None) -> list[str]:
     """A vocabulary field against its declaration: the shape, the presence,
     and every value against the closed set — naming the file, since that is
     where a missing value gets added."""
@@ -414,9 +461,9 @@ def _vocabulary_violations(contract: Contract, field: Field, rel: str,
                 f"value {_cite(field.because)} — set `many = true` there if "
                 f"it should hold several"]
     if not values:
-        if field.required and field.default is None:
+        if field.demanded(meta or {}) and field.default is None:
             return [f"{rel}: no `{field.name}:` in frontmatter — "
-                    f"{explain(contract, field)}"]
+                    f"{explain(contract, field, meta)}"]
         return []
     file = next((b.split(": ", 1)[0] for b in field.because
                  if b.endswith(": values")), "")
