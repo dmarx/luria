@@ -99,6 +99,13 @@ def _sub_line(text: str, field: str, value, many: bool = False) -> str:
     return _append_field(text, replacement)
 
 
+def _drop_field(text: str, field: str) -> str:
+    """Remove a frontmatter field and its continuation lines — the block
+    `_sub_line` would have replaced — leaving the comment above it."""
+    pattern = re.compile(rf"^{field}:.*(?:\n(?:  |- ).*)*\n", re.MULTILINE)
+    return pattern.sub("", text, count=1)
+
+
 def _append_field(text: str, block: str) -> str:
     """Add a field at the end of the frontmatter, where a reader looks for
     what the form did not prompt for."""
@@ -181,6 +188,15 @@ def new_scheme_doc(scheme, fields: dict[str, str]) -> Path:
             text = text.replace(f"# {code}: {old_title}", f"# {code}: {title}")
     for field, value in fields.items():
         text = _sub_line(text, field, value, many=field in plural)
+    # A prose field the caller did not fill still carries the form's own
+    # words — "one-paragraph description of the decision" — which the lint
+    # reports as the form's text, not the document's. Drop the value and keep
+    # the comment above it, which is the instruction; an absent summary falls
+    # back to the title until the author writes one.
+    from .doc_refs import PROSE_KEYS
+    for field in PROSE_KEYS:
+        if field not in fields:
+            text = _drop_field(text, field)
 
     path = scheme.dir / f"{stem}.md"
     path.parent.mkdir(parents=True, exist_ok=True)

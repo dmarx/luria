@@ -139,6 +139,25 @@ def check_frontmatter(errors: list[str]) -> None:
 
 
 
+def check_form_text(errors: list[str]) -> None:
+    """A prose field still saying what the scheme's `_template.md` says is
+    the form's text, not the document's — a summary that reads "one-paragraph
+    description of the decision" in the index. Write it, or drop the key."""
+    cfg = current()
+    for scheme in cfg.schemes.values():
+        for path in [*scheme.documents().values(),
+                     *scheme.temp_documents().values()]:
+            meta, _ = builder.parse_frontmatter(path.read_text(encoding="utf-8"))
+            for key in templates.form_text(scheme, meta or {}):
+                fallback = (" — the index falls back to the title"
+                            if key == "summary" else "")
+                errors.append(
+                    f"{cfg.rel(path)}: `{key}:` still says what "
+                    f"{cfg.rel(scheme.dir / templates.TEMPLATE_NAME)} says — "
+                    f"the form's words, not this document's; write it, or "
+                    f"drop the key{fallback}")
+
+
 def check_title(errors: list[str], rel: str, meta: dict, body: str) -> None:
     """`title:` is the source of truth, and the body's H1 repeats it.
 
@@ -608,6 +627,7 @@ def run() -> None:
     errors: list[str] = []
     check_docs_index(errors)
     check_frontmatter(errors)
+    check_form_text(errors)
     check_status_vocabulary(errors)
     check_contracts(errors)
     check_view_dirs(errors)

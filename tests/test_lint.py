@@ -396,3 +396,54 @@ def test_a_project_on_the_workflow_token_fails_on_it(project, capsys):
 def test_a_numbered_code_in_a_workflow_is_fine(project):
     workflow_project(project, "# The shape (ADR-029).\nname: Docs\n")
     assert lint.workflow_temp_code_lines() == []
+
+
+# ── The form's words in a document ───────────────────────────────────────
+
+
+def formed_project(project, template_summary: str) -> None:
+    from luria import config
+    (project / "luria.toml").write_text(
+        '[luria]\nissue_url = "https://example.test/issues/{n}"\n'
+        '[luria.schemes.ADR]\ndir = "record/decisions.d"\n'
+        'output = "docs/decisions"\n')
+    config.reset()
+    d = project / "record" / "decisions.d"
+    d.mkdir(parents=True, exist_ok=True)
+    (d / "_template.md").write_text(
+        f"---\nstatus: Proposed\ntitle: 'Title'\ntags:\n- record\n"
+        f"summary: >-\n  {template_summary}\n---\n\n# ADR-000: Title\n")
+
+
+def form_text_errors() -> list[str]:
+    found: list[str] = []
+    lint.check_form_text(found)
+    return found
+
+
+def test_a_summary_still_saying_what_the_form_says_is_reported(project):
+    """Two Proposed decisions reached the published index saying
+    "One-paragraph description of the decision" — the template's own
+    instruction, filed as if it were the summary."""
+    formed_project(project, "One-paragraph description of the decision.")
+    from tests import _scheme
+    _scheme.decision(project, 1, "Proposed",
+                     summary="One-paragraph  description of the decision.")
+    errors = form_text_errors()
+    assert len(errors) == 1
+    assert "ADR-001.md" in errors[0] and "`summary:`" in errors[0]
+    assert "falls back to the title" in errors[0]
+
+
+def test_a_summary_of_the_document_s_own_passes(project):
+    formed_project(project, "One-paragraph description of the decision.")
+    from tests import _scheme
+    _scheme.decision(project, 1, "Active", summary="We chose the thing.")
+    _scheme.decision(project, 2, "Active")
+    assert form_text_errors() == []
+
+
+def test_a_scheme_with_no_form_has_nothing_to_compare(project):
+    from tests import _scheme
+    _scheme.decision(project, 1, "Active", summary="Whatever the form said.")
+    assert form_text_errors() == []
