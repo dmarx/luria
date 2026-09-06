@@ -39,6 +39,12 @@ un-silently revisable, and this record has worked examples of both
 **[Ci](tags/ci.md)** (1):
 [069](../../record/decisions.d/ADR-069.md)
 
+**[Config](tags/config.md)** (1):
+[082](../../record/decisions.d/ADR-082.md)
+
+**[Contract](tags/contract.md)** (1):
+[082](../../record/decisions.d/ADR-082.md)
+
 ## Chronological
 
 | # | Title | Summary | Status |
@@ -124,4 +130,5 @@ un-silently revisable, and this record has worked examples of both
 | [ADR-079](../../record/decisions.d/ADR-079.md) | Read a note's frontmatter comments as directive comments | A reference field is a citation site — `superseded_by:` naming a document that was itself later retired is reported at its line — but the markdown scan read only HTML comments, so the finding could be acknowledged only file-wide. Whole-line `#` comments inside the frontmatter are now directive comments, and in frontmatter a line-scoped directive reaches the whole YAML entry below it. Rejected: exempting reference fields from the retired-citation report, which would hide the one edge the report exists to question. | Active |
 | [ADR-080](../../record/decisions.d/ADR-080.md) | A remote declares how to ask what an identifier is, and the lint may ask | 53 of 139 arXiv identifiers in one record resolved to real papers on unrelated subjects and stayed green for two years, because every check asked whether a reference points somewhere and none asked whether it points where it says. `uris.title` plus `title_re` say how to ask, and the lint asks about what the lockfile cannot answer — a citation is likeliest wrong in the minutes after it is typed, which is exactly when nothing has resolved it. Rejected: making the lockfile the boundary of what may be known, guessing the metadata API per host, and fuzzy title matching. | Active |
 | [ADR-081](../../record/decisions.d/ADR-081.md) | `inert-status` measures a distribution, and its threshold is the project's to set | The check fired only when every record shared one status, on the argument that one retirement proves the judgement is live. A 144-document registry disproved it: eleven exceptions silenced the check while a quarter of its entries went unexamined. `uniform_share` makes the threshold configurable and defaults to 1.0, so nothing starts reporting. Rejected: lowering the default, and inferring the threshold from scheme size. | Active |
+| [ADR-082](../../record/decisions.d/ADR-082.md) | A field can be required by another field's value | A record can state what it believes and had no way to state what would change its mind, so provisional documents accumulate with nothing saying what they are provisional pending. `required_when` demands a field only while another field holds one of a listed set of values — one field, one set, no expression language, because the value of the rule is that it is legible in the line that declares it. | Active |
 
