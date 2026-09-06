@@ -4,7 +4,7 @@
 
 Collectors, generators, the lint, the directive vocabulary.
 
-61 of 82 decisions. Back to the [full index](../README.md).
+62 of 83 decisions. Back to the [full index](../README.md).
 
 | # | Title | Summary | Status |
 |---|---|---|---|
@@ -69,3 +69,4 @@ Collectors, generators, the lint, the directive vocabulary.
 | [ADR-079](../../../record/decisions.d/ADR-079.md) | Read a note's frontmatter comments as directive comments | A reference field is a citation site — `superseded_by:` naming a document that was itself later retired is reported at its line — but the markdown scan read only HTML comments, so the finding could be acknowledged only file-wide. Whole-line `#` comments inside the frontmatter are now directive comments, and in frontmatter a line-scoped directive reaches the whole YAML entry below it. Rejected: exempting reference fields from the retired-citation report, which would hide the one edge the report exists to question. | Active |
 | [ADR-080](../../../record/decisions.d/ADR-080.md) | A remote declares how to ask what an identifier is, and the lint may ask | 53 of 139 arXiv identifiers in one record resolved to real papers on unrelated subjects and stayed green for two years, because every check asked whether a reference points somewhere and none asked whether it points where it says. `uris.title` plus `title_re` say how to ask, and the lint asks about what the lockfile cannot answer — a citation is likeliest wrong in the minutes after it is typed, which is exactly when nothing has resolved it. Rejected: making the lockfile the boundary of what may be known, guessing the metadata API per host, and fuzzy title matching. | Active |
 | [ADR-081](../../../record/decisions.d/ADR-081.md) | `inert-status` measures a distribution, and its threshold is the project's to set | The check fired only when every record shared one status, on the argument that one retirement proves the judgement is live. A 144-document registry disproved it: eleven exceptions silenced the check while a quarter of its entries went unexamined. `uniform_share` makes the threshold configurable and defaults to 1.0, so nothing starts reporting. Rejected: lowering the default, and inferring the threshold from scheme size. | Active |
+| [ADR-083](../../../record/decisions.d/ADR-083.md) | A relation is walked transitively and rendered as sequences, on one page | Typed edges gave every page its neighbours and no view answered "what sequence is this document a step in", so the sequences stayed as prose, re-described once per participant, and went stale in two places at once. `[luria.chains]` walks a declared relation transitively and renders the lines on one page; a cycle and a one-sided comparison become findings. | Active |
