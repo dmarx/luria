@@ -33,6 +33,12 @@ carry; an optional field is the author's to add, and demanding every one in
 the template would make each document carry keys it does not want. An
 optional field that *is* scaffolded is checked for shape all the same —
 absent is a choice, present-and-wrong is copied.
+
+"Required" is read against the form's own frontmatter, so a conditional
+requirement (`required_when`, #170) is judged by the status the form
+scaffolds. A practice template that starts a document at `Proposed`, in a
+scheme where a proposed practice must say what would settle it, should prompt
+for that field — it is going to be required the moment the document exists.
 """
 
 from __future__ import annotations
@@ -75,7 +81,7 @@ def rows() -> list[str]:
                 continue
             cite = _cite(field.because)
             if field.name not in meta:
-                if field.required:
+                if field.demanded(meta):
                     found.append(
                         f"{where}:1: `{field.name}:` is required but not "
                         f"scaffolded — a document copied from this form starts "

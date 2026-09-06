@@ -234,6 +234,56 @@ REQUIRE_RULES = ("any", "at-most-one", "exactly-one")
 
 
 @dataclass(frozen=True)
+class RequiredWhen:
+    """A field demanded only while another field says one of these things:
+
+        [luria.schemes.SOTA.fields.promote_when]
+        required_when = { status = ["Proposed", "Deferred"] }
+
+    `requires` says a field must always be there, which is right for identity
+    — a title, a source. It is wrong for a field that is *about* a state: a
+    practice at a provisional status should say what would settle it, and one
+    already in force has nothing to be waiting for. Demanding the field of
+    everything makes most documents carry a key with nothing to put in it,
+    and demanding it of nothing is what a project has today (#170).
+
+    One field against a set of literal values, and no more than that. Not
+    negation, not conjunction, not an expression: a config that can state
+    arbitrary predicates is a config nobody reads at a glance, and the whole
+    value of this one is that a reader sees the rule in the line."""
+    on: str
+    values: tuple[str, ...]
+
+    def holds(self, meta: dict) -> bool:
+        """Whether the condition is met by a document's frontmatter. The
+        compared value is normalised the way the field's own machinery
+        normalises it — a `status:` carrying a qualifying note is still that
+        status (ADR-003), and matching the raw string would read
+        `Proposed — pending a replication` as some other status and exempt
+        the document silently."""
+        raw = meta.get(self.on)
+        if raw is None:
+            return False
+        if self.on == "status":
+            from .statuses import parse
+            return parse(str(raw)).value in self.values
+        if isinstance(raw, list):
+            return any(str(v) in self.values for v in raw)
+        return str(raw) in self.values
+
+
+@dataclass(frozen=True)
+class PlainField:
+    """A field declared in the `fields` table that carries no vocabulary —
+    its type is "any truthy value", the same as a `requires` entry, and what
+    it adds is when the requirement applies."""
+    field: str
+    required: bool = False
+    many: bool = False
+    required_when: RequiredWhen | None = None
+
+
+@dataclass(frozen=True)
 class FieldGroup:
     """Several fields of which an entry must carry some — a requirement that
     is satisfied by any of them, named for what they have in common:
@@ -283,6 +333,8 @@ class Reference:
     scheme: str
     required: bool = True
     many: bool = False
+    # When the requirement applies, if not always (see `RequiredWhen`).
+    required_when: RequiredWhen | None = None
 
 
 @dataclass(frozen=True)
@@ -312,6 +364,8 @@ class Vocabulary:
     # Normalised to a tuple of values whatever the shape declared; None when
     # absence is a meaningful state rather than a spelling of the default.
     default: tuple[str, ...] | None = None
+    # When the requirement applies, if not always (see `RequiredWhen`).
+    required_when: RequiredWhen | None = None
 
 
 # The axes every scheme has, with their own files and their own rules.
@@ -387,6 +441,9 @@ class Scheme:
     # "V"`, values in `V.yaml` beside the records. The third instance of
     # what `statuses.yaml` and `tags.yaml` already are.
     vocabularies: tuple[Vocabulary, ...] = ()
+    # Fields declared in the same table with no vocabulary: any truthy value,
+    # carrying when the requirement applies (`PlainField`, #170).
+    plain_fields: tuple[PlainField, ...] = ()
     # Why this scheme's records all sharing one status is deliberate rather
     # than a dead enforcement mechanism (#104). The `inert-status` check is the
     # one judgment call in luria with no acknowledgement — every other has an
@@ -930,27 +987,65 @@ def _references(prefix: str, raw: dict) -> tuple[Reference, ...]:
             raise ValueError(
                 f"luria.toml: schemes.{prefix}.references.{field} needs a "
                 f"`scheme` — it names which scheme's codes the field holds")
+        where = f"luria.toml: schemes.{prefix}.references.{field}"
+        required = bool(spec.get("required", True))
         found.append(Reference(field=str(field),
                                scheme=str(spec["scheme"]).upper(),
-                               required=bool(spec.get("required", True)),
-                               many=bool(spec.get("many", False))))
+                               required=required,
+                               many=bool(spec.get("many", False)),
+                               required_when=_required_when(where, spec,
+                                                            required)))
     return tuple(found)
 
 
-def _fields(prefix: str, raw: dict, scheme_dir: Path, root: Path,
-            references: tuple) -> tuple[Vocabulary, ...]:
-    """Read a scheme's `[luria.schemes.X.fields]` tables.
+def _required_when(where: str, spec: dict, required: bool) -> RequiredWhen | None:
+    """`required_when = { status = ["Proposed"] }` — one field, one set of
+    values. Validated eagerly, for the reason every other declaration is: a
+    condition that can never hold, or one whose meaning the reader has to
+    guess, surfaces as "no violations"."""
+    raw = spec.get("required_when")
+    if raw is None:
+        return None
+    if not isinstance(raw, dict) or not raw:
+        raise ValueError(f"{where}: `required_when` is a table naming one "
+                         f"field and the values that make this one required "
+                         f"— `{{ status = [\"Proposed\"] }}`")
+    if len(raw) > 1:
+        raise ValueError(
+            f"{where}: `required_when` names one field, not "
+            f"{', '.join(sorted(raw))} — two conditions would need an `and` "
+            f"or an `or` this config does not have")
+    if required:
+        raise ValueError(f"{where}: the field is already always required, so "
+                         f"`required_when` says nothing — drop one of them")
+    on, values = next(iter(raw.items()))
+    values = tuple(str(v) for v in
+                   (values if isinstance(values, list) else [values]))
+    if not values:
+        raise ValueError(f"{where}: `required_when.{on}` lists no values, so "
+                         f"the condition can never hold and the field is "
+                         f"never required")
+    return RequiredWhen(on=str(on), values=values)
 
-    One table for a field's shape and type. `vocabulary` is the one type it
-    takes today; an entry declaring none is an error rather than a field
-    that constrains nothing, and a field also named in `references` is two
-    declarations of one thing.
+
+def _fields(prefix: str, raw: dict, scheme_dir: Path, root: Path,
+            references: tuple) -> tuple:
+    """Read a scheme's `[luria.schemes.X.fields]` tables, as
+    `(vocabularies, plain fields)`.
+
+    One table for a field's shape and type. `vocabulary` is the one *type* it
+    takes; `required_when` is a rule about when the field applies and needs no
+    type, so a table declaring only that is a plain field — any truthy value,
+    like a `requires` entry, demanded only under its condition (#170). A table
+    declaring neither is an error rather than a field that constrains nothing,
+    and a field also named in `references` is two declarations of one thing.
 
     Validated here, eagerly, for the reason tag groups are: a declared axis
     with no values, or a default no value matches, would surface as "no
     violations", which is the quiet failure a declaration exists to remove."""
     from .vocabularies import declared
     found = []
+    plain: list[PlainField] = []
     taken = {r.field for r in references}
     for field, spec in raw.items():
         where = f"luria.toml: schemes.{prefix}.fields.{field}"
@@ -962,9 +1057,17 @@ def _fields(prefix: str, raw: dict, scheme_dir: Path, root: Path,
                              f"`references`; a field has one declaration")
         name = spec.get("vocabulary")
         if not name:
-            raise ValueError(f"{where}: declares no type — `vocabulary = "
-                             f"\"NAME\"` is the one kind of field this table "
-                             f"takes today")
+            required = bool(spec.get("required", False))
+            when = _required_when(where, spec, required)
+            if when is None and not required:
+                raise ValueError(f"{where}: declares no type — `vocabulary = "
+                                 f"\"NAME\"` types the field, `required_when` "
+                                 f"says when it applies, and a table with "
+                                 f"neither constrains nothing")
+            plain.append(PlainField(field=str(field), required=required,
+                                    many=bool(spec.get("many", False)),
+                                    required_when=when))
+            continue
         name = str(name)
         file = scheme_dir / f"{name}.yaml"
         values = declared(file)
@@ -996,8 +1099,10 @@ def _fields(prefix: str, raw: dict, scheme_dir: Path, root: Path,
                     f"{file.relative_to(root)} (values: {', '.join(values)})")
         found.append(Vocabulary(field=str(field), name=name, file=file,
                                 many=many, required=required,
-                                default=defaults))
-    return tuple(found)
+                                default=defaults,
+                                required_when=_required_when(where, spec,
+                                                             required)))
+    return tuple(found), tuple(plain)
 
 
 def _fragment(spec) -> Fragment:
@@ -1429,8 +1534,9 @@ def _schemes(raw: dict, root: Path) -> dict[str, Scheme]:
                                    tags_path),
             tags_file=tags_file,
             references=(refs := _references(prefix, spec.get("references", {}))),
-            vocabularies=_fields(prefix, spec.get("fields", {}),
-                                 root / spec["dir"], root, refs),
+            **dict(zip(("vocabularies", "plain_fields"),
+                       _fields(prefix, spec.get("fields", {}),
+                               root / spec["dir"], root, refs))),
             field_groups=_field_groups(prefix, spec.get("field_groups", {})),
             uniform_ok=(spec.get("uniform_ok") or None),
             uniform_share=float(spec.get("uniform_share", 1.0)),
