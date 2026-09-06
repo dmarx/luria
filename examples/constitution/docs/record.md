@@ -22,17 +22,23 @@ A code — `ADR-012` — resolves to a document, and every reference to it in th
 
 ## What an entry must carry
 
-Every entry carries `status`, `title`, `tags` and `date`, and one standard field is conditional: `superseded_by` is required when `status` is `Superseded` (ADR-071). Beyond those, what each scheme's entries must carry — compiled from `luria.toml` into the contract `luria lint` checks, with where each obligation was declared. A finding cites the same line.
+Every entry carries `title`, `tags` and `date`, and one standard field is conditional: a retiring document names its successor — `superseded_by:` when `status` is `Superseded`, unless the scheme renames the pair (ADR-071). `status` itself is listed below rather than assumed: the words are the scheme's own, declared like any other controlled vocabulary. Beyond those, what each scheme's entries must carry — compiled from `luria.toml` into the contract `luria lint` checks, with where each obligation was declared. A finding cites the same line.
+
+**`VALUE`**
+
+- `status` — optional, one of `Active`, `Proposed`, `Deferred`, `Superseded`, `Rejected` (luria.toml: schemes.VALUE.fields.status; record/values.d/statuses.yaml: values)
 
 **`PRACTICE`**
 
 - `grounds` — required, one or more `VALUE` codes (luria.toml: schemes.PRACTICE.references.grounds)
 - `surface` — one or more of `conversation`, `harness`, `repository`, `record`; absent means `conversation` (luria.toml: schemes.PRACTICE.fields.surface; record/practices.d/surfaces.yaml: values)
+- `status` — optional, one of `Active`, `Proposed`, `Deferred`, `Superseded`, `Rejected` (luria.toml: schemes.PRACTICE.fields.status; record/practices.d/statuses.yaml: values)
 
 **`BOUNDARY`**
 
 - `overrides` — optional, one or more `PRACTICE` codes when present (luria.toml: schemes.BOUNDARY.references.overrides)
 - `grounds` — required, one or more `VALUE` codes (luria.toml: schemes.BOUNDARY.references.grounds)
+- `status` — optional, one of `Active`, `Proposed`, `Deferred`, `Superseded`, `Rejected` (luria.toml: schemes.BOUNDARY.fields.status; record/boundaries.d/statuses.yaml: values)
 
 ## Journals
 

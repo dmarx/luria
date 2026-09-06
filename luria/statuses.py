@@ -127,6 +127,28 @@ def of(meta: dict, scheme=None) -> Status:
                   tuple(str(c).strip() for c in codes if str(c).strip()))
 
 
+def normalised(meta: dict) -> dict:
+    """`meta` with `status:` read apart into the three-field form.
+
+    The legacy scalar `Superseded — by X; note` puts a qualifier inside the
+    value, so the raw frontmatter is not the vocabulary value — which is
+    what made `status` look like it needed a bespoke checker. Splitting it
+    here, once, at the boundary where frontmatter is read for checking,
+    means every generic consumer downstream sees a bare word and needs no
+    idea that this field is different (#181).
+
+    The combined form is still reported, by the check whose finding names
+    the repair. This only stops it being reported twice."""
+    meta = meta or {}
+    parsed = parse(meta.get("status"))
+    if not parsed.note:
+        return meta
+    out = dict(meta)
+    out["status"] = parsed.value
+    out.setdefault("status_note", parsed.note)
+    return out
+
+
 def combined(meta: dict) -> bool:
     """True when `status:` still carries the note — the form to move."""
     return bool(parse((meta or {}).get("status")).note)
@@ -278,11 +300,18 @@ def problems(scheme) -> list[str]:
 
 
 def undeclared(scheme, status: str) -> bool:
-    """True when this status is not a word the scheme may use.
+    """True when nothing is checking this scheme's status word.
 
-    `status` is the bare word: ADR-003 allows a trailing ` — note`, and the
-    note is a qualifier on the word rather than part of it."""
-    return parse(status).value not in vocabulary(scheme)
+    Not "the word is wrong" — that is the vocabulary's finding, raised with
+    every other controlled field once the scheme declares one. This is the
+    case a vocabulary cannot raise: its own absence. A scheme declaring no
+    `status` field has no values, so every word passes and the check looks
+    clean because it is not there (DP-15).
+
+    Requiring the declaration is #181's second half; it breaks every record
+    that predates it, so it ships with the command that writes one."""
+    del status
+    return not any(v.field == "status" for v in scheme.vocabularies)
 
 
 def legend(scheme) -> str:

@@ -20,12 +20,13 @@ A code — `ADR-012` — resolves to a document, and every reference to it in th
 
 ## What an entry must carry
 
-Every entry carries `status`, `title`, `tags` and `date`, and one standard field is conditional: `superseded_by` is required when `status` is `Superseded` (ADR-071). Beyond those, what each scheme's entries must carry — compiled from `luria.toml` into the contract `luria lint` checks, with where each obligation was declared. A finding cites the same line.
+Every entry carries `title`, `tags` and `date`, and one standard field is conditional: a retiring document names its successor — `superseded_by:` when `status` is `Superseded`, unless the scheme renames the pair (ADR-071). `status` itself is listed below rather than assumed: the words are the scheme's own, declared like any other controlled vocabulary. Beyond those, what each scheme's entries must carry — compiled from `luria.toml` into the contract `luria lint` checks, with where each obligation was declared. A finding cites the same line.
 
 **`SCENE`**
 
 - `follows` — optional, one or more `SCENE` codes when present (luria.toml: schemes.SCENE.references.follows)
 - `worlds` — one or more of `A`, `B`, `C`; absent means `B` (luria.toml: schemes.SCENE.fields.worlds; record/scenes.d/worlds.yaml: values)
+- `status` — optional, one of `Active`, `Proposed`, `Deferred`, `Superseded`, `Rejected` (luria.toml: schemes.SCENE.fields.status; record/scenes.d/statuses.yaml: values)
 
 ## Journals
 

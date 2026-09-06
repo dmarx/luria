@@ -367,7 +367,7 @@ def _scheme_files(scheme: Scheme) -> dict[Path, str]:
     if scheme.prefix == "DP" and scheme.render == "document":
         return {scheme.dir / src.name: src.read_text(encoding="utf-8")
                 for src in sorted((TEMPLATE / "record/principles.d").glob("*"))
-                if src.is_file()}
+                if src.is_file()} | {scheme.statuses_yaml: _statuses_yaml(scheme)}
     stub = (GENERIC_STUB_DOCUMENT if scheme.render == "document"
             else GENERIC_STUB_INDEX)
     subs = {"{PREFIX}": scheme.prefix, "{prefix}": scheme.prefix.lower()}
@@ -465,7 +465,9 @@ def plan(into: Path, config_arg: str | None = None,
     if not TEMPLATE.is_dir():                       # installed without data
         return []
     toml_text = _toml_text(into, config_arg, issue_url, schemes, journals)
-    cfg = load(into, text=toml_text)
+    # The scaffold is planned from a config whose vocabulary files it is
+    # about to write, so an absent one is expected here and nowhere else.
+    cfg = load(into, text=toml_text, scaffolding=True)
 
     files: dict[Path, str] = {into / CONFIG_NAME: toml_text}
     for scheme in cfg.schemes.values():

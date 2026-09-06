@@ -181,3 +181,11 @@ url  = "https://github.com/dmarx/luria/blob/main/docs/directives.md#fixture-code
 # file is one the job can never number, and it fails the lint here.
 [luria.lint]
 fail_on = ["workflow-temp-codes"]
+
+# `status:` declared as the controlled vocabulary it is (#181),
+# written by `luria upgrade statuses`.
+[luria.schemes.ADR.fields.status]
+vocabulary = "statuses"
+
+[luria.schemes.DP.fields.status]
+vocabulary = "statuses"

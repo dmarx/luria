@@ -8,6 +8,8 @@
 **[Systems](tags/systems.md)** (1) — hardware, kernels, memory:
 [003](../../record/literature.d/LIT-003.md)
 
+**By status:** [In the anthology](statuses/Active.md) (2) · [Attic](statuses/Rejected.md) (1) · [Superseded](statuses/Superseded.md) (0)
+
 What the status column means in this scheme — the words are luria's, the meanings are this project's.
 
 | Status | | Means |

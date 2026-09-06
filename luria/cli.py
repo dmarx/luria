@@ -16,6 +16,9 @@
     luria init          scaffold the record into a project that has none
     luria config        write a starting luria.toml and stop, for editing
                         before anything is scaffolded
+    luria upgrade       carry a record across a version boundary; every
+                        command under it is temporary and says what has to
+                        be true before it is deleted
 
 Two more exist for CI, which is their only regular caller:
 
@@ -38,7 +41,7 @@ import sys
 import fire
 
 from . import (adr_index, collect, concretize, init, link_refs, lint, migrate,
-               new, remotes, repair, reports, site)
+               new, remotes, repair, reports, site, upgrade)
 
 COMMANDS = {
     "lint": lint.run,
@@ -54,6 +57,7 @@ COMMANDS = {
     "config": init.config_run,
     "reports": reports.run,
     "collect": collect.run,
+    "upgrade": upgrade.run,
 }
 
 # Run by CI on every push; runnable by hand, but nothing in the contributor

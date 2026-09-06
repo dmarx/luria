@@ -16,6 +16,8 @@ borrows a live sequence's prefix is the hazard that rule exists for.
 
 from __future__ import annotations
 
+import pytest
+
 from pathlib import Path
 
 from luria import repair, adr_index, config, contract, lint, statuses
@@ -59,38 +61,56 @@ def _value(root: Path, number: int, status: str = "Active",
     return path
 
 
+def _wire(root: Path) -> None:
+    toml = root / "luria.toml"
+    wiring = '[luria.schemes.VP.fields.status]\nvocabulary = "statuses"\n'
+    if wiring not in toml.read_text():
+        toml.write_text(toml.read_text() + wiring)
+    config.reset()
+
+
 def _declare(root: Path, text: str) -> None:
+    """Write the vocabulary AND wire it.
+
+    The file alone declares nothing since `status:` became an ordinary
+    controlled field (#181): `statuses.yaml` is the values, the `fields`
+    table is the wiring — the split ADR-076 draws for every vocabulary."""
     (root / "record" / "values.d" / "statuses.yaml").write_text(text)
+    _wire(root)
 
 
 def _scheme():
     return config.current().schemes["VP"]
 
 
-def test_declaring_nothing_leaves_every_word_available(tmp_path, monkeypatch):
-    """The default posture, and it must be silent in both directions.
+def test_declaring_nothing_checks_nothing(tmp_path, monkeypatch):
+    """The posture a record predating the declaration is in, said plainly.
 
-    A project that has not thought about this must not be told it has a
-    problem, and must not be handed a legend it never asked for."""
+    It used to be silent in both directions — no legend, and no complaint,
+    because the five were enforced from the code. With the words the
+    project's, silence in the second direction would mean an unchecked
+    field looking exactly like a clean one (DP-15), so it says so."""
     _project(tmp_path, monkeypatch)
     for n, s in enumerate(("Active", "Proposed", "Deferred", "Superseded",
                            "Rejected"), start=1):
         _value(tmp_path, n, s, superseded_by="VP-001" if s == "Superseded" else None)
     errors: list[str] = []
     lint.check_frontmatter(errors)
-    assert errors == []
+    assert len(errors) == 5 and all("unchecked" in e for e in errors), errors
     assert statuses.legend(_scheme()) == ""
 
 
-def test_a_declared_vocabulary_narrows_the_five(tmp_path, monkeypatch):
+def test_a_declared_vocabulary_is_the_vocabulary(tmp_path, monkeypatch):
+    """It replaces rather than narrows — there is no longer a list in the
+    code for it to be a subset of."""
     _project(tmp_path, monkeypatch)
     _declare(tmp_path, "Active:\n  blurb: in force\nRejected:\n  blurb: wrong\n")
     _value(tmp_path, 1, "Active")
     _value(tmp_path, 2, "Deferred")
     errors: list[str] = []
-    lint.check_frontmatter(errors)
+    lint.check_contracts(errors)
     assert len(errors) == 1
-    assert "VP-002" in errors[0] and "'Deferred'" in errors[0]
+    assert "VP-002" in errors[0] and "Deferred" in errors[0]
 
 
 def test_a_trailing_note_does_not_defeat_the_check(tmp_path, monkeypatch):
@@ -106,8 +126,8 @@ def test_a_trailing_note_does_not_defeat_the_check(tmp_path, monkeypatch):
 
     _value(tmp_path, 3, "Deferred — until the audit")
     errors = []
-    lint.check_frontmatter(errors)
-    assert len(errors) == 1 and "'Deferred'" in errors[0]
+    lint.check_contracts(errors)
+    assert len(errors) == 1 and "Deferred" in errors[0]
 
 
 def test_a_scheme_may_name_its_own_words(tmp_path, monkeypatch):
@@ -159,19 +179,21 @@ def test_a_word_outside_the_declared_vocabulary_is_still_reported(
     _declare(tmp_path, "Accepted:\n  blurb: in force\nWithdrawn:\n  blurb: not\n")
     _value(tmp_path, 1, "Superseded")
     errors: list[str] = []
-    lint.check_frontmatter(errors)
+    lint.check_contracts(errors)
     assert any("Superseded" in e for e in errors), errors
 
 
-def test_the_default_five_still_apply_when_nothing_is_declared(
+def test_a_scheme_declaring_no_vocabulary_checks_no_word(
         tmp_path, monkeypatch):
-    """A default, not an absence: an unconfigured project keeps exactly the
-    behaviour it had, including the rejection of a word nobody declared."""
+    """The honest consequence of `status:` becoming an ordinary controlled
+    field: with no declaration there are no values, so nothing constrains
+    the word — and the finding says exactly that rather than pretending a
+    default is in force. Requiring the declaration is the next step."""
     _project(tmp_path, monkeypatch)
     _value(tmp_path, 1, "Accepted")
     errors: list[str] = []
     lint.check_frontmatter(errors)
-    assert any("Accepted" in e for e in errors), errors
+    assert any("unchecked" in e for e in errors), errors
 
 
 def test_the_meaning_reaches_the_generated_index(tmp_path, monkeypatch):
@@ -193,15 +215,17 @@ def test_the_meaning_reaches_the_generated_index(tmp_path, monkeypatch):
         "the legend explains the column, so it belongs above the table"
 
 
-def test_an_undeclared_status_is_not_reported_when_nothing_is_declared(
+def test_undeclared_means_nothing_is_checking_it(
         tmp_path, monkeypatch):
-    """Guards the inert default against the obvious refactor that breaks it —
-    treating an absent file as an empty vocabulary would reject every record in
-    every project that has not adopted this."""
+    """`undeclared` no longer means "the word is wrong" — that is the
+    vocabulary's finding now. It means nothing is checking the word at all,
+    which is the one thing a vocabulary cannot report about itself."""
     _project(tmp_path, monkeypatch)
     _value(tmp_path, 1, "Rejected")
-    assert not statuses.undeclared(_scheme(), "Rejected")
+    assert statuses.undeclared(_scheme(), "Rejected")
     assert statuses.declared(_scheme()) == {}
+    _declare(tmp_path, "Rejected:\n  blurb: wrong\nActive:\n  blurb: in force\n")
+    assert not statuses.undeclared(_scheme(), "Rejected")
 
 
 # ── The inert-status report (#104) ──────────────────────────────────────
@@ -466,6 +490,7 @@ def test_repair_moves_the_note_and_the_finding_clears(tmp_path, monkeypatch):
     """The repair is the one `luria repair` already runs for `created:`
     (ADR-031): the file states both facts, and is made to say so in two."""
     _project(tmp_path, monkeypatch)
+    _declare(tmp_path, "Active:\n  blurb: in force\nDeferred:\n  blurb: parked\n")
     path = tmp_path / "record" / "values.d" / "VP-001.md"
     path.write_text("---\nstatus: 'Deferred — until the audit'\ntitle: 'A value'\n"
                     "tags:\n- craft\ndate: '2026-01-01'\n---\n\n# VP-001: A value\n")
@@ -636,3 +661,124 @@ def test_declaring_the_field_yourself_replaces_the_default(tmp_path, monkeypatch
     assert len(fields) == 1, fields
     assert not fields[0].builtin
     assert fields[0].reference == "VP"
+
+
+# --- `status:` is an ordinary controlled vocabulary (#181) -------------------
+#
+# ADR-076 generalized the vocabulary mechanism FROM `status` and `tags` and
+# then carved both out. `status` is the closed, single-valued case, which is
+# exactly what the mechanism does — so the bespoke reader beside it is a
+# second implementation of one thing (DP-4).
+
+def test_status_may_be_declared_as_a_vocabulary(tmp_path, monkeypatch):
+    _project(tmp_path, monkeypatch)
+    _declare(tmp_path, "Active:\n  blurb: in force\nWithdrawn:\n  blurb: not\n")
+    _wire(tmp_path)
+    _value(tmp_path, 1, "Withdrawn")
+    errors: list[str] = []
+    lint.check_contracts(errors)
+    assert errors == [], errors
+
+
+def test_the_declared_vocabulary_checks_the_word(tmp_path, monkeypatch):
+    _project(tmp_path, monkeypatch)
+    _declare(tmp_path, "Active:\n  blurb: in force\nWithdrawn:\n  blurb: not\n")
+    _wire(tmp_path)
+    _value(tmp_path, 1, "Bogus")
+    errors: list[str] = []
+    lint.check_contracts(errors)
+    assert any("Bogus" in e for e in errors), errors
+
+
+def test_one_bad_word_is_one_finding(tmp_path, monkeypatch):
+    """The whole point. Before this, the bespoke check and the generic one
+    both fired: two findings for one value."""
+    _project(tmp_path, monkeypatch)
+    _declare(tmp_path, "Active:\n  blurb: in force\nWithdrawn:\n  blurb: not\n")
+    _wire(tmp_path)
+    _value(tmp_path, 1, "Bogus")
+    errors: list[str] = []
+    lint.check_frontmatter(errors)
+    lint.check_contracts(errors)
+    assert len([e for e in errors if "Bogus" in e]) == 1, errors
+
+
+def test_a_status_carrying_a_note_is_one_finding_too(tmp_path, monkeypatch):
+    """The obstacle that decided the shape. `status: Deferred — until the
+    audit` means the raw value is not the vocabulary value, so a naive
+    vocabulary check reports the whole string as an unknown word — beside
+    the existing "carries a note" finding, which is the actionable one.
+
+    Normalising the frontmatter at the read boundary means the generic
+    checker needs no idea that `status` is special."""
+    _project(tmp_path, monkeypatch)
+    _declare(tmp_path, "Active:\n  blurb: in force\nDeferred:\n  blurb: parked\n")
+    _wire(tmp_path)
+    _value(tmp_path, 1, "Deferred — until the audit")
+    p = tmp_path / "record" / "values.d" / "VP-001.md"
+    p.write_text(p.read_text().replace("status_note: 'until the audit'\n", ""))
+    p.write_text(p.read_text().replace(
+        "status: Deferred\n", "status: Deferred — until the audit\n"))
+    config.reset()
+    errors: list[str] = []
+    lint.check_frontmatter(errors)
+    lint.check_contracts(errors)
+    assert len(errors) == 1, errors
+    assert "carries a note" in errors[0], errors
+
+
+# --- the requirement, and the marker on its remedy (#181) -------------------
+
+def test_a_scheme_without_a_status_vocabulary_fails_the_lint(
+        tmp_path, monkeypatch):
+    """The break. A record predating the declaration has an unchecked
+    `status:` — every word passes, and the absence looks exactly like a
+    clean check (DP-15). It is a violation, and the finding names the
+    command that fixes it."""
+    _project(tmp_path, monkeypatch)
+    _value(tmp_path, 1)
+    errors: list[str] = []
+    lint.check_frontmatter(errors)
+    assert any("luria upgrade statuses" in e for e in errors), errors
+
+
+def test_the_upgrade_satisfies_the_requirement(tmp_path, monkeypatch):
+    """The fix ships with the break, and is the whole remedy: after it, the
+    record lints clean without anyone hand-editing config."""
+    from luria import upgrade
+    _project(tmp_path, monkeypatch)
+    _value(tmp_path, 1)
+    upgrade.run("statuses", root=str(tmp_path))
+    config.reset()
+    errors: list[str] = []
+    lint.check_frontmatter(errors)
+    lint.check_contracts(errors)
+    assert errors == [], errors
+
+
+def test_the_upgrade_does_not_load_the_config_it_repairs(tmp_path, monkeypatch):
+    """It has to run against a record the new version refuses to load, or it
+    is unrunnable in exactly the situation it exists for."""
+    from luria import upgrade
+    _project(tmp_path, monkeypatch)
+    (tmp_path / "luria.toml").write_text(
+        (tmp_path / "luria.toml").read_text()
+        + '[luria.schemes.VP.fields.bogus]\nvocabulary = "nothing"\n')
+    config.reset()
+    with pytest.raises(ValueError):
+        config.current()
+    upgrade.run("statuses", root=str(tmp_path))     # must not raise
+    assert (tmp_path / "record" / "values.d" / "statuses.yaml").exists()
+
+
+def test_a_spent_upgrade_says_it_can_be_deleted(tmp_path, monkeypatch):
+    """The marker. An upgrade that has nothing left to do anywhere is dead
+    code that still has to be read and tested, so the lint raises the
+    question rather than waiting for someone to remember it — the posture
+    `stale-directives` already takes."""
+    from luria import upgrade
+    _project(tmp_path, monkeypatch)
+    upgrade.run("statuses", root=str(tmp_path))
+    config.reset()
+    rows = lint.spent_upgrades()
+    assert any("statuses" in r and "delete" in r for r in rows), rows

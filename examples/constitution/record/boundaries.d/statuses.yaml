@@ -1,0 +1,18 @@
+# The words this scheme's documents may use, and what each means.
+#
+# `status:` is a controlled vocabulary like any other, and this is
+# the vocabulary: `[luria.schemes.X.fields.status]` in luria.toml is
+# the wiring. Rename these, drop what you do not want, add your own.
+# The one rule is that the scheme's `active` word has to appear here
+# — it is how everything decides what is in force.
+
+Active:
+  blurb: in force — the current answer, and what a citation should normally point at
+Proposed:
+  blurb: not in force yet — an open question, so citing it as settled is what the reference report catches
+Deferred:
+  blurb: not in force and not being worked on; the question is real and the answer waits on something
+Superseded:
+  blurb: no longer in force because something replaced it; the successor is named in the field, not in the prose
+Rejected:
+  blurb: no longer in force and nothing replaced it — kept because a rejection is worth being able to point at

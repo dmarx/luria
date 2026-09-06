@@ -30,3 +30,11 @@ render = "document"
 # example is either a fiction or the wrong project.
 [luria.site]
 title = "RFCs and specs"
+
+# `status:` declared as the controlled vocabulary it is (#181),
+# written by `luria upgrade statuses`.
+[luria.schemes.RFC.fields.status]
+vocabulary = "statuses"
+
+[luria.schemes.SPEC.fields.status]
+vocabulary = "statuses"

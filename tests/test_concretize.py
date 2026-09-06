@@ -180,7 +180,7 @@ def test_concretize_rewrites_history_too(merge_project):
 def test_filing_allocation_is_untouched(project):
     """The default dial: a scheme without `allocate = "merge"` still numbers
     at creation, exactly as before."""
-    (project / "record" / "decisions.d").mkdir(parents=True)
+    (project / "record" / "decisions.d").mkdir(parents=True, exist_ok=True)
     path = new.new_entry("adr", {"title": "Numbered on the spot"}, None)
     assert path.name == "ADR-001.md"
 

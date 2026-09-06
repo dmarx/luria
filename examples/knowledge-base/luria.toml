@@ -70,3 +70,11 @@ url  = "https://arxiv.org/abs/{1}.{2}"
 # example is either a fiction or the wrong project.
 [luria.site]
 title = "Knowledge base"
+
+# `status:` declared as the controlled vocabulary it is (#181),
+# written by `luria upgrade statuses`.
+[luria.schemes.LIT.fields.status]
+vocabulary = "statuses"
+
+[luria.schemes.SOTA.fields.status]
+vocabulary = "statuses"

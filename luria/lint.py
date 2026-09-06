@@ -116,20 +116,16 @@ def check_frontmatter(errors: list[str]) -> None:
                     f"{rel}: `status:` carries a note — `luria repair` moves "
                     f"it to `status_note:`")
             elif statuses.undeclared(scheme, status.value):
-                # One list, read once. The vocabulary is the scheme's own
-                # where it declares one and the default five otherwise, so
-                # this used to be two checks against two spellings of the
-                # same words — a duplicated projection (DP-3).
-                where = (f"see {cfg.rel(scheme.statuses_yaml)}"
-                         if statuses.declared(scheme)
-                         else "the default; declare "
-                              f"{cfg.rel(scheme.statuses_yaml)} to use "
-                              "other words")
+                # Only when the scheme declares no `status` vocabulary, so
+                # nothing checks the word. Where it does declare one, the
+                # check is the vocabulary's, in `check_contracts` with every
+                # other controlled field — one implementation (DP-4).
                 errors.append(
-                    f"{rel}: status {status.value!r} is not one the "
-                    f"{scheme.prefix} scheme uses — want "
-                    f"{'|'.join(statuses.vocabulary(scheme))} ({where}); "
-                    f"a qualifying note goes in `status_note:`")
+                    f"{rel}: status {status.value!r} is unchecked — the "
+                    f"{scheme.prefix} scheme declares no `status` "
+                    f"vocabulary, so any word passes and the absence looks "
+                    f"exactly like a clean check "
+                    f"(`luria upgrade statuses` writes one)")
             # "Superseded names its successor" used to be a branch here.
             # It is a `required_when` on the built-in field now, checked with
             # every other obligation in `check_contracts` (ADR-071 stated
@@ -216,6 +212,10 @@ def check_contracts(errors: list[str]) -> None:
             meta, _ = builder.parse_frontmatter(path.read_text(encoding="utf-8"))
             if not meta:
                 continue          # check_frontmatter already said so
+            # A `status:` still carrying its note is one mistake with one
+            # finding, raised where the repair is named. Reading it apart
+            # here keeps the contract's checker generic (#181).
+            meta = statuses.normalised(meta)
             errors.extend(contract.violations(c, cfg.rel(path), meta, known))
 
 
@@ -376,8 +376,29 @@ FAILABLE = ("retired-citations", "unresolved-codes", "hand-written-urls",
             "source-mismatch", "source-unchecked",
             "legacy-spellings", "narrow-titles", "stale-directives",
             "template-drift", "broken-chains",
-            "one-sided-relations",
+            "one-sided-relations", "spent-upgrades",
             "pending-documents", "unlinted-files", "workflow-temp-codes")
+
+
+def spent_upgrades() -> list[str]:
+    """Upgrades this record has already run.
+
+    A one-shot upgrade is temporary by construction, and the thing that
+    makes it *stay* temporary is being asked about. Once every record has
+    run one it is dead code that still has to be read, tested and
+    explained — so a record that no longer needs it says so, the way
+    `stale-directives` reports a directive that no longer suppresses
+    anything. One user's record saying it is not proof every record has,
+    which is why the row says "once every record has" rather than "now"."""
+    from . import upgrade
+    out = []
+    for name, entry in upgrade.SUNSET.items():
+        writes, lines, _ = upgrade._plan(current().root)
+        if not writes and not lines:
+            out.append(f"`luria upgrade {name}` has nothing left to do here "
+                       f"— delete it once every record has run it "
+                       f"({entry.sunset})")
+    return out
 
 
 def status_sections() -> list[tuple[str, str, list[str]]]:
@@ -563,6 +584,13 @@ def status_sections() -> list[tuple[str, str, list[str]]]:
             f"{len(drift)} scaffolded field(s) contradict the scheme's own "
             "contract (a document copied from the form starts in the wrong "
             "shape)", drift))
+
+    spent = spent_upgrades()
+    if spent:
+        sections.append((
+            "spent-upgrades",
+            f"{len(spent)} one-shot upgrade(s) this record no longer needs",
+            spent))
 
     # A directive that silently does nothing is worse than no directive.
     stale = ref_status.stale_annotations(result, docs) + stale_urls \
