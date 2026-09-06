@@ -193,3 +193,31 @@ def test_a_declared_flag_reaches_the_document_through_run(project, capsys):
     new_mod.run(kind="sota", source="LIT-134,LIT-140")
     written = (current().root / capsys.readouterr().out.strip()).read_text()
     assert "source:\n- LIT-134\n- LIT-140\n" in written
+
+
+
+def test_an_unfilled_summary_is_dropped_not_copied_from_the_form(project):
+    """The form's `summary:` explains what a summary is for. A document
+    scaffolded without one used to carry that explanation as its summary,
+    and two Proposed decisions reached the published index saying it. The
+    key goes; the comment above it stays as the instruction."""
+    from luria import config, new
+    (project / "luria.toml").write_text(
+        '[luria]\nissue_url = "https://example.test/issues/{n}"\n'
+        '[luria.schemes.ADR]\ndir = "record/decisions.d"\n'
+        'output = "docs/decisions"\n')
+    config.reset()
+    d = project / "record" / "decisions.d"
+    d.mkdir(parents=True, exist_ok=True)
+    (d / "_template.md").write_text(
+        "---\nstatus: Proposed\ntitle: 'Title'\ntags:\n- record\n"
+        "date: '2026-01-01'\n# What the index shows.\nsummary: >-\n"
+        "  One-paragraph description of the decision.\n---\n\n"
+        "# ADR-NNN: Title\n")
+    scheme = config.current().schemes["ADR"]
+    bare = new.new_scheme_doc(scheme, {"title": "Bare"}).read_text()
+    assert "summary:" not in bare
+    assert "# What the index shows." in bare, "the instruction survives"
+    filled = new.new_scheme_doc(scheme, {"title": "Filled",
+                                         "summary": "We chose it."}).read_text()
+    assert "summary: >-\n  We chose it." in filled

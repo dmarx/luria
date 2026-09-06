@@ -48,6 +48,7 @@ import re
 from .adr_index import parse_frontmatter
 from .config import current
 from .contract import _cite, for_scheme
+from .doc_refs import PROSE_KEYS
 
 TEMPLATE_NAME = "_template.md"
 
@@ -102,3 +103,32 @@ def rows() -> list[str]:
                     f"copied from this form starts with a list where a code "
                     f"belongs {cite}")
     return sorted(found)
+
+
+def _squash(value) -> str:
+    return " ".join(str(value or "").split())
+
+
+def placeholders(scheme) -> dict[str, str]:
+    """What the scheme's form says in each prose field, whitespace squashed —
+    the words a filed document must not still be saying. Empty when the
+    scheme has no form."""
+    path = scheme.dir / TEMPLATE_NAME
+    if not path.exists():
+        return {}
+    meta, _ = parse_frontmatter(path.read_text(encoding="utf-8"))
+    return {k: _squash(meta[k]) for k in PROSE_KEYS
+            if meta and _squash(meta.get(k))}
+
+
+def form_text(scheme, meta: dict) -> list[str]:
+    """The prose keys of one document that still carry the form's own
+    words. A template's `summary:` describes what a summary is for, so a
+    document repeating it verbatim has not written one; the decision index
+    then prints the instruction where the decision should be — which is how
+    two Proposed decisions reached the published site saying "One-paragraph
+    description of the decision". Always wrong, and the mechanical fix is to
+    drop the key: an absent summary falls back to the title."""
+    said = placeholders(scheme)
+    return [k for k in PROSE_KEYS
+            if k in said and _squash(meta.get(k)) == said[k]]
