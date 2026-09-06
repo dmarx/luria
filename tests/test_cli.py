@@ -13,7 +13,7 @@ import subprocess
 import sys
 
 from luria import (adr_index, cli, collect, concretize, init, link_refs,
-                   lint, migrate, new, remotes, repair, reports, site)
+                   lint, migrate, new, remotes, repair, reports, site, upgrade)
 
 
 def test_every_command_is_registered():
@@ -24,6 +24,7 @@ def test_every_command_is_registered():
         "migrate": migrate.run, "remotes": remotes.run,
         "site": site.run, "init": init.run, "reports": reports.run,
         "collect": collect.run, "config": init.config_run,
+        "upgrade": upgrade.run,
     }
 
 

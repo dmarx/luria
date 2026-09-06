@@ -38,3 +38,8 @@ url  = "https://nvd.nist.gov/vuln/detail/CVE-{uid}"
 # example is either a fiction or the wrong project.
 [luria.site]
 title = "External citations"
+
+# `status:` declared as the controlled vocabulary it is (#181),
+# written by `luria upgrade statuses`.
+[luria.schemes.NOTE.fields.status]
+vocabulary = "statuses"

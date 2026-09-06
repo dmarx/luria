@@ -34,3 +34,18 @@ title       = "Meeting notes"
 # example is either a fiction or the wrong project.
 [luria.site]
 title = "Many journals"
+
+# This example is about journals, and left its scheme to the shipped default
+# — which stopped being enough when `status:` became a field a scheme
+# declares rather than one the code assumes (LU-#181). Written out so the
+# words this record's decisions may use are this record's to see and change.
+[luria.schemes.ADR]
+dir = "record/decisions.d"
+output = "docs/decisions"
+active = "Active"
+render = "index"
+
+# `status:` declared as the controlled vocabulary it is (#181),
+# written by `luria upgrade statuses`.
+[luria.schemes.ADR.fields.status]
+vocabulary = "statuses"

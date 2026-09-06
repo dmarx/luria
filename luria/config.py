@@ -371,7 +371,12 @@ class Vocabulary:
 
 
 # The axes every scheme has, with their own files and their own rules.
-BUILT_IN_AXES = ("status", "statuses", "tags")
+# `tags` stays: it is OPEN, and a vocabulary is closed by
+# construction (ADR-054 deferred even a `closed` flag), and its
+# `tag_groups` constrain a *subset of values*, which a vocabulary
+# cannot express. `status` needed neither — it is the closed,
+# single-valued case the mechanism was built for (#181).
+BUILT_IN_AXES = ("tags",)
 
 
 @dataclass(frozen=True)
@@ -1082,7 +1087,7 @@ def _required_when(where: str, spec: dict, required: bool) -> RequiredWhen | Non
 
 
 def _fields(prefix: str, raw: dict, scheme_dir: Path, root: Path,
-            references: tuple) -> tuple:
+            references: tuple, scaffolding: bool = False) -> tuple:
     """Read a scheme's `[luria.schemes.X.fields]` tables, as
     `(vocabularies, plain fields)`.
 
@@ -1103,8 +1108,8 @@ def _fields(prefix: str, raw: dict, scheme_dir: Path, root: Path,
     for field, spec in raw.items():
         where = f"luria.toml: schemes.{prefix}.fields.{field}"
         if field in BUILT_IN_AXES:
-            raise ValueError(f"{where}: `{field}` is built in — `status` and "
-                             f"`tags` have their own files and rules")
+            raise ValueError(f"{where}: `{field}` is built in — `tags` is "
+                             f"open, and a vocabulary is closed")
         if field in taken:
             raise ValueError(f"{where}: `{field}` is also declared under "
                              f"`references`; a field has one declaration")
@@ -1124,7 +1129,11 @@ def _fields(prefix: str, raw: dict, scheme_dir: Path, root: Path,
         name = str(name)
         file = scheme_dir / f"{name}.yaml"
         values = declared(file)
-        if not values:
+        if not values and not (scaffolding and not file.exists()):
+            # Absent is not the same as empty when a scaffold is being
+            # planned: `luria init` reads the config to decide what to
+            # write, and the vocabulary file is one of the things it is
+            # about to write. Every other caller keeps ADR-076's eager rule.
             raise ValueError(
                 f"{where}: {file.relative_to(root)} declares no values, so "
                 f"the field constrains nothing")
@@ -1514,7 +1523,8 @@ class Config:
 FAMILIES = ("schemes", "fragments", "journals", "remotes", "chains")
 
 
-def load(root: Path | None = None, text: str | None = None) -> Config:
+def load(root: Path | None = None, text: str | None = None,
+         scaffolding: bool = False) -> Config:
     """The config at `root`, or parsed from `text` when given.
 
     `text` exists for `luria init --config`: the scaffold has to be planned
@@ -1547,7 +1557,7 @@ def load(root: Path | None = None, text: str | None = None) -> Config:
         fragments={k: _fragment(v) for k, v in raw["fragments"].items()},
         code_globs=tuple(raw["code"]["globs"]),
         historical=frozenset(root / p for p in raw["code"]["historical"]),
-        schemes=(schemes := _schemes(raw["schemes"], root)),
+        schemes=(schemes := _schemes(raw["schemes"], root, scaffolding)),
         remotes={
             prefix.upper(): Remote(
                 prefix.upper(),
@@ -1698,7 +1708,8 @@ def _conditions(scheme):
                 yield entry.field, entry.required_when
 
 
-def _schemes(raw: dict, root: Path) -> dict[str, Scheme]:
+def _schemes(raw: dict, root: Path,
+             scaffolding: bool = False) -> dict[str, Scheme]:
     """Every declared scheme, with the cross-scheme checks that need them all.
 
     A reference naming a scheme that does not exist is a config error, and it
@@ -1725,7 +1736,8 @@ def _schemes(raw: dict, root: Path) -> dict[str, Scheme]:
             references=(refs := _references(prefix, spec.get("references", {}))),
             **dict(zip(("vocabularies", "plain_fields"),
                        _fields(prefix, spec.get("fields", {}),
-                               root / spec["dir"], root, refs))),
+                               root / spec["dir"], root, refs,
+                               scaffolding))),
             field_groups=_field_groups(prefix, spec.get("field_groups", {})),
             uniform_ok=(spec.get("uniform_ok") or None),
             uniform_share=float(spec.get("uniform_share", 1.0)),

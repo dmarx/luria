@@ -116,20 +116,14 @@ def check_frontmatter(errors: list[str]) -> None:
                     f"{rel}: `status:` carries a note — `luria repair` moves "
                     f"it to `status_note:`")
             elif statuses.undeclared(scheme, status.value):
-                # One list, read once. The vocabulary is the scheme's own
-                # where it declares one and the default five otherwise, so
-                # this used to be two checks against two spellings of the
-                # same words — a duplicated projection (DP-3).
-                where = (f"see {cfg.rel(scheme.statuses_yaml)}"
-                         if statuses.declared(scheme)
-                         else "the default; declare "
-                              f"{cfg.rel(scheme.statuses_yaml)} to use "
-                              "other words")
+                # Only when the scheme declares no `status` vocabulary, so
+                # nothing checks the word. Where it does declare one, the
+                # check is the vocabulary's, in `check_contracts` with every
+                # other controlled field — one implementation (DP-4).
                 errors.append(
-                    f"{rel}: status {status.value!r} is not one the "
-                    f"{scheme.prefix} scheme uses — want "
-                    f"{'|'.join(statuses.vocabulary(scheme))} ({where}); "
-                    f"a qualifying note goes in `status_note:`")
+                    f"{rel}: status {status.value!r} is unchecked — the "
+                    f"{scheme.prefix} scheme declares no `status` "
+                    f"vocabulary, so any word passes")
             # "Superseded names its successor" used to be a branch here.
             # It is a `required_when` on the built-in field now, checked with
             # every other obligation in `check_contracts` (ADR-071 stated
@@ -197,6 +191,10 @@ def check_contracts(errors: list[str]) -> None:
             meta, _ = builder.parse_frontmatter(path.read_text(encoding="utf-8"))
             if not meta:
                 continue          # check_frontmatter already said so
+            # A `status:` still carrying its note is one mistake with one
+            # finding, raised where the repair is named. Reading it apart
+            # here keeps the contract's checker generic (#181).
+            meta = statuses.normalised(meta)
             errors.extend(contract.violations(c, cfg.rel(path), meta, known))
 
 

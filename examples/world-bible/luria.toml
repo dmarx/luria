@@ -40,3 +40,8 @@ default    = ["B"]
 # example is either a fiction or the wrong project.
 [luria.site]
 title = "World bible"
+
+# `status:` declared as the controlled vocabulary it is (#181),
+# written by `luria upgrade statuses`.
+[luria.schemes.SCENE.fields.status]
+vocabulary = "statuses"

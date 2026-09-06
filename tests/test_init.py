@@ -31,6 +31,10 @@ issue_url = "https://github.com/acme/team/issues/{n}"
 [luria.schemes.RFC]
 dir = "record/rfcs.d"
 output = "docs/rfcs"
+# `status:` is a field a scheme declares (#181). The scaffold writes the
+# vocabulary file; this says which field it backs.
+[luria.schemes.RFC.fields.status]
+vocabulary = "statuses"
 [luria.journals.incidents]
 dir = "record/incidents.d"
 output = "docs/incidents"
@@ -167,5 +171,7 @@ def test_the_written_vocabulary_is_the_one_in_force(tmp_path, monkeypatch):
     scheme.statuses_yaml.write_text(
         "Active:\n  blurb: in force\nWithdrawn:\n  blurb: taken back\n")
     config.reset()
-    assert statuses.undeclared(config.current().schemes["ADR"], "Superseded")
-    assert not statuses.undeclared(config.current().schemes["ADR"], "Withdrawn")
+    values = next(v for v in config.current().schemes["ADR"].vocabularies
+                  if v.field == "status")
+    from luria import vocabularies
+    assert tuple(vocabularies.declared(values.file)) == ("Active", "Withdrawn")

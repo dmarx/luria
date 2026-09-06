@@ -57,17 +57,31 @@ historical = ["CHANGELOG.md"]
 # DP, so this record has ADR and DP — delete one of these tables and the
 # scheme is gone, record and views alike. A family left undeclared keeps the
 # shipped default.
+# `status:` is a controlled vocabulary like any other (LU-ADR-076), declared
+# rather than assumed: the words live in `record/decisions.d/statuses.yaml`
+# and this table is the wiring. Rename them there and every check, legend and
+# page follows — `active` above just has to stay one of them.
 [luria.schemes.ADR]
 dir = "record/decisions.d"
 output = "docs/decisions"
 active = "Active"
 render = "index"
+successor = "superseded_by"
+retires_on = "Superseded"
+
+[luria.schemes.ADR.fields.status]
+vocabulary = "statuses"
 
 [luria.schemes.DP]
 dir = "record/principles.d"
 active = "Active"
 render = "document"
 output = "docs/design-principles.md"
+successor = "superseded_by"
+retires_on = "Superseded"
+
+[luria.schemes.DP.fields.status]
+vocabulary = "statuses"
 
 # Another project's record, cited from this one. `LU-ADR-013` then means that
 # project's ADR-013: the fixer links it, the lint demands it, and
