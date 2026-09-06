@@ -1201,6 +1201,12 @@ class Chain:
     output: Path
     sibling: str = ""
     title: str = ""
+    # A second field to show beside each step's status (#173). A record can
+    # carry an axis the status cannot express — how far the *field* has
+    # converged, as against what the record itself asserts — and without this
+    # the page renders an agreed trunk and a disputed branch identically,
+    # which is the one distinction a line of work exists to show.
+    annotate: str = ""
 
 
 @dataclass(frozen=True)
@@ -1627,6 +1633,19 @@ def _chains(raw: dict, schemes: dict, root: Path) -> dict[str, Chain]:
             raise ValueError(f"{where}: scheme {prefix!r} is not declared "
                              f"(have: {', '.join(sorted(schemes))})")
         declared = {r.field for r in schemes[prefix].references}
+        annotate = str(spec.get("annotate", ""))
+        if annotate:
+            # `status` is not named here: it is a declared vocabulary since
+            # #181, so it arrives through `vocabularies` like any other. Only
+            # `tags` is still an axis the code assumes.
+            known = ({v.field for v in schemes[prefix].vocabularies}
+                     | {f.field for f in schemes[prefix].plain_fields}
+                     | set(schemes[prefix].requires) | declared | {"tags"})
+            if annotate not in known:
+                raise ValueError(
+                    f"{where}: `annotate = \"{annotate}\"` is not a field "
+                    f"{prefix} declares, so every step would render blank "
+                    f"(declared: {', '.join(sorted(known))})")
         for key in ("relation", "sibling"):
             field = str(spec.get(key, ""))
             if key == "sibling" and not field:
@@ -1644,6 +1663,7 @@ def _chains(raw: dict, schemes: dict, root: Path) -> dict[str, Chain]:
                           relation=str(spec["relation"]),
                           sibling=str(spec.get("sibling", "")),
                           output=root / str(spec["output"]),
+                          annotate=annotate,
                           title=str(spec.get("title", "")) or name.title())
     return out
 

@@ -219,6 +219,17 @@ def _link(doc: Adr, chain) -> str:
     return prefix_for(scheme, chain.output.parent) + doc.path.name
 
 
+def _annotation(doc: Adr, chain) -> str:
+    """The chain's second axis for one step, read as the contract reads it —
+    so a field with a `default` shows its default rather than a blank, which
+    is what ADR-076 means by "never absent"."""
+    if not chain.annotate:
+        return ""
+    obligations = for_scheme(current().schemes[chain.scheme])
+    values = obligations.reading(chain.annotate, doc.meta)
+    return f", {', '.join(str(v) for v in values)}" if values else ""
+
+
 def _step(doc: Adr, chain, lead: str = "") -> str:
     """One line of the rendered list: the code, the title, and the status
     *value*.
@@ -233,7 +244,7 @@ def _step(doc: Adr, chain, lead: str = "") -> str:
     to want. `status_value` is the field, and the fields are why it is
     there to ask for."""
     return (f"{lead}[{doc.code}]({_link(doc, chain)}) — {doc.title} "
-            f"*({doc.status_value})*")
+            f"*({doc.status_value}{_annotation(doc, chain)})*")
 
 
 def _render(chain, lines: list[Line]) -> str:
