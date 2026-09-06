@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Spell what the record left implicit: bare references become links, and
-one-sided symmetric relations gain their back-reference.
+a relation held by one side gains its converse.
 
     luria link                    # report what would change
     luria link --fix              # write it
@@ -10,7 +10,7 @@ one-sided symmetric relations gain their back-reference.
 author stated once that the record needs written in a particular place. The
 scanning and masking rules live in `doc_refs.py`, shared with `luria.lint` so
 the linter and the fixer can never disagree; the relation completion lives in
-`chains.py` beside the check that reports it. This is the one-shot migration
+`relations.py` beside the check that reports it. This is the one-shot migration
 tool plus the escape hatch for "lint says I left a bare reference": run it
 with `--fix` instead of hand-editing (ADR-005).
 
@@ -22,7 +22,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from . import chains, doc_refs
+from . import doc_refs, relations
 from .config import current
 
 
@@ -46,19 +46,19 @@ def linkify_files(paths: list[Path], fix: bool = False) -> tuple[int, list[Path]
 
 
 def run(*paths: str, fix: bool = False, links_only: bool = False) -> None:
-    """Rewrite bare references as links and complete symmetric relations —
+    """Rewrite bare references as links and complete declared relations —
     every doc, or just PATHS. Reports what would change; --fix writes it.
     --links-only skips the relation completion.
 
-    Completion is whole-record: it reads every document of a chain's scheme
-    to know what is missing, so PATHS narrows the linking only."""
+    Completion is whole-record: it reads every document of a scheme to know
+    what is missing, so PATHS narrows the linking only."""
     files = [Path(p).resolve() for p in paths] or doc_refs.doc_files()
     total, _ = linkify_files(files, fix)
     verb = "linked" if fix else "would link"
     print(f"{verb} {total} reference(s) in {len(files)} file(s)")
     if links_only:
         return
-    filled = chains.complete(fix=fix)
+    filled = relations.complete(fix=fix)
     if filled:
         verb = "completed" if fix else "would complete"
         print(f"{verb} {len(filled)} back-reference(s) in "

@@ -179,16 +179,32 @@ hand-writing targets is the one thing the workflow forbids.
 References inside backticks, fences, existing links, HTML comments, and
 frontmatter (except designated prose fields) are left alone.
 
-**Back-references.** A chain's `sibling` relation is symmetric: "this
-paper was compared against that one" is a fact both documents hold, and
-one side declaring it alone is the `broken-chains` finding. `--fix`
-writes the missing side, so you declare a comparison once — on the
-document that ran it — rather than opening every other member to record
-it. The chain's `relation` is never mirrored: succession is directed,
-and a back-reference there would manufacture a cycle.
+**Back-references.** A reference field may declare its `converse` — the
+field holding the same relation read backwards:
 
-Completion reads every document of a chain's scheme, because that is
-what "missing" is defined against, so `PATHS` narrows the linking only.
+```toml
+[luria.schemes.LIT.references]
+extends          = { scheme = "LIT", many = true, converse = "extended_by" }
+extended_by      = { scheme = "LIT", many = true, converse = "extends" }
+compared_against = { scheme = "LIT", many = true, converse = "compared_against" }
+```
+
+A relation naming *itself* is what symmetry is, so there is one rule and
+not two. `--fix` writes the side that is missing, in either direction, so
+the author states the relation once on whichever document they were
+holding. One side holding it alone is the `one-sided-relations` finding.
+
+A relation with **no declared converse is left entirely alone** — nothing
+written, nothing reported. Its reverse edge would be a guess, and a guess
+in the record is worse than an absence, because an absence looks like one.
+
+The one thing `--fix` will not touch is a contradiction: a document naming
+another in both directions of one pair, or two documents each claiming to
+come first. Nothing is missing there — two incompatible things are
+present, and the data does not say which was meant.
+
+Completion reads every document of a scheme, because that is what
+"missing" is defined against, so `PATHS` narrows the linking only.
 `--links-only` skips it entirely — the behaviour `--fix` had before
 completion existed, for a run that must touch nothing but link text.
 

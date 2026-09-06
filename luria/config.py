@@ -278,6 +278,13 @@ class Reference:
     shaped like a code, belonging to that scheme, resolving to a document
     (ADR-060).
 
+    `converse` names the field holding the same relation read backwards —
+    `extends` and `extended_by`, or `compared_against` naming itself, which
+    is what symmetry *is*. Declaring it is what licenses `luria link --fix`
+    to write one side from the other, and what makes a one-sided pair a
+    finding; a relation with no declared converse is left entirely alone,
+    because its reverse edge would be a guess (#180).
+
     `many` says the field holds a list of codes rather than one. Without it
     a list was stringified and its first code checked, the rest ignored —
     structured input coerced to prose and half-read, with no finding. A
@@ -287,6 +294,7 @@ class Reference:
     scheme: str
     required: bool = True
     many: bool = False
+    converse: str = ""
 
 
 @dataclass(frozen=True)
@@ -926,6 +934,49 @@ def _field_groups(prefix: str, raw: dict) -> tuple[FieldGroup, ...]:
     return tuple(groups)
 
 
+def _checked_converses(prefix: str, refs: tuple) -> tuple:
+    """Refuse a converse declaration that cannot mean what it says.
+
+    A relation's converse is the relation read backwards: if A `extends` B
+    then B is `extended_by` A. Declaring the pair is what lets the fixer
+    complete one side from the other, and symmetry is simply the case where
+    a relation is its own converse.
+
+    Four things have to hold, and each of them fails silently otherwise —
+    a pair that never completes looks exactly like a record with nothing
+    missing (DP-15)."""
+    by_name = {r.field: r for r in refs}
+    for ref in refs:
+        if not ref.converse:
+            continue
+        where = f"luria.toml: schemes.{prefix}.references.{ref.field}.converse"
+        other = by_name.get(ref.converse)
+        if other is None:
+            raise ValueError(
+                f"{where}: {ref.converse!r} is not a reference {prefix} "
+                f"declares — a converse names the field holding the same "
+                f"relation read backwards, and it has to exist to be written "
+                f"into (declared: {', '.join(sorted(by_name)) or 'none'})")
+        if other.scheme != ref.scheme:
+            raise ValueError(
+                f"{where}: {ref.field!r} holds {ref.scheme} codes and "
+                f"{ref.converse!r} holds {other.scheme} codes — the same "
+                f"relation read backwards points at the same scheme")
+        if other.converse != ref.field:
+            raise ValueError(
+                f"{where}: {ref.converse!r} does not name {ref.field!r} back "
+                f"— a converse is mutual, and half a pair completes in one "
+                f"direction only "
+                f"(saw: {ref.converse}.converse = {other.converse or 'unset'!r})")
+        for side in (ref, other):
+            if not side.many:
+                raise ValueError(
+                    f"{where}: {side.field!r} needs `many = true` — either "
+                    f"side of a pair is written into, and several documents "
+                    f"can stand in one relation to the same one")
+    return refs
+
+
 def _references(prefix: str, raw: dict) -> tuple[Reference, ...]:
     """Read a scheme's `[luria.schemes.X.references]` table."""
     found = []
@@ -937,8 +988,9 @@ def _references(prefix: str, raw: dict) -> tuple[Reference, ...]:
         found.append(Reference(field=str(field),
                                scheme=str(spec["scheme"]).upper(),
                                required=bool(spec.get("required", True)),
-                               many=bool(spec.get("many", False))))
-    return tuple(found)
+                               many=bool(spec.get("many", False)),
+                               converse=str(spec.get("converse", ""))))
+    return tuple(_checked_converses(prefix, tuple(found)))
 
 
 def _fields(prefix: str, raw: dict, scheme_dir: Path, root: Path,
