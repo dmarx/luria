@@ -211,13 +211,20 @@ def test_the_page_shows_status_so_a_retired_step_reads_as_one(
     assert "Superseded" in page
 
 
-def test_the_page_links_into_the_generated_view(tmp_path, monkeypatch):
-    """Links resolve from where the page renders, not from the sources."""
+def test_every_rendered_target_resolves(tmp_path, monkeypatch):
+    """The first version linked into the scheme's *view* directory, which for
+    an index-rendered scheme holds a README and tag pages and never a page
+    per document — so every link on the page resolved to nothing, and no
+    fixture noticed until a real corpus did."""
+    import re
     root = project(tmp_path, monkeypatch)
     note(root, 1, "The original")
     note(root, 2, "The replacement", extends=["LIT-001"])
     page = chains.outputs()[root / "docs/lineage.md"]
-    assert "(literature/LIT-001.md)" in page
+    targets = re.findall(r"\]\(([^)]+)\)", page)
+    assert targets
+    for target in targets:
+        assert (root / "docs" / target).resolve().exists(), target
 
 
 def test_a_project_declaring_no_chains_renders_nothing(tmp_path, monkeypatch):
@@ -270,3 +277,30 @@ def test_the_page_is_part_of_the_generated_views(tmp_path, monkeypatch):
     note(root, 1, "The original")
     note(root, 2, "The replacement", extends=["LIT-001"])
     assert root / "docs/lineage.md" in adr_index.outputs()
+
+
+def test_a_status_note_carrying_a_link_is_rebased(tmp_path, monkeypatch):
+    """A `Superseded — by [LIT-001](LIT-001.md)` note is prose authored in
+    the source's frame; leaving it alone broke it on this page exactly as it
+    once broke on the tag pages. Found by the first real corpus."""
+    import re
+    root = project(tmp_path, monkeypatch)
+    note(root, 1, "The original")
+    write(root, "record/literature.d/LIT-002.md",
+          "---\nstatus: 'Superseded'\nsuperseded_by:\n- LIT-001\n"
+          "status_note: 'by [LIT-001](LIT-001.md)'\n"
+          "title: 'The replacement'\ntags:\n- record\ndate: '2026-01-01'\n"
+          "extends:\n- LIT-001\n---\n\n# LIT-002: The replacement\n\nBody.\n")
+    page = chains.outputs()[root / "docs/lineage.md"]
+    for target in re.findall(r"\]\(([^)]+)\)", page):
+        assert (root / "docs" / target).resolve().exists(), target
+
+
+def test_the_page_is_not_a_citing_site(tmp_path, monkeypatch):
+    """A chain's job is to show the line *including* its retired steps, so
+    scanning it would report every superseded document in every chain — at a
+    site the reader must not edit, in a file the next build overwrites."""
+    root = project(tmp_path, monkeypatch)
+    note(root, 1, "The original")
+    note(root, 2, "The replacement", extends=["LIT-001"])
+    assert config.current().is_generated(root / "docs/lineage.md")

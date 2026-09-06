@@ -1260,6 +1260,13 @@ class Config:
         # is made of example codes.
         if path == self.record_doc:
             return True
+        # A chain page (#171). Generated for the usual reason, and excluded
+        # here for a sharper one: its whole job is to show a line *including*
+        # its retired steps, so scanning it would report every superseded
+        # document in every chain as an unacknowledged citation — at a site
+        # the reader must not edit, in a file the next build overwrites.
+        if any(path == c.output for c in self.chains.values()):
+            return True
         for s in self.schemes.values():
             if s.render == "index" and (path == s.index_path
                                         or path.parent == s.tag_dir):
