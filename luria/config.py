@@ -1207,12 +1207,20 @@ class Chain:
     # the page renders an agreed trunk and a disputed branch identically,
     # which is the one distinction a line of work exists to show.
     #
-    # Every field the step shows, in order — `status` included, and named
-    # rather than assumed. It rendered implicitly once, with this key
-    # meaning "the OTHER field", which left the chain page as the last
-    # thing treating `status` as a built-in axis after #181 made it a
-    # declared vocabulary like any other. A chain names what it shows.
-    annotate: tuple[str, ...] = ("status",)
+    # The facets a step is classified along, in render order — `status`
+    # included, and named rather than assumed.
+    #
+    # Named for what the fields ARE rather than for what the renderer does
+    # with them. They are independent axes of one document — ADR-076 calls
+    # `status` and `tags` exactly that, and already writes a page per
+    # vocabulary value, which is faceted browsing. A chain shows one
+    # document's values along each.
+    #
+    # It was `annotate` first, meaning "the OTHER field" beside a hardcoded
+    # status: a verb whose object was the thing it sat next to. When the
+    # list became the whole content there was nothing left to annotate, and
+    # the word outlived what it described.
+    facet_by: tuple[str, ...] = ("status",)
 
 
 @dataclass(frozen=True)
@@ -1639,9 +1647,9 @@ def _chains(raw: dict, schemes: dict, root: Path) -> dict[str, Chain]:
             raise ValueError(f"{where}: scheme {prefix!r} is not declared "
                              f"(have: {', '.join(sorted(schemes))})")
         declared = {r.field for r in schemes[prefix].references}
-        raw_annotate = spec.get("annotate", ("status",))
-        annotate = tuple(str(f) for f in (
-            [raw_annotate] if isinstance(raw_annotate, str) else raw_annotate))
+        raw_facets = spec.get("facet_by", ("status",))
+        facet_by = tuple(str(f) for f in (
+            [raw_facets] if isinstance(raw_facets, str) else raw_facets))
         # `status` is nameable because it is a declared vocabulary since
         # #181, arriving through `vocabularies` like any other field. Only
         # `tags` is still an axis the code assumes.
@@ -1649,10 +1657,10 @@ def _chains(raw: dict, schemes: dict, root: Path) -> dict[str, Chain]:
                  | {f.field for f in schemes[prefix].plain_fields}
                  | set(schemes[prefix].requires) | declared
                  | {"tags", "status"})
-        for field in annotate:
+        for field in facet_by:
             if field not in known:
                 raise ValueError(
-                    f"{where}: `annotate` names {field!r}, which {prefix} "
+                    f"{where}: `facet_by` names {field!r}, which {prefix} "
                     f"does not declare, so every step would render it blank "
                     f"(nameable: {', '.join(sorted(known))})")
         for key in ("relation", "sibling"):
@@ -1672,7 +1680,7 @@ def _chains(raw: dict, schemes: dict, root: Path) -> dict[str, Chain]:
                           relation=str(spec["relation"]),
                           sibling=str(spec.get("sibling", "")),
                           output=root / str(spec["output"]),
-                          annotate=annotate,
+                          facet_by=facet_by,
                           title=str(spec.get("title", "")) or name.title())
     return out
 

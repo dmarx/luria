@@ -221,7 +221,7 @@ def _link(doc: Adr, chain) -> str:
 
 
 def _annotation(doc: Adr, chain) -> str:
-    """Every field this chain shows for one step, in the order it names them.
+    """One step's value along each facet the chain names, in that order.
 
     Read through the compiled contract rather than raw frontmatter, so a
     field with a `default` shows its default rather than a blank — what
@@ -230,7 +230,7 @@ def _annotation(doc: Adr, chain) -> str:
     obligations = for_scheme(current().schemes[chain.scheme])
     meta = statuses.normalised(doc.meta)
     shown: list[str] = []
-    for field in chain.annotate:
+    for field in chain.facet_by:
         shown += [str(v) for v in (obligations.reading(field, meta) or ())]
     return ", ".join(shown)
 
