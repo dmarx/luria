@@ -16,6 +16,8 @@ borrows a live sequence's prefix is the hazard that rule exists for.
 
 from __future__ import annotations
 
+import pytest
+
 from pathlib import Path
 
 from luria import repair, adr_index, config, contract, lint, statuses
@@ -723,3 +725,60 @@ def test_a_status_carrying_a_note_is_one_finding_too(tmp_path, monkeypatch):
     lint.check_contracts(errors)
     assert len(errors) == 1, errors
     assert "carries a note" in errors[0], errors
+
+
+# --- the requirement, and the marker on its remedy (#181) -------------------
+
+def test_a_scheme_without_a_status_vocabulary_fails_the_lint(
+        tmp_path, monkeypatch):
+    """The break. A record predating the declaration has an unchecked
+    `status:` — every word passes, and the absence looks exactly like a
+    clean check (DP-15). It is a violation, and the finding names the
+    command that fixes it."""
+    _project(tmp_path, monkeypatch)
+    _value(tmp_path, 1)
+    errors: list[str] = []
+    lint.check_frontmatter(errors)
+    assert any("luria upgrade statuses" in e for e in errors), errors
+
+
+def test_the_upgrade_satisfies_the_requirement(tmp_path, monkeypatch):
+    """The fix ships with the break, and is the whole remedy: after it, the
+    record lints clean without anyone hand-editing config."""
+    from luria import upgrade
+    _project(tmp_path, monkeypatch)
+    _value(tmp_path, 1)
+    upgrade.run("statuses", root=str(tmp_path))
+    config.reset()
+    errors: list[str] = []
+    lint.check_frontmatter(errors)
+    lint.check_contracts(errors)
+    assert errors == [], errors
+
+
+def test_the_upgrade_does_not_load_the_config_it_repairs(tmp_path, monkeypatch):
+    """It has to run against a record the new version refuses to load, or it
+    is unrunnable in exactly the situation it exists for."""
+    from luria import upgrade
+    _project(tmp_path, monkeypatch)
+    (tmp_path / "luria.toml").write_text(
+        (tmp_path / "luria.toml").read_text()
+        + '[luria.schemes.VP.fields.bogus]\nvocabulary = "nothing"\n')
+    config.reset()
+    with pytest.raises(ValueError):
+        config.current()
+    upgrade.run("statuses", root=str(tmp_path))     # must not raise
+    assert (tmp_path / "record" / "values.d" / "statuses.yaml").exists()
+
+
+def test_a_spent_upgrade_says_it_can_be_deleted(tmp_path, monkeypatch):
+    """The marker. An upgrade that has nothing left to do anywhere is dead
+    code that still has to be read and tested, so the lint raises the
+    question rather than waiting for someone to remember it — the posture
+    `stale-directives` already takes."""
+    from luria import upgrade
+    _project(tmp_path, monkeypatch)
+    upgrade.run("statuses", root=str(tmp_path))
+    config.reset()
+    rows = lint.spent_upgrades()
+    assert any("statuses" in r and "delete" in r for r in rows), rows

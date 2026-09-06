@@ -123,7 +123,9 @@ def check_frontmatter(errors: list[str]) -> None:
                 errors.append(
                     f"{rel}: status {status.value!r} is unchecked — the "
                     f"{scheme.prefix} scheme declares no `status` "
-                    f"vocabulary, so any word passes")
+                    f"vocabulary, so any word passes and the absence looks "
+                    f"exactly like a clean check "
+                    f"(`luria upgrade statuses` writes one)")
             # "Superseded names its successor" used to be a branch here.
             # It is a `required_when` on the built-in field now, checked with
             # every other obligation in `check_contracts` (ADR-071 stated
@@ -355,8 +357,29 @@ FAILABLE = ("retired-citations", "unresolved-codes", "hand-written-urls",
             "source-mismatch", "source-unchecked",
             "legacy-spellings", "narrow-titles", "stale-directives",
             "template-drift", "broken-chains",
-            "one-sided-relations",
+            "one-sided-relations", "spent-upgrades",
             "pending-documents", "unlinted-files", "workflow-temp-codes")
+
+
+def spent_upgrades() -> list[str]:
+    """Upgrades this record has already run.
+
+    A one-shot upgrade is temporary by construction, and the thing that
+    makes it *stay* temporary is being asked about. Once every record has
+    run one it is dead code that still has to be read, tested and
+    explained — so a record that no longer needs it says so, the way
+    `stale-directives` reports a directive that no longer suppresses
+    anything. One user's record saying it is not proof every record has,
+    which is why the row says "once every record has" rather than "now"."""
+    from . import upgrade
+    out = []
+    for name, entry in upgrade.SUNSET.items():
+        writes, lines, _ = upgrade._plan(current().root)
+        if not writes and not lines:
+            out.append(f"`luria upgrade {name}` has nothing left to do here "
+                       f"— delete it once every record has run it "
+                       f"({entry.sunset})")
+    return out
 
 
 def status_sections() -> list[tuple[str, str, list[str]]]:
@@ -542,6 +565,13 @@ def status_sections() -> list[tuple[str, str, list[str]]]:
             f"{len(drift)} scaffolded field(s) contradict the scheme's own "
             "contract (a document copied from the form starts in the wrong "
             "shape)", drift))
+
+    spent = spent_upgrades()
+    if spent:
+        sections.append((
+            "spent-upgrades",
+            f"{len(spent)} one-shot upgrade(s) this record no longer needs",
+            spent))
 
     # A directive that silently does nothing is worse than no directive.
     stale = ref_status.stale_annotations(result, docs) + stale_urls \

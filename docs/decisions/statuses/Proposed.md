@@ -9,4 +9,4 @@
 | # | Title | Summary | Status |
 |---|---|---|---|
 | [ADR-084](../../../record/decisions.d/ADR-084.md) | A relation declares its converse; symmetry is the self-converse case | One-paragraph description of the decision, the cost that motivated it, and the alternatives that lost. Written to be read in a table row. | Proposed |
-| [ADR-tmpv6jcf](../../../record/decisions.d/ADR-tmpv6jcf.md) | Status is an ordinary controlled vocabulary; a built-in is a declaration nobody wrote | One-paragraph description of the decision, the cost that motivated it, and the alternatives that lost. Written to be read in a table row. | Proposed |
+| [ADR-085](../../../record/decisions.d/ADR-085.md) | Status is an ordinary controlled vocabulary; a built-in is a declaration nobody wrote | One-paragraph description of the decision, the cost that motivated it, and the alternatives that lost. Written to be read in a table row. | Proposed |

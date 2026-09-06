@@ -10,10 +10,10 @@
 | Open since | Status | Code | Cited | Unack. | Title |
 |---|---|---|--:|--:|---|
 | 2026-09-06 | Proposed | [ADR-084](../../record/decisions.d/ADR-084.md) | 0 | 0 | A relation declares its converse; symmetry is the self-converse case |
-| 2026-09-06 | Proposed | [ADR-tmpv6jcf](../../record/decisions.d/ADR-tmpv6jcf.md) | 0 | 0 | Status is an ordinary controlled vocabulary; a built-in is a declaration nobody wrote |
+| 2026-09-06 | Proposed | [ADR-085](../../record/decisions.d/ADR-085.md) | 0 | 0 | Status is an ordinary controlled vocabulary; a built-in is a declaration nobody wrote |
 
 The citation count is the second axis, and it flips the priority: an old proposal nothing references is a stalled idea worth closing, while an old proposal many files cite is a decision the codebase has already made and hasn't written down.
 
 This count and the reference-status report's will differ, and that is not an off-by-one. That report covers documents something actually **cites** and hasn't acknowledged; this one covers every **undecided** document. One here is missing from there for exactly one of two reasons: nothing cites it, or every citation carries an `inactive-ok` annotation.
 
-**Cited nowhere at all** (2): [ADR-084](../../record/decisions.d/ADR-084.md), [ADR-tmpv6jcf](../../record/decisions.d/ADR-tmpv6jcf.md) — these are the cheapest to close, since nothing depends on the answer.
+**Cited nowhere at all** (2): [ADR-084](../../record/decisions.d/ADR-084.md), [ADR-085](../../record/decisions.d/ADR-085.md) — these are the cheapest to close, since nothing depends on the answer.
