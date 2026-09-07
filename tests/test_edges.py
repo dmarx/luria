@@ -253,3 +253,72 @@ def test_a_list_in_a_scalar_reference_yields_no_edge(tmp_path, monkeypatch):
     path = doc(root, "record/scenes.d/SCENE-003.md", code="SCENE-003",
                extra="follows:\n- SCENE-001\n- SCENE-002")
     assert edges.outbound(Adr(path, current().schemes["SCENE"])) == []
+
+
+def converse_schemes(tmp_path, monkeypatch) -> Path:
+    """Two schemes where the practice line declares its converse, which is
+    what puts the same fact in both documents' frontmatter."""
+    write(tmp_path, "luria.toml", """
+[luria]
+issue_url = "https://example.test/issues/{n}"
+[luria.schemes.LIT]
+dir = "record/literature.d"
+[luria.schemes.SOTA]
+dir = "record/practices.d"
+[luria.schemes.SOTA.references]
+source      = { scheme = "LIT" }
+extends     = { scheme = "SOTA", many = true, converse = "extended_by" }
+extended_by = { scheme = "SOTA", many = true, converse = "extends" }
+""")
+    monkeypatch.setenv("LURIA_ROOT", str(tmp_path))
+    config.reset()
+    return tmp_path
+
+
+def test_a_stored_converse_is_not_also_rendered_as_a_backlink(
+        tmp_path, monkeypatch):
+    """`extends:` and `extended_by:` hold ONE fact, written on both sides
+    because the converse is declared. The inbound rendering exists for the
+    direction the site would otherwise lose; when the converse is stored
+    here, nothing is lost, and printing it twice under two labels — once
+    humanised, once as a raw field name — is the same fact wearing two
+    coats."""
+    root = converse_schemes(tmp_path, monkeypatch)
+    trunk = doc(root, "record/practices.d/SOTA-001.md", code="SOTA-001",
+                extra="extended_by:\n- SOTA-002")
+    doc(root, "record/practices.d/SOTA-002.md", code="SOTA-002",
+        extra="extends:\n- SOTA-001")
+    out = [edges.Edge("SOTA-001", "extended_by", "SOTA-002", "frontmatter")]
+    back = [edges.Edge("SOTA-002", "extends", "SOTA-001", "frontmatter")]
+    line = site.record_line({"status": "Active"}, trunk,
+                            outbound=out, inbound=back)
+    assert "**Extended by** [SOTA-002](SOTA-002.md)" in line
+    assert "Cited as" not in line
+
+
+def test_a_backlink_with_no_stored_converse_still_renders(
+        tmp_path, monkeypatch):
+    """The suppression is about a fact already on the page, not about
+    backlinks. `source:` declares no converse, so the citing practice is
+    the only place this note's page can learn it is cited."""
+    root = converse_schemes(tmp_path, monkeypatch)
+    lit = doc(root, "record/literature.d/LIT-001.md", code="LIT-001")
+    doc(root, "record/practices.d/SOTA-001.md", code="SOTA-001",
+        extra="source: LIT-001")
+    back = [edges.Edge("SOTA-001", "source", "LIT-001", "frontmatter")]
+    assert "**Cited as `source` by** [SOTA-001](../practices.d/SOTA-001.md)" \
+        in site.record_line({"status": "Active"}, lit, inbound=back)
+
+
+def test_an_unwritten_converse_still_renders_as_a_backlink(
+        tmp_path, monkeypatch):
+    """A one-sided relation is a lint finding, not a reason for the page to
+    go quiet: suppress the backlink only where the converse is actually
+    stored, so a record mid-repair still shows the edge it has."""
+    root = converse_schemes(tmp_path, monkeypatch)
+    trunk = doc(root, "record/practices.d/SOTA-001.md", code="SOTA-001")
+    doc(root, "record/practices.d/SOTA-002.md", code="SOTA-002",
+        extra="extends:\n- SOTA-001")
+    back = [edges.Edge("SOTA-002", "extends", "SOTA-001", "frontmatter")]
+    assert "**Cited as `extends` by** [SOTA-002](SOTA-002.md)" in \
+        site.record_line({"status": "Active"}, trunk, inbound=back)

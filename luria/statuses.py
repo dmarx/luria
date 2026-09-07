@@ -49,6 +49,12 @@ import yaml
 # `statuses.yaml`, and every check follows its words. What generic code needs
 # is not a word but a role: which status means *in force*, and that is
 # `active` on the scheme, declared and defaulted long before this.
+# The frontmatter key a scheme may back with a vocabulary (#181). Named
+# once because two places now reason about it *as a declared field* —
+# whether the scheme declared one, and whether a generic loop over the
+# declared ones should render it — and they must agree.
+FIELD = "status"
+
 DEFAULT_STATUSES = ("Active", "Proposed", "Deferred", "Superseded", "Rejected")
 
 # ADR-003's shape: the word, then optionally an em-dash and a note.
@@ -311,7 +317,7 @@ def undeclared(scheme, status: str) -> bool:
     Requiring the declaration is #181's second half; it breaks every record
     that predates it, so it ships with the command that writes one."""
     del status
-    return not any(v.field == "status" for v in scheme.vocabularies)
+    return not any(v.field == FIELD for v in scheme.vocabularies)
 
 
 def legend(scheme) -> str:

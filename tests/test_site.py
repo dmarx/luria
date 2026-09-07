@@ -529,3 +529,4 @@ def test_an_orphan_in_a_nested_view_directory_is_an_orphan(tmp_path, monkeypatch
     assert any(p.name == "ZZZ.md" for p in adr_index.staleness().orphaned), (
         "an unrendered file in a nested record's view directory went unreported"
     )
+

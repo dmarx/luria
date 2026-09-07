@@ -484,6 +484,29 @@ def _inbound_labels(scheme) -> tuple[dict[str, str], tuple[str, ...]]:
             (successor, edges.INFLUENCED_BY))
 
 
+def _repeats_an_outbound(edge, held: set[tuple[str, str]]) -> bool:
+    """Whether an inbound edge says what this page's own frontmatter already
+    said, through the converse field.
+
+    The backlinks exist for the direction the site would otherwise lose. A
+    declared converse removes that loss by storing the fact on both
+    documents, so rendering the backlink too prints one fact twice under two
+    labels — once humanised from the field, once as the raw field name.
+    inactive-ok: ADR-084 — the decision this behaviour follows from; it is
+    Proposed because nobody has marked it Active, not because it is unsettled
+
+    Read from what the page actually holds rather than from the declaration
+    alone: a one-sided relation is a lint finding, and a record mid-repair
+    should still see the edge it has."""
+    from .contract import local_scheme
+    from .relations import converse_of
+    prefix = local_scheme(edge.source)
+    if prefix is None:
+        return False
+    back = converse_of(prefix, edge.relation)
+    return bool(back) and (back, edge.source) in held
+
+
 def _edge_bits(outbound, inbound, scheme=None) -> list[str]:
     """The typed edges as record-line fragments, wikilinks and all.
 
@@ -500,8 +523,11 @@ def _edge_bits(outbound, inbound, scheme=None) -> list[str]:
     for relation, targets in out.items():
         label = relation.replace("_", " ").capitalize()
         bits.append(f"**{label}** " + " · ".join(f"[[{t}]]" for t in targets))
+    held = {(e.relation, e.target) for e in outbound}
     grouped: dict[str, list[str]] = {}
     for edge in inbound:
+        if _repeats_an_outbound(edge, held):
+            continue
         grouped.setdefault(edge.relation, []).append(edge.source)
 
     def order(relation: str) -> tuple[int, str]:
@@ -534,6 +560,12 @@ def _vocabulary_bits(meta: dict, source: Path) -> list[str]:
         return []
     bits = []
     for vocab in scheme.vocabularies:
+        # `status:` became an ordinary declared vocabulary (#181), and this
+        # loop started rendering a field `record_line` had always rendered
+        # itself. The dedicated path wins because it is the only one that can
+        # compose `Superseded — by X; note` out of the fields around the word.
+        if vocab.field == statuses.FIELD:
+            continue
         raw = meta.get(vocab.field)
         values = raw if isinstance(raw, list) else (
             [] if raw in (None, "") else [raw])
