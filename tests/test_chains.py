@@ -474,3 +474,50 @@ output   = "docs/lineage.md"
 facet_by = ["status", "nowhere"]
 """)
         config.current()
+
+
+# --- the rendered order says who descends from whom (#207) -------------------
+
+def test_two_roots_in_one_group_each_keep_their_own_child(
+        tmp_path, monkeypatch):
+    """Two roots join one group through a shared descendant. The page
+    indents by depth, so if the order is not anchored to each node's parent
+    a child lands under whichever root happened to sort last — asserting a
+    descent nobody declared."""
+    root = project(tmp_path, monkeypatch)
+    note(root, 1, "Root A")
+    note(root, 2, "Child of A", extends=["LIT-001"])
+    note(root, 9, "Root B")
+    note(root, 3, "Child of both", extends=["LIT-002", "LIT-009"])
+    line, = chains.walk()
+    order = [d.code for d in line.spine]
+    # LIT-002's parent is LIT-001, so it must follow it rather than trailing
+    # the other root.
+    assert order.index("LIT-002") == order.index("LIT-001") + 1, order
+
+
+def test_a_child_follows_its_parent_not_its_parent_s_sibling(
+        tmp_path, monkeypatch):
+    """The shape that broke the anthology's Mamba line: two siblings at one
+    depth, and the child of the *first* rendered under the second."""
+    root = project(tmp_path, monkeypatch)
+    note(root, 1, "The root")
+    note(root, 2, "First sibling", extends=["LIT-001"])
+    note(root, 3, "Second sibling", extends=["LIT-001"])
+    note(root, 4, "Child of the first", extends=["LIT-002"])
+    line, = chains.walk()
+    order = [d.code for d in line.spine]
+    assert order.index("LIT-004") == order.index("LIT-002") + 1, order
+
+
+def test_a_second_parent_is_named_rather_than_dropped(tmp_path, monkeypatch):
+    """A node renders under one parent. The other edge is true and must not
+    vanish from the page just because the layout is a tree."""
+    root = project(tmp_path, monkeypatch)
+    note(root, 1, "Root A")
+    note(root, 9, "Root B")
+    note(root, 3, "Child of both", extends=["LIT-001", "LIT-009"])
+    page = chains.outputs()[root / "docs/lineage.md"]
+    assert "LIT-009" in page
+    under = [ln for ln in page.splitlines() if "LIT-003" in ln]
+    assert under and "also extends" in under[0].lower(), under
