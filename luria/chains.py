@@ -96,7 +96,14 @@ def _load(chain) -> tuple[dict[str, Adr], dict[str, list[str]],
     the scheme is the contract's finding, not a node here."""
     scheme = current().schemes[chain.scheme]
     docs = {d.code: d for d in load_scheme(scheme)}
-    held = relations.edges(chain.scheme, chain.relation)
+    # One spine, spelled by one relation or several (#211). Unioned before
+    # the walk, so every step below reads a spine that does not know how
+    # many fields filled it — which is what keeps ordering, depth and cycle
+    # reporting identical whether a record signs its succession or not.
+    held: dict[str, set[str]] = {}
+    for field in chain.relation:
+        for code, targets in relations.edges(chain.scheme, field).items():
+            held.setdefault(code, set()).update(targets)
     apart = (relations.edges(chain.scheme, chain.sibling)
              if chain.sibling else {})
     spine = {code: sorted(held.get(code, ())) for code in docs}
@@ -239,10 +246,21 @@ def rows() -> list[str]:
             for reached in sorted(_reaches(code, spine)):
                 if code in spine[reached] and code < reached:
                     found.append(
-                        f"{cfg.rel(docs[code].path)}: `{chain.relation}:` "
+                        f"{cfg.rel(docs[code].path)}: {_spine(chain)} "
                         f"makes a cycle — {code} and {reached} each come "
                         f"before the other, so neither is the earlier step")
     return sorted(set(found))
+
+
+def _spine(chain) -> str:
+    """The chain's spine relations, as prose — `` `extends:` `` for the
+    common case and `` `extends:` and `corrects:` `` for a signed one. One
+    implementation, because the cycle finding and the page header name the
+    same thing and drifting apart would be a small lie in two voices."""
+    fields = [f"`{f}:`" for f in chain.relation]
+    if len(fields) < 3:
+        return " and ".join(fields)
+    return ", ".join(fields[:-1]) + f" and {fields[-1]}"
 
 
 def _reaches(start: str, spine: dict[str, list[str]]) -> set[str]:
@@ -309,7 +327,7 @@ def _step(doc: Adr, chain, lead: str = "") -> str:
 def _render(chain, lines: list[Line]) -> str:
     count = f"{len(lines)} line" + ("" if len(lines) == 1 else "s")
     out = [MARKER, "", f"# {chain.title}", "",
-           f"{count}, walked from `{chain.relation}:` on {chain.scheme} "
+           f"{count}, walked from {_spine(chain)} on {chain.scheme} "
            f"documents. Each step explains itself; this page is the order "
            f"they came in.", ""]
     for line in lines:

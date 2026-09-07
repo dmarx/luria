@@ -57,11 +57,12 @@ output = "docs/literature"
 
 
 def note(root: Path, number: int, title: str, *, status: str = "Active",
-         extends=(), compared_against=()) -> Path:
+         extends=(), compared_against=(), corrects=()) -> Path:
     front = ["---", f"status: {status}", f"title: {title!r}", "tags:",
              "- record", "date: '2026-01-01'"]
     for name, codes in (("extends", extends),
-                        ("compared_against", compared_against)):
+                        ("compared_against", compared_against),
+                        ("corrects", corrects)):
         if codes:
             front.append(f"{name}:")
             front += [f"- {c}" for c in codes]
@@ -521,3 +522,84 @@ def test_a_second_parent_is_named_rather_than_dropped(tmp_path, monkeypatch):
     assert "LIT-009" in page
     under = [ln for ln in page.splitlines() if "LIT-003" in ln]
     assert under and "also extends" in under[0].lower(), under
+
+
+# --- a spine of more than one relation (#211) --------------------------------
+#
+# A record can carry succession with a sign: "builds on the parent" and
+# "exists because the parent is broken" are both succession, and one relation
+# renders them identically. Two relations say it, and they are one line.
+
+SIGNED = """
+[luria.schemes.LIT.references]
+extends = { scheme = "LIT", required = false, many = true, converse = "extended_by" }
+extended_by = { scheme = "LIT", required = false, many = true, converse = "extends" }
+corrects = { scheme = "LIT", required = false, many = true, converse = "corrected_by" }
+corrected_by = { scheme = "LIT", required = false, many = true, converse = "corrects" }
+compared_against = { scheme = "LIT", required = false, many = true, converse = "compared_against" }
+"""
+
+SIGNED_CHAIN = """
+[luria.chains.lineage]
+scheme   = "LIT"
+relation = ["extends", "corrects"]
+output   = "docs/lineage.md"
+title    = "Lines of work"
+"""
+
+
+def test_a_spine_of_two_relations_is_one_line(tmp_path, monkeypatch):
+    root = project(tmp_path, monkeypatch, SIGNED + SIGNED_CHAIN)
+    note(root, 1, "Origin")
+    note(root, 2, "Builds on it", extends=["LIT-001"])
+    note(root, 3, "Fixes that", corrects=["LIT-002"])
+    lines = chains.lines_of(config.current().chains["lineage"])
+    assert len(lines) == 1
+    assert [d.code for d in lines[0].spine] == ["LIT-001", "LIT-002",
+                                                "LIT-003"]
+
+
+def test_a_second_spine_relation_nests_like_the_first(tmp_path, monkeypatch):
+    root = project(tmp_path, monkeypatch, SIGNED + SIGNED_CHAIN)
+    note(root, 1, "Origin")
+    note(root, 2, "Fixes it", corrects=["LIT-001"])
+    page = chains.outputs()[root / "docs/lineage.md"]
+    assert page.index("LIT-001") < page.index("LIT-002")
+    assert "  - [LIT-002]" in page
+
+
+def test_a_scalar_relation_still_reads(tmp_path, monkeypatch):
+    root = project(tmp_path, monkeypatch)          # relation = "extends"
+    note(root, 1, "Origin")
+    note(root, 2, "Builds on it", extends=["LIT-001"])
+    lines = chains.lines_of(config.current().chains["lineage"])
+    assert [d.code for d in lines[0].spine] == ["LIT-001", "LIT-002"]
+
+
+def test_the_header_names_every_spine_relation(tmp_path, monkeypatch):
+    root = project(tmp_path, monkeypatch, SIGNED + SIGNED_CHAIN)
+    note(root, 1, "Origin")
+    note(root, 2, "Fixes it", corrects=["LIT-001"])
+    page = chains.outputs()[root / "docs/lineage.md"]
+    assert "`extends:`" in page and "`corrects:`" in page
+
+
+def test_a_spine_relation_the_scheme_does_not_declare_is_refused(
+        tmp_path, monkeypatch):
+    project(tmp_path, monkeypatch, SIGNED + """
+[luria.chains.lineage]
+scheme   = "LIT"
+relation = ["extends", "supersedes"]
+output   = "docs/lineage.md"
+""")
+    with pytest.raises(ValueError, match="supersedes"):
+        config.current()
+
+
+def test_a_cycle_across_two_spine_relations_is_a_finding(
+        tmp_path, monkeypatch):
+    root = project(tmp_path, monkeypatch, SIGNED + SIGNED_CHAIN)
+    note(root, 1, "One", extends=["LIT-002"])
+    note(root, 2, "Two", corrects=["LIT-001"])
+    found = chains.rows()
+    assert found and "makes a cycle" in found[0]
