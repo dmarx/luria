@@ -507,7 +507,7 @@ def _repeats_an_outbound(edge, held: set[tuple[str, str]]) -> bool:
     return bool(back) and (back, edge.source) in held
 
 
-def _edge_bits(outbound, inbound, scheme=None) -> list[str]:
+def _edge_bits(outbound, inbound, scheme=None, known=None) -> list[tuple[str, list[str]]]:
     """The typed edges as record-line fragments, wikilinks and all.
 
     Supersession and influence already read from the page's own frontmatter
@@ -515,6 +515,7 @@ def _edge_bits(outbound, inbound, scheme=None) -> list[str]:
     reference fields — the one direction the site otherwise loses, since
     frontmatter renders as nothing."""
     labels, order_of = _inbound_labels(scheme)
+    known = titles() if known is None else known
     bits = []
     out: dict[str, list[str]] = {}
     for edge in outbound:
@@ -522,7 +523,7 @@ def _edge_bits(outbound, inbound, scheme=None) -> list[str]:
             out.setdefault(edge.relation, []).append(edge.target)
     for relation, targets in out.items():
         label = relation.replace("_", " ").capitalize()
-        bits.append((label, " · ".join(f"[[{t}]]" for t in targets)))
+        bits.append((label, [_named(c, known) for c in targets]))
     held = {(e.relation, e.target) for e in outbound}
     grouped: dict[str, list[str]] = {}
     for edge in inbound:
@@ -536,8 +537,8 @@ def _edge_bits(outbound, inbound, scheme=None) -> list[str]:
 
     for relation in sorted(grouped, key=order):
         label = labels.get(relation) or f"Cited as `{relation}` by"
-        codes = " · ".join(f"[[{c}]]" for c in sorted(set(grouped[relation])))
-        bits.append((label, codes))
+        bits.append((label, [_named(c, known)
+                             for c in sorted(set(grouped[relation]))]))
     return bits
 
 
@@ -571,9 +572,9 @@ def _vocabulary_bits(meta: dict, source: Path) -> list[str]:
             [] if raw in (None, "") else [raw])
         if not values:
             continue
-        links = " · ".join(
+        links = [
             f"[{v}]({posixpath.relpath((scheme.vocab_dir(vocab.name) / f'{v}.md').as_posix(), source.parent.as_posix())})"
-            for v in values)
+            for v in values]
         bits.append((vocab.field.replace("_", " ").capitalize(), links))
     return bits
 
@@ -598,7 +599,45 @@ def readme_region() -> str:
             f"published by `luria site`.")
 
 
-def _table(rows: list[tuple[str, str]]) -> str:
+def titles() -> dict[str, str]:
+    """`{code: title}` for every referable document in the record.
+
+    Read through `ref_status`, which already loads exactly this — one reader
+    for "what documents are there and what are they called" rather than a
+    second that could disagree (DP-4)."""
+    from . import ref_status
+    return {code: doc.title for code, doc in ref_status.load_docs().items()}
+
+
+def _plain(title: str) -> str:
+    """A title as data, with what the surfaces it lands in would read as
+    syntax escaped.
+
+    Two hazards, both real rather than hypothetical. `|` ends a table cell.
+    And `[[` opens a wikilink the expander then tries to resolve — this
+    project's own ADR-025 is titled ``Wikilinks: `[[CODE]]` is a typed
+    reference``, and splicing it unescaped asked the resolver for a document
+    called `CODE` on every page citing it.
+
+    Markdown renders `\\[` as `[`, so the escape costs the reader nothing."""
+    return title.replace("|", "\\|").replace("[[", "\\[\\[")
+
+
+def _named(code: str, known: dict[str, str]) -> str:
+    """A code as a wikilink, followed by the document's title.
+
+    A code alone asks the reader to already know the record: `LIT-141` says
+    nothing about what it is, and the whole point of a backlink is to be
+    followed by someone who does not yet know where it goes. The title is what
+    makes the line answerable without opening anything.
+
+    Unknown codes render bare rather than guessing — a remote code, or one the
+    lint is already reporting as resolving to nothing."""
+    title = known.get(code, "")
+    return f"[[{code}]] — {_plain(title)}" if title else f"[[{code}]]"
+
+
+def _table(rows: list[tuple[str, list[str]]]) -> str:
     """The record's facts as a two-column table.
 
     They were one line of `**Label** value` separated by center dots, which
@@ -610,14 +649,27 @@ def _table(rows: list[tuple[str, str]]) -> str:
     Header-less on purpose — `| | |` — because "Field" and "Value" name
     nothing a reader did not already know from the rows.
 
-    Multi-valued fields keep the center dot inside their cell: it separates
-    peers there (three sources, two contesting papers), which is the job it
-    was doing badly at the top level and does well one level down."""
+    A field with several values gets a real bulleted list inside its cell —
+    `<ul>`, because a markdown table cell cannot hold a block-level list and
+    Quartz passes raw HTML through (verified against v4.5.2: the markdown
+    links inside the items are still parsed, and `CrawlLinks` still resolves
+    them). One value renders plain: a one-item bullet is a bullet about
+    nothing.
+
+    The center dot is gone from both levels. It was separating peers inside a
+    cell, which it did adequately, but a title after each code makes the items
+    long enough that a line each is the only thing that reads."""
+    def cell(values: list[str]) -> str:
+        if len(values) == 1:
+            return values[0]
+        items = "".join(f"<li>{v}</li>" for v in values)
+        return f"<ul>{items}</ul>"
     return "\n".join(["| | |", "|---|---|"]
-                      + [f"| **{label}** | {value} |" for label, value in rows])
+                      + [f"| **{label}** | {cell(values)} |" for label, values in rows])
 
 
-def record_line(meta: dict, source: Path, outbound=(), inbound=()) -> str:
+def record_line(meta: dict, source: Path, outbound=(), inbound=(),
+                known: dict[str, str] | None = None) -> str:
     """The frontmatter facts, rendered where a reader (and a graph) can see
     them: status, when it was filed, the issue, what influenced it, and the
     typed edges in and out of it.
@@ -625,28 +677,28 @@ def record_line(meta: dict, source: Path, outbound=(), inbound=()) -> str:
     Composed with wikilinks and handed to the resolver rather than spelled
     here — the fixer owns every target in this record, and a second speller
     would be the drift DP-4 names."""
-    bits: list[tuple[str, str]] = []
+    known = titles() if known is None else known
+    bits: list[tuple[str, list[str]]] = []
     if status := statuses.display(statuses.of(meta, _scheme_of(source)),
-                                  link=lambda c: f"[[{c}]]"):
-        bits.append(("Status", status))
+                                  link=lambda c: _named(c, known)):
+        bits.append(("Status", [status]))
     # Shown only when it isn't 1, the same rule the index follows (ADR-016).
     # A version that isn't a number is somebody's mistake, not this function's
     # to interpret — it is shown as written and the lint says so.
     if (version := meta.get("version")) and str(version).strip() != "1":
-        bits.append(("Version", str(version)))
+        bits.append(("Version", [str(version)]))
     if date := str(meta.get("date", "")).strip():
-        bits.append(("Filed", date))
+        bits.append(("Filed", [date]))
     # `issue: '#21, #23'` is a real shape in this record, so the separator is
     # read out of the field rather than assumed to be a space.
     if issues := re.findall(r"#\d+", str(meta.get("issue", ""))):
-        bits.append(("Issue",
-                     " · ".join(f"[[{issue}]]" for issue in issues)))
+        bits.append(("Issue", [f"[[{issue}]]" for issue in issues]))
     influenced = [str(c).strip() for c in (meta.get("influenced_by") or [])]
     if influenced:
-        codes = " · ".join(f"[[{code}]]" for code in influenced if code)
-        bits.append(("Influenced by", codes))
+        bits.append(("Influenced by",
+                     [_named(c, known) for c in influenced if c]))
     bits += _vocabulary_bits(meta, source)
-    bits += _edge_bits(outbound, inbound, _scheme_of(source))
+    bits += _edge_bits(outbound, inbound, _scheme_of(source), known)
     if not bits:
         return ""
     expanded, _ = doc_refs.expand_wikilinks(_table(bits), source)
@@ -820,6 +872,7 @@ def stage(out: Path, cfg=None, nested: bool = True) -> Report:
     # Read once for the whole record: a page's backlinks are somebody else's
     # frontmatter.
     typed = edges.graph()
+    known = titles()
 
     for path in pages:
         text = path.read_text(encoding="utf-8")
@@ -830,7 +883,8 @@ def stage(out: Path, cfg=None, nested: bool = True) -> Report:
             line = record_line(
                 meta, path,
                 outbound=typed.outbound(code) if code else (),
-                inbound=typed.inbound(code) if code else ())
+                inbound=typed.inbound(code) if code else (),
+                known=known)
             if line:
                 body = _insert_after_title(body, line)
                 report.lineage += 1
