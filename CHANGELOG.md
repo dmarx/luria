@@ -5,6 +5,792 @@ Assembled from `changelog.d/` fragments on a cadence — never hand-edited
 
 <!-- luria-insert-here -->
 
+## 2026-09-07
+
+### Changed
+
+- A remote's code now relates to a set of *named URIs* rendered through one
+  template vocabulary ([ADR-067](record/decisions.d/ADR-067.md)): `url` and `pin_url` are the short
+  spellings of `uris.read` and `uris.bytes`, a `[luria.remotes.X.uris]`
+  table names further relations, and {filename} is an ordinary template
+  variable fed by the discovered lockfile map, authority semantics
+  included — so a GitLab-style raw scheme with slug filenames is two
+  template lines. The GitHub blob→raw rebase regex is gone, replaced by
+  shipped default templates; the one behavioral change is that a `url`
+  template rendering a blob-shaped URL no longer implies pinnable bytes —
+  declare `uris.bytes` (or `pin_url`) instead.
+
+### Fixed
+
+- `luria lint` checks the standing of references to merge-allocated
+  documents. `ref_status` loaded a scheme by number and matched codes by
+  digits, so a temporary code ([ADR-049](record/decisions.d/ADR-049.md)) was neither a document nor a citation
+  site: for the whole life of the pull request that files them, citations
+  among merge-allocated documents went unchecked, and the findings surfaced
+  only after the merge that concretized the codes — on the trunk, in files
+  nobody was editing ([#203](https://github.com/dmarx/luria/issues/203)). `luria link --fix` had handled temporary codes
+  all along; the two halves of the reference system disagreed about whether a
+  temporary code is a code, and only one of them said so.
+
+### Changed
+
+- Five source comments cited `ADR-tmpstat1`, a temporary code that never
+  named a document; the decision they meant is [ADR-085](record/decisions.d/ADR-085.md). The checker above
+  found them on its first run.
+
+  A record that spells out the temporary shape in prose — a decision that
+  defines it, a README transcript, a CLI page — has illustrative codes that
+  now resolve to nothing, and each wants an `unresolved-ok:` acknowledgement
+  once. File them with the upgrade, not before: on the older version the
+  directive excuses nothing and is reported stale.
+
+### Fixed
+
+- `LU-#193` linked to the *citing* project's issue 193, not the remote's. The
+  prefix was inert prose and the number resolved through the local
+  `issue_url`, producing a well-formed link to a different project's issue of
+  the same number — which in a mature tracker exists and is about something
+  else. No check could see it: the target resolved, so `broken-targets` was
+  satisfied ([#194](https://github.com/dmarx/luria/issues/194)).
+
+### Added
+
+- `[luria.remotes.X] issue_url`, defaulting to the GitHub convention for a
+  remote with a `repo`. A remote reached by a `url` template alone — an arXiv
+  identifier, a ticket key — has no tracker, so its `X-#7` resolves to nothing
+  and is left bare rather than pointed at the local one.
+
+### Changed
+
+- Every document code in the site's record line now carries the document's
+  title. A code alone asks the reader to already know the record — `LIT-141`
+  says nothing about what it is — and being followed by someone who does not
+  yet know where it goes is the whole point of a backlink.
+- A field with several values gets a bulleted list, one item per line, instead
+  of values separated by center dots. With a title after each code the items
+  are long enough that a line each is the only thing that reads. A single
+  value stays plain: a one-item bullet is a bullet about nothing.
+
+### Fixed
+
+- A title containing markdown syntax is escaped where it is spliced. This
+  project's own [ADR-025](record/decisions.d/ADR-025.md) is titled ``Wikilinks: `[[CODE]]` is a typed
+  reference``, and two decisions cite it — unescaped, both their pages asked
+  the resolver for a document called `CODE`. `|` is escaped too, which would
+  otherwise end the table cell.
+
+### Changed
+
+- The site's record line is a two-column table instead of one line of
+  `**Label** value` fragments separated by center dots. It read acceptably at
+  three facts and badly at eleven — `LIT-140` ran to a paragraph of bolded
+  fragments a reader had to parse before they could scan. The center dot keeps
+  its job inside a cell, where it separates peers.
+
+  The line is composed only when staging the site, so nothing about how the
+  record reads in the repository changes.
+
+### Added
+
+- A `<!-- luria:site -->` README region, rewritten by `luria index` beside the
+  badges and the citation block, carrying the URL `luria site` publishes to.
+  Derived from `Site.base_url`, which needs no configuration for a GitHub
+  project ([#197](https://github.com/dmarx/luria/issues/197)).
+- `unlinked-site`, a lint finding for a record that publishes a site its README
+  never names. Satisfied by the URL appearing anywhere in the README, prose
+  link included — it is about the front page, not about the marker.
+- `[luria.site] publish`, defaulting true. A record that lives only in its
+  repository sets it false and the finding goes quiet.
+
+### Changed
+
+- The region machinery — markers, staleness-safe rewrite, README path — is one
+  implementation in `readme.py`, read the same way by `badges`, `citation` and
+  the new region. It had been copied three times and had already drifted in
+  spelling.
+- This project's README links its own site from that region instead of a
+  hand-typed line, which had been sitting immediately below the region
+  `luria index` rewrites.
+
+### Fixed
+
+- The site's record line named a document's status **twice** on every page of
+  every scheme that declares a status vocabulary — which, since [#181](https://github.com/dmarx/luria/issues/181) requires
+  the declaration, is every record. `record_line` had always rendered it
+  through `statuses.display`; the generic vocabulary loop then rendered it
+  again as an ordinary declared field. The dedicated path stays, because it is
+  the only one that composes `Superseded — by X; note` out of the fields
+  around the word.
+- A relation with a declared `converse` rendered **twice** on the same line —
+  once humanised from the field it holds, once as a backlink labelled with the
+  raw field name (`**Extends** LIT-141 · … · Cited as `extended_by` by
+  LIT-141`). Backlinks exist for the direction the site would otherwise lose,
+  and storing the converse removes the loss. Suppressed by what the page
+  actually holds rather than by the declaration alone, so a record with a
+  one-sided relation still shows the edge it has while the lint reports it.
+
+### Added
+
+- `statuses.FIELD`, naming the frontmatter key a scheme may back with a
+  vocabulary, so the two places reasoning about it as a declared field agree.
+
+### Added
+
+- **`luria upgrade`** — one-shot commands that carry a record across a
+  version boundary. Each is temporary by construction and states what has to
+  be true before it is deleted; `luria upgrade` with no argument lists them
+  with those conditions. Nothing under it goes through config loading, since
+  the config an upgrade repairs is the one the new version refuses to load.
+- **`luria upgrade statuses`** writes the `status` declaration and the
+  vocabulary file into a record that predates them.
+- Lint class `spent-upgrades`: an upgrade this record no longer needs is
+  dead code upstream, so the record says so rather than waiting for someone
+  to remember.
+
+### Changed
+
+- **`status:` is a controlled vocabulary a scheme declares**, not a built-in
+  axis. `[luria.schemes.X.fields.status] vocabulary = "statuses"` wires the
+  field to `statuses.yaml`; the words are the project's, and every check,
+  legend and page follows them.
+- **A scheme that declares no `status` vocabulary is a lint violation**,
+  naming `luria upgrade statuses`. An unchecked field looks exactly like a
+  clean one, which is the failure the declaration exists to remove.
+- The bespoke status check is gone: one bad word is one finding, raised
+  where every other controlled field is checked.
+- A `status:` still carrying its `— note` is read apart at the boundary
+  where frontmatter is read for checking, so it is reported once — by the
+  check whose finding names the repair.
+- The record page lists each scheme's status words and cites the file they
+  come from, instead of saying "nothing beyond the standard fields".
+
+### Documentation
+
+- `examples/README.md` and the shipped `luria.toml` explain that `active`
+  picks the in-force word *from* the vocabulary rather than adding one.
+
+### Added
+
+- `luria lint` reports a prose field (`summary:`, `origin:`, `status_note:`)
+  that still says what the scheme's `_template.md` says — the form's words,
+  not the document's. Write it, or drop the key; an absent summary falls
+  back to the title.
+
+### Changed
+
+- `luria new` no longer copies the form's placeholder into a prose field
+  the caller did not fill (`summary:`, `origin:`, `status_note:`); the key
+  is dropped and the comment above it stays as the instruction.
+
+### Added
+
+- A reference field may declare its `converse` — the field holding the same
+  relation read backwards (`extends` / `extended_by`). `luria link --fix`
+  makes the two sides agree, so a relation is stated once on whichever
+  document the author was holding.
+- A relation naming *itself* as its converse is what symmetry is, so
+  `compared_against = { …, converse = "compared_against" }` gets the
+  behaviour that used to be hard-wired to a chain's `sibling`.
+- **Removing a relation propagates too.** `--fix` reads the last committed
+  state to tell a write the other side has not caught up with from a
+  deletion the other side is stale about, and writes or prunes accordingly.
+  A relation withdrawn on one side and asserted on the other is reported and
+  left alone.
+- **`luria link --fix` never makes `luria lint` worse.** A repair that would
+  move a document from satisfying its scheme to violating it — a
+  back-reference added into a field group that permits one of two fields, a
+  stale one removed out of a field the status requires — is not applied. The
+  pair stays one-sided and the finding names both rules that disagree.
+- Lint class `one-sided-relations`, naming for each finding whether the
+  fixer will write the missing side or remove the stale one.
+
+### Changed
+
+- **A relation with no declared `converse` is now left entirely alone** —
+  nothing completed, nothing reported. A project relying on the previous
+  release's symmetric completion must add `converse` to the field's
+  declaration to keep it; the change is otherwise silent.
+- `broken-chains` keeps only the cycle. The one-sided finding moved to
+  `one-sided-relations`, because a declared pair is one-sided or it is not,
+  whether or not a chain walks it.
+- A chain reads both its relations through the converse union, so a
+  one-sided declaration renders correctly before the fixer runs.
+
+### Documentation
+
+- `docs/cli.md` covers `converse`, the add-versus-remove table, what `--fix`
+  will not touch, and why an undeclared relation is left alone.
+
+### Added
+
+- `luria link --fix` now completes a chain's symmetric `sibling` relation:
+  where one document declares a comparison and the other does not, the
+  missing back-reference is written into the other document's frontmatter.
+  You declare a comparison once, on the document that ran it. The directed
+  `relation` is never mirrored.
+- `luria link --links-only` restricts `--fix` to link rewriting — the
+  behaviour it had before completion existed.
+
+### Changed
+
+- The `broken-chains` one-sided-comparison finding now names its remedy,
+  the way `legacy-spellings` does.
+
+### Documentation
+
+- `docs/cli.md` covers the two repairs `luria link` performs and why
+  `PATHS` narrows only the first of them.
+
+### Added
+
+- `[luria.chains.X] annotate = "field"` shows a second field beside each
+  step's status on a chain page. A record can carry an axis the status cannot
+  express — how far the *field* has converged, as against what the record
+  itself asserts — and without this the page renders an agreed trunk and a
+  disputed branch identically, which is the one distinction a line of work
+  exists to show. Read through the contract, so a field with a `default`
+  shows its default rather than a blank; a field the scheme does not declare
+  is a config error ([#173](https://github.com/dmarx/luria/issues/173)).
+
+### Added
+
+- `required_when` is validated at load against what the scheme can actually
+  say: an `on` the scheme cannot name is refused, and so is a value outside a
+  closed set (the status vocabulary, or a vocabulary-backed field). A
+  misspelled field and a miscased status used to be accepted and silently
+  never hold — the outcome eager validation exists to remove ([#172](https://github.com/dmarx/luria/issues/172) review).
+
+### Changed
+
+- A condition is compared against a field's **effective** value, resolved
+  through the compiled contract rather than read raw. A vocabulary field with
+  a `default` is never absent ([ADR-076](record/decisions.d/ADR-076.md)), so a condition naming its default now
+  holds for the documents that omit it; a list-valued field matches on any
+  element. `RequiredWhen` is pure data again, so `config` no longer reaches
+  into `statuses` ([#172](https://github.com/dmarx/luria/issues/172) review).
+- [ADR-071](record/decisions.d/ADR-071.md)'s "a Superseded document names its successor" is a `required_when`
+  on the built-in `superseded_by` field instead of a hand-written branch in
+  `check_frontmatter`. One implementation, and the built-in gets the contract
+  wording, provenance and record-page mention for nothing ([#172](https://github.com/dmarx/luria/issues/172) review).
+- `docs/record.md` names the built-in conditional once, alongside the standard
+  fields. `describe()` still lists only what a scheme declares *beyond* them.
+
+### Changed
+
+- A chain page renders the status *value*, not the composed
+  `Superseded — by [X](…); note` display form. The successor is the next line
+  on the page and the note is the argument this view leaves on the document —
+  and composing it dragged a link authored in the source's frame onto a page
+  that renders elsewhere, which is a thing to avoid rather than a thing to
+  rebase. `status`, `superseded_by` and `status_note` being three fields is
+  what makes the narrower reading available ([#171](https://github.com/dmarx/luria/issues/171)).
+
+### Fixed
+
+- A chain page's links pointed into the scheme's view directory, which for an
+  index-rendered scheme holds a README and tag pages and never a page per
+  document — so every rendered link resolved to nothing. Found by the first
+  real corpus; the fixtures had checked the shape of a target and not its
+  existence ([#171](https://github.com/dmarx/luria/issues/171)).
+- A status note carrying a link is rebased on a chain page, as it already is
+  on the index and tag pages ([#171](https://github.com/dmarx/luria/issues/171)).
+- A chain page registers in `is_generated`: its job is to show a line
+  including its retired steps, so scanning it reported every superseded
+  document in every chain ([#171](https://github.com/dmarx/luria/issues/171)).
+- A chain's relation fields are no longer read as citation sites. The step a
+  document extends is superseded by construction, so `extends:` produced one
+  "cites a retired document" finding per retired step, at the field whose
+  whole job is to name it. Prose is unaffected ([#171](https://github.com/dmarx/luria/issues/171)).
+
+### Added
+
+- `[luria.chains]`: a declared relation is walked transitively and rendered
+  as sequences on one page — the spine directed, optional symmetric
+  cross-links alongside. Order, title and status only: the field carries the
+  sequence, the prose keeps the argument ([#171](https://github.com/dmarx/luria/issues/171)).
+- `broken-chains`: a succession that loops, and a comparison only one side
+  declares. Both structural, neither acknowledgeable.
+
+### Added
+
+- `required_when`: a field can be required by another field's value —
+  `required_when = { status = ["Proposed", "Deferred"] }` — so a record can
+  say not only what it believes but what would change its mind. One field
+  against a set of literal values, deliberately not an expression language
+  ([#170](https://github.com/dmarx/luria/issues/170), [ADR-082](record/decisions.d/ADR-082.md)).
+- The `fields` table accepts a declaration with no `vocabulary`: a rule about
+  when a field applies needs no type, so a table declaring only
+  `required_when` is a plain field.
+
+### Added
+
+- `template-drift`: a scheme's `_template.md` is now checked against the
+  scheme's own contract — a `many` field scaffolded as one value, a scalar one
+  scaffolded as a list, a required field the form never prompts for. Shape
+  only; placeholder values stay placeholders. The template was the one file
+  stating the schema that nothing compared to it, and it is the file every
+  document is a copy of ([#169](https://github.com/dmarx/luria/issues/169)).
+- `luria new` accepts a scheme's declared fields as flags — `--source
+  LIT-134,LIT-140` — and writes each in the shape its contract declares. An
+  undeclared flag is refused by name ([#169](https://github.com/dmarx/luria/issues/169)).
+
+### Fixed
+
+- `luria new` dropped a field the template did not already scaffold: the
+  substitution matched nothing and the command reported success. It is
+  appended to the frontmatter now ([#169](https://github.com/dmarx/luria/issues/169)).
+
+### Fixed
+
+- `source-mismatch` no longer reports a disagreement on HTML escaping.
+  Metadata APIs serve XML and JSON, so a title arrives escaped — arXiv's Atom
+  feed returns `Better &amp; Faster` — and comparing that against a title a
+  person typed reported a mismatch on the ampersand. Entities are unescaped
+  at the fetch rather than at the comparison, so the lockfile records what
+  the title is rather than markup.
+
+  Found by running the check on a real corpus of 186 notes, which is the only
+  way it would have been found: the fixtures all had ASCII titles.
+
+### Added
+
+- `source-mismatch`: an identifier whose upstream title is not the one the
+  document records. A citation can resolve perfectly and still name a
+  different paper, and nothing looked — 53 of 139 arXiv identifiers in one
+  record pointed at unrelated work and stayed green for two years.
+- `source-unchecked`: an identifier nothing has verified. The case that
+  matters most, since a citation is likeliest wrong in the minutes after it
+  is typed, which is exactly when no lockfile has an answer for it.
+- `[luria.lint] network` — `auto` (default) lets the lint ask about what the
+  lockfile cannot answer, `never` is the hermetic build, `require` makes not
+  being able to ask a finding, so a green CI run means the references were
+  verified rather than remembered.
+- `luria remotes --resolve` fetches the title behind every identifier and
+  records it in the lockfile, which the lint then answers from — and adds to,
+  so what it learns is committed and reviewable.
+- `uris.title` and `title_re` on a remote say how to ask and how to read the
+  answer. One line each for arXiv and Crossref, both in the CLI docs.
+- `source-ok:` acknowledges a deliberate disagreement — a nickname the
+  project prefers, a trimmed subtitle, a title that changed between versions.
+
+### Changed
+
+- The lockfile gains a `titles` section, preserved across `--refresh` and
+  `--pin` like the others, and written by the lint as well as read.
+- Fetch failures are distinguished by HTTP status: 404/410 is upstream saying
+  the identifier names nothing — an answer, recorded and not retried — while
+  429/503 is retried with backoff and, if it persists, reported as unchecked
+  rather than written down as an absence.
+
+### Added
+
+- `uniform_share`, a per-scheme threshold for `inert-status`. The check
+  reported only on unanimity; a scheme at 133/144 one status is a field a
+  reader can predict without looking, and eleven exceptions were enough to
+  silence it permanently. Defaults to `1.0` — the previous rule exactly — so
+  no existing project's output changes.
+
+### Changed
+
+- An `inert-status` row shows the distribution behind the modal status:
+  `SOTA: 133/144 at Active — 8 Proposed, 2 Superseded, 1 Deferred`. A finding
+  about a proportion that prints only a proportion invites the reply that
+  exceptions exist.
+- `uniform_ok` acknowledges by the same rule, so what is acknowledged and
+  what would have been reported cannot drift apart.
+
+### Fixed
+
+- A remote code in a reference field is read whole. `superseded_by:` naming
+  a uid-remote document — `ARXIV-2110.08058`, `DOI:10.1145/3600006` — was
+  truncated to a scheme-shaped prefix (or to nothing) before the contract
+  check saw it, and failed as "names no scheme or remote" while the same
+  code in prose resolved. The check always meant to admit a remote code;
+  now its reader does.
+
+### Added
+
+- Directives in a record document's frontmatter. A reference field is a
+  citation site, and the only comment the markdown scan read was an HTML
+  one, so a `superseded_by:` naming a document that was itself later
+  retired could be acknowledged only file-wide. A whole-line `#` comment
+  inside the frontmatter is now a comment the directive parser reads, and
+  its line scope reaches the whole YAML entry below it — key and list items
+  or continuation lines — so `# inactive-ok: ADR-012 — …` directly above
+  the field excuses the field.
+
+### Fixed
+
+- **`CONTRIBUTING.md` is scanned by the reference machinery.**
+  `doc_refs.doc_files()` listed `README.md`, `CLAUDE.md` and `AGENTS.md` — the
+  files an agent bootstraps from, which is a real category and the wrong one:
+  what the reference rules care about is prose asserting the project's rules to
+  a reader. `CONTRIBUTING.md` states [DP-008](docs/design-principles.md#dp-8), [DP-006](docs/design-principles.md#dp-6), [DP-003](docs/design-principles.md#dp-3) and the
+  [DP-001](docs/design-principles.md#dp-1)/[DP-010](docs/design-principles.md#dp-10) split almost verbatim while citing none of them, and
+  nothing linked or checked its references. Those citations are now written and
+  held by the lint. Second instance of this gap — the first was
+  `examples/README.md`, where a hand-written link pointed at a path that does
+  not exist.
+- [ADR-077](record/decisions.d/ADR-077.md) records that [ADR-045](record/decisions.d/ADR-045.md)'s consequence — *"`examples/**` joins
+  `template/**` in the site's exclusions"* — is no longer true, following
+  [ADR-017](record/decisions.d/ADR-017.md)'s pattern: the old body stands as written and the newer decision
+  is where a reader learns the state changed. [ADR-045](record/decisions.d/ADR-045.md) is not edited and not
+  superseded; its decision is still in force, and only a sentence about its
+  side effects aged out. The other half of that paragraph was already overtaken
+  by [ADR-047](record/decisions.d/ADR-047.md).
+- `CONTRIBUTING.md`'s description of `examples/` was left behind by
+  [ADR-078](record/decisions.d/ADR-078.md): the views are committed and held by `luria index --check` now,
+  and the temporary-tree build is about test isolation rather than about
+  avoiding a committed view.
+
+### Fixed
+
+- **`examples/constitution`: `BOUNDARY-001` was grounded in a value that does
+  not justify it.** `VALUE-003` governs the *manner* of a refusal — refuse in a
+  sentence, then stop — and says nothing about which requests are refused. The
+  edge was well-typed and false: `required = true` demanded a value and the
+  nearest one to hand filled the slot, which is the failure mode a required
+  reference is advertised to prevent, inverted. `VALUE-008` now says what the
+  limit actually rests on — a cost landing on someone who was never in the
+  conversation and cannot decline — and `VALUE-003` stays as the second
+  ground, since it does govern the delivery.
+- **`grounds` is `many = true`.** It was scalar, so a practice sitting on a
+  seam between two values could name only one. `PRACTICE-006` was that case and
+  carried the second as a **tag** — a tag standing in for a reference the
+  schema could not express, which is [DP-016](docs/design-principles.md#dp-16)'s reading. It now names both
+  (`VALUE-006` for what a correction costs the reader, `VALUE-001` for the
+  requirement that it happen), and the `honesty` tag is dropped rather than
+  kept beside the edge.
+
+### Added
+
+- `test_every_section_of_the_source_says_what_accounts_for_it` — the reverse of
+  the existing accountability test, and the direction that actually goes wrong.
+  The forward test catches a document nobody derived; the likelier change is
+  the source gaining a paragraph while nothing is written, and until now that
+  left the suite green. Verified against exactly that: a planted `## Escalation`
+  section with no document. A `nothing yet` block satisfies the check, which is
+  the point rather than a loophole — three sections are accounted for by
+  nothing deliberately, and an explicit "nothing, and nothing should" is a
+  different statement from silence ([DP-015](docs/design-principles.md#dp-15)).
+
+### Changed
+
+- **`luria index` regenerates nested records' views, and `--check` fails on a
+  stale one** ([ADR-078](record/decisions.d/ADR-078.md)). `outputs()` and `view_dirs()` reach into each
+  nested record under *its own* config; `run()` and `staleness()` inherit it
+  unchanged. So the examples' views are **committed** now, `examples/.gitignore`
+  is empty, and each example can be read here as a finished record.
+
+  They were ignored on the argument that a committed view nobody regenerates is
+  the stale projection the examples argue against — which conflated *committed*
+  with *hand-maintained*. [DP-003](docs/design-principles.md#dp-3)'s first rung is *derive it*, and a view CI
+  regenerates on every push is derived; this project's own `docs/` are
+  committed on exactly that basis. The examples being the one exception was
+  [DP-016](docs/design-principles.md#dp-16)'s same-shape-opposite-rules, and the gap was real rather than
+  stylistic: nothing regenerated them, so committing them first would have made
+  the original argument true.
+- **`include_records` moves from `[luria.site]` to `[luria]`.** It says a
+  project contains other projects, which generation needs as much as publishing
+  — a key `luria index` had to reach into the site table to read is
+  [DP-016](docs/design-principles.md#dp-16)'s awkwardness. `Config.nested_records()` is the single answer all
+  three callers use, because a record that is published but never regenerated
+  is worse than either alone ([DP-004](docs/design-principles.md#dp-4)).
+- `luria site` stages a nested record from the record itself rather than
+  copying it to a temporary directory and generating there. That copy existed
+  only because the views were not committed.
+- `luria index` names the nested records it wrote rather than folding them into
+  the tally: *"…60 devlog entries, plus examples/collocated, …"*. "78 files from
+  77 ADRs" is arithmetic nobody can check, and a record that silently rendered
+  nothing would look exactly like one that rendered correctly ([DP-015](docs/design-principles.md#dp-15)).
+
+### Changed
+
+- **[DP-012](docs/design-principles.md#dp-12) to v2**, generalized from "one decision, one thing" to **one
+  document, one thing**. Its test was always general; nothing in the wording
+  said so, and a record of practices or claims would not have read itself as
+  covered. Found in one that isn't: a record with no decisions in it at all.
+- The principle gains a second test. The a-priori one — *could these have been
+  decided differently?* — only fires when an author stops to ask. Typed edges
+  ([ADR-060](record/decisions.d/ADR-060.md), [ADR-071](record/decisions.d/ADR-071.md)) supply one that arrives as friction: **an edge
+  whose prose has to name which clause of its target it bears on is reporting
+  that the target is two documents.** It also gains the reason not to fix such
+  an edge with a qualifier — a `when:` beside a checked reference is prose in a
+  data field, which is escalating emphasis one level up, and it is why
+  [#141](https://github.com/dmarx/luria/issues/141) puts `when` expressions among its non-goals.
+- `examples/constitution`: `PRACTICE-001` split, as the principle's worked
+  case. It carried two claims that arrived in the same paragraph of the source
+  — deliver the whole scope, and resolve ambiguity without escalating — and a
+  boundary overriding it had to say in prose which of the two it argued with.
+  The second is now `PRACTICE-010`, and `BOUNDARY-003` names it. The split
+  exposed a second error: `BOUNDARY-003`'s edge to `PRACTICE-005` was dropped
+  rather than repointed, because that practice licenses acting on what is
+  *established* and explicitly not on what is assumed — it never permitted the
+  inference, so there was nothing to override.
+
+### Added
+
+- **[DP-015](docs/design-principles.md#dp-15)** — *an absence reads exactly like a success*. The premise
+  underneath [DP-001](docs/design-principles.md#dp-1), [DP-003](docs/design-principles.md#dp-3)'s fail-stale rung, [DP-006](docs/design-principles.md#dp-6) and
+  [DP-010](docs/design-principles.md#dp-10), each of which leans on the word *silent* at its load-bearing
+  moment and none of which says why silence is the problem. Re-derived four
+  times without being written down; a fifth time in another project
+  ([SG-DP-022](https://github.com/dmarx/strata-g/blob/main/docs/design-principles.md#dp-22)). All four now cite it, so the unification is an edge rather
+  than an assertion.
+- An audit of the principle set for restatements, whose result is mostly
+  negative and worth recording as such. [DP-002](docs/design-principles.md#dp-2), [DP-003](docs/design-principles.md#dp-3) and [DP-004](docs/design-principles.md#dp-4)
+  look like one principle and are not: [DP-003](docs/design-principles.md#dp-3) is asymmetric (a source and a
+  projection, so *derive it* is available), [DP-004](docs/design-principles.md#dp-4) is symmetric (two peers,
+  so the remedy is consolidation and "choose the failure polarity" is
+  meaningless), and [DP-002](docs/design-principles.md#dp-2)'s failure mode is contention, which occurs with
+  no duplication at all. Every sampled citation of [DP-004](docs/design-principles.md#dp-4) invokes
+  divergence-between-implementations; none invokes [DP-003](docs/design-principles.md#dp-3)'s remedy ladder.
+  Merging them would make the advice a disjunction and cost ~130 citation sites
+  their precision.
+
+- **[DP-016](docs/design-principles.md#dp-16)** — *an awkward structure is reporting a distinction the model
+  has stopped expressing*. Extracted from [DP-009](docs/design-principles.md#dp-9), where it was the third of
+  three jobs and had **never been cited** — [DP-012](docs/design-principles.md#dp-12)'s own symptom for a
+  document carrying two things, firing on a principle. Promoted on its second
+  substrate: [DP-009](docs/design-principles.md#dp-9) found the reading in the file tree, and a typed
+  `overrides` edge found it again in the citation graph, which is not a tree
+  and which [DP-009](docs/design-principles.md#dp-9) does not cover. [DP-009](docs/design-principles.md#dp-9) goes to v2 and hands the
+  clause over; [DP-012](docs/design-principles.md#dp-12)'s edge test cites it as the general form.
+
+### Added
+
+- **`site.include_records`** ([ADR-077](record/decisions.d/ADR-077.md)) — mount a
+  whole record inside another's site. Each match is staged by **its own
+  config** into a temporary vault and only the finished `content/` is mounted,
+  because the source-versus-view test (`link_base`) answers from the reading
+  config's schemes: a parent publishing a child's files directly emits both a
+  fragment and the view it renders into. One level deep, deliberately; a
+  pattern matching no record is an error, a directory that is not a record is a
+  quiet skip.
+- `config.rooted()` — a bounded context manager that makes another project
+  current and restores what it swapped, including restoring an absence.
+  `load(root)` builds any config, but the modules underneath call `current()`
+  for themselves, so switching projects means switching the global; this names
+  and bounds it.
+- A root `README.md` for each of the seven examples. Each is now self-contained
+  — its own config, sources, README and generated views — and the README is
+  what the published section uses as its landing page.
+
+### Changed
+
+- The examples are **published**, at `examples/<name>/` on this project's site,
+  instead of being excluded from it. 103 pages to 208. Each keeps its own
+  title, theme derivation and record lines, because each was staged by the
+  config that knows about it.
+
+### Added
+
+- `examples/constitution/docs/constitution.md` — the source document the
+  example's record decomposes. The record asserted things *about* a
+  constitution that was not in the repository, so nothing could check the
+  decomposition. It lives under `docs/` so `doc_files()` scans it and its
+  references are held to the same rules as any other prose.
+- Nine documents covering source passages the record did not account for:
+  `VALUE-005` (an error that lands on a person is not symmetric with one that
+  lands on the work), `VALUE-006` (every sentence the reader must process is a
+  cost charged to them), `VALUE-007` (a refusal from the person you are working
+  for is information, not an obstacle), `PRACTICE-005`–`PRACTICE-009`, and
+  `BOUNDARY-003` (never infer a person's pronouns from their name).
+  `BOUNDARY-003` overrides two practices that would have licensed the
+  inference, which is the example's clearest demonstration of precedence as a
+  checked edge.
+- `test_every_active_document_accounts_for_something_in_the_source` — the
+  schema checks `PRACTICE → VALUE`; nothing checked `document → the text it was
+  drawn from`, and that is the direction a record drifts in. Retired documents
+  are exempt.
+
+### Changed
+
+- `BOUNDARY-002` to v2. As written it said restatement *instead of*
+  reproduction, which read as a rule against quoting a source at all. Narrowed:
+  reproducing is fine, but a copy must not stand in for the analysis and a
+  reproduction must stay one — which is why the source page's references sit in
+  annotation blocks after each section rather than as links threaded into
+  quoted prose.
+
+### Added
+
+- `examples/constitution/` — a worked record with no code in it: an AI
+  assistant's operating instructions decomposed into `VALUE`, `PRACTICE` and
+  `BOUNDARY` schemes, where precedence is a **checked reference**
+  (`BOUNDARY.overrides → PRACTICE`) rather than escalating emphasis, `grounds`
+  is a typed reference so no rule stands on its own authority, and a practice
+  is retired by a boundary from a different scheme.
+- `test_every_example_stages_its_own_site` — every example is staged as its own
+  Quartz vault and asserted to publish pages with nothing unplaceable and
+  nothing redirected out to the repository. The root `luria.toml` excludes
+  `examples/**` from *this* site because a parent config cannot stage a child's
+  record, not because the examples are unpublishable; the test says which.
+
+### Fixed
+
+- **`luria index` was not idempotent** for any record whose vocabulary pages
+  cite a retired document. `Config.is_generated` covered a scheme's index and
+  tag pages but not its **vocabulary** pages, while `adr_index.view_dirs()`
+  did — so the reference machinery (`doc_refs.doc_files` →
+  `ref_status.scanned_files`, both filtered on `is_generated`) read a generated
+  page as prose. The reports render in the same parallel pass that writes those
+  pages, so the report saw the *previous* run's copy and a second index produced
+  a different report than the first. A citation inside one also could not be
+  excused: an `inactive-ok:` written into a generated file is erased by the next
+  build. Present since vocabularies shipped; only a *retired* vocabulary member
+  makes it visible.
+- `tests/test_examples.py::lint_errors` ran six of `lint.run`'s nine checks, so
+  an example could pass these tests and fail the real command. It now runs all
+  nine — `check_status_vocabulary`, `check_contracts` and
+  `check_version_history` were the gap, and `check_contracts` is what makes a
+  typed reference a finding rather than a sentence.
+
+### Documentation
+
+- `examples/README.md` records two things staging made visible that `luria
+  lint` cannot see: a `render = "document"` scheme's sources are cited by their
+  **anchor in the assembled view**, never by filename — the file exists and
+  lints clean but is never published — and a document scheme's stub must
+  contain `{principles}`, without which every member's body is dropped while
+  index and lint both stay green.
+
+### Changed
+
+- The Pages workflow builds after the generation job has committed the
+  views on the default branch (`workflow_run` on the CI workflow), instead
+  of on the push — which had deployed the merge commit, one bot commit
+  behind — and builds nothing on a pull request, where a branch carries no
+  views of its own. The scaffold's `pages.yml` has the same shape.
+
+### Changed
+
+- `luria lint` reads sources only. Whether a committed view is current is
+  `luria index --check`'s question, asked in the generation job on the
+  default branch; the lint keeps the view-directory rule (a hand-written
+  file inside one is a violation), computed without writing anything. A
+  branch is linted as it is, in CI and locally — nobody regenerates a view
+  to check a record.
+- The generate action's pull-request shape is repairs only: `views: "false"`
+  (was `commit-views`) pushes the repairs and writes no view; the lint
+  follows in the same job. The scaffold's workflow uses it.
+
+### Changed
+
+- A temporary code cited from a workflow file is the `workflow-temp-codes`
+  warning class, on the enforcement dial, rather than a lint error: the
+  generation job cannot push the rewrite on the workflow's own token, and
+  can on a token with workflow write. This repository and the scaffold
+  name the class in `fail_on`.
+
+### Added
+
+- `luria lint` reports a temporary code cited in a workflow file: the
+  generation job rewrites it when the decision is numbered, and the
+  workflow token may not modify `.github/workflows/`, so the job's push is
+  refused. Cite the number once the decision has one, or say it in prose.
+
+### Added
+
+- `luria repair` writes every mechanical source repair — bare codes linked,
+  a journal entry's missing `created:` filled from its path, a retired
+  configuration reference removed — each a state the lint reports with this
+  command as its remedy. Idempotent.
+
+### Changed
+
+- `luria index` writes views only; the source repairs it used to make first
+  are `luria repair`'s.
+- Generated views are committed on the default branch only, and source
+  repairs on the branch that authored them. A pull request pushes its
+  repairs onto the branch, regenerates the views in the working tree, lints
+  the result in the same job, and commits no view — so branches never
+  conflict on the decision index or the devlog book, and the review reads
+  repaired sources. The generate action takes `commit-views: "false"` for
+  that shape and a `repair-message`; the scaffold's workflow uses it.
+
+### Added
+
+- `[luria.schemes.X.field_groups.NAME]`: several fields of which an entry
+  must carry some — `fields = ["arxiv", "doi", "url"]` with `require =
+  "at-least-one"` (or `exactly-one`, `at-most-one`). The finding names the
+  need and every field that would have met it; the record page lists the
+  group ([#141](https://github.com/dmarx/luria/issues/141)).
+
+### Changed
+
+- The knowledge-base example requires *a source* of a paper — arXiv, DOI
+  or URL — rather than an arXiv identifier, and gains a technical report
+  with only a URL.
+
+### Changed
+
+- The status note is its own field: `status: Superseded` with
+  `status_note: …`, where one scalar carried both. `status_note` is prose
+  — a code in it is a citation the fixer links. A note still riding in
+  `status:` is a lint finding, and `luria repair` moves it ([#141](https://github.com/dmarx/luria/issues/141)).
+- `superseded_by:` is a reference field on every scheme: the successor a
+  superseded document names, one code or a list, checked and resolved,
+  rendered as `Superseded — by X` and as a *Supersedes* backlink. A
+  `Superseded` document that leaves it empty is a lint finding. `luria
+  index` fills it from an old-form `by CODE` note.
+
+### Fixed
+
+- `luria new adr --tags record,mechanism` crashed: Fire hands a
+  comma-separated flag to the scaffolder as a tuple, and it expected a
+  string. Both spellings now work.
+
+### Added
+
+- A frontmatter field backed by a scheme-local controlled vocabulary
+  ([#141](https://github.com/dmarx/luria/issues/141)): `[luria.schemes.X.fields.NAME]` with `vocabulary`, `many`, `required` and
+  `default`, the values in `NAME.yaml` beside the records shaped like
+  `tags.yaml`. Closed — a value the file does not name is a finding. A
+  default is read as the field's value wherever it is absent and is never
+  written into the source. `luria index` renders a page per value beside
+  the tag pages, the scheme's index links them, the record page lists the
+  field with what absence means, and the site's record line shows the
+  written values. A `world-bible` worked example.
+
+### Added
+
+- `many = true` on a declared reference: the field holds a list of codes,
+  every element is checked and resolved, and each becomes an edge ([#141](https://github.com/dmarx/luria/issues/141)).
+
+### Fixed
+
+- A reference field given a YAML list was stringified, its first code
+  checked and the rest silently ignored. A list where one code was
+  declared is now a finding that names `many = true` as the remedy.
+
+### Changed
+
+- A contract finding cites the key that declared the obligation — every
+  key when a field is in both `requires` and `references`, and the
+  vocabulary file a derived tag group reads its members from ([#141](https://github.com/dmarx/luria/issues/141)).
+- `docs/record.md` gains *What an entry must carry*: each scheme's
+  obligations with where each was declared, from the same renderer the
+  findings cite. Says so truthfully when there are none.
+- The knowledge-base example declares `source` a `LIT` reference rather
+  than a bare `requires`, as [#141](https://github.com/dmarx/luria/issues/141)'s second dogfooding experiment asked.
+
+### Added
+
+- Typed edges, read from what the record already says (`luria/edges.py`,
+  [#141](https://github.com/dmarx/luria/issues/141)): a `Superseded — by` note, an `influenced_by:` list and any declared
+  reference field are edges named for the relation. `luria site` renders each
+  document's edges both ways on its record line — *Supersedes*, *Influenced*,
+  *Source*, *Cited as `source` by* — where the site previously showed only
+  that a page was mentioned.
+
+### Changed
+
+- `requires`, `references` and `tag_groups` are checked in one pass over a
+  contract compiled per scheme (`luria/contract.py`, [#141](https://github.com/dmarx/luria/issues/141)), where each was
+  its own loop over the record. Findings are unchanged; a field named in
+  both `requires` and `references` is now reported once rather than twice.
+
 ## 2026-08-31
 
 ### Changed
