@@ -522,7 +522,7 @@ def _edge_bits(outbound, inbound, scheme=None) -> list[str]:
             out.setdefault(edge.relation, []).append(edge.target)
     for relation, targets in out.items():
         label = relation.replace("_", " ").capitalize()
-        bits.append(f"**{label}** " + " · ".join(f"[[{t}]]" for t in targets))
+        bits.append((label, " · ".join(f"[[{t}]]" for t in targets)))
     held = {(e.relation, e.target) for e in outbound}
     grouped: dict[str, list[str]] = {}
     for edge in inbound:
@@ -537,7 +537,7 @@ def _edge_bits(outbound, inbound, scheme=None) -> list[str]:
     for relation in sorted(grouped, key=order):
         label = labels.get(relation) or f"Cited as `{relation}` by"
         codes = " · ".join(f"[[{c}]]" for c in sorted(set(grouped[relation])))
-        bits.append(f"**{label}** {codes}")
+        bits.append((label, codes))
     return bits
 
 
@@ -574,7 +574,7 @@ def _vocabulary_bits(meta: dict, source: Path) -> list[str]:
         links = " · ".join(
             f"[{v}]({posixpath.relpath((scheme.vocab_dir(vocab.name) / f'{v}.md').as_posix(), source.parent.as_posix())})"
             for v in values)
-        bits.append(f"**{vocab.field.replace('_', ' ').capitalize()}** {links}")
+        bits.append((vocab.field.replace("_", " ").capitalize(), links))
     return bits
 
 
@@ -598,6 +598,25 @@ def readme_region() -> str:
             f"published by `luria site`.")
 
 
+def _table(rows: list[tuple[str, str]]) -> str:
+    """The record's facts as a two-column table.
+
+    They were one line of `**Label** value` separated by center dots, which
+    reads acceptably at three facts and not at eleven: `LIT-140` runs to a
+    paragraph of bolded fragments a reader has to parse before they can scan.
+    A table gives every fact the same shape and puts the labels in a column,
+    which is what makes it scannable rather than merely shorter.
+
+    Header-less on purpose — `| | |` — because "Field" and "Value" name
+    nothing a reader did not already know from the rows.
+
+    Multi-valued fields keep the center dot inside their cell: it separates
+    peers there (three sources, two contesting papers), which is the job it
+    was doing badly at the top level and does well one level down."""
+    return "\n".join(["| | |", "|---|---|"]
+                      + [f"| **{label}** | {value} |" for label, value in rows])
+
+
 def record_line(meta: dict, source: Path, outbound=(), inbound=()) -> str:
     """The frontmatter facts, rendered where a reader (and a graph) can see
     them: status, when it was filed, the issue, what influenced it, and the
@@ -606,31 +625,31 @@ def record_line(meta: dict, source: Path, outbound=(), inbound=()) -> str:
     Composed with wikilinks and handed to the resolver rather than spelled
     here — the fixer owns every target in this record, and a second speller
     would be the drift DP-4 names."""
-    bits = []
+    bits: list[tuple[str, str]] = []
     if status := statuses.display(statuses.of(meta, _scheme_of(source)),
                                   link=lambda c: f"[[{c}]]"):
-        bits.append(f"**Status** {status}")
+        bits.append(("Status", status))
     # Shown only when it isn't 1, the same rule the index follows (ADR-016).
     # A version that isn't a number is somebody's mistake, not this function's
     # to interpret — it is shown as written and the lint says so.
     if (version := meta.get("version")) and str(version).strip() != "1":
-        bits.append(f"**Version** {version}")
+        bits.append(("Version", str(version)))
     if date := str(meta.get("date", "")).strip():
-        bits.append(f"**Filed** {date}")
+        bits.append(("Filed", date))
     # `issue: '#21, #23'` is a real shape in this record, so the separator is
     # read out of the field rather than assumed to be a space.
     if issues := re.findall(r"#\d+", str(meta.get("issue", ""))):
-        bits.append("**Issue** "
-                    + " · ".join(f"[[{issue}]]" for issue in issues))
+        bits.append(("Issue",
+                     " · ".join(f"[[{issue}]]" for issue in issues)))
     influenced = [str(c).strip() for c in (meta.get("influenced_by") or [])]
     if influenced:
         codes = " · ".join(f"[[{code}]]" for code in influenced if code)
-        bits.append(f"**Influenced by** {codes}")
+        bits.append(("Influenced by", codes))
     bits += _vocabulary_bits(meta, source)
     bits += _edge_bits(outbound, inbound, _scheme_of(source))
     if not bits:
         return ""
-    expanded, _ = doc_refs.expand_wikilinks("> " + " · ".join(bits), source)
+    expanded, _ = doc_refs.expand_wikilinks(_table(bits), source)
     return expanded
 
 

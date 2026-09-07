@@ -82,9 +82,9 @@ def test_record_line_carries_status_date_and_lineage():
     meta = {"status": "Active", "date": "2026-08-04", "issue": "#9",
             "influenced_by": ["ADR-005", "ADR-024"]}
     line = site.record_line(meta, current().schemes["ADR"].dir / "ADR-025.md")
-    assert line.startswith("> ")
-    assert "**Status** Active" in line
-    assert "**Filed** 2026-08-04" in line
+    assert line.startswith("| | |\n|---|---|\n")
+    assert "| **Status** | Active |" in line
+    assert "| **Filed** | 2026-08-04 |" in line
     # Wikilinks in, resolved links out — the fixer owns every target (DP-4).
     assert "[ADR-005](ADR-005.md)" in line
     assert "[ADR-024](ADR-024.md)" in line
@@ -105,7 +105,7 @@ def test_record_line_is_empty_without_frontmatter_facts():
 def test_version_appears_only_when_it_is_not_one():
     where = current().schemes["ADR"].dir / "ADR-001.md"
     assert "**Version**" not in site.record_line({"version": 1}, where)
-    assert "**Version** 2" in site.record_line({"version": 2}, where)
+    assert "| **Version** | 2 |" in site.record_line({"version": 2}, where)
 
 
 def test_staged_decision_gets_its_code_as_an_alias(tmp_path):
@@ -115,7 +115,7 @@ def test_staged_decision_gets_its_code_as_an_alias(tmp_path):
     assert '\naliases:\n- "ADR-025"\n' in staged
     # The frontmatter that was already there is carried over verbatim.
     assert "status: Active" in staged
-    assert "> **Status** Active" in staged
+    assert "| **Status** | Active |" in staged
 
 
 def test_staging_is_idempotent_and_drops_removed_pages(tmp_path):
@@ -209,7 +209,7 @@ def test_a_superseded_decision_says_so_on_its_page(project):
     site.stage(out)
     staged = (out / "content" / "record" / "decisions.d"
               / "ADR-002.md").read_text()
-    assert "> **Status** Superseded — by [ADR-001](ADR-001.md)" in staged
+    assert "| **Status** | Superseded — by [ADR-001](ADR-001.md) |" in staged
 
 
 def test_an_html_image_is_staged_beside_its_page(tmp_path):

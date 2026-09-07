@@ -6,6 +6,7 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 
 ## Currently — [September 2026](2026-09.md)
 
+- [7 Sep 01:53 — The properties panel cannot show what the record line is for](2026-09.md#20260907015341)
 - [7 Sep 00:58 — Three copies of a region, and a link nobody derived](2026-09.md#20260907005848)
 - [7 Sep 00:35 — One fact, one bit: two duplications the record line grew](2026-09.md#20260907003519)
 - [6 Sep 21:32 — Migrating status onto the mechanism it was generalized from](2026-09.md#20260906213202)
@@ -40,9 +41,9 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 
 ## All books
 
-77 entries across 2 books, newest first.
+78 entries across 2 books, newest first.
 
 | Book | Entries | First | Last |
 |---|--:|---|---|
-| [2026-09](2026-09.md) | 31 | 2026-09-03 | 2026-09-07 |
+| [2026-09](2026-09.md) | 32 | 2026-09-03 | 2026-09-07 |
 | [2026-08](2026-08.md) | 46 | 2026-08-03 | 2026-08-28 |
