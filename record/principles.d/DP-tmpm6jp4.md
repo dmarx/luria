@@ -1,0 +1,112 @@
+---
+status: Active
+title: 'A record states what is true now — git already keeps what was written then'
+version: 1
+tags:
+- record
+date: '2026-09-07'
+influenced_by:
+- ADR-040
+- ADR-049
+origin: >-
+  Concretization renumbered a practice, and the curation entry explaining what
+  the temporary code had hidden was left holding the old spelling. The reflex
+  was to keep the stale characters and staple a directive to them; [ADR-040](../record/decisions.d/ADR-040.md) had
+  already decided the other way for migrations, and the belief underneath that
+  decision had never been written down.
+summary: >-
+  A record document is not a ledger entry. Its job is to be true and
+  resolvable today, so when a code is renumbered or a fact is superseded the
+  entry is rewritten — the journals and devlogs that describe the change
+  included. The immutable history already exists and is called git; a record
+  that tries to be one as well duplicates it badly and stops being checkable
+  in the process. What has to survive a rewrite is the claim, not the
+  characters that expressed it. The corollary is the expensive half:
+  substitution is not rewriting.
+---
+
+# DP-tmpm6jp4: A record states what is true now — git already keeps what was written then
+
+**Rewrite the record to keep it true. The characters are not the deliverable;
+the claim is.**
+
+Record documents accumulate a ledger's manners. A journal entry is dated, a
+devlog describes a day, a curation entry reports what was found — and all
+three read as testimony, so the instinct when one goes stale is to leave it
+alone and annotate around it. *It was true when it was written.* The entry
+becomes a fossil with a note attached, and the note is doing the work the
+entry used to do.
+
+That instinct is importing a guarantee the record was never asked to provide.
+
+## Git is the ledger
+
+The append-only, tamper-evident, "what did this file say on the 5th" store
+exists already, it is underneath every record, and it is better at the job
+than prose will ever be. Nothing is lost by rewriting a document, because
+nothing was ever being kept by *not* rewriting it.
+
+What the record provides instead is the thing git cannot: a statement that is
+true now, resolvable now, and checkable now. Those are the properties the lint
+enforces, and they are properties of the current text only. A code that no
+longer resolves is a dead link whatever its provenance, and "this was correct
+in September" does not make it navigable in March.
+
+[ADR-040](../record/decisions.d/ADR-040.md) already decided this for migrations, and stated the reason in
+passing: a rewrite covers **historical journals included**, because a code
+matching no configured scheme is invisible to the linter, and git guards the
+true history anyway. It explicitly rejected preserving old spellings in
+historical files as a half-measure that leaves history unwatched. That is
+this principle, applied once, to one mechanism. [ADR-049](../record/decisions.d/ADR-049.md) then produced the
+same situation on a shorter clock: every merge renames codes, so every record
+using merge-allocation generates stale spellings continuously, in exactly the
+entries whose subject is the renaming.
+
+## The claim is what survives, not the characters
+
+The unit being preserved is the information content. A curation entry that
+says *this finding could not surface until the merge concretized the codes* is
+making a claim about visibility and timing. Which five characters the
+temporary code happened to carry is not part of it — a temp tail is random by
+construction, and no reader has ever needed the specific one.
+
+So the honest question at a stale site is not "may I change this?" but "what
+is this sentence claiming?" — and then write the sentence that claims it,
+today, in today's vocabulary. Usually that is a substitution. Sometimes it is
+a different sentence. Both are ordinary edits.
+
+## The corollary: substitution is not rewriting
+
+This is the half that costs something, and it is why the licence to rewrite
+cannot be handed to a fixer and forgotten.
+
+`luria link --fix` upgrades an old spelling by replacing it. That is correct
+wherever the code is being *used* — cited, referenced, pointed at. It is wrong
+wherever the code is being *mentioned*: quoted as text, shown as a shape, used
+as the example in an argument about the codes themselves. The worked case is
+one sentence away from this principle's own origin — an entry explaining that
+a regex required digits, and giving a temp-tailed code as the string that
+therefore failed to match. Substituting the concretized number produces a
+grammatical sentence that is false, because the number has digits.
+
+The fix there was still a rewrite. It just was not a substitution: the
+sentence keeps the regex, drops the specific code, and says "a temp-tailed
+code" — which is what it was always arguing about. Nothing was acknowledged
+and nothing was preserved that mattered.
+
+This is why the class stays failable and has no acknowledgement directive.
+An acknowledgement would be a claim that some stale spelling is load-bearing,
+and the mention case is not an example of that — it is an example of a
+substitution being wrong, which is a different thing, and its remedy is to
+write the sentence properly rather than to keep the wrong one on file.
+
+## Where literal history belongs
+
+Occasionally the old spelling *is* the content: a document's own former
+identity, which other repositories and old branches still cite. That is
+structured data, not prose, and it has a field — `formerly:`, which the
+resolver honours forever and the reference checker does not scan.
+
+The division is the whole principle in one line. History that must be
+preserved verbatim goes in a field, where it is data and nothing pretends it
+is a current statement. Everything else is prose, and prose is maintained.
