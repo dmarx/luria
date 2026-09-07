@@ -234,6 +234,7 @@ different pair of lines, not a different subsystem.
 |---|---|---|
 | `prefix` | `str` | *the table's own name* |
 | `repo` | `str` | *unset* |
+| `issue_url` | `str` | *unset* |
 | `ref` | `str` | `"main"` |
 | `dir` | `str` | `"record/decisions.d"` |
 | `name` | `str` | *unset* |
