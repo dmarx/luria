@@ -50,14 +50,16 @@ worth citing, statuses that mean something, and views generated so they cannot
 drift from their sources.
 
 <!-- luria:badges -->
-[![needs decision: 2](https://img.shields.io/badge/needs%20decision-2-orange)](docs/reports/pending-decisions.md)
+[![needs decision: 3](https://img.shields.io/badge/needs%20decision-3-orange)](docs/reports/pending-decisions.md)
 [![cited, not in force: 0](https://img.shields.io/badge/cited,%20not%20in%20force-0-brightgreen)](docs/reports/reference-status.md)
 <!-- /luria:badges -->
 
-📖 **[dmarx.github.io/luria](https://dmarx.github.io/luria/)** — this
-repository's own record, published by `luria site`. Searchable, with backlinks
-and a graph. Not a mirror of these docs: it is the output of one of the
-features, applied to the project that ships it.
+<!-- luria:site -->
+📖 **[dmarx.github.io/luria](https://dmarx.github.io/luria/)** — this record, published by `luria site`.
+<!-- /luria:site -->
+
+Searchable, with backlinks and a graph. Not a mirror of these docs: it is the
+output of one of the features, applied to the project that ships it.
 
 ## Install
 

@@ -377,7 +377,39 @@ FAILABLE = ("retired-citations", "unresolved-codes", "hand-written-urls",
             "legacy-spellings", "narrow-titles", "stale-directives",
             "template-drift", "broken-chains",
             "one-sided-relations", "spent-upgrades",
-            "pending-documents", "unlinted-files", "workflow-temp-codes")
+            "pending-documents", "unlinted-files", "workflow-temp-codes",
+            "unlinked-site")
+
+
+def unlinked_site() -> list[str]:
+    """A record that publishes a site whose README never names it.
+
+    `luria site` has always known where the record lands — `base_url` derives
+    from `issue_url` — and nothing wrote it where a reader of the repository
+    front page would look. An absence that reads exactly like a success is
+    the case DP-15 exists for, and this is the signal.
+
+    Satisfied by the URL appearing anywhere in the README, prose link
+    included: the finding is "your front page does not point at the site you
+    publish", not "you must use our marker".
+
+    Scoped by `[luria.site] publish`, which defaults true: `base_url` derives
+    for every GitHub project whether or not one is deployed, so a record that
+    lives only in its repository says `publish = false` and the guard goes
+    quiet — a guard opts out rather than being argued with (DP-10)."""
+    from . import readme
+    cfg = current()
+    if not (cfg.site.publish and cfg.site.base_url):
+        return []
+    path = readme.path()
+    if not path.exists():
+        return []
+    if cfg.site.base_url in path.read_text(encoding="utf-8"):
+        return []
+    return [f"README.md never names {cfg.site.base_url}, where `luria site` "
+            f"publishes this record — add a `{readme.markers('site')[0]}` / "
+            f"`{readme.markers('site')[1]}` region for `luria index` to fill, "
+            f"or write the link yourself"]
 
 
 def spent_upgrades() -> list[str]:
@@ -442,6 +474,16 @@ def status_sections() -> list[tuple[str, str, list[str]]]:
     # (#37) — blunt enough that the count surfaces even though nothing here
     # can act on it: an exemption nobody sees is how a report stops being a
     # complete account.
+    # The site the record publishes, named nowhere a reader of the front page
+    # would look. An absence that reads exactly like a success (DP-15), and
+    # the one thing here whose fix is a paste rather than an edit to the
+    # record.
+    if unlinked := unlinked_site():
+        sections.append((
+            "unlinked-site",
+            "the published site is not linked from the README",
+            unlinked))
+
     if result.unlinted:
         sections.append((
             "unlinted-files",
