@@ -6,6 +6,7 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 
 ## Currently — [September 2026](2026-09.md)
 
+- [7 Sep 16:55 — The chain page encoded depth but not parentage](2026-09.md#20260907165522)
 - [7 Sep 05:35 — A temporary code is a code to link, and was not one to check](2026-09.md#20260907053505)
 - [7 Sep 04:40 — The link that resolved to the wrong project](2026-09.md#20260907044002)
 - [7 Sep 03:02 — A title is data, and this record has one that reads as syntax](2026-09.md#20260907030258)
@@ -44,9 +45,9 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 
 ## All books
 
-81 entries across 2 books, newest first.
+82 entries across 2 books, newest first.
 
 | Book | Entries | First | Last |
 |---|--:|---|---|
-| [2026-09](2026-09.md) | 35 | 2026-09-03 | 2026-09-07 |
+| [2026-09](2026-09.md) | 36 | 2026-09-03 | 2026-09-07 |
 | [2026-08](2026-08.md) | 46 | 2026-08-03 | 2026-08-28 |

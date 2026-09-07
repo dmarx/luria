@@ -67,6 +67,12 @@ class Line:
     alongside: list[Adr] = field(default_factory=list)
     # Each spine member's distance from a root, for the rendered nesting.
     depth: dict[str, int] = field(default_factory=dict)
+    # The parent each step renders *under*. The page indents by depth, so
+    # nesting only reads correctly when a step is emitted directly after
+    # this one; `_order` is what guarantees that. A step with several
+    # parents renders under one of them and names the rest.
+    under: dict[str, str] = field(default_factory=dict)
+    also: dict[str, list[str]] = field(default_factory=dict)
 
     @property
     def members(self) -> list[Adr]:
@@ -140,6 +146,52 @@ def _depths(group: list[str], spine: dict[str, list[str]]) -> dict[str, int]:
     return depth
 
 
+def _order(group: list[str], spine: dict[str, list[str]],
+           depth: dict[str, int]) -> tuple[list[str], dict[str, str],
+                                           dict[str, list[str]]]:
+    """The spine in render order: every step immediately after the parent it
+    nests under.
+
+    Sorting by `(depth, code)` is not enough, and the way it fails is silent.
+    The page carries nesting as indentation, so a step at depth d+1 reads as
+    a child of whatever step at depth d preceded it — which, under a plain
+    sort, is whichever one happened to sort last. One group with two roots,
+    or one step with two parents, and the page asserts a descent nobody
+    declared. Found in `anthology-of-the-sota`, where Kimi Linear rendered
+    as a descendant of Mamba-3 because Gated DeltaNet has two parents.
+
+    So: choose one parent per step — the deepest, ties broken by code, so a
+    step nests under the most specific thing it extends — and emit each
+    subtree depth-first from its root. The other parents are real and are
+    returned to be named rather than dropped."""
+    kids: dict[str, list[str]] = {c: [] for c in group}
+    under: dict[str, str] = {}
+    also: dict[str, list[str]] = {}
+    for code in sorted(group):
+        parents = [p for p in spine[code] if p in depth]
+        if not parents:
+            continue
+        best = sorted(parents, key=lambda p: (-depth[p], p))[0]
+        under[code] = best
+        kids[best].append(code)
+        rest = sorted(p for p in parents if p != best)
+        if rest:
+            also[code] = rest
+    order: list[str] = []
+    def emit(code: str) -> None:
+        order.append(code)
+        for kid in sorted(kids[code], key=lambda c: (depth[c], c)):
+            emit(kid)
+    for code in sorted(group, key=lambda c: (depth[c], c)):
+        if code not in under:
+            emit(code)
+    # A cycle leaves its members unreachable from any root; they are the
+    # `rows()` finding, and dropping them here would hide it.
+    order += [c for c in sorted(group, key=lambda c: (depth[c], c))
+              if c not in order]
+    return order, under, also
+
+
 def lines_of(chain) -> list[Line]:
     """Every sequence in one chain, spines ordered oldest first.
 
@@ -156,8 +208,9 @@ def lines_of(chain) -> list[Line]:
     out: list[Line] = []
     for group in _components(sorted(docs), neighbours):
         depth = _depths(group, spine)
-        line = Line(depth=depth)
-        for code in sorted(group, key=lambda c: (depth[c], c)):
+        order, under, also = _order(group, spine, depth)
+        line = Line(depth=depth, under=under, also=also)
+        for code in order:
             on_spine = bool(spine[code]) or any(code in spine[o] for o in group)
             (line.spine if on_spine else line.alongside).append(docs[code])
         out.append(line)
@@ -264,8 +317,13 @@ def _render(chain, lines: list[Line]) -> str:
         out.append(f"## From {head.title}")
         out.append("")
         for doc in line.spine:
+            # A step with several parents nests under one of them; the rest
+            # are named here so the page holds every declared edge, not the
+            # subset a tree layout can draw.
+            extra = line.also.get(doc.code, [])
+            tail = (f" — also extends {', '.join(extra)}" if extra else "")
             out.append("  " * line.depth[doc.code] + "- "
-                       + _step(doc, chain))
+                       + _step(doc, chain) + tail)
         for doc in line.alongside:
             out.append(_step(doc, chain, lead="- alongside: "))
         out.append("")
