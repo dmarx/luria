@@ -185,14 +185,14 @@ def test_the_record_line_names_what_a_decision_supersedes():
     where = current().schemes["ADR"].dir / "ADR-011.md"
     inbound = [edges.Edge("ADR-010", "superseded_by", "ADR-011", "status")]
     line = site.record_line({"status": "Active"}, where, inbound=inbound)
-    assert "| **Supersedes** | [ADR-010](ADR-010.md) |" in line
+    assert "| **Supersedes** | [ADR-010](ADR-010.md) — " in line
 
 
 def test_the_record_line_names_what_a_decision_influenced():
     where = current().schemes["ADR"].dir / "ADR-035.md"
     inbound = [edges.Edge("DP-010", "influenced_by", "ADR-035", "frontmatter")]
     line = site.record_line({"status": "Active"}, where, inbound=inbound)
-    assert "| **Influenced** | [DP-010](../../docs/design-principles.md#dp-10) |" in line
+    assert "| **Influenced** | [DP-010](../../docs/design-principles.md#dp-10) — " in line
 
 
 def test_the_record_line_carries_a_declared_reference_both_ways(
@@ -202,9 +202,9 @@ def test_the_record_line_carries_a_declared_reference_both_ways(
     sota = doc(root, "record/practices.d/SOTA-001.md", code="SOTA-001",
                extra="source: LIT-001")
     out = [edges.Edge("SOTA-001", "source", "LIT-001", "frontmatter `source:`")]
-    assert "| **Source** | [LIT-001](../literature.d/LIT-001.md) |" in \
+    assert "| **Source** | [LIT-001](../literature.d/LIT-001.md) — Entry LIT-001 |" in \
         site.record_line({"status": "Active"}, sota, outbound=out)
-    assert "| **Cited as `source` by** | [SOTA-001](../practices.d/SOTA-001.md) |" in \
+    assert "| **Cited as `source` by** | [SOTA-001](../practices.d/SOTA-001.md) — Entry SOTA-001 |" in \
         site.record_line({"status": "Active"}, lit, inbound=out)
 
 
@@ -214,7 +214,7 @@ def test_a_staged_page_carries_its_inbound_edges(project):
     out = project / "build" / "site"
     site.stage(out)
     staged = (out / "content" / "record" / "decisions.d" / "ADR-001.md").read_text()
-    assert "| **Supersedes** | [ADR-002](ADR-002.md) |" in staged
+    assert "| **Supersedes** | [ADR-002](ADR-002.md) — " in staged
 
 
 # --- one edge per code in a plural reference ------------------------------
@@ -292,7 +292,7 @@ def test_a_stored_converse_is_not_also_rendered_as_a_backlink(
     back = [edges.Edge("SOTA-002", "extends", "SOTA-001", "frontmatter")]
     line = site.record_line({"status": "Active"}, trunk,
                             outbound=out, inbound=back)
-    assert "| **Extended by** | [SOTA-002](SOTA-002.md) |" in line
+    assert "| **Extended by** | [SOTA-002](SOTA-002.md) — Entry SOTA-002 |" in line
     assert "Cited as" not in line
 
 
@@ -306,7 +306,7 @@ def test_a_backlink_with_no_stored_converse_still_renders(
     doc(root, "record/practices.d/SOTA-001.md", code="SOTA-001",
         extra="source: LIT-001")
     back = [edges.Edge("SOTA-001", "source", "LIT-001", "frontmatter")]
-    assert "| **Cited as `source` by** | [SOTA-001](../practices.d/SOTA-001.md) |" \
+    assert "| **Cited as `source` by** | [SOTA-001](../practices.d/SOTA-001.md) — Entry SOTA-001 |" \
         in site.record_line({"status": "Active"}, lit, inbound=back)
 
 
@@ -320,5 +320,5 @@ def test_an_unwritten_converse_still_renders_as_a_backlink(
     doc(root, "record/practices.d/SOTA-002.md", code="SOTA-002",
         extra="extends:\n- SOTA-001")
     back = [edges.Edge("SOTA-002", "extends", "SOTA-001", "frontmatter")]
-    assert "| **Cited as `extends` by** | [SOTA-002](SOTA-002.md) |" in \
+    assert "| **Cited as `extends` by** | [SOTA-002](SOTA-002.md) — Entry SOTA-002 |" in \
         site.record_line({"status": "Active"}, trunk, inbound=back)

@@ -530,3 +530,21 @@ def test_an_orphan_in_a_nested_view_directory_is_an_orphan(tmp_path, monkeypatch
         "an unrendered file in a nested record's view directory went unreported"
     )
 
+
+def test_a_title_that_looks_like_syntax_is_escaped():
+    """A title is data spliced into a markdown table cell that is then
+    wikilink-expanded, so anything in it that reads as syntax has to be
+    escaped. This project's ADR-025 is titled ``Wikilinks: `[[CODE]]` is a
+    typed reference``, and two decisions cite it through `influenced_by:` —
+    unescaped, every one of their pages asked the resolver for a document
+    called `CODE`."""
+    assert site._plain("a | b") == r"a \| b"
+    assert "[[" not in site._plain(site.titles()["ADR-025"])
+
+
+def test_staging_leaves_no_unresolved_wikilink():
+    """The whole record, not a fixture: the escaping above was found by this
+    assertion failing on two real pages, and it is what keeps it found."""
+    import tempfile
+    with tempfile.TemporaryDirectory() as d:
+        assert site.stage(Path(d)).unplaced == []

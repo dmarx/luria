@@ -361,7 +361,9 @@ def test_the_record_line_shows_the_written_values_not_the_default(tmp_path, monk
     root = world(tmp_path, monkeypatch)
     path = scene(root, 1, "worlds:\n- A\n- C")
     line = site.record_line({"status": "Active", "worlds": ["A", "C"]}, path)
-    assert "| **Worlds** | [A](../../docs/scenes/worlds/A.md) · [C](../../docs/scenes/worlds/C.md) |" in line
+    assert ("| **Worlds** | <ul>"
+            "<li>[A](../../docs/scenes/worlds/A.md)</li>"
+            "<li>[C](../../docs/scenes/worlds/C.md)</li></ul> |") in line
     quiet = site.record_line({"status": "Active"}, scene(root, 2))
     assert "Worlds" not in quiet
 
