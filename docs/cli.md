@@ -314,6 +314,7 @@ scheduled CI job wants.
 luria concretize [--check]
 ```
 
+<!-- unresolved-ok-block: ADR-tmp3kf9x — an illustrative temporary code, not a citation -->
 For schemes with `allocate = "merge"`: assign each temporary code
 (`ADR-tmp3kf9x`) the next real number, rename the file, rewrite every
 reference in docs and scanned code, and record the old spelling under

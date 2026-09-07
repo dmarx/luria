@@ -50,6 +50,7 @@ import yaml
 
 from .config import current
 
+# unresolved-ok: ADR-tmp47fje — ADR-049's example of the shape, not a document
 # The tail accepts a temporary code (`ADR-tmp47fje`, ADR-049) as well as a
 # number: both are codes a heading legitimately carries.
 TITLE_RE = re.compile(r"^#\s*[A-Z]+-[A-Za-z0-9]+\s*(?::|—|-)\s*")

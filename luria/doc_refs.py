@@ -474,6 +474,7 @@ def find_refs(text: str, path: Path = ANY_MD) -> list[Ref]:
     patterns: list[tuple[str, str, re.Pattern]] = [("scheme", dp_prefix, DP_RE)] \
         if dp_prefix else []
     patterns += [("scheme", s.prefix, s.pattern) for s in schemes.values()]
+    # unresolved-ok: ADR-tmp47fje — ADR-049's example of the shape
     # Temporary codes (ADR-049): `ADR-tmp47fje`, the merge-allocated shape.
     # Matched for every scheme, not just merge-allocated ones — a temp code
     # can outlive its scheme's dial via an `formerly:` alias, and a reference's

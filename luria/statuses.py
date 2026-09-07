@@ -44,7 +44,7 @@ from dataclasses import dataclass
 
 import yaml
 
-# ADR-003's five, kept as the DEFAULT rather than the law (ADR-tmpstat1).
+# ADR-003's five, kept as the DEFAULT rather than the law (ADR-085).
 # A project whose decisions are `Accepted` and `Withdrawn` says so in its own
 # `statuses.yaml`, and every check follows its words. What generic code needs
 # is not a word but a role: which status means *in force*, and that is

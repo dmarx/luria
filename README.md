@@ -51,7 +51,7 @@ drift from their sources.
 
 <!-- luria:badges -->
 [![needs decision: 3](https://img.shields.io/badge/needs%20decision-3-orange)](docs/reports/pending-decisions.md)
-[![cited, not in force: 0](https://img.shields.io/badge/cited,%20not%20in%20force-0-brightgreen)](docs/reports/reference-status.md)
+[![cited, not in force: 1](https://img.shields.io/badge/cited,%20not%20in%20force-1-orange)](docs/reports/reference-status.md)
 <!-- /luria:badges -->
 
 <!-- luria:site -->
@@ -71,6 +71,7 @@ Python 3.11+. Two runtime dependencies (PyYAML, fire).
 
 ## Sixty seconds
 
+<!-- unresolved-ok-block: ADR-tmp3kf9x — the transcript's minted temporary code -->
 ```console
 $ luria init --dry-run                      # what would it add?
 $ luria init                                # issue_url comes from your remote

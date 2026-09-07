@@ -35,7 +35,8 @@ a paragraph, and re-derived cold it costs a session.
   changelog line: the root cause, the approach that failed, the trap you
   fell into.
 - `luria new adr --title "…"` — a decision document, when you chose
-  between real alternatives. It gets a temporary code (`ADR-tmpxxxxx`);
+  between real alternatives. It gets a temporary code <!-- unresolved-ok: ADR-tmpxxxxx — a placeholder tail, not a document -->
+  (`ADR-tmpxxxxx`);
   CI assigns the real number when the merge serializes on `main`, so
   parallel branches never collide on one.
 

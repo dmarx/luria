@@ -328,7 +328,7 @@ reported and enforced, per class, without ever silencing the account.
 
 ## Numbering without collisions
 
-<!-- unresolved-ok: ADR-158 — an illustrative collision, not a citation -->
+<!-- unresolved-ok-block: ADR-158, ADR-tmp3kf9x — illustrative codes, not citations -->
 Sequential numbers collide: two branches both file `ADR-158`, and one of
 them is renumbering after the merge. A scheme with `allocate = "merge"`
 sidesteps this — `luria new` mints a **temporary code**

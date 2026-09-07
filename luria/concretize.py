@@ -40,8 +40,9 @@ always wrong and mechanically fixable — run this command — so it fails
 outright, which is ADR-035's bar for a check that may fail a build.
 """
 
-# unresolved-ok-file: ADR-123 — a demonstration code in the docstring above,
-# standing in for the number a temporary code concretizes onto
+# unresolved-ok-file: ADR-tmp47fje, ADR-123 — demonstration codes in the
+# docstring above: ADR-049's worked example of the temporary shape, and the
+# number it stands in for once concretized. Neither names a document.
 
 from __future__ import annotations
 

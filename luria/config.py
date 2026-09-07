@@ -190,6 +190,7 @@ def _merge(base: dict, override: dict) -> dict:
     return out
 
 
+# unresolved-ok-block: ADR-tmp47fje — ADR-049's example of the shape, not a document
 # A temporary code's tail: a literal `tmp` sentinel plus five base-36
 # characters — `ADR-tmp47fje`. The alphabetic start keeps the numeric and
 # temporary patterns disjoint by construction, and the spelled-out sentinel
@@ -395,7 +396,7 @@ class Scheme:
     prefix: str
     dir: Path
     active: str = "Active"
-    # The retirement pair, defaults rather than laws (ADR-tmpstat1). A
+    # The retirement pair, defaults rather than laws (ADR-085). A
     # project whose decisions are `Supplanted` and point at their
     # replacement through `supplanted_by:` says so here, and every check,
     # edge and rendering follows its words. `active` set the precedent long
@@ -421,6 +422,7 @@ class Scheme:
     # behaviour: `luria new` takes the next free number on the spot — right
     # for a single-writer record, and a distributed claim on a global counter
     # the moment branches are concurrent. "merge" issues a temporary code
+    # unresolved-ok: ADR-tmp47fje — ADR-049's example of the shape
     # instead (`ADR-tmp47fje`, visibly provisional and never a number), and
     # `luria concretize` — run wherever merges serialize — assigns the real
     # numbers in merge order and records each temporary code as a permanent

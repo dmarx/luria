@@ -8,8 +8,8 @@ of this machinery found a crash (`render_categories` formatting a number that
 temp docs don't have) that no unit test of the minter would have seen.
 """
 
-# unresolved-ok-file: ADR-000 — the assertion below matches on the string
-# `[ADR-0`, which the reference scanner reads as a code
+# unresolved-ok-file: ADR-000, ADR-tmpab123 — the first is the string `[ADR-0`,
+# which the reference scanner reads as a code; the second is a fixture tail
 import re
 import subprocess
 from pathlib import Path

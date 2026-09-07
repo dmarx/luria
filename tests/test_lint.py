@@ -12,6 +12,9 @@ remedy available here is rung 2 — keep the copy, guard the property that they
 agree. So the guard needs firing, not just provisioning
 ([DP-6](../docs/design-principles.md#dp-6)).
 """
+
+# unresolved-ok-file: ADR-tmpabcde — a fixture temporary code, deliberately
+# naming no document: what is under test is the shape reaching a workflow file.
 import sys
 
 import pytest

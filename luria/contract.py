@@ -153,7 +153,7 @@ def built_in(scheme) -> tuple[Field, ...]:
     """The fields a scheme gets without asking — today, the one naming what
     replaced a retired document.
 
-    A **default**, not a law (ADR-tmpstat1). The field's name and the status
+    A **default**, not a law (ADR-085). The field's name and the status
     that demands it come from the scheme (`successor` and `retires_on`,
     themselves defaulting to `superseded_by` and `Superseded`), and a scheme
     declaring the field in its own `references` table replaces this outright

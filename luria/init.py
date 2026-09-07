@@ -380,7 +380,7 @@ def _scheme_files(scheme: Scheme) -> dict[Path, str]:
 
 
 # What each status means, written into the scaffold rather than inherited
-# from the code (ADR-tmpstat1). The five are a default, and a default nobody
+# from the code (ADR-085). The five are a default, and a default nobody
 # can read is the trap `template-drift` and `inert-status` were both filed
 # about: a capability that is live, enforced and invisible. Editing this file
 # changes what the lint accepts — that is the point of writing it.
