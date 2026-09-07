@@ -51,9 +51,11 @@ class Upgrade:
 SUNSET = {
     "statuses": Upgrade(
         summary="declare `status:` as the controlled vocabulary it is",
-        sunset="every record that predates #181 has run it. Luria has one "
-               "user today, so: once luria's own record and the anthology "
-               "are both on the release that carries this.",
+        sunset="1.0.0. Both records that predated #181 have run it "
+               "already, but more are coming onto luria before the first "
+               "stable release, and each of them predates #181 too. The "
+               "pin is the version rather than a list of projects because "
+               "a list is never finished at the moment you read it.",
     ),
 }
 
