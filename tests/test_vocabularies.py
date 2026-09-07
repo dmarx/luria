@@ -364,3 +364,55 @@ def test_the_record_line_shows_the_written_values_not_the_default(tmp_path, monk
     assert "**Worlds** [A](../../docs/scenes/worlds/A.md) · [C](../../docs/scenes/worlds/C.md)" in line
     quiet = site.record_line({"status": "Active"}, scene(root, 2))
     assert "Worlds" not in quiet
+
+
+def test_a_status_backed_by_a_vocabulary_is_named_once(tmp_path, monkeypatch):
+    """`status:` became an ordinary declared vocabulary (#181), and the
+    record line renders it twice for it: once through `statuses.display`,
+    which is the only path that can say `Superseded — by X`, and again
+    through the generic vocabulary loop that now sees it like any other.
+    One field, one bit."""
+    write(tmp_path, "luria.toml", """
+[luria]
+issue_url = "https://example.test/issues/{n}"
+[luria.schemes.ADR]
+dir = "record/decisions.d"
+output = "docs/decisions"
+render = "index"
+[luria.schemes.ADR.fields.status]
+vocabulary = "statuses"
+""")
+    write(tmp_path, "record/decisions.d/statuses.yaml",
+          "Active:\n  label: In force\nSuperseded:\n  label: Replaced\n")
+    monkeypatch.setenv("LURIA_ROOT", str(tmp_path))
+    config.reset()
+    where = current().schemes["ADR"].dir / "ADR-001.md"
+    line = site.record_line({"status": "Active"}, where)
+    assert line.count("**Status**") == 1
+
+
+def test_a_superseded_status_still_reads_its_successor(tmp_path, monkeypatch):
+    """The reason the dedicated path wins over the generic one: the generic
+    loop renders the bare word, and only `statuses.display` composes the
+    successor the status note carries."""
+    write(tmp_path, "luria.toml", """
+[luria]
+issue_url = "https://example.test/issues/{n}"
+[luria.schemes.ADR]
+dir = "record/decisions.d"
+output = "docs/decisions"
+render = "index"
+[luria.schemes.ADR.fields.status]
+vocabulary = "statuses"
+""")
+    write(tmp_path, "record/decisions.d/statuses.yaml",
+          "Active:\n  label: In force\nSuperseded:\n  label: Replaced\n")
+    monkeypatch.setenv("LURIA_ROOT", str(tmp_path))
+    config.reset()
+    where = current().schemes["ADR"].dir / "ADR-001.md"
+    line = site.record_line(
+        {"status": "Superseded", "superseded_by": ["ADR-002"]}, where)
+    assert line.count("**Status**") == 1
+    # The successor survives; how its code is spelled is the resolver's,
+    # and this fixture has no ADR-002 file for it to point at.
+    assert "Superseded — by" in line and "ADR-002" in line
