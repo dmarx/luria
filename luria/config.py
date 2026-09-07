@@ -139,6 +139,12 @@ DEFAULTS: dict = {
     # for a GitHub project, so the conventional case needs no `[luria.site]`
     # table at all — a default nobody has to read the docs to get.
     "site": {
+        # Whether this record is published on the web at all. True because
+        # every key below derives for a GitHub project and publishing is the
+        # conventional case; `publish = false` is for a record that lives
+        # only in its repository, and is how such a project turns off the
+        # finding that its README names no site (DP-10).
+        "publish": True,
         "title": "",
         "base_url": "",
         "source_url": "",
@@ -1288,6 +1294,10 @@ class Site:
     base_url: str
     source_url: str
     exclude: tuple[str, ...] = ()
+    # Whether this record is published. `base_url` derives for every GitHub
+    # project whether or not anyone deploys, so it cannot answer the question
+    # on its own; this can, and it defaults to the conventional case.
+    publish: bool = True
     icon: Path | None = None
     logo: Path | None = None
     logo_dark: Path | None = None
@@ -1810,6 +1820,7 @@ def _site(raw: dict, root: Path) -> Site:
         source_url=spec.get("source_url")
         or (f"https://github.com/{owner}/{repo}/blob/HEAD" if owner else ""),
         exclude=tuple(spec.get("exclude", ())),
+        publish=bool(spec.get("publish", True)),
         icon=root / spec["icon"] if spec.get("icon") else None,
         logo=root / spec["logo"] if spec.get("logo") else None,
         logo_dark=root / spec["logo_dark"] if spec.get("logo_dark") else None,

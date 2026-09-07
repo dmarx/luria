@@ -644,17 +644,22 @@ def run(check: bool = False) -> None:
     # The README's badge counts are derived from the same frontmatter, so they
     # are regenerated here rather than by a command someone has to remember
     # (ADR-018). A project with no badge region is left alone.
-    from . import badges
-    from . import citation
-    readme = badges.readme()
-    if readme.exists():
-        text = readme.read_text(encoding="utf-8")
-        if badges.OPEN in text:
+    from . import badges, citation, readme as readme_mod, site
+    path = readme_mod.path()
+    if path.exists():
+        before = path.read_text(encoding="utf-8")
+        text = before
+        if readme_mod.has(text, "badges"):
             text = badges.rewrite(text)
-        if citation.OPEN in text:
+        if readme_mod.has(text, "citation"):
             text = citation.rewrite(text)
-        if text != readme.read_text(encoding="utf-8"):
-            readme.write_text(text, encoding="utf-8")
+        # Where the record is published, from `Site.base_url` — derived, so
+        # the front page cannot drift from where `luria site` actually puts
+        # it (DP-3). Absent region, absent edit, like the other two.
+        if readme_mod.has(text, "site"):
+            text = readme_mod.rewrite(text, "site", site.readme_region())
+        if text != before:
+            path.write_text(text, encoding="utf-8")
 
 
 if __name__ == "__main__":

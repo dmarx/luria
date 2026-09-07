@@ -28,11 +28,11 @@ from pathlib import Path
 
 import yaml
 
+from . import readme as readme_mod
 from .config import current
 
-OPEN = "<!-- luria:citation -->"
-CLOSE = "<!-- /luria:citation -->"
-REGION_RE = re.compile(re.escape(OPEN) + r".*?" + re.escape(CLOSE), re.S)
+# Shared region machinery (`readme.py`); these names stay for the callers.
+OPEN, CLOSE = readme_mod.markers("citation")
 
 # CFF's own spelling on the left, BibTeX's on the right. Only the fields a
 # software citation actually carries: a `@software` entry with a version and a
@@ -114,11 +114,14 @@ def entry() -> str:
     return f"@software{{{_key(data, authors)},\n{body}\n}}"
 
 
-def region() -> str:
+def _inner() -> str:
     text = entry()
-    inner = f"```bibtex\n{text}\n```" if text else \
+    return f"```bibtex\n{text}\n```" if text else \
         "*No readable `CITATION.cff`; add one and run `luria index`.*"
-    return "\n".join([OPEN, inner, CLOSE])
+
+
+def region() -> str:
+    return "\n".join([OPEN, _inner(), CLOSE])
 
 
 def rewrite(text: str) -> str:
@@ -126,7 +129,7 @@ def rewrite(text: str) -> str:
 
     Unchanged when there is no region — a project that has not opted in is not
     nagged, which is the same bargain the badge region makes."""
-    return REGION_RE.sub(lambda _: region(), text, count=1)
+    return readme_mod.rewrite(text, "citation", _inner())
 
 
 def run(write: bool = False, check: bool = False) -> None:

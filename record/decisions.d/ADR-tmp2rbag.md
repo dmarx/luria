@@ -1,0 +1,139 @@
+---
+status: Proposed
+title: 'A marked region is how the README carries a derived fact'
+version: 1
+tags:
+- record
+- mechanism
+date: '2026-09-07'
+issue: '#197'
+summary: >-
+  `luria site` has always known where a record is published, and nothing wrote
+  it on the front page — luria's own README hand-maintained the link one line
+  below the region `luria index` rewrites. Adds a `luria:site` region rendered
+  from `Site`, extracts the region machinery the third copy of which prompted
+  this, and pairs the opt-in disclosure with an `unlinked-site` finding, since
+  a marker nobody knows about is a feature nobody has.
+---
+
+# ADR-NNN: A marked region is how the README carries a derived fact
+
+## Context
+
+`Site.base_url` derives from `issue_url` with no configuration: a GitHub
+project gets `owner.github.io/repo` for free, and `luria site` uses it to
+build. Nothing wrote it anywhere a reader of the repository front page could
+see.
+
+This repository's own README, lines 52–57 before this change:
+
+    <!-- luria:badges -->
+    …two badges, generated, each linking a report…
+    <!-- /luria:badges -->
+
+    📖 **[dmarx.github.io/luria](https://dmarx.github.io/luria/)** — …
+
+A hand-typed link on the line immediately after the closing marker of a region
+this project rewrites on every `index`. [DP-003](../../docs/design-principles.md#dp-3) one line from its own
+source, in the repository that ships the principle.
+
+Downstream is worse: the anthology has no badge region at all, so it gets
+neither the counts nor a link. Insertion is opt-in by marker presence, `luria
+init` writes no root README to put markers in, and nothing anywhere says a
+record could have this. [DP-015](../../docs/design-principles.md#dp-15) is the shape exactly — the absence reads
+like a success.
+
+Looking for where to put it turned up the other half of the problem: the
+region machinery existed **three times**, in `badges.py`, in `citation.py`,
+and about to be written a fourth time here. Each copy is four lines — an
+`OPEN`, a `CLOSE`, a compiled regex, a `sub` — and they had already drifted in
+spelling (`re.DOTALL` against `re.S`, an f-string against concatenation).
+
+## Decision
+
+**A `<!-- luria:site -->` region, rendered from `Site`,** rewritten by `luria
+index` beside the badges and the citation block.
+
+**Its own marker, not the badges region.** That region's docstring is explicit
+that it holds "two numbers about the record", and a link is not a number.
+Separate markers also let a project take one without the other, and keep
+"what is this region for" a question with one answer per region.
+
+**A link, not a shields badge.** A badge carries a number that moves, and the
+round-trip buys something. A base URL is a constant luria already knows;
+rendering it as a remote image would cost a reader a request to display text
+this repository could have written itself — the same argument `badges.py`
+already makes for baking its counts in.
+
+**The region holds only the derived fact.** Prose about the site stays outside
+the markers, where no rewrite will touch it. This README keeps its own
+sentence about backlinks and the graph; only the link moved inside.
+
+**One implementation of the region ([DP-004](../../docs/design-principles.md#dp-4)),** extracted to `readme.py`:
+`markers`, `has`, `rewrite`, `path`. `badges.py` and `citation.py` now read
+the same way, and keep their `OPEN`/`CLOSE` names because callers address
+them there.
+
+**An `unlinked-site` finding, because the disclosure alone reaches nobody.**
+A region is opt-in and luria never inserts one — the position would have to be
+guessed, and the guess is wrong for a front page that opens with a logo block,
+a table or a quote. So the disclosure opts in and the guard that reports its
+absence opts out, which is [DP-010](../../docs/design-principles.md#dp-10) applied to the same feature twice.
+
+The finding is satisfied by the URL appearing **anywhere** in the README,
+prose link included: it says "your front page does not point at the site you
+publish", never "you must use our marker". A project that wrote the link by
+hand has already done the thing.
+
+**Scoped by `[luria.site] publish`, defaulting true.** `base_url` derives for
+every GitHub project whether or not one is deployed, so it cannot scope this
+by itself, and `[luria.site]`'s presence cannot either — the config's own
+comment says the conventional case needs no such table. A record that lives
+only in its repository says `publish = false` and the guard goes quiet.
+
+## Alternatives considered
+
+- **Put it in the badges region.** No new marker, no new lint class. Rejected:
+  it widens that region's meaning from "two numbers" to "two numbers and a
+  link", and a project wanting the link but not the counts would have to take
+  both.
+
+- **Insert the region automatically into any README that lacks one.** This is
+  the tempting one, because it is the only option that fixes existing records
+  with no action from anybody. Rejected: luria would start writing into a file
+  whose layout belongs to the author, at a position it has to guess. The badge
+  region's own test says why — *"a tool that edits a README nobody asked it to
+  edit is a tool people stop running."*
+
+- **Scaffold it in `luria init` and stop there.** The option that was asked
+  for, and half of it is not available: `init` writes `docs/README.md`, a views
+  index, and no root README, so there is nothing to scaffold markers into. The
+  half that would work reaches only records that do not exist yet — and the
+  three records that prompted this all exist.
+
+- **Report it from `luria site` rather than the lint.** Attractive, because
+  running `luria site` proves the project publishes, so the scope question
+  disappears. Rejected because it only fires for someone already running the
+  command locally; CI runs it in a job whose output nobody reads on a green
+  build, and the front page being wrong is exactly the thing a lint is for.
+
+- **Leave it manual and fix the two READMEs.** Cheapest, and concedes that the
+  link stays a projection nothing checks. The next record onto luria would
+  rediscover this, which is how it got discovered in the first place.
+
+## Consequences
+
+`luria` links its own site from a generated region, and the hand-typed line is
+gone — which is also the test that the rendering is good enough to live with.
+
+The anthology now reports `unlinked-site`, correctly, and clears it with a
+two-line paste. So do `mathematics-of-meaning` and `strata-g` when they
+migrate.
+
+`publish = false` is a new config key, and a key nobody sets is a key nobody
+reads. It earns its place only because the alternative was a warning a
+non-publishing project could never clear.
+
+A fourth region would now cost a call rather than a copy. That is the part
+worth keeping: the extraction was not planned, it was the third copy asking
+for it.
