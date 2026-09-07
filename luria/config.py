@@ -714,6 +714,11 @@ class Remote:
     different pair of lines, not a different subsystem."""
     prefix: str
     repo: str = ""
+    # Where the remote's *issues* live. Defaults to the GitHub convention for
+    # a remote with a `repo`, and stays empty for one reached by a `url`
+    # template alone — an arXiv identifier or a ticket key has no tracker, and
+    # guessing one would put the silent wrongness of #194 in a new place.
+    issue_url: str = ""
     ref: str = "main"
     dir: str = "record/decisions.d"
     name: str = ""
@@ -1592,6 +1597,7 @@ def load(root: Path | None = None, text: str | None = None,
             prefix.upper(): Remote(
                 prefix.upper(),
                 repo=spec.get("repo", ""),
+                issue_url=spec.get("issue_url", ""),
                 ref=spec.get("ref", "main"),
                 dir=spec.get("dir", "record/decisions.d"),
                 name=spec.get("name", ""),

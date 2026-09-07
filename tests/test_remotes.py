@@ -528,3 +528,61 @@ def test_scheme_level_uris_scope_to_the_family(project):
     assert remotes.resolve("UP", "VP-18") == "https://up.example/values/18"
     assert remotes.resolve("UP", "ADR-032").endswith(
         "record/decisions.d/ADR-032.md")
+
+
+# ── A remote's issue tracker (#194) ──────────────────────────────────────
+
+def test_a_remote_issue_links_to_the_remote_tracker(project):
+    """`UP-#7` means upstream's issue 7.
+
+    Before this, the `UP-` was inert prose and the `#7` resolved through the
+    *citing* project's `issue_url` — a well-formed link to a completely
+    different project's issue 7, which in a mature tracker exists and is about
+    something else. Nothing could catch it: the target resolves, so
+    `broken-targets` was satisfied."""
+    with_remote(project)
+    assert remotes.issue_link("UP", 7) == "https://github.com/o/r/issues/7"
+
+
+def test_an_explicit_issue_url_wins(project):
+    """A forge that is not GitHub is a line of config, not a subsystem —
+    the same bargain the `uris` table already makes for documents."""
+    with_remote(project,
+                'issue_url = "https://gitlab.test/o/r/-/issues/{n}"\n')
+    assert remotes.issue_link("UP", 7) == "https://gitlab.test/o/r/-/issues/7"
+
+
+def test_a_remote_with_no_repo_has_no_tracker(project):
+    """`ARXIV-#5` names nothing. A remote reached by a `url` template has no
+    issues, and guessing one would be the same silent wrongness in a new
+    place — so it resolves to nothing and the caller reports it."""
+    with_remote(project, '[luria.remotes.ARXIV]\n'
+                         'uid = "(\\\\d{4})\\\\.(\\\\d{4,5})"\n'
+                         'url = "https://arxiv.org/abs/{1}.{2}"\n')
+    assert remotes.issue_link("ARXIV", 5) == ""
+
+
+def test_the_prefix_claims_the_whole_span(project):
+    """The bug was one of scanning, not only of construction: the local issue
+    pattern read `#7` out of the middle of `UP-#7`. The remote reference has
+    to claim its span first, exactly as `UP-ADR-013` already does."""
+    with_remote(project)
+    refs = doc_refs.find_refs("See UP-#7 for the upstream discussion.",
+                              doc_refs.ANY_MD)
+    kinds = [(r.kind, r.text) for r in refs]
+    assert ("remote-issue", "UP-#7") in kinds
+    assert not any(k == "issue" for k, _ in kinds)
+
+
+def test_a_bare_issue_still_links_locally(project):
+    """The narrow fix stays narrow: an unprefixed `#7` is this project's."""
+    with_remote(project)
+    refs = doc_refs.find_refs("See #7 for the discussion.", doc_refs.ANY_MD)
+    assert [(r.kind, r.num) for r in refs] == [("issue", 7)]
+
+
+def test_a_remote_issue_is_written_as_a_link(project):
+    with_remote(project)
+    out, n = doc_refs.linkify("See UP-#7.", doc_refs.ANY_MD)
+    assert n == 1
+    assert out == "See [UP-#7](https://github.com/o/r/issues/7)."

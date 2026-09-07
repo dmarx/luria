@@ -224,6 +224,28 @@ def link(remote: Remote, code: str) -> str:
     return construct(remote, code, "read")
 
 
+def issue_link(remote_prefix: str, number: int) -> str:
+    """The URL for one of a remote's issues, or `""` when it has no tracker.
+
+    `LU-#193` means luria's issue 193. Before this it meant nothing: the
+    prefix was inert prose and the number resolved through the *citing*
+    project's `issue_url`, producing a well-formed link to a different
+    project's issue of the same number (#194). Nothing could catch it — the
+    target resolved, so the link checker was satisfied.
+
+    Empty for a remote with no `repo` and no explicit `issue_url`. A remote
+    reached by a `url` template — an arXiv identifier, a ticket key — has no
+    issue tracker, and inventing one would move the same silent wrongness
+    somewhere new rather than remove it."""
+    remote = current().remotes.get(remote_prefix.upper())
+    if remote is None:
+        return ""
+    if remote.issue_url:
+        return remote.issue_url.format(n=number)
+    return (f"https://github.com/{remote.repo}/issues/{number}"
+            if remote.repo else "")
+
+
 def resolve(remote_prefix: str, code: str) -> str:
     remote = current().remotes.get(remote_prefix.upper())
     return link(remote, code) if remote else ""

@@ -75,6 +75,18 @@ ADR_RE = re.compile(r"\bADR[- ](?P<num>\d{1,4})\b")
 # 1–4 digits keeps six-digit hex colours out; `(?!\w)` keeps `#123abc` out.
 ISSUE_RE = re.compile(r"(?<![\w&#/])#(?P<num>\d{1,4})(?!\w)")
 
+# `LU-#193` — one of a REMOTE's issues. Composed like `LU-ADR-013`: the
+# prefix says whose namespace, and without it the number resolved through the
+# citing project's own `issue_url` and silently named a different project's
+# issue (#194). Built from the declared remotes, so an undeclared prefix is
+# still ordinary prose followed by a local issue number.
+def remote_issue_re() -> re.Pattern | None:
+    prefixes = sorted(current().remotes, key=len, reverse=True)
+    if not prefixes:
+        return None
+    alt = "|".join(re.escape(p) for p in prefixes)
+    return re.compile(rf"(?<![\w-])(?P<prefix>{alt})-#(?P<num>\d{{1,4}})(?!\w)")
+
 # A low `#N` is ambiguous: the docs also number principles, an ADR's open
 # questions, user stories and gotchas the same way ("the dual of #1", "open
 # question #3", "story #2", "gotcha #2"). Above the highest principle number the
@@ -467,6 +479,8 @@ def find_refs(text: str, path: Path = ANY_MD) -> list[Ref]:
     # can outlive its scheme's dial via an `formerly:` alias, and a reference's
     # validity shouldn't depend on a setting that may have changed since.
     patterns += [("scheme", s.prefix, s.temp_pattern) for s in schemes.values()]
+    if (remote_issues := remote_issue_re()) is not None:
+        patterns += [("remote-issue", "", remote_issues)]
     patterns += [("issue", "", ISSUE_RE)]
 
     for kind, prefix, regex in patterns:
@@ -477,6 +491,11 @@ def find_refs(text: str, path: Path = ANY_MD) -> list[Ref]:
             for i in range(start, end):
                 claimed[i] = True
             tail = m.groupdict().get("tail") or ""
+            if kind == "remote-issue":
+                refs.append(Ref(kind, int(m.group("num")), start, end,
+                                text[start:end], line_of(start),
+                                remote=m.group("prefix")))
+                continue
             refs.append(Ref(kind, 0 if tail else int(m.group("num")), start,
                             end, text[start:end], line_of(start),
                             prefix=prefix, code=tail))
@@ -781,6 +800,11 @@ def resolve(ref: Ref, source: Path, adrs: dict[int, Path],
         # A URL, never a relative path — it is a different repository, so no
         # `link_base` applies and the same target is right from every file.
         return remotes.resolve(ref.remote, ref.code) or None
+    if ref.kind == "remote-issue":
+        # Empty when the remote has no tracker — an arXiv id or a ticket key
+        # has no issues, and `None` leaves it bare rather than pointing it at
+        # this project's own (#194).
+        return remotes.issue_link(ref.remote, ref.num) or None
     if ref.kind == "issue":
         if text is not None and is_ambiguous_issue(ref, text, anchors):
             return None
