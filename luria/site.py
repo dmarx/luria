@@ -474,7 +474,7 @@ def _alias(path: Path, cfg) -> str | None:
 # How an inbound edge reads on the page it lands on. A declared reference
 # field has no built-in inverse, so it is named for the field.
 #
-# The successor field is the scheme's to name (ADR-tmpstat1), so the label
+# The successor field is the scheme's to name (ADR-085), so the label
 # follows the role rather than the word: a project retiring documents into
 # `supplanted_by:` still reads "Supersedes" on the page that replaced one,
 # because that is what the edge means.

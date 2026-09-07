@@ -70,7 +70,7 @@ from typing import Callable
 
 from . import adr_index as builder
 from . import directives, doc_refs, remotes
-from .config import current
+from .config import TEMP_TAIL, current, is_temp_tail
 
 DEFAULT_SITES = 5
 
@@ -106,13 +106,19 @@ def _load_scheme(scheme) -> dict[str, Doc]:
     """Every document in one scheme's directory, with its status.
 
     Frontmatter-with-a-`status:` is the only contract a scheme has to meet, so
-    a second scheme is a directory and a prefix — not a code change (ADR-006)."""
+    a second scheme is a directory and a prefix — not a code change (ADR-006).
+
+    Merge-allocated documents (ADR-049) are loaded alongside the numbered
+    ones. Reading the directory by number skipped them, and a document the
+    checker holds no record of reads as a code that names nothing — so a
+    `Proposed` decision could be cited as settled and nothing said so until
+    `luria concretize` gave it a number, on `main`, in a file nobody had
+    touched (#203). Its status was in its frontmatter the whole time."""
     docs: dict[str, Doc] = {}
-    for number, path in scheme.documents().items():
-        doc = builder.Adr(path, scheme)
+    for doc in builder.load_scheme(scheme):
         status = doc.status_value
-        code = scheme.code(number)
-        docs[code] = Doc(code, status, doc.title, path, status == scheme.active)
+        docs[doc.code] = Doc(doc.code, status, doc.title, doc.path,
+                             status == scheme.active)
     return docs
 
 
@@ -132,7 +138,7 @@ def load_docs() -> dict[str, Doc]:
 # Full codes only — a bare number is rejected. It reads as an ADR here and as
 # something else in the next repo that borrows this; requiring the prefix is
 # what lets one vocabulary serve more than one reference scheme.
-CODE_RE = re.compile(r"\b([A-Za-z]{2,10})-(\d{1,4})\b")
+CODE_RE = re.compile(rf"\b([A-Za-z]{{2,10}})-(\d{{1,4}}|{TEMP_TAIL})\b")
 BARE_NUMBER_RE = re.compile(r"(?<![\w-])\d{1,4}(?![\w-])")
 URL_RE = re.compile(r"\b[a-z][a-z0-9+.-]*://[^\s<>)\]\"']+", re.IGNORECASE)
 DIRECTIVE = "inactive-ok"
@@ -153,7 +159,8 @@ def _codes(spec: str) -> tuple[set[str], str]:
         codes.add(ref.composed)
     for ref in sorted(refs, key=lambda r: r.start, reverse=True):
         spec = spec[:ref.start] + " " * (ref.end - ref.start) + spec[ref.end:]
-    codes |= {f"{p.upper()}-{int(n):03d}" for p, n in CODE_RE.findall(spec)}
+    codes |= {f"{p.upper()}-{n}" if is_temp_tail(n) else f"{p.upper()}-{int(n):03d}"
+              for p, n in CODE_RE.findall(spec)}
     return codes, spec
 
 
@@ -335,6 +342,8 @@ def scan(files: list[Path] | None = None, docs: dict[str, Doc] | None = None) ->
             for scheme in schemes().values():
                 codes |= {scheme.code(m.group("num"))
                           for m in scheme.pattern.finditer(bare)}
+                codes |= {f"{scheme.prefix}-{m.group('tail')}"
+                          for m in scheme.temp_pattern.finditer(bare)}
             for code in codes:
                 if own.get(path) == code:
                     continue

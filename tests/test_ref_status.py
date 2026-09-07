@@ -14,7 +14,8 @@ from _scheme import decision
 from luria import ref_status
 from luria.config import current
 
-# unresolved-ok-file: ADR-920 ADR-777 — fixture codes, deliberately not real
+# unresolved-ok-file: ADR-920 ADR-777 ADR-tmpab12c — fixture codes,
+# deliberately not real
 REPO = Path(__file__).resolve().parents[1]
 
 
@@ -351,3 +352,75 @@ def test_a_frontmatter_site_without_a_comment_is_still_reported(project):
     site, = result.cited["ADR-012"]
     assert site.excused_by is None
     assert [d.code for d, _, _ in ref_status.flagged(result, docs)] == ["ADR-012"]
+
+
+# ── Merge-allocated documents have standing too (#203) ───────────────────
+
+def temp_decision(root: Path, tail: str, status: str,
+                  title: str = "A decision") -> Path:
+    """A merge-allocated document, before `luria concretize` numbers it."""
+    scheme = current().schemes["ADR"]
+    path = scheme.dir / f"ADR-{tail}.md"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(f"---\nstatus: {status}\ntitle: {title!r}\ntags:\n- record\n"
+                    f"date: '2026-01-01'\n---\n\n# ADR-{tail}: {title}\n\nBody.\n")
+    return path
+
+
+def test_a_temp_coded_document_is_loaded_with_its_status(project):
+    """It was not, and the file carried a status the whole time.
+
+    `Scheme.documents()` keys by number and skips a file it cannot get one
+    from, so a merge-allocated document never reached `load_docs()` and the
+    status checker held no record of it — not "no status", no document."""
+    temp_decision(project, "tmpab12c", "Proposed")
+    docs = ref_status.load_docs()
+    assert "ADR-tmpab12c" in docs
+    assert docs["ADR-tmpab12c"].status == "Proposed"
+    assert docs["ADR-tmpab12c"].active is False
+
+
+def test_a_temp_code_is_a_citation_site(project):
+    """The other half. `CODE_RE` required digits, so the citing text was not
+    a site either — both blind spots had to hold, and both did."""
+    temp_decision(project, "tmpab12c", "Proposed")
+    decision(project, 1, "Active")
+    (project / "notes.md").write_text("see ADR-tmpab12c for the argument\n")
+    docs = ref_status.load_docs()
+    result = ref_status.scan([project / "notes.md"], docs)
+    assert "ADR-tmpab12c" in result.cited
+
+
+def test_citing_a_proposed_temp_document_is_reported(project):
+    """The finding the anthology only saw after its merge concretized the
+    codes, on `main`, in a file nobody was editing."""
+    temp_decision(project, "tmpab12c", "Proposed")
+    decision(project, 1, "Active")
+    (project / "notes.md").write_text("see ADR-tmpab12c for the argument\n")
+    docs = ref_status.load_docs()
+    result = ref_status.scan([project / "notes.md"], docs)
+    assert [d.code for d, _, _ in ref_status.flagged(result, docs)] \
+        == ["ADR-tmpab12c"]
+
+
+def test_an_acknowledgement_covers_a_temp_code(project):
+    """Whatever the checker can report, a directive has to be able to
+    excuse — otherwise the finding is one nobody can clear."""
+    temp_decision(project, "tmpab12c", "Proposed")
+    decision(project, 1, "Active")
+    (project / "notes.md").write_text(
+        "<!-- inactive-ok: ADR-tmpab12c — deliberate -->\n"
+        "see ADR-tmpab12c for the argument\n")
+    docs = ref_status.load_docs()
+    result = ref_status.scan([project / "notes.md"], docs)
+    assert ref_status.flagged(result, docs) == []
+
+
+def test_an_active_temp_document_is_not_flagged(project):
+    """Being temporary is not being retired."""
+    temp_decision(project, "tmpab12c", "Active")
+    decision(project, 1, "Active")
+    (project / "notes.md").write_text("see ADR-tmpab12c\n")
+    docs = ref_status.load_docs()
+    result = ref_status.scan([project / "notes.md"], docs)
+    assert ref_status.flagged(result, docs) == []
