@@ -1198,6 +1198,15 @@ class Chain:
         output   = "docs/lineage.md"         # one page, a section per line
         title    = "Lines of work"
 
+    `relation` takes one field or several — `["extends", "corrects"]` — and
+    several are walked as one spine (#211). That is not a convenience: a
+    record can carry succession with a sign, where "builds on the parent" and
+    "exists because the parent is broken" are both steps in one line and one
+    relation renders them identically. Two relations state the difference
+    where a per-entry attribute would have to qualify a reference, which is
+    the shape the consumer record's own ADR-011 refuses. The sign is which
+    field the code sits in.
+
     `edges.py` already reads a reference field as a typed relation, and the
     site already renders each page's neighbours. What no view answered is
     *what sequence is this document a step in* — and that is the question the
@@ -1210,7 +1219,10 @@ class Chain:
     like current (DP-15)."""
     name: str
     scheme: str
-    relation: str
+    # The spine, always a tuple — one relation is the common case and reads
+    # as `relation = "extends"`, which is why the key stays singular: it
+    # names the concept, not the count. `facet_by` takes either shape too.
+    relation: tuple[str, ...]
     output: Path
     sibling: str = ""
     title: str = ""
@@ -1681,21 +1693,26 @@ def _chains(raw: dict, schemes: dict, root: Path) -> dict[str, Chain]:
                     f"{where}: `facet_by` names {field!r}, which {prefix} "
                     f"does not declare, so every step would render it blank "
                     f"(nameable: {', '.join(sorted(known))})")
-        for key in ("relation", "sibling"):
-            field = str(spec.get(key, ""))
-            if key == "sibling" and not field:
-                continue
-            if field not in declared:
-                raise ValueError(
-                    f"{where}: `{key} = \"{field}\"` is not a reference "
-                    f"{prefix} declares — a chain over a field nothing types "
-                    f"walks no edges and renders an empty page "
-                    f"(declared: {', '.join(sorted(declared)) or 'none'})")
+        raw_spine = spec.get("relation", "")
+        spine = tuple(str(f) for f in (
+            [raw_spine] if isinstance(raw_spine, str) else raw_spine))
+        for key, fields in (("relation", spine),
+                            ("sibling", (str(spec.get("sibling", "")),))):
+            for field in fields:
+                if key == "sibling" and not field:
+                    continue
+                if field not in declared:
+                    raise ValueError(
+                        f"{where}: `{key}` names {field!r}, which is not a "
+                        f"reference {prefix} declares — a chain over a field "
+                        f"nothing types walks no edges and renders an empty "
+                        f"page (declared: "
+                        f"{', '.join(sorted(declared)) or 'none'})")
         if not spec.get("output"):
             raise ValueError(f"{where}: needs an `output` — the page the "
                              f"sequences render to")
         out[name] = Chain(name=name, scheme=prefix,
-                          relation=str(spec["relation"]),
+                          relation=spine,
                           sibling=str(spec.get("sibling", "")),
                           output=root / str(spec["output"]),
                           facet_by=facet_by,

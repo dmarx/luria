@@ -430,7 +430,7 @@ def relation_spans(path, text: str) -> list[tuple[int, int]]:
     completes."""
     cfg = current()
     fields = {f for chain in cfg.chains.values()
-              for f in (chain.relation, chain.sibling)
+              for f in (*chain.relation, chain.sibling)
               if f and path.parent == cfg.schemes[chain.scheme].dir}
     fields |= {f for prefix, field, back in pairs()
                for f in (field, back)
