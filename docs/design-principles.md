@@ -745,9 +745,9 @@ year later.
 
 *v1 · shaped by [ADR-060](../record/decisions.d/ADR-060.md), [ADR-071](../record/decisions.d/ADR-071.md) · origin: Extracted from [DP-009](design-principles.md#dp-9), where it had been the third of three jobs and had never once been cited — the symptom [DP-012](design-principles.md#dp-12) names. Promoted on its second substrate: [DP-009](design-principles.md#dp-9) found it in the file tree (a `.stub` beside the page it feeds, two `README.md` files with opposite rules), and a typed `overrides` edge found it again in the citation graph, where the edge's prose had to name which clause of its target it argued with*
 
-<a name="dp-tmpm6jp4"></a>
+<a name="dp-17"></a>
 
-## DP-tmpm6jp4. A record states what is true now — git already keeps what was written then
+## 17. A record states what is true now — git already keeps what was written then
 
 **Rewrite the record to keep it true. The characters are not the deliverable;
 the claim is.**

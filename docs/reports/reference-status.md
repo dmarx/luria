@@ -33,12 +33,22 @@ Status is an ordinary controlled vocabulary; a built-in is a declaration nobody 
 
 A reference the reader cannot follow: the code names no document in this record. A typo, a number carried in from another project, and an illustrative code in an example all look identical from here — telling them apart takes a human, so this is a report, not an error.
 
-**1 code unaccounted for.** Not listed: 87 mentions marked deliberate with an `unresolved-ok:` comment (same syntax and scopes as `inactive-ok:` above).
+**3 codes unaccounted for.** Not listed: 79 mentions marked deliberate with an `unresolved-ok:` comment (same syntax and scopes as `inactive-ok:` above).
 
+
+### ADR-919 — resolves to nothing (3 unmarked sites · 4 other mentions marked deliberate)
+
+- [`luria/doc_refs.py:414`](../../luria/doc_refs.py)
+- [`luria/doc_refs.py:859`](../../luria/doc_refs.py)
+- [`luria/doc_refs.py:861`](../../luria/doc_refs.py)
 
 ### ADR-000 — resolves to nothing (1 unmarked site · 2 other mentions marked deliberate)
 
 - [`tests/test_lint.py:420`](../../tests/test_lint.py)
+
+### ADR-157 — resolves to nothing (1 unmarked site · 2 other mentions marked deliberate)
+
+- [`luria/doc_refs.py:349`](../../luria/doc_refs.py)
 
 ## Files that opt out of reference checking
 
@@ -48,4 +58,6 @@ A reference the reader cannot follow: the code names no document in this record.
 
 ## Directives that no longer apply
 
-None. Every annotation still governs something. ✅
+- luria/doc_refs.py:38: annotation names DP-017, which does resolve here
+- luria/migrate.py:58: annotation names DP-017, which does resolve here
+- record/decisions.d/ADR-046.md:50: annotation names DP-017, which does resolve here
