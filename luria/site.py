@@ -578,6 +578,26 @@ def _vocabulary_bits(meta: dict, source: Path) -> list[str]:
     return bits
 
 
+def readme_region() -> str:
+    """The README's link to where this record is published, or `""` when no
+    URL can be derived.
+
+    A link rather than a shields badge, deliberately. A badge carries a number
+    that moves and is worth the round-trip; a base URL is a constant luria
+    already knows, and rendering it as a remote image would cost a reader a
+    request to display text this repository could have written itself — the
+    same argument `badges.py` makes for baking its counts in.
+
+    The prose around it stays the project's: the region holds the one fact
+    that is derived, and anything a project wants to say about its site goes
+    outside the markers where no rewrite will touch it."""
+    url = current().site.base_url
+    if not url:
+        return ""
+    return (f"\U0001F4D6 **[{url}](https://{url}/)** — this record, "
+            f"published by `luria site`.")
+
+
 def record_line(meta: dict, source: Path, outbound=(), inbound=()) -> str:
     """The frontmatter facts, rendered where a reader (and a graph) can see
     them: status, when it was filed, the issue, what influenced it, and the

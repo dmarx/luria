@@ -42,12 +42,12 @@ import re
 import sys
 from pathlib import Path
 
-from . import adr_pending, ci, ref_status
+from . import adr_pending, ci, readme as readme_mod, ref_status
 from .config import current
 
-OPEN = "<!-- luria:badges -->"
-CLOSE = "<!-- /luria:badges -->"
-REGION_RE = re.compile(rf"{re.escape(OPEN)}.*?{re.escape(CLOSE)}", re.DOTALL)
+# The region's own machinery lives in `readme.py`, shared with every other
+# marked region; these names stay because callers and tests address them here.
+OPEN, CLOSE = readme_mod.markers("badges")
 
 # Neither number is a failure, so neither goes red. Green when nothing is
 # outstanding, amber when something is — "look at this", not "you broke it".
@@ -77,15 +77,18 @@ def report_link(filename: str) -> str:
     return current().rel(current().reports / filename)
 
 
-def region() -> str:
+def _inner() -> str:
+    """The badges themselves, without the markers around them."""
     undecided, retired = counts()
     return "\n".join([
-        OPEN,
         badge("needs decision", undecided, report_link("pending-decisions.md")),
         badge("cited, not in force", retired,
               report_link("reference-status.md")),
-        CLOSE,
     ])
+
+
+def region() -> str:
+    return "\n".join([OPEN, _inner(), CLOSE])
 
 
 def rewrite(text: str) -> str:
@@ -94,11 +97,11 @@ def rewrite(text: str) -> str:
     Returns the text unchanged when there is no region — a project that hasn\'t
     opted in isn\'t nagged, and `--write` says so rather than silently doing
     nothing (DP-1)."""
-    return REGION_RE.sub(lambda _: region(), text, count=1)
+    return readme_mod.rewrite(text, "badges", _inner())
 
 
 def readme() -> Path:
-    return current().root / "README.md"
+    return readme_mod.path()
 
 
 def run(write: bool = False, check: bool = False) -> None:
