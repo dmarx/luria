@@ -66,8 +66,8 @@ Three constraints fall out and are enforced:
 - **Canonicalize aliases in the fixer, like every other spelling.** The
   consistent choice, and it defeats the feature: the readable identifier
   would survive exactly until someone ran `luria link --fix`.
-<!-- inactive-ok: ADR-tmp9ljfi — Proposed as step 1 of this same plan; the rule it states is what this decision rests on -->
-- **Derive the code itself rather than an alias.** Rejected in [ADR-tmp9ljfi](ADR-tmp9ljfi.md):
+<!-- inactive-ok: ADR-087 — Proposed as step 1 of this same plan; the rule it states is what this decision rests on -->
+- **Derive the code itself rather than an alias.** Rejected in [ADR-087](ADR-087.md):
   a value may participate in identity only if it is recomputed, and may only
   be recomputed if it is not identity.
 - **A filter vocabulary for the template** (slugify, truncate). Deferred, and
