@@ -111,6 +111,7 @@ carries its prefix, so a second scheme is an entry here (ADR-006).
 | `references` | `tuple[Reference, ...]` | *unset* |
 | `vocabularies` | `tuple[Vocabulary, ...]` | *unset* |
 | `plain_fields` | `tuple[PlainField, ...]` | *unset* |
+| `derived` | `tuple` | *unset* |
 | `uniform_ok` | `str \| None` | *unset* |
 | `uniform_share` | `float` | `1.0` |
 

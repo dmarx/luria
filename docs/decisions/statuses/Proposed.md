@@ -4,7 +4,7 @@
 
 **Proposed** — not in force yet — an open question, so citing it as settled is what the reference report catches.
 
-5 of 88 decisions. Back to the [full index](../README.md).
+6 of 89 decisions. Back to the [full index](../README.md).
 
 | # | Title | Summary | Status |
 |---|---|---|---|
@@ -13,3 +13,4 @@
 | [ADR-086](../../../record/decisions.d/ADR-086.md) | A marked region is how the README carries a derived fact | `luria site` has always known where a record is published, and nothing wrote it on the front page — luria's own README hand-maintained the link one line below the region `luria index` rewrites. Adds a `luria:site` region rendered from `Site`, extracts the region machinery the third copy of which prompted this, and pairs the opt-in disclosure with an `unlinked-site` finding, since a marker nobody knows about is a feature nobody has. | Proposed |
 | [ADR-087](../../../record/decisions.d/ADR-087.md) | Identity is a field; the filename is a projection of it | A scheme document carries `number:`, and its filename is derived from it — the model journals have always used for `created:`, applied to schemes. Identity in the filesystem was the obstacle to expressive filenames and aliases, because anything the name encoded became load-bearing. A counter rather than a UUID: the sequence carries the order documents were filed, and merge-safety is already solved by temporary codes. | Proposed |
 | [ADR-088](../../../record/decisions.d/ADR-088.md) | A derived alias is kept; a former spelling is rewritten | A scheme can render a second spelling from each document's frontmatter, and `luria link --fix` leaves it written — the opposite of what it does with a `formerly:` entry, which it rewrites away. Two kinds in one map, each carrying its kind, because the fixer's instruction differs and shape cannot tell them apart. | Proposed |
+| [ADR-089](../../../record/decisions.d/ADR-089.md) v2 | A derived field is read-only, unlike a derived URI | A field declared with `derive` is computed from another field on every read and is never written down; writing one is a finding. [ADR-066](../../../record/decisions.d/ADR-066.md) settled the opposite for a remote's URIs, where an explicit template beats the construction — the difference is that a URI template is a second *source* for something luria cannot otherwise know, while a written `primary_topic:` is the same fact as `tags[0]`, stored twice and free to drift. | Proposed |

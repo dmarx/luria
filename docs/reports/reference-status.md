@@ -9,7 +9,7 @@ Every reference in the record is a claim — "this is why things are the way the
 
 Only an `Active` document is in force. `Proposed` and `Deferred` mean *not in force yet* — an open question, being cited as if it were settled — while `Superseded` and `Rejected` mean *no longer in force*, which is often a perfectly good thing to cite: history, or a rejection worth pointing at. Either way the citation should be deliberate, and this section lists the ones nobody has vouched for yet.
 
-**1 document cited without acknowledgement.** Not listed: 53 citations someone has already vouched for with an `inactive-ok:` comment at the citing site.
+**1 document cited without acknowledgement.** Not listed: 54 citations someone has already vouched for with an `inactive-ok:` comment at the citing site.
 
 To vouch for one, put the reason where the citation is — `inactive-ok:` covers its own line and the line below it, `inactive-ok-block:` its paragraph, `inactive-ok-file:` the whole page:
 
@@ -24,7 +24,7 @@ Status is an ordinary controlled vocabulary; a built-in is a declaration nobody 
 5 citations in 5 files await a look.
 
 - [`luria/config.py:431`](../../luria/config.py)
-- [`luria/contract.py:156`](../../luria/contract.py)
+- [`luria/contract.py:170`](../../luria/contract.py)
 - [`luria/init.py:383`](../../luria/init.py)
 - [`luria/site.py:477`](../../luria/site.py)
 - [`luria/statuses.py:47`](../../luria/statuses.py)

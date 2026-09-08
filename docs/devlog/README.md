@@ -8,6 +8,7 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 
 - [8 Sep 21:01 — Alias inference, and the map that was never wired up](2026-09.md#20260908210139)
 - [8 Sep 18:57 — Identity moved into the document](2026-09.md#20260908185747)
+- [8 Sep 16:59 — Derived fields, and the ADR-066 rule they invert](2026-09.md#20260908165929)
 - [8 Sep 15:49 — A relation asserts an invariant; the check asks which field names it](2026-09.md#20260908154929)
 - [7 Sep 20:08 — Firing a two-relation spine on a real record, and what hid a config error](2026-09.md#20260907200808)
 - [7 Sep 16:55 — The chain page encoded depth but not parentage](2026-09.md#20260907165522)
@@ -49,9 +50,9 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 
 ## All books
 
-86 entries across 2 books, newest first.
+87 entries across 2 books, newest first.
 
 | Book | Entries | First | Last |
 |---|--:|---|---|
-| [2026-09](2026-09.md) | 40 | 2026-09-03 | 2026-09-08 |
+| [2026-09](2026-09.md) | 41 | 2026-09-03 | 2026-09-08 |
 | [2026-08](2026-08.md) | 46 | 2026-08-03 | 2026-08-28 |
