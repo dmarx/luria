@@ -46,7 +46,7 @@ from pathlib import Path
 
 import yaml  # noqa: F401  (re-exported for callers that parse frontmatter)
 
-from . import directives, remotes
+from . import aliases, directives, remotes
 from .adr_index import parse_frontmatter
 from .config import Config, current
 
@@ -571,7 +571,15 @@ def wikilink_target(inner: str, source: Path) -> str | None:
             return _temp_target(scheme, t.group(1), source, base)
         m = re.fullmatch(rf"{scheme.prefix}[- ]0*(\d+)", inner, re.IGNORECASE)
         if not m:
-            continue
+            # A spelling the scheme renders from frontmatter (#219). Looked
+            # up rather than pattern-matched: the map is what decides, so a
+            # shape that resolves to nothing was never a reference. Same rule
+            # `legacy_spellings` states — precision comes from resolution.
+            entry = aliases.alias_map().get(inner)
+            if entry is not None and entry.code.startswith(f"{scheme.prefix}-"):
+                m = re.fullmatch(rf"{scheme.prefix}-0*(\d+)", entry.code)
+            if not m:
+                continue
         n = int(m.group(1))
         if scheme.render == "document" and scheme.output:
             anchor = f"{scheme.prefix.lower()}-{n}"
@@ -739,16 +747,18 @@ def legacy_spellings() -> list[str]:
 
 
 def alias_number(scheme, tail: str) -> int | None:
-    """The number a concretized document carries for a temporary code it
-    used to be (ADR-049). Scanned from `formerly:` frontmatter on demand — this
-    path only runs for a temp code with no live document, which is rare —
-    so nothing caches and nothing can go stale."""
-    code = f"{scheme.prefix}-{tail}"
-    for number, path in scheme.documents().items():
-        meta, _ = parse_frontmatter(path.read_text(encoding="utf-8"))
-        if any(str(a).strip() == code for a in (meta.get("formerly") or [])):
-            return number
-    return None
+    """The number a document answers to under another spelling — a temporary
+    code it used to be (ADR-049), a `formerly:` entry from a migration, or a
+    spelling its scheme renders from frontmatter (#219).
+
+    Read from `aliases.alias_map`, which caches per config. It used to scan
+    every document on demand, and the docstring's reason was sound while the
+    only aliases were temporary codes nobody writes on purpose: the path was
+    rare. A spelling people *choose* to cite is not rare, so the scan became
+    the wrong shape the moment derived aliases existed."""
+    entry = aliases.alias_map().get(f"{scheme.prefix}-{tail}")
+    return entry.number if entry is not None and entry.code.startswith(
+        f"{scheme.prefix}-") else None
 
 
 def _temp_target(scheme, tail: str, source: Path, base: Path) -> str | None:
@@ -922,15 +932,22 @@ def linkify(text: str, source: Path, adrs: dict[int, Path] | None = None,
 
 def _label(ref: Ref) -> str:
     """What the written link says. The matched text, with one exception: a
-    temporary code that resolves only through a `formerly:` alias is a
-    legacy spelling, and the fixer upgrades it to the canonical code
-    (ADR-040) rather than engraving the old name into a fresh link."""
+    spelling the document *used* to have is a legacy spelling, and the fixer
+    upgrades it to the canonical code (ADR-040) rather than engraving the old
+    name into a fresh link.
+
+    A **derived** alias is the opposite case and keeps its text (#219). It is
+    not a stale spelling but a current one, rendered from the document's own
+    frontmatter, and recovering an identifier a reader can interpret is the
+    whole point of having it — canonicalizing it here would erase that on the
+    first `luria link --fix`, silently, which is the failure this branch
+    exists to avoid."""
     if ref.kind == "scheme" and ref.code:
         scheme = current().schemes.get(ref.prefix)
         if scheme is not None and ref.code not in scheme.temp_documents():
-            number = alias_number(scheme, ref.code)
-            if number is not None:
-                return scheme.code(number)
+            entry = aliases.alias_map().get(f"{scheme.prefix}-{ref.code}")
+            if entry is not None and entry.superseded:
+                return scheme.code(entry.number)
     return ref.text
 
 

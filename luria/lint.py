@@ -53,6 +53,7 @@ from . import adr_index as builder
 from . import (adr_pending, badges, chains, ci, contract, doc_refs, journal,
                link_targets, narrow_titles, pins, ref_status, remotes,
                relations, sources, statuses, templates)
+from . import aliases as aliases_mod
 from . import config as config_mod
 from .config import current
 
@@ -249,6 +250,38 @@ def check_numbers(errors: list[str]) -> None:
                 f"{named} — identity is the field, so this document answers "
                 f"to {scheme.code(declared)} while its file is named for "
                 f"{scheme.code(named)}; rename the file or correct the field")
+
+
+def check_alias_collisions(errors: list[str]) -> None:
+    """Two documents rendering one alias (#219).
+
+    A violation rather than a report, because a spelling that resolves to two
+    documents makes every citation through it ambiguous — worse than a stale
+    reference, which at least points somewhere definite.
+
+    Not auto-disambiguated. An automatic suffix is order-dependent and would
+    silently renumber when a third document arrives; the fix is the template,
+    and including `{number}` in it makes collisions impossible by
+    construction, since the number is what `luria concretize` guarantees
+    unique."""
+    cfg = current()
+    for scheme in cfg.schemes.values():
+        if not scheme.alias:
+            continue
+        rendered: dict[str, list[int]] = {}
+        for number, path in scheme.documents().items():
+            meta, _ = builder.parse_frontmatter(path.read_text(encoding="utf-8"))
+            spelling = aliases_mod.render(scheme.alias, meta, scheme, number)
+            if spelling:
+                rendered.setdefault(spelling, []).append(number)
+        for spelling, numbers in sorted(rendered.items()):
+            if len(numbers) > 1:
+                codes = ", ".join(scheme.code(n) for n in sorted(numbers))
+                errors.append(
+                    f"luria.toml: schemes.{scheme.prefix}.alias renders "
+                    f"`{spelling}` for {codes} — one spelling cannot answer "
+                    f"for {len(numbers)} documents; add `{{number}}` to the "
+                    f"template, or a field that tells them apart")
 
 
 def check_journals(errors: list[str]) -> None:
@@ -733,6 +766,7 @@ def run() -> None:
     check_contracts(errors)
     check_view_dirs(errors)
     check_numbers(errors)
+    check_alias_collisions(errors)
     check_journals(errors)
     check_version_history(errors)
     check_bare_refs(errors)
