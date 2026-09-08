@@ -235,3 +235,62 @@ def test_in_frontmatter_the_line_below_is_the_whole_entry():
 def test_in_prose_the_line_below_is_still_one_line():
     d, = find("<!-- inactive-ok: RFC-012 — x -->\n- RFC-012\n- RFC-020\n")
     assert d.lines == frozenset({1, 2})
+
+
+# --- a docstring is one block (#222) -----------------------------------------
+
+def test_a_block_directive_above_a_def_reaches_its_whole_docstring(tmp_path):
+    """The case that motivated this: a citation in a docstring's *third*
+    paragraph. Before, only `-file` reached it — far too blunt for one
+    sentence of prose that happens to name a code."""
+    src = ('# inactive-ok-block: ADR-012 — the decision this replaced\n'
+           'def apply():\n'
+           '    """First paragraph.\n'
+           '\n'
+           '    Second paragraph.\n'
+           '\n'
+           '    A third one citing ADR-012.\n'
+           '    """\n'
+           '    return 1\n')
+    path = tmp_path / "m.py"
+    path.write_text(src)
+    found = directives.find(path, src)
+    assert len(found) == 1
+    cite = next(n for n, line in enumerate(src.splitlines(), 1)
+                if "citing ADR-012" in line)
+    assert cite in found[0].lines
+
+
+def test_a_docstring_is_atomic_the_way_a_fence_is(tmp_path):
+    """The principle it rests on, already in the rules for fenced code: a
+    blank line inside one syntactic unit does not end the paragraph."""
+    src = ('def apply():\n'
+           '    """One.\n'
+           '\n'
+           '    Two.\n'
+           '    """\n'
+           '    return 1\n')
+    # One run: the docstring's internal blank line no longer splits it, so the
+    # definition and its body are a single block.
+    assert directives.blocks(src, tmp_path / "m.py") == [(1, 6)]
+    # Without the language, that blank line splits it as it always did.
+    assert directives.blocks(src) == [(1, 2), (4, 6)]
+
+
+def test_a_directive_written_inside_a_docstring_still_does_not_fire(tmp_path):
+    """Unchanged, and load-bearing: a docstring is not a comment, so prose
+    that looks like a directive is prose."""
+    src = ('def apply():\n'
+           '    """inactive-ok: ADR-012 — not a comment.\n'
+           '\n'
+           '    Citing ADR-012.\n'
+           '    """\n'
+           '    return 1\n')
+    path = tmp_path / "m.py"
+    path.write_text(src)
+    assert directives.find(path, src) == []
+
+
+def test_unparseable_python_yields_no_docstring_spans(tmp_path):
+    """A directive's scope is not where a syntax error should surface."""
+    assert directives.blocks("def (\n", tmp_path / "m.py") is not None

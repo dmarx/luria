@@ -146,6 +146,8 @@ class _Probe(dict):
         return ""
 
 
+# inactive-ok-block: ADR-087 — Proposed, from the same plan; cited for the
+# capability it added, not as settled evidence
 def value(meta: dict, rule: Derived):
     """The derived value for one document, or None when the template cannot
     be filled.
@@ -156,8 +158,8 @@ def value(meta: dict, rule: Derived):
 
     Only the document's own frontmatter is in scope, and that is enough for
     `{number}` too, now that identity is a field a document carries rather
-    than a filename it is parsed out of — a capability this step inherits
-    rather than adds."""
+    than a filename it is parsed out of (ADR-087) — a capability this step
+    inherits rather than adds."""
     return render(rule.template, meta)
 
 

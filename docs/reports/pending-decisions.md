@@ -12,7 +12,7 @@
 | 2026-09-06 | Proposed | [ADR-085](../../record/decisions.d/ADR-085.md) | 5 | 5 | Status is an ordinary controlled vocabulary; a built-in is a declaration nobody wrote |
 | 2026-09-06 | Proposed | [ADR-084](../../record/decisions.d/ADR-084.md) | 0 | 0 | A relation declares its converse; symmetry is the self-converse case |
 | 2026-09-07 | Proposed | [ADR-086](../../record/decisions.d/ADR-086.md) | 0 | 0 | A marked region is how the README carries a derived fact |
-| 2026-09-08 | Proposed | [ADR-087](../../record/decisions.d/ADR-087.md) | 1 | 0 | Identity is a field; the filename is a projection of it |
+| 2026-09-08 | Proposed | [ADR-087](../../record/decisions.d/ADR-087.md) | 2 | 0 | Identity is a field; the filename is a projection of it |
 | 2026-09-08 | Proposed | [ADR-088](../../record/decisions.d/ADR-088.md) | 1 | 0 | A derived alias is kept; a former spelling is rewritten |
 | 2026-09-08 | Proposed | [ADR-089](../../record/decisions.d/ADR-089.md) | 0 | 0 | A derived field is read-only, unlike a derived URI |
 
