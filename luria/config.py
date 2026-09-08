@@ -386,6 +386,38 @@ class Vocabulary:
 BUILT_IN_AXES = ("tags",)
 
 
+# Path → ((mtime_ns, size), number). Keyed on the stat rather than reset
+# explicitly: a write bumps mtime, so the entry expires on its own.
+_NUMBER_CACHE: dict[Path, tuple[tuple[int, int], int | None]] = {}
+
+# `number:` is an integer on a line of its own, so it can be read without a YAML
+# parse of the whole document — this runs once per file per lint, and the
+# frontmatter of a scaffolded document is mostly comments.
+_NUMBER_RE = re.compile(r"^number:[ \t]*(\d+)[ \t]*$", re.M)
+
+
+def _declared_number(path: Path) -> int | None:
+    """The `number:` a document's frontmatter declares, or None.
+
+    Read out of the frontmatter block only: a `number:` in the body is prose
+    about identity, not a claim to one — and it does occur there, so the
+    block boundary is what makes the field readable without a YAML parse."""
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError:
+        return None
+    if not text.startswith("---\n"):
+        return None
+    end = text.find("\n---\n", 3)
+    if end == -1:
+        # Unterminated frontmatter is no frontmatter, which is what
+        # `parse_frontmatter` decides too — searching on would read the body,
+        # and a `number:` in the body is prose about identity, not a claim to one.
+        return None
+    m = _NUMBER_RE.search(text[4:end + 1])
+    return int(m.group(1)) if m else None
+
+
 @dataclass(frozen=True)
 class Scheme:
     """A family of referable documents — `ADR-012`, `RFC-7`, `SPEC-3`.
@@ -403,6 +435,18 @@ class Scheme:
     # before: which word means in force was already the project's to choose.
     successor: str = "superseded_by"
     retires_on: str = "Superseded"
+    # A second spelling this scheme's documents answer to, rendered from each
+    # document's own frontmatter (#219):
+    #
+    #     alias = "LIT-{authors[0]}-{year}-{number}"
+    #
+    # Recovers an identifier a reader can interpret without a lookup, which
+    # is what a record gives up when it adopts sequential codes. Include
+    # `{number}` and collisions are impossible by construction; leave it out
+    # and the lint reports the two documents that landed on one spelling.
+    # Unlike `formerly:`, the fixer leaves a rendered alias alone — the point
+    # is to keep it written.
+    alias: str = ""
     # How this scheme's generated view is built. "index" is a table of links
     # plus per-tag pages — right when the documents are browsed and read one at
     # a time. "document" concatenates the bodies into one page — right when the
@@ -566,6 +610,33 @@ class Scheme:
         return f"{self.code(number)}.md"
 
     def number_of(self, path: Path) -> int | None:
+        """This document's identity: its `number:`, or the one its filename carries.
+
+        The frontmatter wins, because that is where identity lives (#219).
+        The filename is the fallback and the witness — a record written
+        before `number:` existed still reads, and `luria repair` populates the
+        field from the path it already asserts, which is how a project
+        migrates without anyone typing a number.
+
+        Cached on (mtime, size) rather than reset by hand: every writer of a
+        document bumps its mtime, so the cache invalidates itself and no
+        caller has to remember. Reading the field costs a parse, and this is
+        the hot path — `documents()` runs on every lint, index and link
+        pass."""
+        try:
+            st = path.stat()
+        except OSError:
+            return self.number_in_name(path)
+        key = (st.st_mtime_ns, st.st_size)
+        hit = _NUMBER_CACHE.get(path)
+        if hit is not None and hit[0] == key:
+            return hit[1]
+        held = _declared_number(path)
+        found = held if held is not None else self.number_in_name(path)
+        _NUMBER_CACHE[path] = (key, found)
+        return found
+
+    def number_in_name(self, path: Path) -> int | None:
         """The document number a filename carries, or None if it isn't one.
 
         Deliberately tolerant of a trailing slug: `adr-010-some-title.md` is
@@ -584,6 +655,8 @@ class Scheme:
         only for as long as the filename shape never changed."""
         found: dict[int, Path] = {}
         for path in sorted(self.dir.glob("*.md")):
+            if self.temp_of(path) is not None:
+                continue
             number = self.number_of(path)
             if number is not None:
                 found.setdefault(number, path)
@@ -1849,6 +1922,50 @@ def _check_derivations(prefix: str, scheme) -> None:
                 f"off a scalar renames a field rather than deriving one")
 
 
+def _alias_template(prefix: str, raw) -> str:
+    """A scheme's `alias` template, validated for shape where it is read.
+
+    Two things are checkable without any document: that the template renders
+    at all, and that it starts with this scheme's prefix. The prefix matters
+    because every reference scanner in luria finds a code by its prefix
+    first — a spelling that does not carry one is unreachable however well it
+    resolves, which is the quiet kind of failure eager validation exists to
+    prevent (#219)."""
+    template = str(raw or "").strip()
+    if not template:
+        return ""
+    where = f"luria.toml: schemes.{prefix}.alias"
+    try:
+        template.format_map(_Probe())
+    except (ValueError, IndexError) as exc:
+        raise ValueError(f"{where}: {template!r} is not a template "
+                         f"`str.format` can render ({exc})") from exc
+    if not template.startswith(f"{prefix}-"):
+        raise ValueError(
+            f"{where}: {template!r} does not start with '{prefix}-', so no "
+            f"reference scanner would find it — a spelling luria cannot see "
+            f"resolves for nobody")
+    return template
+
+
+class _Probe(dict):
+    """Answers to any name, so a template's *shape* can be checked without a
+    document. Indexing and attribute access have to work too, since
+    `{authors[0]}` and `{date.year}` are ordinary template spellings."""
+
+    def __missing__(self, key):
+        return self
+
+    def __getitem__(self, key):
+        return self
+
+    def __getattr__(self, name):
+        return self
+
+    def __format__(self, spec):
+        return ""
+
+
 def _conditions(scheme):
     """Every (field name, condition) this scheme declares, across the tables
     a condition can be written in."""
@@ -1878,6 +1995,7 @@ def _schemes(raw: dict, root: Path,
             render=spec.get("render", "index"),
             output=root / spec["output"] if spec.get("output") else None,
             allocate=spec.get("allocate", "filing"),
+            alias=_alias_template(prefix, spec.get("alias", "")),
             titles_generalize=bool(spec.get("titles_generalize", False)),
             requires=tuple(spec.get("requires", ())),
             tag_groups=_tag_groups(prefix, spec.get("tag_groups", {}),

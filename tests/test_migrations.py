@@ -44,7 +44,12 @@ def _record_project(tmp_path, monkeypatch):
 
 def test_the_alias_map_derives_from_formerly(tmp_path, monkeypatch):
     _record_project(tmp_path, monkeypatch)
-    assert aliases.alias_map() == {"DP-004": "GP-004"}
+    entries = aliases.alias_map()
+    assert {k: v.code for k, v in entries.items()} == {"DP-004": "GP-004"}
+    # A past spelling, so the fixer rewrites it away — the opposite of what
+    # it does with a derived one (#219).
+    assert entries["DP-004"].kind == aliases.FORMERLY
+    assert entries["DP-004"].superseded
 
 
 def _git(root, *args):
@@ -213,7 +218,8 @@ def test_rename_scheme_end_to_end(tmp_path, monkeypatch, capsys):
     # Full circle into rung 1: the fresh config resolves old spellings.
     config.reset()
     aliases.reset()
-    assert aliases.alias_map() == {"DP-001": "GP-001", "DP-004": "GP-004"}
+    assert {k: v.code for k, v in aliases.alias_map().items()} == {
+        "DP-001": "GP-001", "DP-004": "GP-004"}
 
 
 def test_a_rename_mirrors_each_citation_s_padding(tmp_path, monkeypatch):

@@ -1,7 +1,7 @@
 ---
 status: Proposed
 title: 'A derived field is read-only, unlike a derived URI'
-version: 1
+version: 2
 tags:
 - record
 date: '2026-09-08'
@@ -66,9 +66,17 @@ Two parts are load-bearing:
   override buys an escape hatch and pays for it with the drift the derivation
   was adopted to end.
 - **An expression language.** `tags | first`, or a filter, or a fallback chain.
-  Rejected on the lint's own rule: a mechanism joins when a case demands it. The
-  case in hand is `first`; `last` fell out for free because it is the same line
-  of code. Anything past that is a guess about a record nobody has written.
+  Rejected here on the lint's own rule — a mechanism joins when a case demands
+  it — and the argument as first written leaned on a count of luria's existing
+  expression surfaces that was worthless: it inventoried a codebase whose
+  constraints forbade the thing, found it absent, and read the absence as
+  evidence nobody wanted it. Demand had already shown up in URL construction,
+  interpretable codes, filename slugs and site layout ([#218](https://github.com/dmarx/luria/issues/218)). The rejection
+  survives the correction, on the narrower ground that remains: `first` is the
+  case in hand, `last` fell out for free, and the closed set is a starting
+  point rather than a ceiling. The general form is planned rather than
+  forbidden: one template vocabulary over `str.format`, which luria already
+  uses for URIs and now for aliases (ADR-088), with `derive` folding into it.
 - **Keep `exactly-one` and add a `primary:` field people write.** Solves the
   reading problem and keeps the writing problem — two fields saying one thing,
   which is the status quo plus a copy.
@@ -76,6 +84,13 @@ Two parts are load-bearing:
   stays unbound with no legal way to express what it shares, so the [#214](https://github.com/dmarx/luria/issues/214) check
   reports findings whose only remedies are to widen the vocabulary or to invent
   private tags — and both make the topic pages worse.
+
+## History
+
+- **v2** — the "expression language" rejection was argued from a count of
+  luria's expression surfaces, and that count was circular. Corrected in
+  place: the choice stands, the reason did not, and the general form is
+  planned rather than forbidden.
 
 ## Consequences
 

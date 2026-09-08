@@ -51,6 +51,7 @@ import sys
 from pathlib import Path
 
 from . import doc_refs
+from . import new as new_mod
 from .collect import _added_at
 from .config import current
 
@@ -131,21 +132,28 @@ def run(check: bool = False) -> None:
         print("luria concretize: nothing to do")
         return
 
-    renames: list[tuple[str, str, Path, Path]] = []
+    renames: list[tuple[str, str, Path, Path, int]] = []
     next_free = {s.prefix: max(s.documents(), default=0) + 1
                  for s, _, _ in todo}
     for scheme, tail, path in todo:
         number = next_free[scheme.prefix]
         next_free[scheme.prefix] = number + 1
         renames.append((f"{scheme.prefix}-{tail}", scheme.code(number),
-                        path, scheme.dir / scheme.filename(number)))
+                        path, scheme.dir / scheme.filename(number), number))
 
-    _rewrite_files([(old, new) for old, new, _, _ in renames])
-    for old, new, src, dest in renames:
+    _rewrite_files([(old, new) for old, new, _, _, _ in renames])
+    for old, new, src, dest, number in renames:
         # The tree-wide pass already rewrote this document's own heading and
-        # cross-references; what remains is its identity — the filename —
-        # and the alias that keeps the old name resolving forever.
-        dest.write_text(_record_alias(src.read_text(encoding="utf-8"), old), encoding="utf-8")
+        # cross-references; what remains is its identity — written into the
+        # document as `number:` and projected onto the filename (#219) — and the
+        # alias that keeps the old name resolving forever.
+        #
+        # This is the moment a merge-allocated document acquires a number at
+        # all: until now it had a temporary tail and no claim on the sequence
+        # (ADR-049), which is exactly why `luria new` leaves `number:` out and
+        # this command puts it in.
+        text = _record_alias(src.read_text(encoding="utf-8"), old)
+        dest.write_text(new_mod.write_number(text, number), encoding="utf-8")
         src.unlink()
         print(f"{old} → {new}")
 

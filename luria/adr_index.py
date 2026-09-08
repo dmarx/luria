@@ -156,6 +156,8 @@ class Adr:
         self.path = path
         self.scheme = scheme
         self.prefix = scheme.prefix
+        # Identity is the document's own `number:` where it has one, the
+        # filename's number where it doesn't (#219).
         self.number = scheme.number_of(path)
         # A merge-allocated document awaiting concretization (ADR-049): no
         # number yet, addressed by its temporary tail.
