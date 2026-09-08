@@ -23,7 +23,7 @@ Status is an ordinary controlled vocabulary; a built-in is a declaration nobody 
 
 5 citations in 5 files await a look.
 
-- [`luria/config.py:399`](../../luria/config.py)
+- [`luria/config.py:431`](../../luria/config.py)
 - [`luria/contract.py:156`](../../luria/contract.py)
 - [`luria/init.py:383`](../../luria/init.py)
 - [`luria/site.py:477`](../../luria/site.py)
@@ -55,9 +55,10 @@ A reference the reader cannot follow: the code names no document in this record.
 `unlinted-file:` exempts a whole document from the reference machinery — the blunt tool for a fixture-heavy or vendored page. It is counted here rather than hidden, the same bargain as an acknowledgement: the report stays a complete account of what nobody is checking.
 
 - [`tests/test_migrations.py`](../../tests/test_migrations.py)
+- [`tests/test_number.py`](../../tests/test_number.py)
 
 ## Directives that no longer apply
 
 - luria/doc_refs.py:38: annotation names DP-017, which does resolve here
 - luria/migrate.py:58: annotation names DP-017, which does resolve here
-- record/decisions.d/ADR-046.md:50: annotation names DP-017, which does resolve here
+- record/decisions.d/ADR-046.md:51: annotation names DP-017, which does resolve here
