@@ -386,21 +386,22 @@ class Vocabulary:
 BUILT_IN_AXES = ("tags",)
 
 
-# Path → ((mtime_ns, size), uid). Keyed on the stat rather than reset
+# Path → ((mtime_ns, size), number). Keyed on the stat rather than reset
 # explicitly: a write bumps mtime, so the entry expires on its own.
-_UID_CACHE: dict[Path, tuple[tuple[int, int], int | None]] = {}
+_NUMBER_CACHE: dict[Path, tuple[tuple[int, int], int | None]] = {}
 
-# `uid:` is an integer on a line of its own, so it can be read without a YAML
+# `number:` is an integer on a line of its own, so it can be read without a YAML
 # parse of the whole document — this runs once per file per lint, and the
 # frontmatter of a scaffolded document is mostly comments.
-_UID_RE = re.compile(r"^uid:[ \t]*(\d+)[ \t]*$", re.M)
+_NUMBER_RE = re.compile(r"^number:[ \t]*(\d+)[ \t]*$", re.M)
 
 
-def _declared_uid(path: Path) -> int | None:
-    """The `uid:` a document's frontmatter declares, or None.
+def _declared_number(path: Path) -> int | None:
+    """The `number:` a document's frontmatter declares, or None.
 
-    Read out of the frontmatter block only: a `uid:` in the body is prose
-    about identity, not a claim to one."""
+    Read out of the frontmatter block only: a `number:` in the body is prose
+    about identity, not a claim to one — and it does occur there, so the
+    block boundary is what makes the field readable without a YAML parse."""
     try:
         text = path.read_text(encoding="utf-8")
     except OSError:
@@ -411,9 +412,9 @@ def _declared_uid(path: Path) -> int | None:
     if end == -1:
         # Unterminated frontmatter is no frontmatter, which is what
         # `parse_frontmatter` decides too — searching on would read the body,
-        # and a `uid:` in the body is prose about identity, not a claim to one.
+        # and a `number:` in the body is prose about identity, not a claim to one.
         return None
-    m = _UID_RE.search(text[4:end + 1])
+    m = _NUMBER_RE.search(text[4:end + 1])
     return int(m.group(1)) if m else None
 
 
@@ -591,12 +592,12 @@ class Scheme:
         (ADR-013)."""
         return f"{self.code(number)}.md"
 
-    def uid_of(self, path: Path) -> int | None:
-        """This document's identity: its `uid:`, or the filename's number.
+    def number_of(self, path: Path) -> int | None:
+        """This document's identity: its `number:`, or the one its filename carries.
 
         The frontmatter wins, because that is where identity lives (#219).
         The filename is the fallback and the witness — a record written
-        before `uid:` existed still reads, and `luria repair` populates the
+        before `number:` existed still reads, and `luria repair` populates the
         field from the path it already asserts, which is how a project
         migrates without anyone typing a number.
 
@@ -608,17 +609,17 @@ class Scheme:
         try:
             st = path.stat()
         except OSError:
-            return self.number_of(path)
+            return self.number_in_name(path)
         key = (st.st_mtime_ns, st.st_size)
-        hit = _UID_CACHE.get(path)
+        hit = _NUMBER_CACHE.get(path)
         if hit is not None and hit[0] == key:
             return hit[1]
-        uid = _declared_uid(path)
-        found = uid if uid is not None else self.number_of(path)
-        _UID_CACHE[path] = (key, found)
+        held = _declared_number(path)
+        found = held if held is not None else self.number_in_name(path)
+        _NUMBER_CACHE[path] = (key, found)
         return found
 
-    def number_of(self, path: Path) -> int | None:
+    def number_in_name(self, path: Path) -> int | None:
         """The document number a filename carries, or None if it isn't one.
 
         Deliberately tolerant of a trailing slug: `adr-010-some-title.md` is
@@ -639,7 +640,7 @@ class Scheme:
         for path in sorted(self.dir.glob("*.md")):
             if self.temp_of(path) is not None:
                 continue
-            number = self.uid_of(path)
+            number = self.number_of(path)
             if number is not None:
                 found.setdefault(number, path)
         return dict(sorted(found.items()))

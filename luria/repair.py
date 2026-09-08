@@ -40,12 +40,12 @@ def apply() -> list[Path]:
             changed.append(p)
     # The same repair, for a scheme document's identity (#219): the filename
     # already asserts the number, so writing it into the frontmatter states
-    # what the record implies. This is how a project migrates onto `uid:`
+    # what the record implies. This is how a project migrates onto `number:`
     # without anyone typing one — and why the field can be introduced without
     # a `luria upgrade` of its own.
     for s in cfg.schemes.values():
-        for p in populate_uids(s):
-            print(f"populated `uid:` from the path in {cfg.rel(p)}")
+        for p in populate_numbers(s):
+            print(f"populated `number:` from the path in {cfg.rel(p)}")
             changed.append(p)
     # A note still riding in `status:` moves to `status_note:`, and an
     # old-form `by CODE` note becomes `superseded_by:` — the same repair: the
@@ -65,8 +65,8 @@ def apply() -> list[Path]:
     return changed
 
 
-def populate_uids(scheme) -> list[Path]:
-    """Write `uid:` into every document of `scheme` that lacks one, from the
+def populate_numbers(scheme) -> list[Path]:
+    """Write `number:` into every document of `scheme` that lacks one, from the
     number its filename already carries.
 
     A temporary document is skipped: it has no number yet by design, and
@@ -74,16 +74,16 @@ def populate_uids(scheme) -> list[Path]:
     (ADR-049). Idempotent, like every repair here — a second run finds the
     field present and does nothing."""
     from . import config as config_mod
-    from .new import write_uid
+    from .new import write_number
     done: list[Path] = []
     for path in sorted(scheme.dir.glob("*.md")):
         if scheme.temp_of(path) is not None:
             continue
-        number = scheme.number_of(path)
-        if number is None or config_mod._declared_uid(path) is not None:
+        number = scheme.number_in_name(path)
+        if number is None or config_mod._declared_number(path) is not None:
             continue
         text = path.read_text(encoding="utf-8")
-        written = write_uid(text, number)
+        written = write_number(text, number)
         if written != text:
             path.write_text(written, encoding="utf-8")
             done.append(path)

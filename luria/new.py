@@ -32,8 +32,8 @@ from .config import current
 
 TEMPLATE_NAME = "_template.md"
 
-# `uid:` as `luria new` and `luria repair` both write it.
-_UID_LINE = re.compile(r"^uid:[ \t]*\d*[ \t]*$\n", re.M)
+# `number:` as `luria new` and `luria repair` both write it.
+_NUMBER_LINE = re.compile(r"^number:[ \t]*\d*[ \t]*$\n", re.M)
 
 # The shape written when a scheme has no _template.md of its own — enough to
 # pass the lint (status, title, tag, date, agreeing heading) and nothing else.
@@ -208,7 +208,7 @@ def new_scheme_doc(scheme, fields: dict[str, str]) -> Path:
     # assigns one, which is the same moment it stops being a claim a branch
     # could collide on (ADR-049).
     if number is not None:
-        text = write_uid(text, number)
+        text = write_number(text, number)
 
     path = scheme.dir / f"{stem}.md"
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -216,8 +216,8 @@ def new_scheme_doc(scheme, fields: dict[str, str]) -> Path:
     return path
 
 
-def write_uid(text: str, number: int) -> str:
-    """Put `uid: N` at the top of a document's frontmatter.
+def write_number(text: str, number: int) -> str:
+    """Put `number: N` at the top of a document's frontmatter.
 
     First line, above the scaffold's comments: identity is the one field a
     reader should not have to hunt for, and `luria repair` writes it into
@@ -225,13 +225,13 @@ def write_uid(text: str, number: int) -> str:
     one read alike. Text surgery rather than a YAML round-trip, for the
     reason `field_edit` gives — rewriting through a parser reflows the
     comments a scaffolded document is mostly made of."""
-    line = f"uid: {int(number)}\n"
+    line = f"number: {int(number)}\n"
     if not text.startswith("---\n"):
         return text
     end = text.find("\n---\n", 3)
     head = text[4:end + 1] if end != -1 else ""
-    if _UID_LINE.search(head):
-        return _UID_LINE.sub(line, text, count=1)
+    if _NUMBER_LINE.search(head):
+        return _NUMBER_LINE.sub(line, text, count=1)
     return text[:4] + line + text[4:]
 
 

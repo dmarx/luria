@@ -220,8 +220,8 @@ def check_contracts(errors: list[str]) -> None:
             errors.extend(contract.violations(c, cfg.rel(path), meta, known))
 
 
-def check_uids(errors: list[str]) -> None:
-    """A document's `uid:` and its filename have to agree (#219).
+def check_numbers(errors: list[str]) -> None:
+    """A document's `number:` and its filename have to agree (#219).
 
     The same check `check_journals` makes about `created:` and an entry's
     path, for the same reason: identity lives in the frontmatter, the name on
@@ -233,19 +233,19 @@ def check_uids(errors: list[str]) -> None:
 
     A violation rather than a report, and not repaired automatically: which
     of the two is right is a question only the author can answer, and
-    renaming on a guess would move a document's identity. An *absent* `uid:`
+    renaming on a guess would move a document's identity. An *absent* `number:`
     is the repairable case, and `luria repair` handles it from the path."""
     cfg = current()
     for scheme in cfg.schemes.values():
         for path in sorted(scheme.dir.glob("*.md")):
             if scheme.temp_of(path) is not None:
                 continue
-            declared = config_mod._declared_uid(path)
-            named = scheme.number_of(path)
+            declared = config_mod._declared_number(path)
+            named = scheme.number_in_name(path)
             if declared is None or named is None or declared == named:
                 continue
             errors.append(
-                f"{cfg.rel(path)}: `uid: {declared}` but the filename says "
+                f"{cfg.rel(path)}: `number: {declared}` but the filename says "
                 f"{named} — identity is the field, so this document answers "
                 f"to {scheme.code(declared)} while its file is named for "
                 f"{scheme.code(named)}; rename the file or correct the field")
@@ -732,7 +732,7 @@ def run() -> None:
     check_status_vocabulary(errors)
     check_contracts(errors)
     check_view_dirs(errors)
-    check_uids(errors)
+    check_numbers(errors)
     check_journals(errors)
     check_version_history(errors)
     check_bare_refs(errors)

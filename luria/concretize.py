@@ -145,15 +145,15 @@ def run(check: bool = False) -> None:
     for old, new, src, dest, number in renames:
         # The tree-wide pass already rewrote this document's own heading and
         # cross-references; what remains is its identity — written into the
-        # document as `uid:` and projected onto the filename (#219) — and the
+        # document as `number:` and projected onto the filename (#219) — and the
         # alias that keeps the old name resolving forever.
         #
         # This is the moment a merge-allocated document acquires a number at
         # all: until now it had a temporary tail and no claim on the sequence
-        # (ADR-049), which is exactly why `luria new` leaves `uid:` out and
+        # (ADR-049), which is exactly why `luria new` leaves `number:` out and
         # this command puts it in.
         text = _record_alias(src.read_text(encoding="utf-8"), old)
-        dest.write_text(new_mod.write_uid(text, number), encoding="utf-8")
+        dest.write_text(new_mod.write_number(text, number), encoding="utf-8")
         src.unlink()
         print(f"{old} → {new}")
 

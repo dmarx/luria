@@ -7,7 +7,7 @@ tags:
 date: '2026-09-08'
 issue: '#219'
 summary: >-
-  A scheme document carries `uid:`, and its filename is derived from it —
+  A scheme document carries `number:`, and its filename is derived from it —
   the model journals have always used for `created:`, applied to schemes.
   Identity in the filesystem was the obstacle to expressive filenames and
   aliases, because anything the name encoded became load-bearing. A counter
@@ -35,10 +35,10 @@ slug) were readable without a lookup, and became `SOTA-001` and nothing.
 
 ## Decision
 
-A scheme document carries `uid:`, an integer, and the filename is a
+A scheme document carries `number:`, an integer, and the filename is a
 projection of it.
 
-- `Scheme.uid_of()` reads the field, falling back to the filename.
+- `Scheme.number_of()` reads the field, falling back to the filename.
 - `luria lint` reports a document whose field and filename disagree.
 - `luria repair` writes the field from the path where it is absent.
 - `luria new` writes it for a scheme that allocates on filing; `luria
@@ -69,6 +69,15 @@ buy merge-safety that temporary codes already provide.
   A number makes no claim that can rot. The rule this settles: a derived
   value may participate in identity only if it is recomputed, and it may only
   be recomputed if it is not identity.
+- **Call the field `uid:`.** The first spelling, and wrong twice over. The
+  "u" promises uniqueness across the record, and the value is unique only
+  within its scheme — three schemes give three documents `1`. And `uid` was
+  already taken: a remote declares one to mean an opaque foreign tail
+  ([ADR-024](ADR-024.md)), so the same word would have named two unrelated
+  things. `number` is what the code already calls this value everywhere
+  (`number_of`, `Adr.number`, the `{number}` template variable), promises
+  nothing about scope, and leaves `uid` free for a record-global identifier
+  if one is ever wanted.
 - **Rename the file automatically when the two disagree.** Rejected: which of
   the two is right is a question only the author can answer, and renaming on
   a guess moves a document's identity and orphans the links to it. An
