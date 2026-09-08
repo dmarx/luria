@@ -103,7 +103,7 @@ def code_of(path: Path) -> str | None:
     for scheme in current().schemes.values():
         if path.parent != scheme.dir:
             continue
-        number = scheme.number_of(path)
+        number = scheme.uid_of(path)
         if number is not None:
             return scheme.code(number)
         if tail := scheme.temp_of(path):

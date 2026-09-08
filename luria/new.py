@@ -32,6 +32,9 @@ from .config import current
 
 TEMPLATE_NAME = "_template.md"
 
+# `uid:` as `luria new` and `luria repair` both write it.
+_UID_LINE = re.compile(r"^uid:[ \t]*\d*[ \t]*$\n", re.M)
+
 # The shape written when a scheme has no _template.md of its own — enough to
 # pass the lint (status, title, tag, date, agreeing heading) and nothing else.
 FALLBACK = """---
@@ -157,6 +160,7 @@ def new_scheme_doc(scheme, fields: dict[str, str]) -> Path:
         # `luria concretize` assigns the real number where merges serialize.
         stem = f"{scheme.prefix}-{_mint_tail(scheme)}"
         code = stem
+        number = None
     else:
         number = max(scheme.documents(), default=0) + 1
         code = f"{scheme.prefix}-{number:03d}"
@@ -198,10 +202,37 @@ def new_scheme_doc(scheme, fields: dict[str, str]) -> Path:
         if field not in fields:
             text = _drop_field(text, field)
 
+    # Identity written into the document, not left to the filename (#219).
+    # Only for a scheme that allocates on filing: a merge-allocated one has
+    # no number to write yet, and `luria concretize` puts it there when it
+    # assigns one, which is the same moment it stops being a claim a branch
+    # could collide on (ADR-049).
+    if number is not None:
+        text = write_uid(text, number)
+
     path = scheme.dir / f"{stem}.md"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(text, encoding="utf-8")
     return path
+
+
+def write_uid(text: str, number: int) -> str:
+    """Put `uid: N` at the top of a document's frontmatter.
+
+    First line, above the scaffold's comments: identity is the one field a
+    reader should not have to hunt for, and `luria repair` writes it into
+    existing documents at the same place, so a migrated record and a fresh
+    one read alike. Text surgery rather than a YAML round-trip, for the
+    reason `field_edit` gives — rewriting through a parser reflows the
+    comments a scaffolded document is mostly made of."""
+    line = f"uid: {int(number)}\n"
+    if not text.startswith("---\n"):
+        return text
+    end = text.find("\n---\n", 3)
+    head = text[4:end + 1] if end != -1 else ""
+    if _UID_LINE.search(head):
+        return _UID_LINE.sub(line, text, count=1)
+    return text[:4] + line + text[4:]
 
 
 def new_fragment(dir_name: str, name: str | None) -> Path:

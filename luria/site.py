@@ -465,7 +465,7 @@ def _alias(path: Path, cfg) -> str | None:
     for scheme in cfg.schemes.values():
         if scheme.render != "index" or path.parent != scheme.dir:
             continue
-        number = scheme.number_of(path)
+        number = scheme.uid_of(path)
         if number is not None:
             return scheme.code(number)
     return None
