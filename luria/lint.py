@@ -53,6 +53,7 @@ from . import adr_index as builder
 from . import (adr_pending, badges, chains, ci, contract, doc_refs, journal,
                link_targets, narrow_titles, pins, ref_status, remotes,
                relations, sources, statuses, templates)
+from . import config as config_mod
 from .config import current
 
 # Pages deliberately absent from the index: the index itself.
@@ -217,6 +218,37 @@ def check_contracts(errors: list[str]) -> None:
             # here keeps the contract's checker generic (#181).
             meta = statuses.normalised(meta)
             errors.extend(contract.violations(c, cfg.rel(path), meta, known))
+
+
+def check_numbers(errors: list[str]) -> None:
+    """A document's `number:` and its filename have to agree (#219).
+
+    The same check `check_journals` makes about `created:` and an entry's
+    path, for the same reason: identity lives in the frontmatter, the name on
+    disk is a projection of it, and a projection that disagrees with its
+    source means every reader picks a different one. Here the stakes are
+    concrete — `documents()` reads the field, while a link target is written
+    from the code, so a disagreement resolves references to a filename that
+    is not there.
+
+    A violation rather than a report, and not repaired automatically: which
+    of the two is right is a question only the author can answer, and
+    renaming on a guess would move a document's identity. An *absent* `number:`
+    is the repairable case, and `luria repair` handles it from the path."""
+    cfg = current()
+    for scheme in cfg.schemes.values():
+        for path in sorted(scheme.dir.glob("*.md")):
+            if scheme.temp_of(path) is not None:
+                continue
+            declared = config_mod._declared_number(path)
+            named = scheme.number_in_name(path)
+            if declared is None or named is None or declared == named:
+                continue
+            errors.append(
+                f"{cfg.rel(path)}: `number: {declared}` but the filename says "
+                f"{named} — identity is the field, so this document answers "
+                f"to {scheme.code(declared)} while its file is named for "
+                f"{scheme.code(named)}; rename the file or correct the field")
 
 
 def check_journals(errors: list[str]) -> None:
@@ -700,6 +732,7 @@ def run() -> None:
     check_status_vocabulary(errors)
     check_contracts(errors)
     check_view_dirs(errors)
+    check_numbers(errors)
     check_journals(errors)
     check_version_history(errors)
     check_bare_refs(errors)

@@ -38,6 +38,15 @@ def apply() -> list[Path]:
         for p in journal.populate_created(j):
             print(f"populated `created:` from the path in {cfg.rel(p)}")
             changed.append(p)
+    # The same repair, for a scheme document's identity (#219): the filename
+    # already asserts the number, so writing it into the frontmatter states
+    # what the record implies. This is how a project migrates onto `number:`
+    # without anyone typing one — and why the field can be introduced without
+    # a `luria upgrade` of its own.
+    for s in cfg.schemes.values():
+        for p in populate_numbers(s):
+            print(f"populated `number:` from the path in {cfg.rel(p)}")
+            changed.append(p)
     # A note still riding in `status:` moves to `status_note:`, and an
     # old-form `by CODE` note becomes `superseded_by:` — the same repair: the
     # file states the facts, and now says so in the fields that carry them
@@ -54,6 +63,31 @@ def apply() -> list[Path]:
               f"record is described in {cfg.rel(cfg.record_doc)}")
         changed.append(p)
     return changed
+
+
+def populate_numbers(scheme) -> list[Path]:
+    """Write `number:` into every document of `scheme` that lacks one, from the
+    number its filename already carries.
+
+    A temporary document is skipped: it has no number yet by design, and
+    `luria concretize` writes the field at the moment it assigns one
+    (ADR-049). Idempotent, like every repair here — a second run finds the
+    field present and does nothing."""
+    from . import config as config_mod
+    from .new import write_number
+    done: list[Path] = []
+    for path in sorted(scheme.dir.glob("*.md")):
+        if scheme.temp_of(path) is not None:
+            continue
+        number = scheme.number_in_name(path)
+        if number is None or config_mod._declared_number(path) is not None:
+            continue
+        text = path.read_text(encoding="utf-8")
+        written = write_number(text, number)
+        if written != text:
+            path.write_text(written, encoding="utf-8")
+            done.append(path)
+    return done
 
 
 def run() -> None:
