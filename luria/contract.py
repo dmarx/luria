@@ -319,7 +319,7 @@ def describe(contract: Contract) -> list[str]:
         if field.builtin:
             continue
         if (rule := contract.derivation(field.name)) is not None:
-            what = f"derived — the {rule.take} of `{rule.source}:`, never written"
+            what = f"derived — `{rule.template}`, never written"
             if field.vocabulary is not None:
                 what += (", and one of "
                          + ", ".join(f"`{v}`" for v in field.values))
@@ -482,7 +482,7 @@ def violations(contract: Contract, rel: str, meta: dict,
             f"{rel}: `{name}:` is written in frontmatter, but "
             f"{contract.scheme} derives it (`{rule.spec}`) — the value has "
             f"one source and this is not it; drop the line and order "
-            f"`{rule.source}:` to say it")
+            f"the fields it reads to say it")
     meta = derive.applied(meta, contract.derived)
     for field in contract.fields:
         raw = meta.get(field.name)
