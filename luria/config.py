@@ -1221,8 +1221,9 @@ def _fields(prefix: str, raw: dict, scheme_dir: Path, root: Path,
             if spec.get("required"):
                 raise ValueError(
                     f"{where}: a derived field is present exactly when "
-                    f"`{rule.source}:` is, so `required` here would name the "
-                    f"wrong line as the fix — require `{rule.source}` instead")
+                    f"the fields it reads are, so `required` here would "
+                    f"name the wrong line as the fix — require "
+                    f"{', '.join(f'`{n}`' for n in rule.sources)} instead")
             if spec.get("default") is not None:
                 raise ValueError(
                     f"{where}: `default` and `derive` are two answers to "
@@ -1901,25 +1902,32 @@ def _check_derivations(prefix: str, scheme) -> None:
     List-valued is the harder rule and the one worth stating: `first:` of a
     single value is that value, so a derivation off a scalar is a rename
     wearing a derivation's clothes, and renames belong in the frontmatter."""
+    from .derive import lone_field
     plural = {"tags", *(v.field for v in scheme.vocabularies if v.many),
               *(r.field for r in scheme.references if r.many),
               *(f.field for f in scheme.plain_fields if f.many)}
-    nameable = {*BUILT_IN_CONDITION_FIELDS, *scheme.requires,
+    nameable = {*BUILT_IN_CONDITION_FIELDS, "number", *scheme.requires,
                 *(r.field for r in scheme.references),
                 *(v.field for v in scheme.vocabularies),
                 *(f.field for f in scheme.plain_fields)}
     for rule in scheme.derived:
         where = f"luria.toml: schemes.{prefix}.fields.{rule.field}.derive"
-        if rule.source not in nameable:
+        for name in rule.sources:
+            if name not in nameable:
+                raise ValueError(
+                    f"{where}: `{name}` is not a field {prefix} declares, so "
+                    f"`{rule.field}` resolves to nothing on every document "
+                    f"(nameable: {', '.join(sorted(nameable))})")
+        # The scalar-rename rule, narrowed to where it still bites. A template
+        # that builds something — `"LIT-{first_author}-{number}"` — reads
+        # single-valued fields legitimately. A template that is *only* a
+        # single-valued field copies it under a second name, which is the
+        # rename this refused before templates existed.
+        if lone_field(rule.template) and rule.sources[0] not in plural:
             raise ValueError(
-                f"{where}: `{rule.source}` is not a field {prefix} declares, "
-                f"so `{rule.field}` resolves to nothing on every document "
-                f"(nameable: {', '.join(sorted(nameable))})")
-        if rule.source not in plural:
-            raise ValueError(
-                f"{where}: `{rule.source}` holds one value, and "
-                f"`{rule.take}:` of one value is that value — a derivation "
-                f"off a scalar renames a field rather than deriving one")
+                f"{where}: `{rule.template}` is just `{rule.sources[0]}` under "
+                f"another name — a template that reads one single-valued field "
+                f"and nothing else renames a field rather than deriving one")
 
 
 def _alias_template(prefix: str, raw) -> str:

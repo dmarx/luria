@@ -24,71 +24,141 @@ source for something luria cannot otherwise know. A written `primary_topic:`
 is not that: it is the same fact as `tags[0]`, stored twice and free to
 disagree. So writing a derived field is a finding, not an override.
 
-**A closed set of takes, not an expression language.** `first` and `last` over
-a list. The source must be list-valued — `first:` of a scalar is the scalar,
-which is a rename wearing a derivation's clothes. Everything past this waits
-for a case that needs it.
+**One template vocabulary, two variable sources (#219).** The spelling is
+`str.format` — the engine `Remote.uri` already renders URLs through, fed here
+from a document's frontmatter instead of from a remote and a code. So there
+is one template language in luria, not a second grammar per feature, and
+`{tags[0]}`, `{first_author}`, `{published:.4}` all mean what they mean
+everywhere else.
+
+**A lone field returns the value, not a string.** `"{tags[0]}"` yields the
+tag itself, so it stays identical to the vocabulary member a check compares
+it against and to the value another document's tag list intersects with.
+Anything with literal text around it — `"LIT-{first_author}-{number}"` — is
+a string, because that is what it was written to build. The rule is the
+template's shape rather than a flag, so nothing has to be declared twice.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 
-# The takes, and what each one reads off a list. Closed: a spelling outside
-# this map is refused where the config is read, not discovered as a field that
-# silently never resolves.
-TAKES = {
-    "first": lambda values: values[0],
-    "last": lambda values: values[-1],
-}
-
-
 @dataclass(frozen=True)
 class Derived:
-    """One derivation: `field` is what it defines, off `source`, by `take`."""
+    """One derivation: `field` is what it defines, `template` how."""
     field: str
-    take: str
-    source: str
+    template: str
 
     @property
     def spec(self) -> str:
         """The declaration as written, for messages that name it."""
-        return f"{self.take}:{self.source}"
+        return self.template
+
+    @property
+    def sources(self) -> tuple[str, ...]:
+        """The frontmatter fields this template reads, for the eager check."""
+        return names_in(self.template)
+
+
+def names_in(template: str) -> tuple[str, ...]:
+    """The field names a template reads, without the indexing or the format
+    spec — `"LIT-{authors[0]}-{published:.4}"` names `authors` and
+    `published`. What the eager check needs in order to say whether a scheme
+    can hold them."""
+    import string
+    out = []
+    for _, field, _, _ in string.Formatter().parse(template):
+        if field:
+            root = field.split(".")[0].split("[")[0].strip()
+            if root and not root.isdigit() and root not in out:
+                out.append(root)
+    return tuple(out)
+
+
+def lone_field(template: str) -> bool:
+    """Whether the template is exactly one replacement field and nothing else.
+
+    That is the case where the value survives as itself rather than as its
+    rendering, which is what keeps a derived field comparable to the
+    vocabulary it is checked against."""
+    import string
+    parts = list(string.Formatter().parse(template))
+    return (len(parts) == 1 and parts[0][0] == "" and parts[0][1] is not None
+            and not parts[0][2])
+
+
+def render(template: str, values: dict):
+    """A template against one document's values, or None when it cannot fill.
+
+    None rather than a partial rendering: a half-filled spelling would
+    resolve for some documents and not others, with nothing saying which."""
+    try:
+        if lone_field(template):
+            import string
+            name = list(string.Formatter().parse(template))[0][1]
+            got = string.Formatter().get_field(name, (), values)[0]
+            return got if got not in (None, "") else None
+        out = template.format(**values).strip()
+    except (KeyError, IndexError, AttributeError, TypeError, ValueError):
+        return None
+    return out or None
 
 
 def parse(where: str, field: str, raw) -> Derived:
-    """One `derive = "take:source"` declaration, or a ValueError naming the
-    spelling that was wrong. Shape only — whether `source` is a field the
-    scheme can hold needs the whole scheme, so it is checked there."""
+    """One `derive = "{template}"` declaration, or a ValueError naming what
+    was wrong with it. Shape only — whether the names are fields the scheme
+    can hold needs the whole scheme, so that is checked there."""
     text = str(raw).strip()
-    take, sep, source = text.partition(":")
-    take, source = take.strip(), source.strip()
-    if not sep or not take or not source:
+    if not text:
+        raise ValueError(f"{where}: `derive` is empty")
+    try:
+        text.format_map(_Probe())
+    except (ValueError, IndexError) as exc:
+        raise ValueError(f"{where}: `derive = {text!r}` is not a template "
+                         f"`str.format` can render ({exc})") from exc
+    read = names_in(text)
+    if not read:
         raise ValueError(
-            f"{where}: `derive = {text!r}` is not a derivation — the shape is "
-            f'"take:field", as in "first:tags"')
-    if take not in TAKES:
-        raise ValueError(
-            f"{where}: `derive` takes {take!r}, which is not one of "
-            f"{', '.join(sorted(TAKES))}")
-    if source == field:
+            f"{where}: `derive = {text!r}` reads no field, so every document "
+            f"would get the same value — which is a default, not a derivation")
+    if field in read:
         raise ValueError(
             f"{where}: `{field}` derives from itself, which resolves to "
             f"nothing")
-    return Derived(field=str(field), take=take, source=source)
+    return Derived(field=str(field), template=text)
+
+
+class _Probe(dict):
+    """Answers to any name, so a template's shape can be checked without a
+    document — indexing and attributes included, since `{authors[0]}` and
+    `{date.year}` are ordinary spellings."""
+
+    def __missing__(self, key):
+        return self
+
+    def __getitem__(self, key):
+        return self
+
+    def __getattr__(self, name):
+        return self
+
+    def __format__(self, spec):
+        return ""
 
 
 def value(meta: dict, rule: Derived):
-    """The derived value for one document, or None when the source holds
-    nothing.
+    """The derived value for one document, or None when the template cannot
+    be filled.
 
     Absence is not an error here. A document with no `tags:` has no primary
     topic to compute, and saying so is the tags field's job — reporting it
-    twice would name the wrong line as the fix."""
-    raw = meta.get(rule.source)
-    values = raw if isinstance(raw, list) else ([] if raw in (None, "") else [raw])
-    values = [v for v in values if v not in (None, "")]
-    return TAKES[rule.take](values) if values else None
+    twice would name the wrong line as the fix.
+
+    Only the document's own frontmatter is in scope, and that is enough for
+    `{number}` too, now that identity is a field a document carries rather
+    than a filename it is parsed out of — a capability this step inherits
+    rather than adds."""
+    return render(rule.template, meta)
 
 
 def written(meta: dict, rules) -> list[str]:

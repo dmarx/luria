@@ -87,14 +87,12 @@ def render(template: str, meta: dict, scheme, number: int) -> str | None:
     through, fed from a different source. A template naming a field this
     document lacks renders nothing rather than a half-spelling: a partial
     alias would resolve for some documents and not others, silently."""
+    from . import derive
     values = dict(meta)
     values.update(number=number, prefix=scheme.prefix,
                   code=scheme.code(number))
-    try:
-        out = template.format(**values).strip()
-    except (KeyError, IndexError, AttributeError, TypeError):
-        return None
-    return out or None
+    out = derive.render(template, values)
+    return str(out) if out is not None else None
 
 
 def alias_map(cfg: Config | None = None) -> dict[str, Alias]:

@@ -32,7 +32,7 @@ encoding:
 
 DERIVED = """
 [luria.schemes.LIT.fields.primary_topic]
-derive     = "first:tags"
+derive     = "{tags[0]}"
 vocabulary = "tags"
 """
 
@@ -101,9 +101,9 @@ def test_order_is_the_whole_statement(tmp_path, monkeypatch):
     assert adr_index.Adr(b, scheme()).meta["primary_topic"] == "optimizers"
 
 
-def test_last_reads_the_other_end(tmp_path, monkeypatch):
+def test_an_explicit_index_reads_further_in(tmp_path, monkeypatch):
     root = project(tmp_path, monkeypatch,
-                   DERIVED.replace('"first:tags"', '"last:tags"'))
+                   DERIVED.replace('"{tags[0]}"', '"{tags[1]}"'))
     path = note(root, 1, ["stability", "optimizers"])
     assert adr_index.Adr(path, scheme()).meta["primary_topic"] == "optimizers"
 
@@ -137,7 +137,7 @@ def test_writing_a_derived_field_is_a_finding(tmp_path, monkeypatch):
     out = findings(root, path)
     assert len(out) == 1
     assert "`primary_topic:` is written in frontmatter" in out[0]
-    assert "first:tags" in out[0]
+    assert "{tags[0]}" in out[0]
 
 
 def test_a_written_value_that_agrees_is_still_a_finding(tmp_path, monkeypatch):
@@ -231,21 +231,21 @@ def test_the_record_page_says_where_the_value_comes_from(tmp_path, monkeypatch):
     project(tmp_path, monkeypatch)
     lines = contract.describe(contract.for_scheme(scheme()))
     line = next(l for l in lines if l.startswith("`primary_topic`"))
-    assert "derived — the first of `tags:`, never written" in line
+    assert "derived — `{tags[0]}`, never written" in line
 
 
 # --- refused at load ---------------------------------------------------------
 
 @pytest.mark.parametrize("spec,message", [
-    ('"tags"', "is not a derivation"),
-    ('"middle:tags"', "not one of first, last"),
-    ('"first:primary_topic"', "derives from itself"),
-    ('"first:nonexistent"', "is not a field LIT declares"),
-    ('"first:status"', "renames a field rather than deriving one"),
+    ('"tags"', "reads no field"),
+    ('"LIT-{tags[0]"', "not a template"),
+    ('"{primary_topic}"', "derives from itself"),
+    ('"{nonexistent}"', "is not a field LIT declares"),
+    ('"{status}"', "renames a field rather than deriving one"),
 ])
 def test_a_derivation_that_could_never_resolve_is_refused(
         tmp_path, monkeypatch, spec, message):
-    project(tmp_path, monkeypatch, DERIVED.replace('"first:tags"', spec))
+    project(tmp_path, monkeypatch, DERIVED.replace('"{tags[0]}"', spec))
     with pytest.raises(ValueError, match=message):
         config.current()
 
@@ -268,7 +268,7 @@ def test_a_derivation_needs_no_vocabulary_to_be_a_field(tmp_path, monkeypatch):
     page cannot tell a reader about."""
     project(tmp_path, monkeypatch, '''
 [luria.schemes.LIT.fields.primary_topic]
-derive = "first:tags"
+derive = "{tags[0]}"
 ''')
     root = tmp_path
     path = note(root, 1, ["homemade"])
@@ -276,4 +276,78 @@ derive = "first:tags"
     assert findings(root, path) == []
     line = next(l for l in contract.describe(contract.for_scheme(scheme()))
                 if l.startswith("`primary_topic`"))
-    assert "derived — the first of `tags:`, never written" in line
+    assert "derived — `{tags[0]}`, never written" in line
+
+
+# --- one template vocabulary -------------------------------------------------
+
+def test_a_lone_field_keeps_the_value_s_type(tmp_path, monkeypatch):
+    """`{versions[0]}` is the number, not "3". What keeps a derived value
+    comparable to the vocabulary member a check matches it against, and to
+    the value another document's list is intersected with."""
+    root = project(tmp_path, monkeypatch, '''
+[luria.schemes.LIT.fields.era]
+derive = "{versions[0]}"
+
+[luria.schemes.LIT.fields.versions]
+required = true
+many = true
+''')
+    path = write(root, "record/literature.d/LIT-001.md",
+                 "---\nstatus: Active\ntitle: 'N'\nversions:\n- 3\n- 4\n"
+                 "date: '2026-01-01'\n---\n\n# LIT-001: N\n")
+    assert adr_index.Adr(path, scheme()).meta["era"] == 3
+
+
+def test_a_template_that_builds_something_is_a_string(tmp_path, monkeypatch):
+    """The other half of the rule: literal text around a field means the
+    author was writing a string, so they get one."""
+    root = project(tmp_path, monkeypatch, '''
+[luria.schemes.LIT.fields.era]
+derive = "v{versions[0]}"
+
+[luria.schemes.LIT.fields.versions]
+required = true
+many = true
+''')
+    path = write(root, "record/literature.d/LIT-001.md",
+                 "---\nstatus: Active\ntitle: 'N'\nversions:\n- 3\n- 4\n"
+                 "date: '2026-01-01'\n---\n\n# LIT-001: N\n")
+    assert adr_index.Adr(path, scheme()).meta["era"] == "v3"
+
+
+def test_a_lone_scalar_field_is_still_refused_as_a_rename(tmp_path, monkeypatch):
+    """The pre-template rule, narrowed to where it still bites: `{year}`
+    under a second name copies a field rather than deriving one. A template
+    that *builds* from scalars is fine — this is only the bare case."""
+    project(tmp_path, monkeypatch, '''
+[luria.schemes.LIT.fields.era]
+derive = "{year}"
+
+[luria.schemes.LIT.fields.year]
+required = true
+''')
+    with pytest.raises(ValueError, match="renames a field"):
+        config.current()
+
+
+def test_derive_and_alias_render_through_one_vocabulary(tmp_path, monkeypatch):
+    """The point of the step: the same spelling means the same thing whether
+    it names a field or an alias."""
+    from luria import aliases, derive as derive_mod
+    meta = {"tags": ["stability", "x"], "first_author": "Dao",
+            "published": "2022-05-01"}
+    assert derive_mod.render("{tags[0]}", meta) == "stability"
+    assert derive_mod.render("LIT-{first_author}-{published:.4}",
+                             meta) == "LIT-Dao-2022"
+    project(tmp_path, monkeypatch)
+    assert aliases.render("LIT-{first_author}-{published:.4}", meta,
+                          scheme(), 74) == "LIT-Dao-2022"
+
+
+def test_a_template_reading_nothing_is_refused(tmp_path, monkeypatch):
+    """A constant is a default, not a derivation — and `default` is the
+    spelling that already means that."""
+    project(tmp_path, monkeypatch, DERIVED.replace('"{tags[0]}"', '"constant"'))
+    with pytest.raises(ValueError, match="reads no field"):
+        config.current()
