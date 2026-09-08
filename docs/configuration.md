@@ -99,6 +99,7 @@ carries its prefix, so a second scheme is an entry here (ADR-006).
 | `active` | `str` | `"Active"` |
 | `successor` | `str` | `"superseded_by"` |
 | `retires_on` | `str` | `"Superseded"` |
+| `alias` | `str` | *unset* |
 | `render` | `str` | `"index"` |
 | `output` | `Path \| None` | *unset* |
 | `allocate` | `str` | `"filing"` |
