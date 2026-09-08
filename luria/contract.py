@@ -28,6 +28,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
+from . import derive
 from .config import (TEMP_TAIL, FieldGroup, RequiredWhen, TagGroup,
                      current)
 
@@ -82,6 +83,19 @@ class Contract:
     # The vocabulary file a derived tag group reads its members from
     # (`primary_for`, ADR-060), relative to the project; "" when none.
     vocabulary: str = ""
+    # Fields computed from another field (`derive.Derived`, #216). Resolved
+    # onto the document before every other check, so a derived field is
+    # checked exactly like a written one — including against its vocabulary,
+    # which is what makes "the first tag is a real topic" cost no new code.
+    derived: tuple = ()
+
+    def derivation(self, name: str):
+        """The rule computing `name`, or None when it is written (#216).
+
+        Read by everything that must tell a computed field from a written one:
+        the scaffold, which has no flag to offer for one, and the record page,
+        which says where the value comes from rather than what shape it is."""
+        return next((r for r in self.derived if r.field == name), None)
 
     def demands(self, field: Field, meta: dict) -> bool:
         """Whether this document must carry the field. Consulted everywhere
@@ -219,7 +233,8 @@ def for_scheme(scheme) -> Contract:
         fields.setdefault(field.name, field)
     return Contract(scheme.prefix, tuple(fields.values()), scheme.tag_groups,
                     field_groups=scheme.field_groups,
-                    where="luria.toml", vocabulary=vocabulary)
+                    where="luria.toml", vocabulary=vocabulary,
+                    derived=scheme.derived)
 
 
 def _cite(because: tuple[str, ...]) -> str:
@@ -302,6 +317,13 @@ def describe(contract: Contract) -> list[str]:
         # than repeating it under every scheme as though it were declared
         # there (review of #172).
         if field.builtin:
+            continue
+        if (rule := contract.derivation(field.name)) is not None:
+            what = f"derived — the {rule.take} of `{rule.source}:`, never written"
+            if field.vocabulary is not None:
+                what += (", and one of "
+                         + ", ".join(f"`{v}`" for v in field.values))
+            lines.append(f"`{field.name}` — {what} {_cite(field.because)}")
             continue
         if field.vocabulary is not None:
             members = ", ".join(f"`{v}`" for v in field.values)
@@ -447,8 +469,21 @@ def violations(contract: Contract, rel: str, meta: dict,
     """One document against its scheme's contract, one line per breach.
 
     `known` maps a target prefix to its resolvable codes; the caller loads
-    each once per run rather than once per document."""
+    each once per run rather than once per document.
+
+    A derived field (#216) is read off the document before anything else runs,
+    so every check below sees one field whether it was computed or written —
+    with one exception, taken first: writing a derived field down is itself
+    the finding."""
     out: list[str] = []
+    for name in derive.written(meta, contract.derived):
+        rule = next(r for r in contract.derived if r.field == name)
+        out.append(
+            f"{rel}: `{name}:` is written in frontmatter, but "
+            f"{contract.scheme} derives it (`{rule.spec}`) — the value has "
+            f"one source and this is not it; drop the line and order "
+            f"`{rule.source}:` to say it")
+    meta = derive.applied(meta, contract.derived)
     for field in contract.fields:
         raw = meta.get(field.name)
         if field.vocabulary is not None:

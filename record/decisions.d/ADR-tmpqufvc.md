@@ -1,0 +1,97 @@
+---
+status: Proposed
+title: 'A derived field is read-only, unlike a derived URI'
+version: 1
+tags:
+- record
+date: '2026-09-08'
+issue: '#216'
+summary: >-
+  A field declared with `derive` is computed from another field on every read
+  and is never written down; writing one is a finding. [ADR-066](ADR-066.md) settled the
+  opposite for a remote's URIs, where an explicit template beats the
+  construction — the difference is that a URI template is a second *source*
+  for something luria cannot otherwise know, while a written `primary_topic:`
+  is the same fact as `tags[0]`, stored twice and free to drift.
+---
+
+# ADR-tmpqufvc: A derived field is read-only, unlike a derived URI
+
+## Context
+
+"The primary topic" was not a field. It was a `tag_group` with
+`require = "exactly-one"` — a constraint on a *set*. Asking a document for its
+primary meant intersecting its tags with the group's and hoping one value fell
+out, which is why that model is order-blind, and why holding two vocabulary
+topics read as a violation rather than as a statement.
+
+The cost surfaced the first time the [#214](https://github.com/dmarx/luria/issues/214) invariant check ran on a real record.
+All twelve unbound relations it found paired documents whose topics differ, and
+not one could be fixed by naming the topic they share: `exactly-one` forbids the
+second topic. The remedies left were inventing a vocabulary word or attaching a
+private tag, and the consuming record used both.
+
+Reading the first tag as the primary was already the convention. The vocabulary
+files say so in as many words — "in the order the index shows them" — and on the
+406 documents of the record that motivated this, **every one already carried a
+real topic in first position**. The convention existed; nothing enforced it and
+nothing could read it.
+
+## Decision
+
+A field can be declared with `derive = "take:source"`, computed from another
+field wherever a document's frontmatter is read, and **never written down**. A
+document that writes one is a finding.
+
+Two parts are load-bearing:
+
+- **`derive` composes with `vocabulary` rather than replacing it.** A derived
+  field declared against a vocabulary is checked against it by the machinery
+  already written, so "the first tag must be a real topic" cost no new check
+  and cannot fall out of step with one.
+- **The source must be list-valued.** `first:` of a single value is that value,
+  so a derivation off a scalar is a rename wearing a derivation's clothes.
+  Refused where the config is read.
+
+## Alternatives considered
+
+- **A declaration beats the derivation, as in [ADR-066](ADR-066.md).** The
+  obvious one, and the reason this decision exists rather than being assumed. A
+  remote's `url` template is a genuine second source: luria cannot otherwise
+  know where a foreign project puts its documents, so an author who does must be
+  able to say. A written `primary_topic:` is not that. It is the same fact as
+  `tags[0]`, in two places, with nothing relating them — which is precisely the
+  failure [ADR-060](ADR-060.md) already documented for this vocabulary (seven
+  terms across four places, two copies disagreeing before anyone noticed). The
+  override buys an escape hatch and pays for it with the drift the derivation
+  was adopted to end.
+- **An expression language.** `tags | first`, or a filter, or a fallback chain.
+  Rejected on the lint's own rule: a mechanism joins when a case demands it. The
+  case in hand is `first`; `last` fell out for free because it is the same line
+  of code. Anything past that is a guess about a record nobody has written.
+- **Keep `exactly-one` and add a `primary:` field people write.** Solves the
+  reading problem and keeps the writing problem — two fields saying one thing,
+  which is the status quo plus a copy.
+- **Status quo.** Costs the second topic permanently. Every cross-topic relation
+  stays unbound with no legal way to express what it shares, so the [#214](https://github.com/dmarx/luria/issues/214) check
+  reports findings whose only remedies are to widen the vocabulary or to invent
+  private tags — and both make the topic pages worse.
+
+## Consequences
+
+Ordering carries meaning, and that is a real new cost: `tags: [a, b]` and
+`tags: [b, a]` look alike to a skimming reader. Three things blunt it and none
+removes it. Nothing in the toolchain reorders — frontmatter edits are text
+surgery, never a YAML round-trip — so order survives by construction rather than
+by care. `luria new` writes the primary first. A vocabulary-backed derived field
+catches an ineligible tag in first position. What none of them catches is two
+*eligible* topics written in the wrong order, and there the record is wrong in a
+way only a reader can see.
+
+`luria new` offers no flag for a derived field, since scaffolding one would
+write a line the lint rejects on the document's first read.
+
+Fired on the consuming record before being trusted, per the working agreement:
+406 documents resolved a primary, the lint stayed at its exact baseline, and
+both guards were made to fire on real documents — a written `primary_topic:`,
+and a secondary tag moved to first position.

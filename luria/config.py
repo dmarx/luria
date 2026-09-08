@@ -466,6 +466,11 @@ class Scheme:
     # Fields declared in the same table with no vocabulary: any truthy value,
     # carrying when the requirement applies (`PlainField`, #170).
     plain_fields: tuple[PlainField, ...] = ()
+    # Fields computed from another field rather than written (`derive.Derived`,
+    # #216). Resolved onto a document's frontmatter wherever one is read, so a
+    # derived field is an ordinary field to everything downstream — and a
+    # written one is a finding, because it has a source and this is not it.
+    derived: tuple = ()
     # Why this scheme's records all sharing one status is deliberate rather
     # than a dead enforcement mechanism (#104). The `inert-status` check is the
     # one judgment call in luria with no acknowledgement — every other has an
@@ -1102,7 +1107,7 @@ def _required_when(where: str, spec: dict, required: bool) -> RequiredWhen | Non
 def _fields(prefix: str, raw: dict, scheme_dir: Path, root: Path,
             references: tuple, scaffolding: bool = False) -> tuple:
     """Read a scheme's `[luria.schemes.X.fields]` tables, as
-    `(vocabularies, plain fields)`.
+    `(vocabularies, plain fields, derivations)`.
 
     One table for a field's shape and type. `vocabulary` is the one *type* it
     takes; `required_when` is a rule about when the field applies and needs no
@@ -1111,12 +1116,19 @@ def _fields(prefix: str, raw: dict, scheme_dir: Path, root: Path,
     declaring neither is an error rather than a field that constrains nothing,
     and a field also named in `references` is two declarations of one thing.
 
+    `derive` says where the value comes from rather than what shape it is, so
+    it is a declaration in its own right and composes with `vocabulary` — the
+    pairing that gets "the first tag is a real topic" out of the vocabulary
+    check already written, with no second check to keep in step (#216).
+
     Validated here, eagerly, for the reason tag groups are: a declared axis
     with no values, or a default no value matches, would surface as "no
     violations", which is the quiet failure a declaration exists to remove."""
+    from .derive import parse as parse_derivation
     from .vocabularies import declared
     found = []
     plain: list[PlainField] = []
+    rules = []
     taken = {r.field for r in references}
     for field, spec in raw.items():
         where = f"luria.toml: schemes.{prefix}.fields.{field}"
@@ -1126,15 +1138,33 @@ def _fields(prefix: str, raw: dict, scheme_dir: Path, root: Path,
         if field in taken:
             raise ValueError(f"{where}: `{field}` is also declared under "
                              f"`references`; a field has one declaration")
+        rule = None
+        if spec.get("derive") is not None:
+            rule = parse_derivation(where, str(field), spec["derive"])
+            if spec.get("many"):
+                raise ValueError(
+                    f"{where}: `derive = \"{rule.spec}\"` reads one value off "
+                    f"a list, so the field holds one — drop `many`")
+            if spec.get("required"):
+                raise ValueError(
+                    f"{where}: a derived field is present exactly when "
+                    f"`{rule.source}:` is, so `required` here would name the "
+                    f"wrong line as the fix — require `{rule.source}` instead")
+            if spec.get("default") is not None:
+                raise ValueError(
+                    f"{where}: `default` and `derive` are two answers to "
+                    f"where the value comes from — keep one")
+            rules.append(rule)
         name = spec.get("vocabulary")
         if not name:
             required = bool(spec.get("required", False))
             when = _required_when(where, spec, required)
-            if when is None and not required:
+            if when is None and not required and rule is None:
                 raise ValueError(f"{where}: declares no type — `vocabulary = "
-                                 f"\"NAME\"` types the field, `required_when` "
+                                 f"\"NAME\"` types the field, `derive` says "
+                                 f"where its value comes from, `required_when` "
                                  f"says when it applies, and a table with "
-                                 f"neither constrains nothing")
+                                 f"none of them constrains nothing")
             plain.append(PlainField(field=str(field), required=required,
                                     many=bool(spec.get("many", False)),
                                     required_when=when))
@@ -1177,7 +1207,7 @@ def _fields(prefix: str, raw: dict, scheme_dir: Path, root: Path,
                                 default=defaults,
                                 required_when=_required_when(where, spec,
                                                              required)))
-    return tuple(found), tuple(plain)
+    return tuple(found), tuple(plain), tuple(rules)
 
 
 def _fragment(spec) -> Fragment:
@@ -1786,6 +1816,39 @@ def _check_conditions(prefix: str, scheme) -> None:
                 f"(values: {', '.join(allowed)})")
 
 
+def _check_derivations(prefix: str, scheme) -> None:
+    """Every `derive` against the scheme that declares it (#216).
+
+    Two things the shape check cannot know on its own: whether the source is a
+    field this scheme can hold, and whether it holds a *list*. Both are eager
+    for the usual reason — a derivation off a field nothing carries resolves to
+    nothing on every document, which reads exactly like a record with no
+    findings.
+
+    List-valued is the harder rule and the one worth stating: `first:` of a
+    single value is that value, so a derivation off a scalar is a rename
+    wearing a derivation's clothes, and renames belong in the frontmatter."""
+    plural = {"tags", *(v.field for v in scheme.vocabularies if v.many),
+              *(r.field for r in scheme.references if r.many),
+              *(f.field for f in scheme.plain_fields if f.many)}
+    nameable = {*BUILT_IN_CONDITION_FIELDS, *scheme.requires,
+                *(r.field for r in scheme.references),
+                *(v.field for v in scheme.vocabularies),
+                *(f.field for f in scheme.plain_fields)}
+    for rule in scheme.derived:
+        where = f"luria.toml: schemes.{prefix}.fields.{rule.field}.derive"
+        if rule.source not in nameable:
+            raise ValueError(
+                f"{where}: `{rule.source}` is not a field {prefix} declares, "
+                f"so `{rule.field}` resolves to nothing on every document "
+                f"(nameable: {', '.join(sorted(nameable))})")
+        if rule.source not in plural:
+            raise ValueError(
+                f"{where}: `{rule.source}` holds one value, and "
+                f"`{rule.take}:` of one value is that value — a derivation "
+                f"off a scalar renames a field rather than deriving one")
+
+
 def _conditions(scheme):
     """Every (field name, condition) this scheme declares, across the tables
     a condition can be written in."""
@@ -1821,7 +1884,7 @@ def _schemes(raw: dict, root: Path,
                                    tags_path),
             tags_file=tags_file,
             references=(refs := _references(prefix, spec.get("references", {}))),
-            **dict(zip(("vocabularies", "plain_fields"),
+            **dict(zip(("vocabularies", "plain_fields", "derived"),
                        _fields(prefix, spec.get("fields", {}),
                                root / spec["dir"], root, refs,
                                scaffolding))),
@@ -1831,6 +1894,7 @@ def _schemes(raw: dict, root: Path,
         )
     for prefix, scheme in schemes.items():
         _check_conditions(prefix, scheme)
+        _check_derivations(prefix, scheme)
         for ref in scheme.references:
             if ref.scheme not in schemes:
                 raise ValueError(
