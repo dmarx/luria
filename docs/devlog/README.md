@@ -6,6 +6,7 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 
 ## Currently — [September 2026](2026-09.md)
 
+- [8 Sep 23:04 — One template vocabulary, and the take grammar that went away](2026-09.md#20260908230434)
 - [8 Sep 21:01 — Alias inference, and the map that was never wired up](2026-09.md#20260908210139)
 - [8 Sep 18:57 — Identity moved into the document](2026-09.md#20260908185747)
 - [8 Sep 16:59 — Derived fields, and the ADR-066 rule they invert](2026-09.md#20260908165929)
@@ -50,9 +51,9 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 
 ## All books
 
-87 entries across 2 books, newest first.
+88 entries across 2 books, newest first.
 
 | Book | Entries | First | Last |
 |---|--:|---|---|
-| [2026-09](2026-09.md) | 41 | 2026-09-03 | 2026-09-08 |
+| [2026-09](2026-09.md) | 42 | 2026-09-03 | 2026-09-08 |
 | [2026-08](2026-08.md) | 46 | 2026-08-03 | 2026-08-28 |
