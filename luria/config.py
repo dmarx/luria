@@ -1246,6 +1246,13 @@ class Chain:
     # list became the whole content there was nothing left to annotate, and
     # the word outlived what it described.
     facet_by: tuple[str, ...] = ("status",)
+    # The field a step in this chain asserts it shares with its neighbours
+    # (#214). Unset means the chain asserts nothing about any field, which is
+    # the default because most relations do not: `source:` joins a practice to
+    # its paper across two vocabularies that were separated on purpose, and a
+    # check assuming otherwise fires on every cross-domain citation a record
+    # was designed to allow.
+    invariant: str = ""
 
 
 @dataclass(frozen=True)
@@ -1711,11 +1718,19 @@ def _chains(raw: dict, schemes: dict, root: Path) -> dict[str, Chain]:
         if not spec.get("output"):
             raise ValueError(f"{where}: needs an `output` — the page the "
                              f"sequences render to")
+        invariant = str(spec.get("invariant", ""))
+        if invariant and invariant not in known:
+            raise ValueError(
+                f"{where}: `invariant` names {invariant!r}, which {prefix} "
+                f"does not declare — a chain asserting a shared value in a "
+                f"field nothing holds reports every line and means nothing "
+                f"(nameable: {', '.join(sorted(known))})")
         out[name] = Chain(name=name, scheme=prefix,
                           relation=spine,
                           sibling=str(spec.get("sibling", "")),
                           output=root / str(spec["output"]),
                           facet_by=facet_by,
+                          invariant=invariant,
                           title=str(spec.get("title", "")) or name.title())
     return out
 
