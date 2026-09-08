@@ -435,6 +435,18 @@ class Scheme:
     # before: which word means in force was already the project's to choose.
     successor: str = "superseded_by"
     retires_on: str = "Superseded"
+    # A second spelling this scheme's documents answer to, rendered from each
+    # document's own frontmatter (#219):
+    #
+    #     alias = "LIT-{authors[0]}-{year}-{number}"
+    #
+    # Recovers an identifier a reader can interpret without a lookup, which
+    # is what a record gives up when it adopts sequential codes. Include
+    # `{number}` and collisions are impossible by construction; leave it out
+    # and the lint reports the two documents that landed on one spelling.
+    # Unlike `formerly:`, the fixer leaves a rendered alias alone — the point
+    # is to keep it written.
+    alias: str = ""
     # How this scheme's generated view is built. "index" is a table of links
     # plus per-tag pages — right when the documents are browsed and read one at
     # a time. "document" concatenates the bodies into one page — right when the
@@ -1847,6 +1859,50 @@ def _check_conditions(prefix: str, scheme) -> None:
                 f"(values: {', '.join(allowed)})")
 
 
+def _alias_template(prefix: str, raw) -> str:
+    """A scheme's `alias` template, validated for shape where it is read.
+
+    Two things are checkable without any document: that the template renders
+    at all, and that it starts with this scheme's prefix. The prefix matters
+    because every reference scanner in luria finds a code by its prefix
+    first — a spelling that does not carry one is unreachable however well it
+    resolves, which is the quiet kind of failure eager validation exists to
+    prevent (#219)."""
+    template = str(raw or "").strip()
+    if not template:
+        return ""
+    where = f"luria.toml: schemes.{prefix}.alias"
+    try:
+        template.format_map(_Probe())
+    except (ValueError, IndexError) as exc:
+        raise ValueError(f"{where}: {template!r} is not a template "
+                         f"`str.format` can render ({exc})") from exc
+    if not template.startswith(f"{prefix}-"):
+        raise ValueError(
+            f"{where}: {template!r} does not start with '{prefix}-', so no "
+            f"reference scanner would find it — a spelling luria cannot see "
+            f"resolves for nobody")
+    return template
+
+
+class _Probe(dict):
+    """Answers to any name, so a template's *shape* can be checked without a
+    document. Indexing and attribute access have to work too, since
+    `{authors[0]}` and `{date.year}` are ordinary template spellings."""
+
+    def __missing__(self, key):
+        return self
+
+    def __getitem__(self, key):
+        return self
+
+    def __getattr__(self, name):
+        return self
+
+    def __format__(self, spec):
+        return ""
+
+
 def _conditions(scheme):
     """Every (field name, condition) this scheme declares, across the tables
     a condition can be written in."""
@@ -1876,6 +1932,7 @@ def _schemes(raw: dict, root: Path,
             render=spec.get("render", "index"),
             output=root / spec["output"] if spec.get("output") else None,
             allocate=spec.get("allocate", "filing"),
+            alias=_alias_template(prefix, spec.get("alias", "")),
             titles_generalize=bool(spec.get("titles_generalize", False)),
             requires=tuple(spec.get("requires", ())),
             tag_groups=_tag_groups(prefix, spec.get("tag_groups", {}),
