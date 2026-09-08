@@ -6,6 +6,7 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 
 ## Currently — [September 2026](2026-09.md)
 
+- [8 Sep 15:49 — A relation asserts an invariant; the check asks which field names it](2026-09.md#20260908154929)
 - [7 Sep 20:08 — Firing a two-relation spine on a real record, and what hid a config error](2026-09.md#20260907200808)
 - [7 Sep 16:55 — The chain page encoded depth but not parentage](2026-09.md#20260907165522)
 - [7 Sep 05:35 — A temporary code is a code to link, and was not one to check](2026-09.md#20260907053505)
@@ -46,9 +47,9 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 
 ## All books
 
-83 entries across 2 books, newest first.
+84 entries across 2 books, newest first.
 
 | Book | Entries | First | Last |
 |---|--:|---|---|
-| [2026-09](2026-09.md) | 37 | 2026-09-03 | 2026-09-07 |
+| [2026-09](2026-09.md) | 38 | 2026-09-03 | 2026-09-08 |
 | [2026-08](2026-08.md) | 46 | 2026-08-03 | 2026-08-28 |
