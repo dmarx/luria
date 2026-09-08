@@ -85,10 +85,19 @@ moment this landed. The cache is now load-bearing for correctness too, since
 resolution is what gates the loose pattern.
 
 An alias is recomputed and therefore always true — until someone writes one
-down. Correcting an author moves the spelling, so a superseded one has to
-land in `formerly:` to keep resolving; that hand-off is what makes an alias
-safe to cite durably, and it is the one part of this that still needs a
-`luria repair` pass.
+down. Correcting an author moves the spelling, so a superseded one lands in
+`formerly:`, where it keeps resolving forever and the fixer starts rewriting
+it. `luria repair` does that hand-off, and it is what makes an alias safe to
+*cite* durably rather than only to resolve.
+
+**The old spelling comes from git, not from a ledger.** The previous
+frontmatter is already written down — the record's history is the
+repository's — so the repair renders the alias from the last commit and
+compares. Recording each rendered alias in the document as well would be one
+copy per revision, which is precisely the hand-kept ledger [ADR-040](ADR-040.md) rejected.
+Where git cannot answer — a new file, no repository — nothing is retired:
+absence of history is not a change of spelling, and guessing there would
+write a `formerly:` naming a spelling that never existed.
 
 Fired on the real record: 218 literature notes rendered
 `LIT-{first_author}-{published:.4}-{number}` with no collisions —

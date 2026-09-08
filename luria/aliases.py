@@ -35,6 +35,7 @@ alias is gone.
 from __future__ import annotations
 
 import re
+import subprocess
 from dataclasses import dataclass
 
 from .adr_index import parse_frontmatter
@@ -141,3 +142,26 @@ def reset() -> None:
 def split(code: str) -> tuple[str, int]:
     prefix, number = code.rsplit("-", 1)
     return prefix, int(number)
+
+
+def previous(path, scheme, number: int) -> str | None:
+    """The alias this document rendered at the last commit, or None.
+
+    Where the old spelling comes from, and the reason it is not stored: the
+    record's history is git's, so the previous frontmatter is already written
+    down — recording each rendered alias in the document too would be exactly
+    the hand-kept ledger ADR-040 rejected, one copy per revision.
+
+    None whenever git cannot answer: a new file, a detached tree, no
+    repository at all. Absence of history is not a change of spelling, and a
+    repair that guessed here would write a `formerly:` entry naming a
+    spelling that never existed."""
+    cfg = current()
+    try:
+        out = subprocess.run(
+            ["git", "show", f"HEAD:{path.relative_to(cfg.root).as_posix()}"],
+            cwd=cfg.root, capture_output=True, text=True, check=True).stdout
+    except (subprocess.CalledProcessError, OSError, ValueError):
+        return None
+    meta, _ = parse_frontmatter(out)
+    return render(scheme.alias, meta, scheme, number) if meta else None

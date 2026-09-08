@@ -184,3 +184,81 @@ def test_an_unrenderable_template_is_refused(tmp_path, monkeypatch):
     project(tmp_path, monkeypatch, 'alias = "LIT-{authors[0"')
     with pytest.raises(ValueError, match="not a template"):
         config.current()
+
+
+# --- retiring a superseded spelling ------------------------------------------
+
+def _git(root, *args):
+    import subprocess
+    subprocess.run(["git", *args], cwd=root, check=True,
+                   capture_output=True, text=True)
+
+
+def committed_project(tmp_path, monkeypatch, **kw):
+    root = project(tmp_path, monkeypatch, **kw)
+    _git(root, "init", "-q")
+    _git(root, "config", "user.email", "t@example.test")
+    _git(root, "config", "user.name", "T")
+    return root
+
+
+def test_a_changed_source_field_retires_the_old_spelling(tmp_path, monkeypatch):
+    """The old spelling comes from git rather than a stored ledger: the
+    previous frontmatter is already written down, so recording each rendered
+    alias in the document too would be a copy per revision."""
+    from luria import repair
+    root = committed_project(tmp_path, monkeypatch)
+    note(root, 41, author="Askell")
+    _git(root, "add", "-A"); _git(root, "commit", "-qm", "filed")
+
+    note(root, 41, author="Bai")          # the attribution is corrected
+    config.reset(); aliases.reset()
+    changed = repair.retire_aliases(scheme())
+    assert [p.name for p in changed] == ["LIT-041.md"]
+
+    config.reset(); aliases.reset()
+    entries = aliases.alias_map()
+    assert entries["LIT-Bai-2014-41"].kind == aliases.ALSO_KNOWN_AS
+    assert entries["LIT-Askell-2014-41"].kind == aliases.FORMERLY
+    assert entries["LIT-Askell-2014-41"].code == "LIT-041"
+
+
+def test_the_retirement_is_idempotent(tmp_path, monkeypatch):
+    from luria import repair
+    root = committed_project(tmp_path, monkeypatch)
+    note(root, 41, author="Askell")
+    _git(root, "add", "-A"); _git(root, "commit", "-qm", "filed")
+    note(root, 41, author="Bai")
+    config.reset(); aliases.reset()
+    repair.retire_aliases(scheme())
+    config.reset(); aliases.reset()
+    assert repair.retire_aliases(scheme()) == []
+
+
+def test_an_unchanged_alias_retires_nothing(tmp_path, monkeypatch):
+    from luria import repair
+    root = committed_project(tmp_path, monkeypatch)
+    note(root, 41, author="Askell")
+    _git(root, "add", "-A"); _git(root, "commit", "-qm", "filed")
+    note(root, 41, author="Askell", title="A retitled paper")
+    config.reset(); aliases.reset()
+    assert repair.retire_aliases(scheme()) == []
+
+
+def test_a_document_with_no_history_retires_nothing(tmp_path, monkeypatch):
+    """Absence of history is not a change of spelling. A repair that guessed
+    here would write a `formerly:` naming something that never existed."""
+    from luria import repair
+    root = committed_project(tmp_path, monkeypatch)
+    note(root, 41)
+    _git(root, "add", "-A"); _git(root, "commit", "-qm", "empty-ish")
+    note(root, 42, author="Ba")           # never committed
+    config.reset(); aliases.reset()
+    assert [p.name for p in repair.retire_aliases(scheme())] == []
+
+
+def test_no_template_means_no_retirement(tmp_path, monkeypatch):
+    from luria import repair
+    root = committed_project(tmp_path, monkeypatch, alias="")
+    note(root, 41)
+    assert repair.retire_aliases(scheme()) == []
