@@ -129,9 +129,15 @@ def plural_fields(scheme) -> frozenset[str]:
 def declared_fields(scheme) -> tuple[str, ...]:
     """Every field a scheme names, for `luria new` to accept as a flag and
     to refuse anything else by. The kinds are the config (ADR-036); so are
-    the flags."""
+    the flags.
+
+    A derived field is not among them (#216): its value comes off another
+    field, so a flag for it would scaffold a line the lint rejects on the
+    document's first read — the scaffold offering a guaranteed violation."""
     from .contract import for_scheme
-    return tuple(f.name for f in for_scheme(scheme).fields if not f.builtin)
+    c = for_scheme(scheme)
+    return tuple(f.name for f in c.fields
+                 if not f.builtin and c.derivation(f.name) is None)
 
 
 def _mint_tail(scheme) -> str:

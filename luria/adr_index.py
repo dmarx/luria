@@ -48,6 +48,7 @@ from pathlib import Path
 
 import yaml
 
+from . import derive
 from .config import current
 
 # unresolved-ok: ADR-tmp47fje — ADR-049's example of the shape, not a document
@@ -162,6 +163,13 @@ class Adr:
         # number yet, addressed by its temporary tail.
         self.tail = scheme.temp_of(path)
         self.meta, body = parse_frontmatter(path.read_text(encoding="utf-8"))
+        # Derived fields resolve here, once, so every reader downstream — a
+        # chain's invariant, a facet, a report column — meets an ordinary
+        # field and needs to know nothing about where it came from (#216).
+        # Safe to fold into `meta` because nothing writes a document back
+        # through this object: frontmatter edits are text surgery
+        # (`field_edit`), so a derived value can never be persisted.
+        self.meta = derive.applied(self.meta, scheme.derived)
         # `title:` is the source of truth; the body's H1 is the fallback, so a
         # document written before the field existed — or in a project that
         # hasn't adopted it — still renders a title rather than a blank cell
