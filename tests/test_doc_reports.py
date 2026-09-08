@@ -29,10 +29,11 @@ from luria import adr_index, adr_pending, config, lint, ref_status, reports
 REPO = Path(__file__).resolve().parents[1]
 
 
-def test_writes_both_reports(tmp_path):
+def test_writes_every_report(tmp_path):
     written = reports.write(tmp_path)
     assert [p.name for p in written] == ["pending-decisions.md",
-                                         "reference-status.md"]
+                                         "reference-status.md",
+                                         "unbound-lineage.md"]
     assert all(p.read_text().startswith("# ") for p in written)
 
 
@@ -135,6 +136,7 @@ def test_outputs_land_in_the_configured_reports_dir():
     assert set(reports.outputs()) == {
         current().reports / "reference-status.md",
         current().reports / "pending-decisions.md",
+        current().reports / "unbound-lineage.md",
     }
 
 
