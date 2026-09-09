@@ -23,7 +23,7 @@ Status is an ordinary controlled vocabulary; a built-in is a declaration nobody 
 
 5 citations in 5 files await a look.
 
-- [`luria/config.py:431`](../../luria/config.py)
+- [`luria/config.py:432`](../../luria/config.py)
 - [`luria/contract.py:170`](../../luria/contract.py)
 - [`luria/init.py:383`](../../luria/init.py)
 - [`luria/site.py:477`](../../luria/site.py)
@@ -44,7 +44,7 @@ A reference the reader cannot follow: the code names no document in this record.
 
 ### ADR-000 — resolves to nothing (1 unmarked site · 2 other mentions marked deliberate)
 
-- [`tests/test_lint.py:420`](../../tests/test_lint.py)
+- [`tests/test_lint.py:421`](../../tests/test_lint.py)
 
 ### ADR-157 — resolves to nothing (1 unmarked site · 2 other mentions marked deliberate)
 
