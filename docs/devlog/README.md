@@ -6,6 +6,7 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 
 ## Currently — [September 2026](2026-09.md)
 
+- [9 Sep 01:41 — tree-sitter 0.26.0 segfaults; the extra pins below it](2026-09.md#20260909014121)
 - [8 Sep 23:30 — A docstring is one block, the way a fence already was](2026-09.md#20260908233041)
 - [8 Sep 23:04 — One template vocabulary, and the take grammar that went away](2026-09.md#20260908230434)
 - [8 Sep 21:01 — Alias inference, and the map that was never wired up](2026-09.md#20260908210139)
@@ -52,9 +53,9 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 
 ## All books
 
-89 entries across 2 books, newest first.
+90 entries across 2 books, newest first.
 
 | Book | Entries | First | Last |
 |---|--:|---|---|
-| [2026-09](2026-09.md) | 43 | 2026-09-03 | 2026-09-08 |
+| [2026-09](2026-09.md) | 44 | 2026-09-03 | 2026-09-09 |
 | [2026-08](2026-08.md) | 46 | 2026-08-03 | 2026-08-28 |
