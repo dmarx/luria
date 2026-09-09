@@ -283,16 +283,17 @@ def test_a_view_the_generator_no_longer_writes_is_not_a_stray(project):
 # ── The enforcement dial (ADR-035) ───────────────────────────────────────
 
 
-def dial_project(project, fail_on: str = "") -> None:
+def dial_project(project, fail_on: str = "", mute: str = "") -> None:
     """A project with a retired decision cited from a docs page, and the
-    dial set to `fail_on` (a TOML list body, e.g. '"retired-citations"')."""
+    dials set to `fail_on` and `mute` (TOML list bodies, e.g.
+    '"retired-citations"')."""
     _scheme.decision(project, 12, "Superseded")
     page = project / "docs" / "notes.md"
     page.parent.mkdir(parents=True, exist_ok=True)
     page.write_text("Still leaning on ADR-012 here.\n")
     (project / "luria.toml").write_text(
         '[luria]\nissue_url = "https://example.test/issues/{n}"\n'
-        f'[luria.lint]\nfail_on = [{fail_on}]\n')
+        f'[luria.lint]\nfail_on = [{fail_on}]\nmute = [{mute}]\n')
     from luria import config
     config.reset()
 
@@ -452,3 +453,63 @@ def test_a_scheme_with_no_form_has_nothing_to_compare(project):
     from tests import _scheme
     _scheme.decision(project, 1, "Active", summary="Whatever the form said.")
     assert form_text_errors() == []
+
+
+# ── The mute dial ────────────────────────────────────────────────────────
+
+
+def test_a_muted_class_is_not_reported(project, capsys):
+    """`mute` removes a class from the report entirely.
+
+    Distinct from `fail_on`, which changes a finding's consequence. A project
+    that has decided a whole check is not useful to it has nowhere to put an
+    acknowledgement — the directives carry a reason at a *site*, and this
+    kind of finding has none."""
+    dial_project(project, mute='"retired-citations"')
+    errors, err = dial_errors(capsys)
+    assert errors == []
+    assert "retired documents cited unacknowledged" not in err
+    assert "ADR-012" not in err, "the detail rows go with the headline"
+
+
+def test_muting_one_class_leaves_the_others(project, capsys):
+    """A mute is per-class, not a global off switch."""
+    dial_project(project, mute='"inert-status"')
+    errors, err = dial_errors(capsys)
+    assert errors == []
+    assert "retired documents cited unacknowledged" in err
+
+
+def test_mute_rejects_a_class_that_does_not_exist(project, capsys):
+    """Same rule as `fail_on`: a dial set to a notch that does not exist must
+    say so rather than silently suppress nothing (DP-1)."""
+    dial_project(project, mute='"no-such-check"')
+    errors, _ = dial_errors(capsys)
+    assert any("`mute` names 'no-such-check'" in e for e in errors), errors
+
+
+def test_a_class_cannot_be_both_enforced_and_hidden(project, capsys):
+    """Not a precedence question. Guessing which the project meant would make
+    one of the two settings a lie, so it is a configuration error."""
+    dial_project(project, fail_on='"retired-citations"',
+                 mute='"retired-citations"')
+    errors, _ = dial_errors(capsys)
+    assert any("both `fail_on` and `mute`" in e for e in errors), errors
+
+
+def test_enforcement_still_wins_over_a_conflicting_mute(project, capsys):
+    """The conflict is reported AND the class still fails — a misconfigured
+    mute must not be able to hide a check the same file asked to enforce."""
+    dial_project(project, fail_on='"retired-citations"',
+                 mute='"retired-citations"')
+    errors, _ = dial_errors(capsys)
+    assert any("failing: `fail_on`" in e for e in errors), errors
+
+
+def test_acknowledged_uniformity_is_mutable(project, capsys):
+    """It is not failable — a project cannot promote its own acknowledgement
+    to a failure — but it is exactly the standing note a project may not want
+    repeated on every run, so the two vocabularies are not the same list."""
+    dial_project(project, mute='"acknowledged-uniformity"')
+    errors, _ = dial_errors(capsys)
+    assert not any("is no mutable warning class" in e for e in errors), errors
