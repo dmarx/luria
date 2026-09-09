@@ -4,7 +4,7 @@
 
 **Proposed** — not in force yet — an open question, so citing it as settled is what the reference report catches.
 
-7 of 90 decisions. Back to the [full index](../README.md).
+8 of 91 decisions. Back to the [full index](../README.md).
 
 | # | Title | Summary | Status |
 |---|---|---|---|
@@ -15,3 +15,4 @@
 | [ADR-088](../../../record/decisions.d/ADR-088.md) | A derived alias is kept; a former spelling is rewritten | A scheme can render a second spelling from each document's frontmatter, and `luria link --fix` leaves it written — the opposite of what it does with a `formerly:` entry, which it rewrites away. Two kinds in one map, each carrying its kind, because the fixer's instruction differs and shape cannot tell them apart. | Proposed |
 | [ADR-089](../../../record/decisions.d/ADR-089.md) v2 | A derived field is read-only, unlike a derived URI | A field declared with `derive` is computed from another field on every read and is never written down; writing one is a finding. [ADR-066](../../../record/decisions.d/ADR-066.md) settled the opposite for a remote's URIs, where an explicit template beats the construction — the difference is that a URI template is a second *source* for something luria cannot otherwise know, while a written `primary_topic:` is the same fact as `tags[0]`, stored twice and free to drift. | Proposed |
 | [ADR-090](../../../record/decisions.d/ADR-090.md) | The block below a directive is a syntactic unit, read from a grammar when one is installed | `-block` scope guessed at a run of non-blank lines, which is wrong in every language that lets a construct hold one. An optional tree-sitter extra reads the real unit instead — one rule for every grammar, no per-language table — and is stated as a union with the blank-line block so it can only widen what a directive already governed, never narrow it. | Proposed |
+| [ADR-091](../../../record/decisions.d/ADR-091.md) | A stack of pull requests lands from the tip | This project squash-merges, which rewrites a branch's commits into a new one. Merging a stack from the bottom therefore guarantees a conflict on the branch above it, between two commits holding the same text. Merge the tip: it already contains the whole stack, it lands in one operation, and the lower pull request is closed by hand as included. | Proposed |
