@@ -32,7 +32,16 @@ defaults to remember:
 - **block** (`-block`) — the run of non-blank lines it sits in. A directive
   standing alone between blank lines has no content block of its own, so the
   block it means is the one it introduces: the next one. Fenced code counts as
-  one block even when it contains blank lines.
+  one block even when it contains blank lines, and so does a Python
+  docstring — one syntactic unit however many paragraphs it holds, counted
+  from its `def` or `class` line, so this reaches a citation in a docstring:
+
+      # inactive-ok-block: ADR-012 — the decision this function replaced
+      def apply(...):
+          '''First paragraph.
+
+          A later paragraph citing ADR-012.'''
+
 - **file** (`-file`) — the whole document.
 
 A blank line between a directive and what it governs therefore needs `-block`:
@@ -113,10 +122,50 @@ def _fence_line_spans(text: str) -> list[tuple[int, int]]:
     return spans
 
 
-def blocks(text: str) -> list[tuple[int, int]]:
-    """Blank-line-delimited runs of lines, 1-based inclusive. A fenced block is
-    atomic — a blank line inside a code sample doesn't end the paragraph."""
+def _docstring_line_spans(text: str) -> list[tuple[int, int]]:
+    """1-based (first, last) line numbers of each docstring in a Python source.
+
+    Module, class and function docstrings only — a string used as a value is
+    not one, and annotating it is not what anyone means. Unparseable source
+    yields nothing rather than raising: a directive scope is not the place to
+    discover a syntax error."""
+    import ast
+    try:
+        tree = ast.parse(text)
+    except (SyntaxError, ValueError):
+        return []
+    spans = []
+    for node in ast.walk(tree):
+        if not isinstance(node, (ast.Module, ast.ClassDef, ast.FunctionDef,
+                                 ast.AsyncFunctionDef)):
+            continue
+        body = getattr(node, "body", None)
+        if not body or not isinstance(body[0], ast.Expr):
+            continue
+        doc = body[0].value
+        if isinstance(doc, ast.Constant) and isinstance(doc.value, str):
+            # From the `def` line, so a directive written above the definition
+            # governs the docstring it introduces rather than stopping at the
+            # signature.
+            first = getattr(node, "lineno", doc.lineno)
+            spans.append((first, doc.end_lineno or doc.lineno))
+    return spans
+
+
+def blocks(text: str, path: Path | None = None) -> list[tuple[int, int]]:
+    """Blank-line-delimited runs of lines, 1-based inclusive.
+
+    A fenced block is atomic — a blank line inside a code sample doesn't end
+    the paragraph — and so is a **Python docstring**, for the same reason and
+    on the same principle (#222). A docstring is one syntactic unit however
+    many paragraphs it holds, so a `-block` directive written above a
+    definition governs the whole of what that definition says, not just its
+    first paragraph. Without it the only annotation that reaches a citation in
+    a docstring's third paragraph is `-file`, which is far too blunt for the
+    case: an ordinary sentence of prose that happens to name a code."""
     fenced = _fence_line_spans(text)
+    if path is not None and path.suffix.lower() == ".py":
+        fenced = fenced + _docstring_line_spans(text)
 
     def in_fence(line: int) -> bool:
         return any(a <= line <= b for a, b in fenced)
@@ -210,7 +259,7 @@ def _line_offsets(text: str) -> list[int]:
 
 def find(path: Path, text: str, names: set[str] | None = None) -> list[Directive]:
     """Every directive in `path`, with the lines each one governs resolved."""
-    spans = blocks(text)
+    spans = blocks(text, path)
     found: list[Directive] = []
     for line_no, offset, body in comment_fragments(path, text):
         m = DIRECTIVE_RE.match(body.strip())
