@@ -1,0 +1,91 @@
+---
+status: Proposed
+title: 'A stack of pull requests lands from the tip'
+version: 1
+tags:
+- process
+date: '2026-09-09'
+issue: '#227'
+summary: >-
+  This project squash-merges, which rewrites a branch's commits into a new
+  one. Merging a stack from the bottom therefore guarantees a conflict on the
+  branch above it, between two commits holding the same text. Merge the tip:
+  it already contains the whole stack, it lands in one operation, and the
+  lower pull request is closed by hand as included.
+---
+
+# ADR-tmp8tcfw: A stack of pull requests lands from the tip
+
+## Context
+
+Work here arrives as a branch and a pull request, and sometimes as two: a
+second branch cut from the first because the second change is only sensible
+on top of the first. [#227](https://github.com/dmarx/luria/issues/227) was cut from [#225](https://github.com/dmarx/luria/issues/225) that way — a Python-specific
+block-scope fix, and then the generic version of it.
+
+Both were green. Landing them looked like a free choice of order, and the
+obvious order — the lower one first, since the upper depends on it — is the
+one that does not work.
+
+`main` takes contributions as **squash** merges. A squash does not put the
+branch's commit on the trunk; it writes a *new* commit holding the same
+content. So after [#225](https://github.com/dmarx/luria/issues/225) landed, its commit was still only on its own branch,
+and the trunk had a different commit saying the same thing. Merging `main`
+into [#227](https://github.com/dmarx/luria/issues/227) then presented git with two unrelated commits that had each
+introduced the same lines, which is exactly the case it cannot resolve:
+
+    CONFLICT (content): Merge conflict in luria/directives.py
+    CONFLICT (content): Merge conflict in tests/test_directives.py
+
+Every hunk was the upper branch adding to text the lower one had written.
+Nothing was in question, and the conflict was still real work: read three
+hunks, resolve, diff against the trunk to prove nothing was dropped,
+revalidate the suite, push, and spend a second CI cycle.
+
+## Decision
+
+**Merge a stack from the tip.** The tip branch already contains every commit
+below it, so one squash lands the whole stack and no branch is ever asked to
+reconcile with a rewritten copy of itself. Close each lower pull request by
+hand, referencing the one that carried it.
+
+The trunk history is not the poorer for it: a squash's message is the
+concatenation of the commits it holds, so `fd1c68c` carries both branches'
+messages, and the two pull requests remain readable at their own numbers.
+
+This holds only because the trunk squashes. A project that merges each pull
+request as a real commit should land a stack from the bottom, since there the
+lower commit *is* on the trunk afterwards and the upper branch fast-forwards
+onto it. The rule is not "tip first" but **"land the stack whichever way
+leaves the trunk's commits as the branch's ancestors"** — and under squash
+that is only ever the tip.
+
+## Alternatives considered
+
+- **Bottom-up, resolving the conflict.** What was done, and it worked. It
+  costs a conflict resolution, a revalidation and an extra CI cycle every
+  time, on a conflict where no decision is ever in question. Paying that
+  repeatedly to record two merge commits instead of one is a bad trade, and
+  the resolution is where a stacked change can quietly lose a line.
+- **Bottom-up, then rebase the upper branch.** Removes the conflict and
+  breaks the rule that history on a shared branch is not rewritten — a
+  reviewer's checkout of the upper branch stops matching what they reviewed.
+- **Merge commits instead of squashes, so bottom-up works.** A real
+  alternative, and a larger change than this decision: the trunk's history
+  is currently one commit per contribution, which is what makes
+  `git log --oneline` on `main` a readable list of changes. Not worth
+  trading for the convenience of stacking.
+- **Don't stack.** Wait for the lower pull request to merge before cutting
+  the upper branch. It serialises work that is ready, for a problem that
+  disappears once the merge order is right.
+
+## Consequences
+
+A lower pull request in a stack will not show as merged, because its head
+commit never reaches the trunk. Close it with a comment naming the pull
+request that carried it, so the trail from its number still leads somewhere.
+
+`luria concretize` is unaffected and worth stating, since it also cares about
+where merges serialize ([ADR-049](ADR-049.md)): a stack lands as one squash, so the
+temporary codes in it are numbered in one trunk run, exactly as a single
+branch's would be.
