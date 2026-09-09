@@ -29,6 +29,37 @@ Scope is how much text the directive governs:
 | `name-block:` | the paragraph (blank-line-delimited block) it sits in, or the following block when the comment stands alone |
 | `name-file:` | the whole file |
 
+A blank-line-delimited block is a guess at where a block ends, and every
+language has a construct that holds a blank line — a Python docstring, a
+YAML mapping, a function body. Install the optional extra:
+
+```
+pip install luria[syntax]
+```
+
+and `-block` reads the real one from a tree-sitter grammar instead: the
+smallest syntactic unit that starts where the block's content starts and
+holds the whole block. It is the same rule in every language the grammar
+pack supports, and it can only *extend* what the blank-line block already
+governed — a directive that works without the extra works the same with
+it. Without the extra nothing changes, and `LURIA_TREE_SITTER=0` turns it
+off without uninstalling it.
+
+So this reaches a citation in a docstring's third paragraph, which the
+blank-line rule cannot:
+
+```python
+# inactive-ok-block: ADR-012 — the decision this function replaced
+def apply(...):
+    """First paragraph.
+
+    A later paragraph citing ADR-012."""
+```
+
+With a grammar the extra also stops reading a comment marker inside a
+string literal as a comment — `echo 'see # this'` in a shell script is one
+string, not a directive site.
+
 A citation site can be a frontmatter field: `superseded_by:` naming a
 document that was itself later retired is reported at that line like any
 sentence. The line-scoped form answers it in place, as a YAML comment

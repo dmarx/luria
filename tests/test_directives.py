@@ -10,7 +10,9 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
 
-from luria import directives  # noqa: E402
+import pytest  # noqa: E402
+
+from luria import directives, syntax  # noqa: E402
 
 MD = Path("notes.md")
 PY = Path("thing.py")
@@ -294,3 +296,76 @@ def test_a_directive_written_inside_a_docstring_still_does_not_fire(tmp_path):
 def test_unparseable_python_yields_no_docstring_spans(tmp_path):
     """A directive's scope is not where a syntax error should surface."""
     assert directives.blocks("def (\n", tmp_path / "m.py") is not None
+
+
+# ── The same block rule, in languages luria knows nothing about ──────────
+
+needs_grammar = pytest.mark.skipif(not syntax.available(),
+                                   reason="tree-sitter is an optional extra")
+
+
+@needs_grammar
+@pytest.mark.parametrize("name,src", [
+    ("m.go", "// inactive-ok-block: RFC-012\nfunc f() {\n\n\treturn RFC012\n}\n"),
+    ("m.rs", "// inactive-ok-block: RFC-012\nfn f() {\n\n    RFC012;\n}\n"),
+    ("m.sh", "# inactive-ok-block: RFC-012\nf() {\n\n  echo RFC012\n}\n"),
+    ("m.yaml", "# inactive-ok-block: RFC-012\njobs:\n  a:\n\n    run: RFC012\n"),
+])
+def test_block_reaches_past_a_blank_line_inside_one_unit(tmp_path, name, src):
+    """The docstring case was never about docstrings. Every language has a
+    construct that holds a blank line, and the run-of-non-blank-lines rule is
+    wrong in all of them the same way."""
+    path = tmp_path / name
+    path.write_text(src)
+    d, = directives.find(path, src)
+    cite = next(n for n, line in enumerate(src.splitlines(), 1)
+                if "RFC012" in line)
+    assert d.covers(cite)
+
+
+@needs_grammar
+def test_a_block_does_not_grow_into_the_next_entry(tmp_path):
+    """Growth stops at the unit the directive introduces. A top-level comment's
+    next sibling is the whole YAML document; taking that would make `-block`
+    mean `-file` in every workflow file in the repository."""
+    src = ("# inactive-ok-block: RFC-012\njobs:\n  a: RFC012\n\nafter: RFC012\n")
+    path = tmp_path / "wf.yaml"
+    path.write_text(src)
+    d, = directives.find(path, src)
+    assert d.covers(3) and not d.covers(5)
+
+
+@needs_grammar
+def test_a_directive_inside_a_string_is_not_a_comment(tmp_path):
+    """What the marker scan cannot do, and says so in its own comment."""
+    for name, src in [
+            ("m.sh", "echo 'inactive-ok: RFC-012'\n"),
+            ("m.yaml", 'run: "inactive-ok: RFC-012"\n'),
+            ("m.go", "var s = `inactive-ok: RFC-012`\n")]:
+        path = tmp_path / name
+        path.write_text(src)
+        assert directives.find(path, src) == [], name
+
+
+@needs_grammar
+def test_a_directive_appended_after_other_comment_text_still_reads(tmp_path):
+    """A grammar reads `// note  // dir: x` as one comment, which is true and
+    would drop the directive. The spelling predates the grammar and keeps
+    working: precision is applied to finding comments, not to redefining where
+    one starts."""
+    src = "// shaped by RFC-012  // inactive-ok: RFC-012\n"
+    path = tmp_path / "m.go"
+    path.write_text(src)
+    d, = directives.find(path, src)
+    assert d.args == ("RFC-012",)
+
+
+@needs_grammar
+def test_growth_never_narrows_what_a_block_already_covered(tmp_path):
+    """The rule is a union. A file that lints today cannot start failing
+    because a grammar has a tidier opinion about its blocks."""
+    src = "# inactive-ok-block: RFC-012\nalpha = RFC012\nbeta = RFC012\n"
+    path = tmp_path / "m.py"
+    path.write_text(src)
+    d, = directives.find(path, src)
+    assert d.covers(2) and d.covers(3)

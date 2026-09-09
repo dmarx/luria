@@ -29,18 +29,26 @@ defaults to remember:
 
 - **line** (no suffix) — its own line and the line below, so it can be written
   directly above the line it governs.
-- **block** (`-block`) — the run of non-blank lines it sits in. A directive
-  standing alone between blank lines has no content block of its own, so the
-  block it means is the one it introduces: the next one. Fenced code counts as
-  one block even when it contains blank lines, and so does a Python
-  docstring — one syntactic unit however many paragraphs it holds, counted
-  from its `def` or `class` line, so this reaches a citation in a docstring:
+- **block** (`-block`) — the run of non-blank lines it sits in, extended to
+  the syntactic unit the directive introduces. A directive standing alone
+  between blank lines has no content block of its own, so the block it means
+  is the one it introduces: the next one. Fenced code counts as one block even
+  when it contains blank lines, and so does a Python docstring — one
+  syntactic unit however many paragraphs it holds, counted from its `def` or
+  `class` line, so this reaches a citation in a docstring:
 
       # inactive-ok-block: ADR-012 — the decision this function replaced
       def apply(...):
           '''First paragraph.
 
           A later paragraph citing ADR-012.'''
+
+  Every language has a construct that holds a blank line, and a run of
+  non-blank lines is wrong about all of them the same way. With the optional
+  `luria[syntax]` extra installed, `luria.syntax` reads the real one from a
+  grammar — the same rule in any language tree-sitter supports. It can only
+  extend the run, never shorten it, so a directive that works without the
+  extra works the same with it.
 
 - **file** (`-file`) — the whole document.
 
@@ -59,9 +67,10 @@ that fence.
 Comments only
 -------------
 A directive is read from real comments: HTML comments in markdown (outside code
-spans and fences), `COMMENT` tokens in Python, and text after a comment marker
-elsewhere. An example inside a fence or a docstring is not a comment, and does
-not fire.
+spans and fences), `COMMENT` tokens in Python, comment nodes from a grammar
+where one is installed, and text after a comment marker elsewhere. An example
+inside a fence or a docstring is not a comment, and does not fire — and with a
+grammar, neither is a `#` inside a shell string.
 """
 
 # unresolved-ok-file: ADR-157, ADR-159 — illustrative codes in the docstring above
@@ -208,11 +217,37 @@ def comment_fragments(path: Path, text: str) -> list[tuple[int, int, str]]:
                     if tok.type == tokenize.COMMENT]
         except (tokenize.TokenError, IndentationError, SyntaxError):
             pass                                  # fall through to the crude scan
+    # Every other language: a grammar when one is installed, the marker scan
+    # otherwise. The scan's own comment admits what it cannot do — a `#` inside
+    # a shell string reads as a comment to it — and this is where that stops
+    # being true, without luria learning a single language's comment syntax.
+    from . import syntax
+    parsed = syntax.comments(path, text)
+    if parsed is not None:
+        return sorted(_with_inner_markers(parsed))
     out = []
     offsets = _line_offsets(text)
     for n, line in enumerate(text.splitlines(), 1):
         for m in COMMENT_MARKER_RE.finditer(line):
             out.append((n, offsets[n - 1] + m.end(), line[m.end():]))
+    return out
+
+
+def _with_inner_markers(
+        fragments: list[tuple[int, int, str]]) -> list[tuple[int, int, str]]:
+    """Each comment, plus what follows any further marker on its first line.
+
+    A grammar reads `// note  // dir: x` as one comment, which is true, and
+    would leave the appended directive un-opened and so unread. The marker
+    scan splits there and the split is a spelling people use, so a grammar's
+    precision is applied to *finding* comments and not to re-litigating what
+    counts as the start of one. Only the first line: in a block comment a
+    marker further down is at a line this fragment cannot name."""
+    out = list(fragments)
+    for line, offset, body in fragments:
+        head = body.split("\n", 1)[0]
+        for m in COMMENT_MARKER_RE.finditer(head):
+            out.append((line, offset + m.end(), head[m.end():]))
     return out
 
 
@@ -294,6 +329,13 @@ def _governed(scope: str, line: int, spans: list[tuple[int, int]],
     if _directive_only(text, own, path):
         nxt = next((s for s in spans if s[0] > own[1]), None)
         own = nxt if nxt else own
+    # A run of non-blank lines is a guess at where a block ends, and it is
+    # wrong wherever a language lets one construct hold a blank line. A
+    # grammar, when one is installed, extends the run to the syntactic unit
+    # the directive introduces — never narrows it, so a directive that works
+    # without the extra works the same with it.
+    from . import syntax
+    own = syntax.grow(path, text, own, after=line)
     return frozenset(range(own[0], own[1] + 1))
 
 

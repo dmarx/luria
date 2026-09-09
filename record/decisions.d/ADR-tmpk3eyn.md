@@ -1,0 +1,106 @@
+---
+status: Proposed
+title: 'The block below a directive is a syntactic unit, read from a grammar when one is installed'
+version: 1
+tags:
+- record
+date: '2026-09-09'
+issue: '#222'
+summary: >-
+  `-block` scope guessed at a run of non-blank lines, which is wrong in every
+  language that lets a construct hold one. An optional tree-sitter extra reads
+  the real unit instead — one rule for every grammar, no per-language table —
+  and is stated as a union with the blank-line block so it can only widen what
+  a directive already governed, never narrow it.
+---
+
+# ADR-tmpk3eyn: The block below a directive is a syntactic unit, read from a grammar when one is installed
+
+## Context
+
+`-block` scope was defined as the run of non-blank lines a directive sits in.
+That definition is a guess, and it fails wherever a language lets one
+construct contain a blank line. The case that surfaced it was a Python
+docstring: a directive written above a definition reached the first paragraph
+and stopped, so a citation in the third paragraph could only be acknowledged
+with `-file`, which is far too blunt for one sentence of prose.
+
+The first fix was a special case: parse the file with
+`ast` and treat a docstring as atomic the way a fenced code block already
+was. It works, and it is Python-only. The observation that made it the wrong
+shape came from outside: tree-sitter removes the per-language identification
+of a comment *and* of the construct that follows it, which is enough for a
+`-block` that is generic rather than a growing list of special cases.
+
+Measured across seven grammars, that turns out to be true and small.
+`"comment" in node.type` covers every one of them (six spell it `comment`,
+Rust spells it `line_comment`), and the node following a comment is
+`function_definition`, `function_declaration`, `function_item` or
+`block_mapping_pair` without luria having to know which.
+
+## Decision
+
+`-block` governs the run of non-blank lines **united with** the syntactic unit
+the directive introduces, where the unit is the smallest named node with
+children that starts at the block's first line of content and holds the whole
+block. Reading it needs a grammar, which ships as an optional extra
+(`luria[syntax]`); without one, the run of non-blank lines is the whole answer
+and behaviour is exactly what it was.
+
+Three parts of that are load-bearing.
+
+**Union, not replacement.** A grammar can only extend what a directive
+governs. A file that lints today cannot start failing because a grammar has a
+tidier opinion about its blocks, and the extra is therefore safe to install on
+an existing record without an audit.
+
+**Smallest, not next-sibling.** The obvious rule — the comment node's next
+named sibling — is right in most languages and catastrophic in YAML, where a
+top-level comment's next sibling is the whole document. That silently turns
+`-block` into `-file` in every workflow file. Requiring the node to *hold the
+block* and taking the smallest such node gives the `jobs:` entry instead.
+
+**With children.** A leaf is a token, not a block. `f` in `f() {` and `int` in
+`int f(void)` both start in the right place, and neither is what a comment
+introduces.
+
+Markdown is not routed through a grammar at all. Its comments are HTML
+comments the markdown scanner already finds exactly, and its blocks *are*
+paragraphs — the blank-line rule is not an approximation of markdown's
+structure, it is markdown's structure.
+
+## Alternatives considered
+
+- **Keep the Python special case, add one per language as it comes up.** This
+  is the status quo extended, and it is what the record would accumulate: a
+  docstring rule, then a YAML rule, then a here-doc rule, each with its own
+  parser and its own tests. The generic rule is smaller than the second entry
+  in that list.
+- **Require the grammar rather than making it optional.** It would make the
+  behaviour uniform and let the Python special case go. Rejected because
+  luria's runtime dependencies are two pure-Python packages and the grammar
+  pack is a platform-specific native one that fetches a bundle on first use;
+  that is a large thing to require of a lint. The stdlib path stays as the
+  fallback, so Python keeps the docstring behaviour with nothing installed.
+- **The comment node's next named sibling.** The rule this decision started
+  from, and the one anybody would write. It fails in YAML as described above.
+  It is recorded because it looks right.
+- **Do nothing.** `-file` remains the only annotation that reaches a citation
+  in a docstring's later paragraph, which is an acknowledgement far broader
+  than the finding it answers — exactly the outcome directives exist to avoid.
+
+## Consequences
+
+Directive scope now has an optional dependency, and with it a failure mode
+that no other part of luria has: a native crash, which does not raise and
+cannot be caught. `tree-sitter` 0.26.0 does exactly this — a twenty-five line
+script using nothing but the grammar pack segfaults over this repository's own
+files — so the extra pins `<0.26`, nothing native escapes one function, and
+`LURIA_TREE_SITTER=0` turns the extra off without uninstalling it. The pin is
+measured; raising it means rerunning the script, not reading a changelog.
+
+With the extra, comment *detection* in non-Python source also comes from the
+grammar. That is the one place this decision is not a union: a marker inside a
+string literal stops being read as a comment. It is a narrowing of false
+positives, and the crude scan's own comment already admitted it could not tell
+them apart.
