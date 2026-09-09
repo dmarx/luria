@@ -445,6 +445,20 @@ FAILABLE = ("retired-citations", "unresolved-codes", "hand-written-urls",
             "pending-documents", "unlinted-files", "workflow-temp-codes",
             "unlinked-site")
 
+# Classes `[luria.lint] mute` may suppress: every failable class, plus
+# `acknowledged-uniformity` — which is not failable (a project cannot promote
+# its own acknowledgement to a failure) and is exactly the kind of standing
+# note a project may reasonably not want repeated on every run.
+#
+# No class is exempt, which is a deliberate choice and the symmetric one:
+# `fail_on` already lets a project make any class fatal and defaults to making
+# none of them so, and a tool that decides for a project which of its own
+# findings it is allowed to stop reading is asserting an authority it has not
+# earned. The cost is that a project can hide something it should not, and
+# `luria reports` still renders the full accounting either way — muting
+# changes what the command prints, not what the record says.
+MUTABLE = FAILABLE + ("acknowledged-uniformity",)
+
 
 def unlinked_site() -> list[str]:
     """A record that publishes a site whose README never names it.
@@ -740,7 +754,28 @@ def report_warnings(errors: list[str]) -> None:
         errors.append(f"luria.toml: `fail_on` names {name!r}, which is no "
                       f"warning class (known: {', '.join(FAILABLE)})")
 
+    # A class the project has decided it does not want reported at all.
+    # `fail_on` changes a finding's consequence; `mute` removes it from the
+    # report. Muting is blunter than the acknowledgement directives on
+    # purpose: those carry a reason at the citing site, which is the right
+    # shape when the finding is about a document, and the wrong shape when a
+    # project has simply decided a whole check is not useful to it.
+    mute = set(current().mute)
+    for name in sorted(mute - set(MUTABLE)):
+        # Same rule as `fail_on`: a dial set to a notch that does not exist
+        # must say so rather than silently do nothing (DP-1).
+        errors.append(f"luria.toml: `mute` names {name!r}, which is no "
+                      f"mutable warning class (known: {', '.join(MUTABLE)})")
+    for name in sorted(mute & fail):
+        # Not a precedence question. A project cannot both enforce a check
+        # and refuse to hear it, and guessing which it meant would make one
+        # of the two settings a lie.
+        errors.append(f"luria.toml: {name!r} is named in both `fail_on` and "
+                      "`mute` — a class cannot be both enforced and hidden")
+
     for name, headline, lines in status_sections():
+        if name in mute and name not in fail:
+            continue
         if name in fail:
             # Name the dial that actually did it: `network = "require"`
             # promotes one class on its own, and blaming `fail_on` would send

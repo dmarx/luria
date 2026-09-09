@@ -115,6 +115,7 @@ DEFAULTS: dict = {
     # promotion, because only unacknowledged rows ever reach a class.
     "lint": {
         "fail_on": [],
+        "mute": [],
         # This project's own concrete nouns, for the `narrow-titles` class.
         # Luria ships NONE: the whole point of the check is that the words are
         # yours, and a shipped list would be some other project's vocabulary
@@ -1451,6 +1452,19 @@ class Config:
     chains: dict[str, Chain]
     stale_days: int
     fail_on: tuple[str, ...]            # warning classes promoted to failures
+    # Warning classes a project has decided it does not want to see at all.
+    # `fail_on` changes a class's CONSEQUENCE; this removes it from the
+    # report. The two are deliberately separate dials, and naming a class in
+    # both is a configuration error rather than a precedence question — a
+    # project cannot both enforce a check and refuse to hear it.
+    #
+    # Muting is a blunter instrument than the acknowledgement directives and
+    # is meant to be: those carry a reason at the site, which is right when
+    # the finding is about a document. A check whose findings a project has
+    # decided are not useful to it has nowhere to put such a reason, and the
+    # alternative to a mute is people learning to skim past a line forever,
+    # which costs the whole report its credibility (DP-1).
+    mute: tuple[str, ...]               # warning classes suppressed entirely
     narrow_terms: tuple[str, ...]       # this project's nouns (narrow-titles)
     network: str                        # "auto" | "never" | "require"
     # Whole records nested inside this one — directory globs, each match
@@ -1765,6 +1779,7 @@ def load(root: Path | None = None, text: str | None = None,
         chains=_chains(raw.get("chains", {}), schemes, root),
         stale_days=int(raw.get("stale_days", 90)),
         fail_on=tuple(raw["lint"]["fail_on"]),
+        mute=tuple(raw["lint"]["mute"]),
         narrow_terms=tuple(raw["lint"].get("narrow_terms", [])),
         network=str(raw["lint"].get("network", "auto")),
         include_records=tuple(raw.get("include_records", ())),
