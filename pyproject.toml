@@ -39,6 +39,21 @@ luria = "luria.cli:main"
 
 [project.optional-dependencies]
 dev = ["pytest>=8", "build>=1"]
+# `-block` scope asks a language question — where does the block below this
+# comment end? — that a run of non-blank lines can only guess at. A grammar
+# answers it for every language it has, which is why this is one extra and not
+# a list of them. Optional: without it the guess is what luria has always
+# used, and the grammar can only widen what a directive governs, never narrow
+# it. The pack fetches a grammar bundle on first use and caches it; a lint
+# that cannot reach it falls back rather than failing.
+#
+# The upper bound is measured, not defensive. On `tree-sitter` 0.26.0, walking
+# parsed trees corrupts the heap: ~25 lines using nothing but the pack — one
+# grammar, a cursor walk over this repository's own `.py` files — segfault
+# reproducibly, and the crash surfaces later, in whatever allocates next.
+# 0.25.2 runs the same script clean. Raise the ceiling by rerunning it, not by
+# reading a changelog.
+syntax = ["tree-sitter>=0.23,<0.26", "tree-sitter-language-pack>=0.7"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["luria"]
