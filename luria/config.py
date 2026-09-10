@@ -1212,12 +1212,22 @@ def _fields(prefix: str, raw: dict, scheme_dir: Path, root: Path,
         if field in taken:
             raise ValueError(f"{where}: `{field}` is also declared under "
                              f"`references`; a field has one declaration")
+        if spec.get("from") is not None and spec.get("derive") is None:
+            raise ValueError(
+                f"{where}: `from` says which document to read and `derive` "
+                f"says what to read off it — `from` alone renders nothing")
         rule = None
         if spec.get("derive") is not None:
-            rule = parse_derivation(where, str(field), spec["derive"])
+            from .derive import parse_follow
+            follow = (parse_follow(f"{where}.from", spec["from"])
+                      if spec.get("from") is not None else None)
+            rule = parse_derivation(where, str(field), spec["derive"], follow)
             if spec.get("many"):
                 raise ValueError(
-                    f"{where}: `derive = \"{rule.spec}\"` reads one value off "
+                    # `template`, not `spec`: this message quotes the literal
+                    # `derive =` value, and `spec` also names the followed
+                    # reference, which was written on its own line (#233).
+                    f"{where}: `derive = \"{rule.template}\"` reads one value off "
                     f"a list, so the field holds one — drop `many`")
             if spec.get("required"):
                 raise ValueError(
@@ -1905,7 +1915,7 @@ def _check_conditions(prefix: str, scheme) -> None:
                 f"(values: {', '.join(allowed)})")
 
 
-def _check_derivations(prefix: str, scheme) -> None:
+def _check_derivations(prefix: str, scheme, schemes=None) -> None:
     """Every `derive` against the scheme that declares it (#216).
 
     Two things the shape check cannot know on its own: whether the source is a
@@ -1925,8 +1935,33 @@ def _check_derivations(prefix: str, scheme) -> None:
                 *(r.field for r in scheme.references),
                 *(v.field for v in scheme.vocabularies),
                 *(f.field for f in scheme.plain_fields)}
+    references = {r.field: r for r in scheme.references}
     for rule in scheme.derived:
         where = f"luria.toml: schemes.{prefix}.fields.{rule.field}.derive"
+        if rule.follow is not None:
+            # The names in the template belong to the *target* scheme, and
+            # which scheme that is comes from the reference being followed.
+            # Both halves are checkable here and neither is checkable in
+            # `derive`, which never sees a second scheme (#233).
+            ref = references.get(rule.follow.field)
+            if ref is None:
+                raise ValueError(
+                    f"{where}: `from = \"{rule.follow}\"` — `{rule.follow.field}` "
+                    f"is not a reference {prefix} declares, so there is no "
+                    f"document to read (references: "
+                    f"{', '.join(sorted(references)) or 'none'})")
+            if ref.many and rule.follow.index is None:
+                raise ValueError(
+                    f"{where}: `{rule.follow.field}` holds several references, "
+                    f"so `from` has to say which — write "
+                    f"`{rule.follow.field}[0]` for the first")
+            if not ref.many and rule.follow.index is not None:
+                raise ValueError(
+                    f"{where}: `{rule.follow.field}` holds one reference, so "
+                    f"`from = \"{rule.follow}\"` indexes something that is not "
+                    f"a list — write `{rule.follow.field}`")
+            _check_target_fields(where, rule, ref, schemes)
+            continue
         for name in rule.sources:
             if name not in nameable:
                 raise ValueError(
@@ -1938,11 +1973,42 @@ def _check_derivations(prefix: str, scheme) -> None:
         # single-valued fields legitimately. A template that is *only* a
         # single-valued field copies it under a second name, which is the
         # rename this refused before templates existed.
+        #
+        # It does not apply across a reference: `"{published}"` off the
+        # document `source[0]` names is not a second name for this document's
+        # field, it is the only way to read the other one's.
         if lone_field(rule.template) and rule.sources[0] not in plural:
             raise ValueError(
                 f"{where}: `{rule.template}` is just `{rule.sources[0]}` under "
                 f"another name — a template that reads one single-valued field "
                 f"and nothing else renames a field rather than deriving one")
+
+
+def _check_target_fields(where: str, rule, ref, schemes) -> None:
+    """A followed template against the scheme it actually renders against.
+
+    Takes the schemes being built rather than reading `current()`: this runs
+    *during* load, and asking the loader for the config it is still assembling
+    recurses until the stack ends.
+
+    Skipped when the target is a scheme this project does not declare — a
+    remote, or a prefix configured elsewhere — because there is nothing local
+    to check the names against and refusing would forbid a legitimate shape."""
+    target = (schemes or {}).get(ref.scheme)
+    if target is None:
+        return
+    nameable = {*BUILT_IN_CONDITION_FIELDS, "number", *target.requires,
+                *(r.field for r in target.references),
+                *(v.field for v in target.vocabularies),
+                *(f.field for f in target.plain_fields),
+                *(d.field for d in target.derived)}
+    for name in rule.sources:
+        if name not in nameable:
+            raise ValueError(
+                f"{where}: `{name}` is not a field {ref.scheme} declares, and "
+                f"`from = \"{rule.follow}\"` reads a {ref.scheme} document — "
+                f"so `{rule.field}` resolves to nothing on every document "
+                f"(nameable: {', '.join(sorted(nameable))})")
 
 
 def _alias_template(prefix: str, raw) -> str:
@@ -2035,7 +2101,7 @@ def _schemes(raw: dict, root: Path,
         )
     for prefix, scheme in schemes.items():
         _check_conditions(prefix, scheme)
-        _check_derivations(prefix, scheme)
+        _check_derivations(prefix, scheme, schemes)
         for ref in scheme.references:
             if ref.scheme not in schemes:
                 raise ValueError(

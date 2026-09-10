@@ -50,7 +50,7 @@ import re
 import sys
 
 from . import adr_index as builder
-from . import (adr_pending, badges, chains, ci, contract, doc_refs, journal,
+from . import (adr_pending, badges, chains, ci, contract, doc_refs, journal, referents,
                link_targets, narrow_titles, pins, ref_status, remotes,
                relations, sources, statuses, templates)
 from . import aliases as aliases_mod
@@ -199,6 +199,9 @@ def check_contracts(errors: list[str]) -> None:
     was the opt-in (ADR-054)."""
     cfg = current()
     known: dict[str, set[str]] = {}
+    # One reader for the whole run: a much-cited paper is otherwise re-parsed
+    # once per document that cites it (#233).
+    resolve = referents.Lookup()
     for scheme in cfg.schemes.values():
         c = contract.for_scheme(scheme)
         # Not `c.empty`: that ignores the built-in `superseded_by` field,
@@ -218,7 +221,8 @@ def check_contracts(errors: list[str]) -> None:
             # finding, raised where the repair is named. Reading it apart
             # here keeps the contract's checker generic (#181).
             meta = statuses.normalised(meta)
-            errors.extend(contract.violations(c, cfg.rel(path), meta, known))
+            errors.extend(contract.violations(c, cfg.rel(path), meta, known,
+                                              resolve))
 
 
 def check_numbers(errors: list[str]) -> None:

@@ -1,0 +1,128 @@
+---
+status: Proposed
+title: 'A derivation may follow a reference: one hop, against written frontmatter'
+version: 1
+tags:
+- record
+- mechanism
+date: '2026-09-10'
+issue: '#233'
+summary: >-
+  `derive` gains `from`, naming a reference to render the template against, so
+  a fact one scheme owns can be read by another instead of copied into it.
+  Rejected: a `ref.` namespace inside the template, which would have made the
+  template language grow a second grammar; and resolving the target's own
+  derivations first, which buys chaining at the cost of cycle detection and an
+  evaluation order.
+---
+
+# ADR-tmpk3zby: A derivation may follow a reference: one hop, against written frontmatter
+
+## Context
+
+`derive` computes a field from **the document's own frontmatter**. There was
+no way to say *take this from the document you point at*, so a fact one scheme
+owns had to be copied by hand into every document that needed it.
+
+A copy goes stale when its original moves, and nothing in luria could notice:
+`concretize` rewrites **references**, not **values**, and the lint has no rule
+relating one document's field to another's.
+
+The cost is measured rather than hypothetical. `anthology-of-the-sota` stores a
+paper's publication date on its `LIT` notes and copies it onto practices and
+reading notes. Backfilling that field across 281 documents found **eight
+practices carrying the date of a source they no longer cite** — one of them a
+paper absent from its `source:` list entirely. Two were left behind by passes
+whose entire purpose was correcting `source:`: a pass that fixes a field does
+not think about the fields derived from it, and nothing made it.
+
+That project shipped a bespoke checker. It works, and it is a per-project
+reimplementation of something the schema should be able to state.
+
+## Decision
+
+A derivation may name the reference it reads through:
+
+    [luria.schemes.SOTA.fields.published]
+    derive = "{published}"
+    from   = "source[0]"
+
+`from` names a reference field the scheme declares, indexed when that field
+holds several. The template renders against the referenced document's
+frontmatter instead of this one's.
+
+Three parts are load-bearing.
+
+**The template does not change.** `{published}` means what it means
+everywhere; only the values it renders against move. `derive` already promised
+one template language rather than a second grammar per feature, and this keeps
+it — the new capability is a second *variable source*, which is the same shape
+`#219` took when it fed `str.format` from frontmatter instead of from a remote.
+
+**One hop, against written frontmatter.** The target's own derivations are not
+resolved first. A cycle is therefore impossible **by construction** rather than
+by detection, and no evaluation order over schemes has to exist. Derivations
+do not chain.
+
+**The target field must be declared.** A followed template's names are checked
+against the target scheme, so a typo is a load error rather than a field that
+silently resolves to nothing on every document — the quiet failure eager
+validation exists to remove.
+
+## Alternatives considered
+
+- **A `ref.` namespace inside the template** — `"{ref.source[0].published}"`.
+  Valid `str.format`, and it needs no second declaration. Rejected because it
+  makes the template carry two different kinds of name: `published` meaning
+  this document's, `ref.source[0].published` meaning another's, distinguished
+  by a prefix a reader has to know. It also reserves a field name project-wide.
+  Splitting the question in two — `from` says *which document*, `derive` says
+  *what to read* — keeps each declaration answering one thing, and leaves the
+  template a template.
+
+- **Resolve the target's derivations first, so derivations chain.** Strictly
+  more capable, and it costs cycle detection, a defined evaluation order across
+  schemes, and a new class of error message about a cycle a reader must then
+  trace. Nothing yet needs a chain. Deferring it keeps the mechanism explicable
+  in one sentence, and the day something needs it, that is a decision with
+  evidence behind it rather than a capability shipped on speculation.
+
+- **A `many` derivation collecting the field from every reference.** A field
+  holds one value, so this needs somewhere to put the rest and a rule for
+  ordering and de-duplicating them. That is a different feature; `from` takes
+  an index and says so.
+
+- **Let a followed template read an undeclared field.** Cheaper to adopt — the
+  motivating project's `published:` on `LIT` was convention rather than a
+  declaration. Rejected for the reason the eager checks exist: an undeclared
+  name resolves to nothing on *every* document, which reads exactly like a
+  record with no findings. Adopting costs one `required = true`, and buys that
+  field a contract of its own.
+
+- **Status quo: every project writes its own checker.** What the anthology did.
+  It leaves the rule in a script rather than in the schema, so nothing scaffolds
+  from it, no record page mentions it, and the next project reinvents it. The
+  same argument `#216` made for `derive` in the first place.
+
+## Consequences
+
+**A copied field stops existing.** The motivating record drops 281
+hand-maintained values to zero, and the eight stale dates cannot recur: writing
+the field down is already a finding, and the value now has exactly one home.
+
+**Verified on the real corpus, not only on fixtures.** With the declaration in
+place and every stored copy removed, all 207 practices and all 74 reading notes
+resolve, and six spot-checks — including four of the eight that had been stale
+— derive the value the backfill had computed by hand. Reinstating one stale
+value makes the lint exit non-zero and name the derivation.
+
+**Adopting costs a declaration.** The target field has to be declared on the
+target scheme. That is the migration, and it is small.
+
+**Derivations do not chain**, and a project that wants one will find nothing
+resolves rather than a diagnostic explaining why. If that recurs, it is the
+evidence the deferred alternative above is waiting for.
+
+**A resolver is a run-scoped cache.** `referents.Lookup` reads each referenced
+document once per run rather than once per citing document; a module-level
+cache would outlive the edit that invalidates it.
