@@ -48,7 +48,7 @@ from pathlib import Path
 
 import yaml
 
-from . import derive
+from . import derive, referents
 from .config import current
 
 # unresolved-ok: ADR-tmp47fje — ADR-049's example of the shape, not a document
@@ -169,7 +169,12 @@ class Adr:
         # Safe to fold into `meta` because nothing writes a document back
         # through this object: frontmatter edits are text surgery
         # (`field_edit`), so a derived value can never be persisted.
-        self.meta = derive.applied(self.meta, scheme.derived)
+        # A `from` derivation reads another document, so the resolver goes in
+        # here too. Built per `Adr` rather than shared: a single reading is
+        # one document and a handful of referents, and a longer-lived cache
+        # would outlive the edit that invalidates it (#233).
+        self.meta = derive.applied(self.meta, scheme.derived,
+                                   referents.Lookup())
         # `title:` is the source of truth; the body's H1 is the fallback, so a
         # document written before the field existed — or in a project that
         # hasn't adopted it — still renders a title rather than a blank cell

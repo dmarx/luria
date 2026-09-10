@@ -319,7 +319,10 @@ def describe(contract: Contract) -> list[str]:
         if field.builtin:
             continue
         if (rule := contract.derivation(field.name)) is not None:
-            what = f"derived — `{rule.template}`, never written"
+            # `spec` rather than `template`: a followed derivation reads
+            # another document, and a record page saying only `{published}`
+            # would not say whose (#233).
+            what = f"derived — `{rule.spec}`, never written"
             if field.vocabulary is not None:
                 what += (", and one of "
                          + ", ".join(f"`{v}`" for v in field.values))
@@ -465,11 +468,13 @@ def _any_scheme_violations(contract: Contract, field: Field, rel: str, raw,
 
 
 def violations(contract: Contract, rel: str, meta: dict,
-               known: dict[str, set[str]]) -> list[str]:
+               known: dict[str, set[str]], resolve=None) -> list[str]:
     """One document against its scheme's contract, one line per breach.
 
     `known` maps a target prefix to its resolvable codes; the caller loads
-    each once per run rather than once per document.
+    each once per run rather than once per document. `resolve` is how a
+    `from` derivation reads the document it follows (#233), and for the same
+    reason belongs to the run: one shared reader, not one per document.
 
     A derived field (#216) is read off the document before anything else runs,
     so every check below sees one field whether it was computed or written —
@@ -483,7 +488,7 @@ def violations(contract: Contract, rel: str, meta: dict,
             f"{contract.scheme} derives it (`{rule.spec}`) — the value has "
             f"one source and this is not it; drop the line and order "
             f"the fields it reads to say it")
-    meta = derive.applied(meta, contract.derived)
+    meta = derive.applied(meta, contract.derived, resolve)
     for field in contract.fields:
         raw = meta.get(field.name)
         if field.vocabulary is not None:
