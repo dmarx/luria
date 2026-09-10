@@ -154,6 +154,37 @@ def reference_status(base: Path | None = None) -> str:
     return "\n".join(out)
 
 
+def _pending_table(rows, base: Path) -> list[str]:
+    """One table of undecided documents. Shared by the flat rendering and the
+    per-scheme one, so the columns cannot drift apart between them."""
+    out = ["| Open since | Status | Code | Cited | Unack. | Title |",
+           "|---|---|---|--:|--:|---|"]
+    for r in rows:
+        since = r.date.isoformat() if r.date is not None else "undated"
+        link = f"[{r.code}]({_link(r.path, base)})"
+        out.append(f"| {since} | {r.status} | {link} | {r.cites} | "
+                   f"{r.unacknowledged} | {r.title} |")
+    out.append("")
+    return out
+
+
+def _pending_by_scheme(rows) -> list[tuple[str, list]]:
+    """`(prefix, rows)` for each scheme that has an undecided document, in the
+    order `luria.toml` declares the schemes (#230).
+
+    Declaration order rather than alphabetical, for the reason `tags.yaml`
+    orders topics: which family a reader meets first is the project's
+    statement about itself, not something to sort.
+
+    A prefix `pending()` returned that no scheme declares still gets a group
+    — the collector is the authority on what is undecided, and a renderer
+    that silently dropped rows would be the worse failure."""
+    groups: dict[str, list] = {prefix: [] for prefix in current().schemes}
+    for row in rows:
+        groups.setdefault(row.code.split("-")[0], []).append(row)
+    return [(prefix, group) for prefix, group in groups.items() if group]
+
+
 def pending_decisions(base: Path | None = None) -> str:
     base = current().reports if base is None else base
     rows = adr_pending.pending()
@@ -170,15 +201,18 @@ def pending_decisions(base: Path | None = None) -> str:
         + (f", {undated} undated" if undated else "") + ".**",
         "",
     ]
-    if rows:
-        out += ["| Open since | Status | Code | Cited | Unack. | Title |",
-                "|---|---|---|--:|--:|---|"]
-        for r in rows:
-            since = r.date.isoformat() if r.date is not None else "undated"
-            link = f"[{r.code}]({_link(r.path, base)})"
-            out.append(f"| {since} | {r.status} | {link} | {r.cites} | "
-                       f"{r.unacknowledged} | {r.title} |")
-        out.append("")
+    # Grouped only when there is something to group. A `Proposed` decision
+    # and a `Proposed` practice are open questions for different readers
+    # (#230) — but a record with one family gains nothing from a heading
+    # naming the only family it has, and this project is one of those.
+    groups = _pending_by_scheme(rows)
+    if len(groups) > 1:
+        for prefix, group in groups:
+            out += [f"## {prefix}s", "",
+                    f"{len(group)} of the {len(rows)}.", ""]
+            out += _pending_table(group, base)
+    elif rows:
+        out += _pending_table(rows, base)
     out += [
         "The citation count is the second axis, and it flips the priority: an "
         "old proposal nothing references is a stalled idea worth closing, while "
