@@ -2,7 +2,7 @@
 
 # ADRs tagged `architecture`
 
-2 of 91 decisions. Back to the [full index](../README.md).
+2 of 92 decisions. Back to the [full index](../README.md).
 
 | # | Title | Summary | Status |
 |---|---|---|---|

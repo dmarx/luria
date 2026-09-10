@@ -4,7 +4,7 @@
 
 Collectors, generators, the lint, the directive vocabulary.
 
-63 of 91 decisions. Back to the [full index](../README.md).
+64 of 92 decisions. Back to the [full index](../README.md).
 
 | # | Title | Summary | Status |
 |---|---|---|---|
@@ -71,3 +71,4 @@ Collectors, generators, the lint, the directive vocabulary.
 | [ADR-081](../../../record/decisions.d/ADR-081.md) | `inert-status` measures a distribution, and its threshold is the project's to set | The check fired only when every record shared one status, on the argument that one retirement proves the judgement is live. A 144-document registry disproved it: eleven exceptions silenced the check while a quarter of its entries went unexamined. `uniform_share` makes the threshold configurable and defaults to 1.0, so nothing starts reporting. Rejected: lowering the default, and inferring the threshold from scheme size. | Active |
 | [ADR-083](../../../record/decisions.d/ADR-083.md) | A relation is walked transitively and rendered as sequences, on one page | Typed edges gave every page its neighbours and no view answered "what sequence is this document a step in", so the sequences stayed as prose, re-described once per participant, and went stale in two places at once. `[luria.chains]` walks a declared relation transitively and renders the lines on one page; a cycle and a one-sided comparison become findings. | Active |
 | [ADR-086](../../../record/decisions.d/ADR-086.md) | A marked region is how the README carries a derived fact | `luria site` has always known where a record is published, and nothing wrote it on the front page — luria's own README hand-maintained the link one line below the region `luria index` rewrites. Adds a `luria:site` region rendered from `Site`, extracts the region machinery the third copy of which prompted this, and pairs the opt-in disclosure with an `unlinked-site` finding, since a marker nobody knows about is a feature nobody has. | Proposed |
+| [ADR-092](../../../record/decisions.d/ADR-092.md) | A derivation may follow a reference: one hop, against written frontmatter | `derive` gains `from`, naming a reference to render the template against, so a fact one scheme owns can be read by another instead of copied into it. Rejected: a `ref.` namespace inside the template, which would have made the template language grow a second grammar; and resolving the target's own derivations first, which buys chaining at the cost of cycle detection and an evaluation order. | Proposed |

@@ -5,7 +5,7 @@
 
 `Proposed` and `Deferred` both describe an open question. Neither says *since when*, and that is the signal: a decision proposed last week is pending; the same one a year later was either overdue or settled in code and never written back.
 
-**8 document(s) awaiting a decision.**
+**9 document(s) awaiting a decision.**
 
 | Open since | Status | Code | Cited | Unack. | Title |
 |---|---|---|--:|--:|---|
@@ -17,9 +17,10 @@
 | 2026-09-08 | Proposed | [ADR-089](../../record/decisions.d/ADR-089.md) | 0 | 0 | A derived field is read-only, unlike a derived URI |
 | 2026-09-09 | Proposed | [ADR-090](../../record/decisions.d/ADR-090.md) | 0 | 0 | The block below a directive is a syntactic unit, read from a grammar when one is installed |
 | 2026-09-09 | Proposed | [ADR-091](../../record/decisions.d/ADR-091.md) | 0 | 0 | A stack of pull requests lands from the tip |
+| 2026-09-10 | Proposed | [ADR-092](../../record/decisions.d/ADR-092.md) | 0 | 0 | A derivation may follow a reference: one hop, against written frontmatter |
 
 The citation count is the second axis, and it flips the priority: an old proposal nothing references is a stalled idea worth closing, while an old proposal many files cite is a decision the codebase has already made and hasn't written down.
 
 This count and the reference-status report's will differ, and that is not an off-by-one. That report covers documents something actually **cites** and hasn't acknowledged; this one covers every **undecided** document. One here is missing from there for exactly one of two reasons: nothing cites it, or every citation carries an `inactive-ok` annotation.
 
-**Cited nowhere at all** (5): [ADR-084](../../record/decisions.d/ADR-084.md), [ADR-086](../../record/decisions.d/ADR-086.md), [ADR-089](../../record/decisions.d/ADR-089.md), [ADR-090](../../record/decisions.d/ADR-090.md), [ADR-091](../../record/decisions.d/ADR-091.md) — these are the cheapest to close, since nothing depends on the answer.
+**Cited nowhere at all** (6): [ADR-084](../../record/decisions.d/ADR-084.md), [ADR-086](../../record/decisions.d/ADR-086.md), [ADR-089](../../record/decisions.d/ADR-089.md), [ADR-090](../../record/decisions.d/ADR-090.md), [ADR-091](../../record/decisions.d/ADR-091.md), [ADR-092](../../record/decisions.d/ADR-092.md) — these are the cheapest to close, since nothing depends on the answer.
