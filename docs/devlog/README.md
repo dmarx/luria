@@ -6,6 +6,7 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 
 ## Currently — [September 2026](2026-09.md)
 
+- [10 Sep 22:10 — Grouping the pending report, and being caught twice by the specimen-code hazard](2026-09.md#20260910221041)
 - [10 Sep 15:47 — Firing the reference derivation on 281 real documents](2026-09.md#20260910154749)
 - [9 Sep 18:53 — A mute dial, because fail_on only changes the consequence](2026-09.md#20260909185314)
 - [9 Sep 02:49 — Merging a stack bottom-up under squash makes a conflict out of nothing](2026-09.md#20260909024928)
@@ -56,9 +57,9 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 
 ## All books
 
-93 entries across 2 books, newest first.
+94 entries across 2 books, newest first.
 
 | Book | Entries | First | Last |
 |---|--:|---|---|
-| [2026-09](2026-09.md) | 47 | 2026-09-03 | 2026-09-10 |
+| [2026-09](2026-09.md) | 48 | 2026-09-03 | 2026-09-10 |
 | [2026-08](2026-08.md) | 46 | 2026-08-03 | 2026-08-28 |
