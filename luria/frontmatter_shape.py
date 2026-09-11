@@ -29,7 +29,10 @@ def check(errors: list[str], rel: str, text: str) -> None:
     seen: dict[str, int] = {}
     for line in block.splitlines():
         stripped = line.lstrip()
-        if stripped.startswith("<!--"):
+        # Column 0 is what makes PyYAML treat `<!--` as a mapping key.
+        # An indented `<!--` inside a folded scalar (e.g. `summary: >-`)
+        # is legal content and must stay silent.
+        if line.startswith("<!--"):
             errors.append(
                 f"{rel}: HTML comment in YAML frontmatter — use a `#` "
                 f"comment (PyYAML treats `<!--` as a mapping key)")

@@ -43,3 +43,16 @@ def test_duplicate_frontmatter_key_is_reported(project):
         "title: 'A decision'\nsource: LIT-141\nsource: LIT-142\n"))
     errors = errors_for(project)
     assert any("duplicate frontmatter key 'source'" in e for e in errors), errors
+
+
+def test_indented_html_comment_in_folded_scalar_is_clean(project):
+    """An indented `<!--` is content, not a mapping key."""
+    path = _scheme.decision(project, 1, "Active", title="A decision")
+    text = path.read_text()
+    path.write_text(text.replace(
+        "title: 'A decision'\n",
+        "title: 'A decision'\n"
+        "summary: >-\n"
+        "  An entry explaining this bug may itself contain\n"
+        "  <!-- a comment that is not a key -->\n"))
+    assert errors_for(project) == []
