@@ -7,11 +7,11 @@ modernize pass. The guards here are fired on the failure they exist for
 (DP-6): a reference written in last year's spelling, a fixture code that must
 survive, a composed remote code that is another project's namespace, and a
 journal link whose frame the sweep must not disturb (#57).
+
+The fixture schemes are `FXL` and `FXM`, from the reserved fixture namespace
+(ADR-tmpgody7): a migration needs two prefixes, and neither may read as a
+citation of a real document.
 """
-# unlinted-file: — migration fixtures; every code spelling in this suite is a
-# deliberate specimen of a pre- or post-migration state, not a claim about
-# this repository's documents. The sweep honors this for the same reason the
-# scanners do: a quote is not an address.
 import json
 import subprocess
 from pathlib import Path
@@ -21,21 +21,21 @@ from luria import (aliases, concretize, config, doc_refs, lint, migrate,
 
 
 def _record_project(tmp_path, monkeypatch):
-    """A project whose GP-004 used to be DP-4 — the post-migration shape."""
+    """A project whose FXM-004 used to be FXL-4 — the post-migration shape."""
     (tmp_path / "docs").mkdir()
     (tmp_path / "luria.toml").write_text(
         '[luria]\nissue_url = "https://example.test/issues/{n}"\n'
         '[luria.paths]\ndesign_principles = "docs/guiding-principles.md"\n'
-        '[luria.schemes.GP]\ndir = "record/principles.d"\n'
+        '[luria.schemes.FXM]\ndir = "record/principles.d"\n'
         'render = "document"\noutput = "docs/guiding-principles.md"\n'
         '[luria.remotes.SG]\nrepo = "example/strata-g"\n'
     )
-    gp_dir = tmp_path / "record" / "principles.d"
-    gp_dir.mkdir(parents=True)
-    (gp_dir / "GP-004.md").write_text(
+    fxm_dir = tmp_path / "record" / "principles.d"
+    fxm_dir.mkdir(parents=True)
+    (fxm_dir / "FXM-004.md").write_text(
         "---\nstatus: Active\ntitle: 'A principle'\ntags:\n- record\n"
-        "date: '2026-01-01'\nformerly:\n- DP-4\n---\n\n"
-        "# GP-004: A principle\n\nBody.\n")
+        "date: '2026-01-01'\nformerly:\n- FXL-4\n---\n\n"
+        "# FXM-004: A principle\n\nBody.\n")
     monkeypatch.setenv("LURIA_ROOT", str(tmp_path))
     config.reset()
     aliases.reset()
@@ -45,11 +45,11 @@ def _record_project(tmp_path, monkeypatch):
 def test_the_alias_map_derives_from_formerly(tmp_path, monkeypatch):
     _record_project(tmp_path, monkeypatch)
     entries = aliases.alias_map()
-    assert {k: v.code for k, v in entries.items()} == {"DP-004": "GP-004"}
+    assert {k: v.code for k, v in entries.items()} == {"FXL-004": "FXM-004"}
     # A past spelling, so the fixer rewrites it away — the opposite of what
     # it does with a derived one (#219).
-    assert entries["DP-004"].kind == aliases.FORMERLY
-    assert entries["DP-004"].superseded
+    assert entries["FXL-004"].kind == aliases.FORMERLY
+    assert entries["FXL-004"].superseded
 
 
 def _git(root, *args):
@@ -57,7 +57,7 @@ def _git(root, *args):
 
 
 def _premigration_project(tmp_path, monkeypatch):
-    """A project the day before its DP scheme becomes GP — documents,
+    """A project the day before its FXL scheme becomes FXM — documents,
     citations in three frames, a fixture number, and two remotes: SG is
     another project (its namespace survives), LU mirrors this one (its
     composed codes follow the rename)."""
@@ -65,43 +65,43 @@ def _premigration_project(tmp_path, monkeypatch):
     (tmp_path / "luria.toml").write_text(
         '[luria]\nissue_url = "https://example.test/issues/{n}"\n'
         '[luria.paths]\ndesign_principles = "docs/design-principles.md"\n'
-        '[luria.schemes.DP]\ndir = "record/principles.d"\n'
+        '[luria.schemes.FXL]\ndir = "record/principles.d"\n'
         'render = "document"\noutput = "docs/design-principles.md"\n'
         '[luria.remotes.SG]\nrepo = "example/strata-g"\n'
-        '[luria.remotes.SG.schemes.DP]\n'
+        '[luria.remotes.SG.schemes.FXL]\n'
         'document = "docs/design-principles.md"\n'
         '[luria.remotes.LU]\nrepo = "example/this-project"\n'
-        '[luria.remotes.LU.schemes.DP]\n'
+        '[luria.remotes.LU.schemes.FXL]\n'
         'document = "docs/design-principles.md"\n'
     )
     (tmp_path / "docs" / "design-principles.md").write_text(
         "<!-- GENERATED -->\n\n# Principles\n\n"
-        '<a name="dp-4"></a>\n\n## 4. Fourth value\n')
-    dp_dir = tmp_path / "record" / "principles.d"
-    dp_dir.mkdir(parents=True)
+        '<a name="fxl-4"></a>\n\n## 4. Fourth value\n')
+    fxl_dir = tmp_path / "record" / "principles.d"
+    fxl_dir.mkdir(parents=True)
     for n, title in ((1, "First value"), (4, "Fourth value")):
-        (dp_dir / f"DP-{n:03d}.md").write_text(
+        (fxl_dir / f"FXL-{n:03d}.md").write_text(
             f"---\nstatus: Active\ntitle: '{title}'\ntags:\n- record\n"
-            f"date: '2026-01-01'\n---\n\n# DP-{n:03d}: {title}\n\n"
-            f"Body citing DP-1 sometimes.\n")
+            f"date: '2026-01-01'\n---\n\n# FXL-{n:03d}: {title}\n\n"
+            f"Body citing FXL-1 sometimes.\n")
     (tmp_path / "docs" / "notes.md").write_text(
         "# Notes\n\n"
-        "Bare DP-4 and a link [DP-4](design-principles.md#dp-4).\n"
-        "Fixture DP-018 is nobody's document.\n"
-        "Foreign SG-DP-4 belongs to strata-g.\n"
-        "Mirrored LU-DP-004 follows this project.\n"
+        "Bare FXL-4 and a link [FXL-4](design-principles.md#fxl-4).\n"
+        "Fixture FXL-018 is nobody's document.\n"
+        "Foreign SG-FXL-4 belongs to strata-g.\n"
+        "Mirrored LU-FXL-004 follows this project.\n"
         "[theirs](https://example.test/sg/docs/design-principles.md#x)\n")
     entry_dir = tmp_path / "record" / "devlog.d" / "2026" / "08" / "01"
     entry_dir.mkdir(parents=True)
     (entry_dir / "120000.md").write_text(
         "---\ntitle: 'An entry'\ncreated: '2026-08-01T12:00:00'\ntags: []\n"
-        "---\n\nBook-frame link: [DP-4](../../record/../docs/"
-        "design-principles.md#dp-4).\n")
+        "---\n\nBook-frame link: [FXL-4](../../record/../docs/"
+        "design-principles.md#fxl-4).\n")
     mig_dir = tmp_path / "record" / "migrations.d"
     mig_dir.mkdir(parents=True)
-    (mig_dir / "0001-dp-to-gp.toml").write_text(
-        'title = "DP becomes GP"\nissue = "#29"\n\n'
-        '[[operations]]\nop = "rename_scheme"\nfrom = "DP"\nto = "GP"\n'
+    (mig_dir / "0001-fxl-to-fxm.toml").write_text(
+        'title = "FXL becomes FXM"\nissue = "#29"\n\n'
+        '[[operations]]\nop = "rename_scheme"\nfrom = "FXL"\nto = "FXM"\n'
         'output = "docs/guiding-principles.md"\nremotes = ["LU"]\n')
     _git(tmp_path, "init", "-q")
     _git(tmp_path, "add", "-A")
@@ -119,11 +119,11 @@ def _locked_project(tmp_path, monkeypatch):
     root = _premigration_project(tmp_path, monkeypatch)
     lock = root / "remotes.lock.json"
     lock.write_text(json.dumps({
-        "remotes": {"LU": {"DP-004": "DP-004.md"},
-                    "SG": {"DP-004": "dp-004-a-slug.md"}},
-        "pins": {"LU": {"DP-004": {"endorsed": "sha256:bbb",
+        "remotes": {"LU": {"FXL-004": "FXL-004.md"},
+                    "SG": {"FXL-004": "fxl-004-a-slug.md"}},
+        "pins": {"LU": {"FXL-004": {"endorsed": "sha256:bbb",
                                    "seen": "sha256:ccc"}},
-                 "SG": {"DP-004": {"endorsed": "sha256:aaa",
+                 "SG": {"FXL-004": {"endorsed": "sha256:aaa",
                                    "seen": "sha256:aaa"}}}},
         indent=2) + "\n")
     _git(root, "add", "-A")
@@ -137,20 +137,20 @@ def test_endorsements_travel_with_a_claimed_rename(tmp_path, monkeypatch):
     the mirrored LU pin is re-keyed with both hashes intact (drift state
     included: prune-and-re-endorse would have laundered the unreviewed
     `seen`). The foreign SG entries survive byte-for-byte: the lockfile is
-    never swept as text, which is what protects `"DP-004"` under `"SG"`
+    never swept as text, which is what protects `"FXL-004"` under `"SG"`
     from a mask that cannot see nested keys as another project's
     namespace (#135)."""
     root, lock = _locked_project(tmp_path, monkeypatch)
     migrate.run("0001")
     data = json.loads(lock.read_text())
-    assert data["pins"]["LU"] == {"GP-004": {"endorsed": "sha256:bbb",
+    assert data["pins"]["LU"] == {"FXM-004": {"endorsed": "sha256:bbb",
                                              "seen": "sha256:ccc"}}
-    assert data["pins"]["SG"] == {"DP-004": {"endorsed": "sha256:aaa",
+    assert data["pins"]["SG"] == {"FXL-004": {"endorsed": "sha256:aaa",
                                              "seen": "sha256:aaa"}}
     # The claimed remote's filename map spells the old world in keys AND
     # values — dropped for re-discovery, while the foreign map stands.
     assert "LU" not in data["remotes"]
-    assert data["remotes"]["SG"] == {"DP-004": "dp-004-a-slug.md"}
+    assert data["remotes"]["SG"] == {"FXL-004": "fxl-004-a-slug.md"}
 
 
 def test_dry_run_plans_the_pin_move_and_keeps_the_lockfile(tmp_path,
@@ -160,7 +160,7 @@ def test_dry_run_plans_the_pin_move_and_keeps_the_lockfile(tmp_path,
     before = lock.read_text()
     migrate.run("0001", dry_run=True)
     out = capsys.readouterr().out
-    assert "LU pin DP-004 -> GP-004" in out and "endorsement travels" in out
+    assert "LU pin FXL-004 -> FXM-004" in out and "endorsement travels" in out
     assert lock.read_text() == before
 
 
@@ -169,8 +169,8 @@ def test_dry_run_prints_the_plan_and_changes_nothing(tmp_path, monkeypatch, caps
     before = {p: p.read_text() for p in root.rglob("*.md")}
     migrate.run("0001", dry_run=True)
     out = capsys.readouterr().out
-    assert "DP-001 -> GP-001" in out and "DP-004 -> GP-004" in out
-    assert "LU-DP-004 -> LU-GP-004" in out
+    assert "FXL-001 -> FXM-001" in out and "FXL-004 -> FXM-004" in out
+    assert "LU-FXL-004 -> LU-FXM-004" in out
     assert "design-principles.md -> guiding-principles.md" in out
     assert {p: p.read_text() for p in root.rglob("*.md")} == before
 
@@ -179,21 +179,21 @@ def test_rename_scheme_end_to_end(tmp_path, monkeypatch, capsys):
     root = _premigration_project(tmp_path, monkeypatch)
     migrate.run("0001")
 
-    dp_dir = root / "record" / "principles.d"
-    assert not (dp_dir / "DP-004.md").exists()
-    moved = (dp_dir / "GP-004.md").read_text()
-    assert "formerly:\n- DP-4\n" in moved, "identity stamped"
-    assert "# GP-004: Fourth value" in moved, "own heading swept"
-    assert "citing GP-1 sometimes" in moved, "cross-citations swept"
+    fxl_dir = root / "record" / "principles.d"
+    assert not (fxl_dir / "FXL-004.md").exists()
+    moved = (fxl_dir / "FXM-004.md").read_text()
+    assert "formerly:\n- FXL-4\n" in moved, "identity stamped"
+    assert "# FXM-004: Fourth value" in moved, "own heading swept"
+    assert "citing FXM-1 sometimes" in moved, "cross-citations swept"
 
     config_text = (root / "luria.toml").read_text()
-    assert "[luria.schemes.GP]" in config_text
-    assert "[luria.schemes.DP]" not in config_text
+    assert "[luria.schemes.FXM]" in config_text
+    assert "[luria.schemes.FXL]" not in config_text
     assert 'design_principles = "docs/guiding-principles.md"' in config_text
     assert 'output = "docs/guiding-principles.md"' in config_text
-    assert "[luria.remotes.LU.schemes.GP]" in config_text, "mirror follows"
+    assert "[luria.remotes.LU.schemes.FXM]" in config_text, "mirror follows"
     assert config_text.count('document = "docs/guiding-principles.md"') == 1
-    assert "[luria.remotes.SG.schemes.DP]" in config_text, "theirs stays"
+    assert "[luria.remotes.SG.schemes.FXL]" in config_text, "theirs stays"
     assert 'document = "docs/design-principles.md"' in config_text, \
         "SG's own path untouched by the section-aware pass"
 
@@ -201,29 +201,29 @@ def test_rename_scheme_end_to_end(tmp_path, monkeypatch, capsys):
         "a generated view is removed, not renamed — the next index rebuilds it"
 
     notes = (root / "docs" / "notes.md").read_text()
-    assert "Bare GP-4 and a link [GP-4](guiding-principles.md#gp-4)." in notes
-    assert "Fixture DP-018 is nobody's document." in notes, "not in the mapping"
-    assert "Foreign SG-DP-4 belongs to strata-g." in notes, "their namespace"
-    assert "Mirrored LU-GP-004 follows this project." in notes
+    assert "Bare FXM-4 and a link [FXM-4](guiding-principles.md#fxm-4)." in notes
+    assert "Fixture FXL-018 is nobody's document." in notes, "not in the mapping"
+    assert "Foreign SG-FXL-4 belongs to strata-g." in notes, "their namespace"
+    assert "Mirrored LU-FXM-004 follows this project." in notes
     assert "https://example.test/sg/docs/design-principles.md#x" in notes, \
         "a foreign URL never follows a local path pair"
 
     entry = next((root / "record" / "devlog.d").rglob("1*.md")).read_text()
-    assert "[GP-4](../../record/../docs/guiding-principles.md#gp-4)" in entry, \
+    assert "[FXM-4](../../record/../docs/guiding-principles.md#fxm-4)" in entry, \
         "history swept, and the link's frame untouched (#57)"
 
-    spec = (root / "record" / "migrations.d" / "0001-dp-to-gp.toml").read_text()
-    assert 'from = "DP"' in spec, "the spec remembers the old spelling"
+    spec = (root / "record" / "migrations.d" / "0001-fxl-to-fxm.toml").read_text()
+    assert 'from = "FXL"' in spec, "the spec remembers the old spelling"
 
     # Full circle into rung 1: the fresh config resolves old spellings.
     config.reset()
     aliases.reset()
     assert {k: v.code for k, v in aliases.alias_map().items()} == {
-        "DP-001": "GP-001", "DP-004": "GP-004"}
+        "FXL-001": "FXM-001", "FXL-004": "FXM-004"}
 
 
 def test_a_rename_mirrors_each_citation_s_padding(tmp_path, monkeypatch):
-    """`DP-004` stays padded, `DP-4` stays bare, and the anchor stays bare.
+    """`FXL-004` stays padded, `FXL-4` stays bare, and the anchor stays bare.
 
     The tail is one string with two spellings in play at once — the padded
     filename form and the bare prose form — so a rewrite has to answer
@@ -231,16 +231,16 @@ def test_a_rename_mirrors_each_citation_s_padding(tmp_path, monkeypatch):
     provisional-tail work touched exactly this branch."""
     root = _premigration_project(tmp_path, monkeypatch)
     page = root / "docs" / "padding.md"
-    page.write_text("Padded DP-004, bare DP-4, anchor "
-                    "[x](design-principles.md#dp-4).\n")
+    page.write_text("Padded FXL-004, bare FXL-4, anchor "
+                    "[x](design-principles.md#fxl-4).\n")
     _git(root, "add", "-A")
     _git(root, "-c", "user.email=t@t", "-c", "user.name=t", "commit",
          "-qm", "padding")
     migrate.run("0001")
     out = page.read_text()
-    assert "Padded GP-004" in out, out
-    assert "bare GP-4," in out, out
-    assert "#gp-4)" in out, out
+    assert "Padded FXM-004" in out, out
+    assert "bare FXM-4," in out, out
+    assert "#fxm-4)" in out, out
 
 
 def test_move_doc_lands_provisional_then_concretizes(tmp_path, monkeypatch):
@@ -260,16 +260,16 @@ def test_move_doc_lands_provisional_then_concretizes(tmp_path, monkeypatch):
     config.reset()
     aliases.reset()
     mig = root / "record" / "migrations.d" / "0002-promote.toml"
-    mig.write_text('title = "DP-4 becomes a value"\n\n'
-                   '[[operations]]\nop = "move_doc"\ndoc = "DP-4"\n'
+    mig.write_text('title = "FXL-4 becomes a value"\n\n'
+                   '[[operations]]\nop = "move_doc"\ndoc = "FXL-4"\n'
                    'to = "VAL"\n')
     migrate.run("0002")
 
     landed = list((root / "record" / "values.d").glob("VAL-tmp*.md"))
     assert len(landed) == 1, "the move lands provisional, never numbered"
-    assert "formerly:\n- DP-4\n" in landed[0].read_text()
-    assert not (root / "record" / "principles.d" / "DP-004.md").exists()
-    # DP renders as a document and VAL as an index, so the citation's SHAPE
+    assert "formerly:\n- FXL-4\n" in landed[0].read_text()
+    assert not (root / "record" / "principles.d" / "FXL-004.md").exists()
+    # FXL renders as a document and VAL as an index, so the citation's SHAPE
     # changed: `page.md#anchor` → `dir/CODE.md`. The sweep drops the stale
     # link and the fixer rebuilds it from the resolver.
     notes = (root / "docs" / "notes.md").read_text()
@@ -284,12 +284,12 @@ def test_move_doc_lands_provisional_then_concretizes(tmp_path, monkeypatch):
     concretize.run()
 
     final = (root / "record" / "values.d" / "VAL-001.md").read_text()
-    assert "- DP-4" in final and "- VAL-tmp" in final, \
+    assert "- FXL-4" in final and "- VAL-tmp" in final, \
         "both the migrated-from code and the provisional one stay resolvable"
     notes = (root / "docs" / "notes.md").read_text()
     assert "[VAL-001](../record/values.d/VAL-001.md)" in notes, notes
     assert "val-tmp" not in notes, "no provisional spelling survives the sweep"
-    assert "Fixture DP-018" in notes, "a fixture number is not in the mapping"
+    assert "Fixture FXL-018" in notes, "a fixture number is not in the mapping"
 
 
 def test_two_moves_into_one_scheme_do_not_collide(tmp_path, monkeypatch):
@@ -308,15 +308,15 @@ def test_two_moves_into_one_scheme_do_not_collide(tmp_path, monkeypatch):
     aliases.reset()
     mig = root / "record" / "migrations.d" / "0002-promote-both.toml"
     mig.write_text('title = "Both principles become values"\n\n'
-                   '[[operations]]\nop = "move_doc"\ndoc = "DP-1"\n'
+                   '[[operations]]\nop = "move_doc"\ndoc = "FXL-1"\n'
                    'to = "VAL"\n\n'
-                   '[[operations]]\nop = "move_doc"\ndoc = "DP-4"\n'
+                   '[[operations]]\nop = "move_doc"\ndoc = "FXL-4"\n'
                    'to = "VAL"\n')
     migrate.run("0002")
 
     landed = sorted((root / "record" / "values.d").glob("VAL-tmp*.md"))
     assert len(landed) == 2, [p.name for p in landed]
-    assert not list((root / "record" / "principles.d").glob("DP-*.md"))
+    assert not list((root / "record" / "principles.d").glob("FXL-*.md"))
 
     _git(root, "add", "-A")
     _git(root, "-c", "user.email=t@t", "-c", "user.name=t", "commit",
@@ -343,14 +343,14 @@ def test_move_doc_supersede_copies_and_tombstones(tmp_path, monkeypatch):
     config.reset()
     aliases.reset()
     mig = root / "record" / "migrations.d" / "0002-supersede.toml"
-    mig.write_text('title = "DP-4 superseded by a value"\n\n'
-                   '[[operations]]\nop = "move_doc"\ndoc = "DP-4"\n'
+    mig.write_text('title = "FXL-4 superseded by a value"\n\n'
+                   '[[operations]]\nop = "move_doc"\ndoc = "FXL-4"\n'
                    'to = "VAL"\nstrategy = "supersede"\n')
     migrate.run("0002")
-    old = (root / "record" / "principles.d" / "DP-004.md").read_text()
+    old = (root / "record" / "principles.d" / "FXL-004.md").read_text()
     assert "status: Superseded\nsuperseded_by:\n- VAL-tmp" in old
     assert len(list((root / "record" / "values.d").glob("VAL-tmp*.md"))) == 1
-    assert "Bare DP-4" in (root / "docs" / "notes.md").read_text(), \
+    assert "Bare FXL-4" in (root / "docs" / "notes.md").read_text(), \
         "supersede mode rewrites nothing"
 
     _git(root, "add", "-A")
@@ -359,9 +359,9 @@ def test_move_doc_supersede_copies_and_tombstones(tmp_path, monkeypatch):
     config.reset()
     aliases.reset()
     concretize.run()
-    old = (root / "record" / "principles.d" / "DP-004.md").read_text()
+    old = (root / "record" / "principles.d" / "FXL-004.md").read_text()
     assert "status: Superseded\nsuperseded_by:\n- VAL-001" in old
-    assert "Bare DP-4" in (root / "docs" / "notes.md").read_text()
+    assert "Bare FXL-4" in (root / "docs" / "notes.md").read_text()
 
 
 def test_new_migration_scaffolds_a_numbered_spec(tmp_path, monkeypatch):
@@ -379,10 +379,10 @@ def test_the_sweep_honors_unlinted_file(tmp_path, monkeypatch, capsys):
     specimen = root / "docs" / "specimens.md"
     specimen.write_text(
         "<!-- unlinted-file: — every code here is a specimen -->\n\n"
-        "# Specimens\n\nThe old spelling DP-4 preserved verbatim.\n")
+        "# Specimens\n\nThe old spelling FXL-4 preserved verbatim.\n")
     _git(root, "add", "-A")
     migrate.run("0001")
-    assert "The old spelling DP-4 preserved verbatim." in specimen.read_text()
+    assert "The old spelling FXL-4 preserved verbatim." in specimen.read_text()
 
 
 def test_provisional_is_decided_in_one_place(tmp_path, monkeypatch):
@@ -394,9 +394,9 @@ def test_provisional_is_decided_in_one_place(tmp_path, monkeypatch):
     from luria.config import is_temp_tail
     assert is_temp_tail("tmp47fje") and not is_temp_tail("004")
     assert not is_temp_tail("nonsense"), "not-a-number is not the same test"
-    assert migrate.Pair("DP-004", "VAL-tmp47fje").new_is_provisional
-    assert not migrate.Pair("DP-004", "VAL-007").new_is_provisional
-    assert not migrate.Pair("DP-004", "VAL-nonsense").new_is_provisional
+    assert migrate.Pair("FXL-004", "VAL-tmp47fje").new_is_provisional
+    assert not migrate.Pair("FXL-004", "VAL-007").new_is_provisional
+    assert not migrate.Pair("FXL-004", "VAL-nonsense").new_is_provisional
 
 
 def test_a_same_render_move_keeps_its_links_untouched(tmp_path, monkeypatch):
@@ -437,7 +437,7 @@ def test_a_worded_citation_of_a_moved_document_is_rebuilt(tmp_path,
                                                           monkeypatch):
     """A citation labelled in prose, not spelled as the code, still follows.
 
-    `[design-principles #17](../design-principles.md#dp-17)` is a live link to
+    `[design-principles #17](../design-principles.md#fxl-17)` is a live link to
     an anchor the move just vacated, and a code-shaped pattern walks straight
     past it. Worse, stripping it to its LABEL resurrects the problem: the bare
     `#17` left behind is itself a design-principle reference, which the fixer
@@ -450,26 +450,26 @@ def test_a_worded_citation_of_a_moved_document_is_rebuilt(tmp_path,
     (root / "record" / "values.d").mkdir(parents=True)
     page = root / "docs" / "worded.md"
     page.write_text(
-        "The fix ([design-principles #4](design-principles.md#dp-4)) held.\n")
+        "The fix ([design-principles #4](design-principles.md#fxl-4)) held.\n")
     config.reset()
     aliases.reset()
     _git(root, "add", "-A")
     _git(root, "-c", "user.email=t@t", "-c", "user.name=t", "commit",
          "-qm", "worded")
     mig = root / "record" / "migrations.d" / "0002-worded.toml"
-    mig.write_text('title = "DP-4 becomes a value"\n\n'
-                   '[[operations]]\nop = "move_doc"\ndoc = "DP-4"\n'
+    mig.write_text('title = "FXL-4 becomes a value"\n\n'
+                   '[[operations]]\nop = "move_doc"\ndoc = "FXL-4"\n'
                    'to = "VAL"\n')
     migrate.run("0002")
     out = page.read_text()
-    assert "design-principles.md#dp-4" not in out, out
-    assert "#dp-4" not in out, "the vacated anchor must not survive anywhere"
+    assert "design-principles.md#fxl-4" not in out, out
+    assert "#fxl-4" not in out, "the vacated anchor must not survive anywhere"
     assert "VAL-tmp" in out, out
 
 
 def _worded_move_project(tmp_path, monkeypatch):
-    """The premigration project plus a SOURCE FILE that cites DP-4 two ways —
-    by code and in prose — and a spec that moves DP-4 into an index-rendered
+    """The premigration project plus a SOURCE FILE that cites FXL-4 two ways —
+    by code and in prose — and a spec that moves FXL-4 into an index-rendered
     scheme."""
     root = _premigration_project(tmp_path, monkeypatch)
     (root / "luria.toml").write_text(
@@ -480,7 +480,7 @@ def _worded_move_project(tmp_path, monkeypatch):
     (root / "src").mkdir()
     (root / "src" / "engine.py").write_text(
         "# Selection rides undo by decision (design-principles #4), not by\n"
-        "# accident. DP-4 is the claim; DP-1 is a different one.\n"
+        "# accident. FXL-4 is the claim; FXL-1 is a different one.\n"
         "SELECTION_RIDES_UNDO = True\n")
     config.reset()
     aliases.reset()
@@ -488,8 +488,8 @@ def _worded_move_project(tmp_path, monkeypatch):
     _git(root, "-c", "user.email=t@t", "-c", "user.name=t", "commit",
          "-qm", "src")
     (root / "record" / "migrations.d" / "0002-worded-code.toml").write_text(
-        'title = "DP-4 becomes a value"\n\n'
-        '[[operations]]\nop = "move_doc"\ndoc = "DP-4"\nto = "VAL"\n')
+        'title = "FXL-4 becomes a value"\n\n'
+        '[[operations]]\nop = "move_doc"\ndoc = "FXL-4"\nto = "VAL"\n')
     return root
 
 
@@ -507,8 +507,8 @@ def test_the_relink_pass_stops_where_the_hyperlink_lint_stops(tmp_path,
     migrate.run("0002")
     src = (root / "src" / "engine.py").read_text()
     assert "](" not in src, f"no markdown links in a source file:\n{src}"
-    # DP-1 did not move, and stays exactly as the author left it.
-    assert "DP-1 is a different one" in src, src
+    # FXL-1 did not move, and stays exactly as the author left it.
+    assert "FXL-1 is a different one" in src, src
 
 
 def test_a_worded_citation_in_code_follows_the_move(tmp_path, monkeypatch):
@@ -525,13 +525,13 @@ def test_a_worded_citation_in_code_follows_the_move(tmp_path, monkeypatch):
     assert "design-principles #4" not in src, src
     assert "#4" not in src, "the vacated anchor number must not survive"
     assert src.count("VAL-tmp") == 2, f"both spellings respelled:\n{src}"
-    assert "DP-1 is a different one" in src, "an unmoved code is left alone"
+    assert "FXL-1 is a different one" in src, "an unmoved code is left alone"
 
 
 def test_a_formerly_stamp_is_not_a_dangling_citation(tmp_path, monkeypatch):
     """The alias a move writes must not be reported as a broken reference.
 
-    `formerly: DP-004` names a code that resolves to no document *because the
+    `formerly: FXL-004` names a code that resolves to no document *because the
     alias exists* — that is what the stamp is for. Counting it made every
     migration hand back one fresh "resolves to no document" warning per moved
     document, pointing at the files the migration had just written."""
@@ -541,5 +541,5 @@ def test_a_formerly_stamp_is_not_a_dangling_citation(tmp_path, monkeypatch):
     aliases.reset()
     moved = next((root / "record" / "values.d").glob("VAL-*.md"))
     assert "formerly:" in moved.read_text(), moved.read_text()
-    assert "DP-004" not in ref_status.scan().dangling, \
+    assert "FXL-004" not in ref_status.scan().dangling, \
         "the stamp is a declaration, not a citation"

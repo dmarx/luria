@@ -1,0 +1,203 @@
+---
+# Don't copy this file by hand — run `luria new adr`, which assigns the
+# identity and fills in the fields a machine can compute. WHICH identity
+# depends on the scheme's `allocate` mode: `filing` (the default) takes the
+# next free number on the spot, `merge` mints a temporary code that
+# `luria concretize` numbers where merges serialize (ADR-049). The kinds are the
+# config: every scheme, fragment directory and journal in luria.toml is one, so
+# `luria new <kind>` works for a scheme the moment it is declared.
+#
+# Numbering is sequential and carries information (it's the order decisions were
+# made). The filename is the code and nothing else; the title goes in `title:`
+# below, where correcting it costs an edit rather than a rename plus every link
+# (ADR-013).
+#
+# This frontmatter is the ONLY place these facts live. The index and the per-tag
+# pages are generated from it (ADR-004) — never edit them by hand; run
+# `luria index`.
+
+# Active | Proposed | Deferred | Superseded | Rejected. Supersede when the
+# CHOICE changes: set the old one to `status: Superseded`, name the successor
+# in `superseded_by: ADR-tmpgody7` (a reference field: checked, resolved, an edge
+# the index and the site render), and leave its body intact. A qualifying
+# note for anything the field cannot say goes in `status_note:` — prose,
+# like `summary:`, so a code in it is a citation. When the
+# choice stands and only a REASON was wrong, correct this body in place and
+# bump `version:` below — the rule objects to silent revision, not to editing.
+status: Active
+
+# What the index shows in place of the code. Repeat it as the body's `# ADR-tmpgody7:`
+# heading — someone reading the file alone needs one — and `luria lint` checks
+# that the two agree, because two copies of a string is a projection that drifts.
+title: 'Fixture schemes come from a reserved namespace'
+
+# Which revision of this decision's claim you are reading. Standard frontmatter
+# for every scheme, and it moves rarely here: a decision that CHANGES is
+# superseded by a new one, not edited. Bump it when the same choice is restated
+# more broadly — scope widened, wording generalized — and say what changed in a
+# `history:` entry. Shown in the index only when it is not 1.
+version: 1
+
+# Browsing categories, pushed down onto the decision itself. One is normal; more
+# than one is fine. A tag not listed in tags.yaml still works.
+tags:
+- record
+- mechanism
+
+date: '2026-09-11'
+
+# Optional. The issue(s) this decision came from: '#123'.
+issue: '#231'
+
+# Optional but wanted: the one-blob description the index table shows. Without
+# it the table falls back to the title, which is usually too terse to browse by.
+# Say what was decided AND what was rejected — the index is read far more often
+# than the decision, and "why not the obvious thing" is what people come for.
+# This field is prose, so it carries links like any other prose; the rest of the
+# frontmatter is data and stays plain. (`origin:` on a principle is
+# prose for the same reason — the generator renders it.)
+summary: >-
+  `FX` is reserved for fixture codes that RESOLVE ([ADR-034](ADR-034.md)); the names under
+  it — `FXL`, and `FXM` where a migration fixture needs a second — are
+  reserved for a fixture project's own SCHEMES, the codes that must resolve to
+  nothing and be claimed by nobody. A leading-prefix reservation, checked by
+  `luria lint` at the config rather than at each citation, so a project cannot
+  quietly take the guarantee away from itself. Retires the three
+  `unlinted-file:` opt-outs that stood in for it, which blanked whole suites to
+  excuse a handful of specimen codes and are the one suppression the reports
+  cannot converge past ([ADR-033](ADR-033.md)). Rejected: masking string literals in the
+  tree-sitter grammar (narrows what a directive governs, against the stated
+  invariant, and CI has no grammar installed, so it would be inert exactly
+  where the codes are), one reserved name rather than a namespace (a migration
+  fixture needs two prefixes, and the second would be invisible only by luck),
+  a per-site `unresolved-ok:` (93 acknowledgement directives already live in
+  21 test files), and refusing the prefix at config load (fixtures declare it
+  deliberately, so the refusal would break the mechanism it protects).
+---
+
+<!-- inactive-ok-file: ADR-007 — the specimen the three suites borrowed; being retired is what made it a finding -->
+<!-- unresolved-ok-file: ADR-tmpabcde, DP-018 — the other two specimens, quoted as the evidence for the decision -->
+# ADR-tmpgody7: Fixture schemes come from a reserved namespace
+
+## Context
+
+A scheme's own test suite has to write codes to test how codes are read, and
+every code it writes is read back by the scanners as a citation of this
+repository's documents. Three suites had reached for the blunt instrument:
+
+| Suite | Directive | What it blanked |
+|---|---|---|
+| `tests/test_number.py` | `unlinted-file:` | 229 lines, to excuse `ADR-007` and `ADR-tmpabcde` |
+| `tests/test_alias_inference.py` | `unlinted-file:` | 264 lines, to excuse `LIT-…` spellings |
+| `tests/test_migrations.py` | `unlinted-file:` | 545 lines, to excuse `DP-4`, `DP-018`, `LU-DP-004` |
+
+`unlinted-file:` is file-scoped by design and counted rather than hidden
+([ADR-033](ADR-033.md)), which is the honest bargain — but it is also the one suppression the
+reports cannot converge past. Three files paying it to excuse a handful of
+specimen codes is the wrong trade, and the third file's directive had already
+been *read as a finding*: writing a new report suite, a fixture built on
+`ADR-007` reported a citation of a Superseded decision, and the comment
+explaining why that was fine re-earned the warning by spelling the code out
+([#231](https://github.com/dmarx/luria/issues/231)).
+
+The dangerous half is quieter. `ADR-007` at least warned. `DP-4` and
+`LU-DP-004` **resolved** — silently counted as citations of real documents by
+a suite that meant neither. A specimen that resolves is indistinguishable from
+a citation, and stays that way until the document it borrowed moves.
+
+[ADR-034](ADR-034.md) already solved the resolving case: the `FX` remote makes `FX-ADR-032`
+an example *by construction*, pointing at the note that says so. It solved the
+wrong half for a fixture project. A fixture does not want its codes to resolve
+somewhere harmless — it wants its codes to belong to a scheme **of its own**,
+whose documents it writes and deletes in a `tmp_path`, and which the project
+running the suite has never heard of.
+
+## Decision
+
+**The `FX` namespace is reserved: no project declares a scheme whose prefix
+begins with `FX`.** Within it, `FXL` is the local fixture scheme by convention
+and `FXM` the second one where a migration fixture needs both an old and a new
+prefix. `luria lint` refuses a declared scheme in the namespace
+(`check_reserved_prefix`).
+
+The three suites now declare `FXL` (and `FXM`) instead of `ADR`, `LIT` and
+`DP`/`GP`, and all three `unlinted-file:` directives are deleted. Nothing else
+about them changed: they still build real scheme configs in `tmp_path`, so the
+local-code path — a bare `FXL-004`, a temp `FXL-tmpabcde`, an alias template,
+a `rename_scheme` across two prefixes — is exercised exactly as before. That
+is the load-bearing detail, and it is why this is a *scheme* reservation and
+not a second remote: a remote code is composed (`FX-ADR-032`) and exercises
+the remote path, which is not the path these suites test.
+
+Three constraints make the namespace hold:
+
+- **Leading match, not substring.** `AFX` is somebody's scheme; `FXM` is not.
+  Reserving `FX` at the front of a prefix costs a project nothing it would
+  have chosen.
+- **A namespace, not a name.** A migration fixture needs two prefixes at once.
+  Reserving only `FXL` would leave the second one invisible by luck, which is
+  the property this decision exists to stop relying on.
+- **Checked at the config, not at the citation.** The finding fires at
+  declaration time, before the first document makes the prefix expensive to
+  change, and names `rename_scheme` ([ADR-040](ADR-040.md)) as the remedy for when it
+  already is.
+
+## Alternatives considered
+
+- **Mask string literals in the tree-sitter grammar.** The narrowest-looking
+  fix: a code inside a Python string is a specimen, so stop scanning string
+  literals. It loses on two counts. `pyproject.toml` states the invariant
+  that the optional grammar *"can only widen what a directive governs, never
+  narrow it"* — a code in a string is bare prose everywhere the grammar is not
+  installed, and CI installs `.[dev]`, not `.[syntax]`. So the fix would be
+  inert precisely where the specimen codes are, and where it did apply it
+  would silently stop checking real citations that happen to sit in strings.
+- **One reserved name, `FXL`.** What [#231](https://github.com/dmarx/luria/issues/231)'s comment proposed, and nearly
+  right. `tests/test_migrations.py` renames a scheme, so it needs an old
+  prefix and a new one in the same fixture; with one reserved name the second
+  falls back to `GP`, which is invisible here only because nobody has declared
+  it. The whole point is to stop being invisible by luck.
+- **A per-site `unresolved-ok:` / `inactive-ok:` on each specimen.** This is
+  what the directives are for, and the test suites already carry **93
+  acknowledgement directives across 21 files**. Two of those suites
+  (`test_directives.py`, `test_ref_status.py`) are testing the directive
+  machinery itself and will always carry them. The rest are per-site
+  maintenance that detonates together when the sequence reaches the borrowed
+  number — the exact failure [ADR-034](ADR-034.md) was written after.
+- **Refuse the prefix at config load.** Stronger and self-defeating: fixture
+  projects declare `FXL` on purpose, so a load-time refusal would break the
+  mechanism it was protecting. The check has to run where a human reads it,
+  which is `luria lint`, and the test suites call individual checks rather
+  than `lint.run()`, so it never fires on a fixture.
+- **Rename `FX` to `FXR` for symmetry** (remote/local). Proposed in [#231](https://github.com/dmarx/luria/issues/231) and
+  not taken: the eight `FX` sites include two dated devlog entries, which are
+  observations that stand, and the bodies of [ADR-014](ADR-014.md), [ADR-034](ADR-034.md) and [ADR-072](ADR-072.md),
+  which would need version bumps for a spelling. `FX` reads as the namespace's
+  own name; nothing about the decision needs it renamed, and the namespace is
+  forward-compatible if that changes.
+- **Status quo.** Three whole suites unchecked, growing by one per new
+  scheme-shaped feature — and a class of specimen (`DP-4`) that resolves
+  silently, so the cost is not the directives but the citations nobody can
+  tell from the real ones.
+
+## Consequences
+
+**Measured.** Three `unlinted-file:` directives deleted, none added: the
+reference report's opt-out section goes from three files to zero, and
+`luria lint` gains no new finding from removing them. 1,038 lines of test file
+return to reference checking. The guard was fired once on the real case before
+being trusted — declaring `[luria.schemes.FXL]` in this project's own
+`luria.toml` produced the violation *and*, in the same run, made **ten fixture
+codes across 96 citation sites** start reporting as dangling, which is the
+hazard the reservation prevents, observed rather than argued.
+
+**What is now harder.** A new scheme-shaped test suite has one more thing to
+know: use `FXL`, not the prefix of whatever it is testing. The docstrings say
+so at the top of each of the three suites, and the check says so to anyone who
+declares one for real.
+
+**What this obliges.** The reservation is only as good as its documentation
+for adopting projects: `docs/directives.md` describes both halves under
+*Fixture codes*, beside the `FX` remote that the same section already
+explains. Anything reserving more of the namespace later — `FXR` for the
+remote — is a spelling change inside a namespace that already holds.
