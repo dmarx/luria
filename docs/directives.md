@@ -158,7 +158,7 @@ project declares a scheme whose prefix begins with it:
 
 `luria lint` refuses a declared scheme in the namespace, at the config rather
 than at each citation, so the guarantee cannot be taken away by accident.
-See [ADR-tmpgody7](../record/decisions.d/ADR-tmpgody7.md).
+See [ADR-093](../record/decisions.d/ADR-093.md).
 
 ## Design notes
 

@@ -187,7 +187,7 @@ def check_status_vocabulary(errors: list[str]) -> None:
 
 
 def check_reserved_prefix(errors: list[str]) -> None:
-    """A scheme declared in the reserved fixture namespace (ADR-tmpgody7).
+    """A scheme declared in the reserved fixture namespace (ADR-093).
 
     Always wrong and always mechanically fixable, which is why it is an error
     and not a report: the namespace exists so that a project's test suite can

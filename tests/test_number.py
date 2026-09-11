@@ -3,7 +3,7 @@
 Schemes now work the way journals always have: the frontmatter carries the
 truth, the path is a projection of it, and the lint guards the agreement.
 
-The fixtures use the reserved local fixture prefix `FXL` (ADR-tmpgody7), so a
+The fixtures use the reserved local fixture prefix `FXL` (ADR-093), so a
 specimen filename here cannot read as a citation of this repository's own
 decisions.
 """

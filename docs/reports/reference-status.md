@@ -9,7 +9,7 @@ Every reference in the record is a claim — "this is why things are the way the
 
 Only an `Active` document is in force. `Proposed` and `Deferred` mean *not in force yet* — an open question, being cited as if it were settled — while `Superseded` and `Rejected` mean *no longer in force*, which is often a perfectly good thing to cite: history, or a rejection worth pointing at. Either way the citation should be deliberate, and this section lists the ones nobody has vouched for yet.
 
-**1 document cited without acknowledgement.** Not listed: 55 citations someone has already vouched for with an `inactive-ok:` comment at the citing site.
+**1 document cited without acknowledgement.** Not listed: 58 citations someone has already vouched for with an `inactive-ok:` comment at the citing site.
 
 To vouch for one, put the reason where the citation is — `inactive-ok:` covers its own line and the line below it, `inactive-ok-block:` its paragraph, `inactive-ok-file:` the whole page:
 
@@ -23,7 +23,7 @@ Status is an ordinary controlled vocabulary; a built-in is a declaration nobody 
 
 5 citations in 5 files await a look.
 
-- [`luria/config.py:432`](../../luria/config.py)
+- [`luria/config.py:446`](../../luria/config.py)
 - [`luria/contract.py:170`](../../luria/contract.py)
 - [`luria/init.py:383`](../../luria/init.py)
 - [`luria/site.py:477`](../../luria/site.py)
@@ -33,7 +33,7 @@ Status is an ordinary controlled vocabulary; a built-in is a declaration nobody 
 
 A reference the reader cannot follow: the code names no document in this record. A typo, a number carried in from another project, and an illustrative code in an example all look identical from here — telling them apart takes a human, so this is a report, not an error.
 
-**3 codes unaccounted for.** Not listed: 79 mentions marked deliberate with an `unresolved-ok:` comment (same syntax and scopes as `inactive-ok:` above).
+**3 codes unaccounted for.** Not listed: 81 mentions marked deliberate with an `unresolved-ok:` comment (same syntax and scopes as `inactive-ok:` above).
 
 
 ### ADR-919 — resolves to nothing (3 unmarked sites · 4 other mentions marked deliberate)
@@ -54,9 +54,7 @@ A reference the reader cannot follow: the code names no document in this record.
 
 `unlinted-file:` exempts a whole document from the reference machinery — the blunt tool for a fixture-heavy or vendored page. It is counted here rather than hidden, the same bargain as an acknowledgement: the report stays a complete account of what nobody is checking.
 
-- [`tests/test_alias_inference.py`](../../tests/test_alias_inference.py)
-- [`tests/test_migrations.py`](../../tests/test_migrations.py)
-- [`tests/test_number.py`](../../tests/test_number.py)
+None. Every scanned file is checked. ✅
 
 ## Directives that no longer apply
 

@@ -3,7 +3,7 @@
 The identifier stays the number `luria concretize` assigns; the alias is a
 second spelling of it, recomputed on every read and therefore always true.
 
-The fixtures use the reserved local fixture prefix `FXL` (ADR-tmpgody7), so a
+The fixtures use the reserved local fixture prefix `FXL` (ADR-093), so a
 specimen spelling here cannot read as a citation of any real document.
 """
 

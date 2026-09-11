@@ -9,7 +9,7 @@ survive, a composed remote code that is another project's namespace, and a
 journal link whose frame the sweep must not disturb (#57).
 
 The fixture schemes are `FXL` and `FXM`, from the reserved fixture namespace
-(ADR-tmpgody7): a migration needs two prefixes, and neither may read as a
+(ADR-093): a migration needs two prefixes, and neither may read as a
 citation of a real document.
 """
 import json

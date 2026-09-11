@@ -201,7 +201,7 @@ def _merge(base: dict, override: dict) -> dict:
 # first shape, read "the ADR-review process" as a temporary reference.
 TEMP_TAIL = r"tmp[a-z0-9]{5}"
 
-# The fixture namespace (ADR-tmpgody7). `FX` is the remote prefix whose every
+# The fixture namespace (ADR-093). `FX` is the remote prefix whose every
 # composed code resolves to the note saying it is an example (ADR-034); the
 # names under it — `FXL` by convention, `FXM` where a second is needed — are
 # for a fixture project's OWN schemes, so that a code a test suite writes is
