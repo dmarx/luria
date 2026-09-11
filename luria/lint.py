@@ -50,7 +50,8 @@ import re
 import sys
 
 from . import adr_index as builder
-from . import (adr_pending, badges, chains, ci, contract, doc_refs, journal, referents,
+from . import (adr_pending, badges, chains, ci, contract, doc_refs, frontmatter_shape,
+               journal, referents,
                link_targets, narrow_titles, pins, ref_status, remotes,
                relations, sources, statuses, templates)
 from . import aliases as aliases_mod
@@ -103,7 +104,9 @@ def check_frontmatter(errors: list[str]) -> None:
         for path in [*scheme.documents().values(),
                      *scheme.temp_documents().values()]:
             rel = cfg.rel(path)
-            meta, body = builder.parse_frontmatter(path.read_text(encoding="utf-8"))
+            text = path.read_text(encoding="utf-8")
+            frontmatter_shape.check(errors, rel, text)
+            meta, body = builder.parse_frontmatter(text)
             if not meta:
                 errors.append(f"{rel}: no YAML frontmatter (see _template.md)")
                 continue
