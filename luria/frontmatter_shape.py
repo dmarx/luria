@@ -8,6 +8,41 @@ Pages build went red (#164).
 
 from __future__ import annotations
 
+import yaml
+
+
+class DuplicateKeyError(yaml.YAMLError):
+    """A YAML mapping repeats a key that SafeLoader would overwrite."""
+
+    def __init__(self, key) -> None:
+        self.key = key
+        super().__init__(f"duplicate key {key!r}")
+
+
+class StrictLoader(yaml.SafeLoader):
+    """SafeLoader with a duplicate-mapping-key check at every depth."""
+
+
+def no_duplicates(loader, node, deep=False):
+    """Raise before SafeLoader silently collapses a duplicate mapping key."""
+    seen = set()
+    for key_node, _ in node.value:
+        key = loader.construct_object(key_node, deep=deep)
+        try:
+            hash(key)
+        except TypeError:
+            # Preserve SafeLoader's existing ConstructorError for a mapping
+            # key that YAML cannot make hashable.
+            return yaml.SafeLoader.construct_mapping(loader, node, deep)
+        if key in seen:
+            raise DuplicateKeyError(key)
+        seen.add(key)
+    return yaml.SafeLoader.construct_mapping(loader, node, deep)
+
+
+StrictLoader.add_constructor(
+    yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG, no_duplicates)
+
 
 def frontmatter_raw(text: str) -> str | None:
     """The YAML block between the opening and closing `---` fences, or None
@@ -26,9 +61,7 @@ def check(errors: list[str], rel: str, text: str) -> None:
     block = frontmatter_raw(text)
     if block is None:
         return
-    seen: dict[str, int] = {}
     for line in block.splitlines():
-        stripped = line.lstrip()
         # Column 0 is what makes PyYAML treat `<!--` as a mapping key.
         # An indented `<!--` inside a folded scalar (e.g. `summary: >-`)
         # is legal content and must stay silent.
@@ -36,19 +69,13 @@ def check(errors: list[str], rel: str, text: str) -> None:
             errors.append(
                 f"{rel}: HTML comment in YAML frontmatter — use a `#` "
                 f"comment (PyYAML treats `<!--` as a mapping key)")
-        # Top-level mapping keys only: unindented, not a YAML `#` comment
-        # or a list item, and carrying a colon. Nested keys are indented.
-        if (not line or line[0].isspace() or stripped.startswith("#")
-                or stripped.startswith("-")):
-            continue
-        if ":" not in line:
-            continue
-        key = line.split(":", 1)[0].rstrip()
-        if not key:
-            continue
-        seen[key] = seen.get(key, 0) + 1
-    for key, count in seen.items():
-        if count > 1:
-            errors.append(
-                f"{rel}: duplicate frontmatter key {key!r} "
-                f"(PyYAML keeps the last value; strict parsers reject it)")
+    try:
+        yaml.load(block, Loader=StrictLoader)
+    except DuplicateKeyError as error:
+        errors.append(
+            f"{rel}: duplicate frontmatter key {error.key!r} "
+            f"(PyYAML keeps the last value; strict parsers reject it)")
+    except yaml.YAMLError:
+        # Let the existing SafeLoader call report or preserve all other YAML
+        # behavior. This check only widens it for silent duplicate keys.
+        pass

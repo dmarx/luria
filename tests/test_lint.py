@@ -171,6 +171,17 @@ def test_the_template_is_exempt(project):
     assert journal_errors(project) == []
 
 
+def test_a_journal_entry_with_a_duplicate_frontmatter_key_is_reported(project):
+    """Journals use frontmatter too, so they share the shape check (#240)."""
+    path = entry(journal_project(project), "2026/08/03/211926")
+    text = path.read_text()
+    path.write_text(text.replace(
+        "title: 'An entry'\n",
+        "title: 'An entry'\n\"title\": 'A replacement'\n"))
+    errors = journal_errors(project)
+    assert any("duplicate frontmatter key 'title'" in e for e in errors), errors
+
+
 # ── `version:` agrees with `history:` (ADR-019) ──────────────────────────
 
 

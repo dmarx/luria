@@ -322,7 +322,9 @@ def check_journals(errors: list[str]) -> None:
             if path.name == "_template.md":
                 continue
             rel = cfg.rel(path)
-            meta, _ = builder.parse_frontmatter(path.read_text(encoding="utf-8"))
+            text = path.read_text(encoding="utf-8")
+            frontmatter_shape.check(errors, rel, text)
+            meta, _ = builder.parse_frontmatter(text)
             created = journal.parse_created(meta.get("created"))
             if created is None:
                 # An inferrable field names its own remedy (#33); one with no
