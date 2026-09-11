@@ -2,13 +2,11 @@
 
 Schemes now work the way journals always have: the frontmatter carries the
 truth, the path is a projection of it, and the lint guards the agreement.
-"""
 
-# unlinted-file: — identity fixtures; `ADR-007` and `ADR-tmpabcde` here are
-# specimens of a filename shape, not citations of this repository's ADR-007
-# (Superseded) or of any temporary document. Same case as
-# `tests/test_migrations.py`: a scheme's own suite has to write codes to test
-# how codes are read.
+The fixtures use the reserved local fixture prefix `FXL` (ADR-tmpgody7), so a
+specimen filename here cannot read as a citation of this repository's own
+decisions.
+"""
 
 from __future__ import annotations
 
@@ -31,9 +29,9 @@ def project(tmp_path, monkeypatch, allocate: str = "filing") -> Path:
 [luria]
 issue_url = "https://example.test/issues/{{n}}"
 
-[luria.schemes.ADR]
-dir = "record/decisions.d"
-output = "docs/decisions"
+[luria.schemes.FXL]
+dir = "record/fixtures.d"
+output = "docs/fixtures"
 allocate = "{allocate}"
 """)
     monkeypatch.setenv("LURIA_ROOT", str(tmp_path))
@@ -47,28 +45,28 @@ def doc(root: Path, name: str, *, number: int | None = None,
     if number is not None:
         front.insert(1, f"number: {number}")
     front += ["date: '2026-01-01'", "---", "", f"# {name}: {title}", "", "Body."]
-    return write(root, f"record/decisions.d/{name}.md", "\n".join(front) + "\n")
+    return write(root, f"record/fixtures.d/{name}.md", "\n".join(front) + "\n")
 
 
 def scheme():
-    return config.current().schemes["ADR"]
+    return config.current().schemes["FXL"]
 
 
 # --- the field is the identity ----------------------------------------------
 
 def test_the_field_wins_over_the_filename(tmp_path, monkeypatch):
     root = project(tmp_path, monkeypatch)
-    path = doc(root, "ADR-007", number=42)
+    path = doc(root, "FXL-007", number=42)
     assert scheme().number_of(path) == 42
     assert scheme().documents() == {42: path}
-    assert adr_index.Adr(path, scheme()).code == "ADR-042"
+    assert adr_index.Adr(path, scheme()).code == "FXL-042"
 
 
 def test_the_filename_answers_when_the_field_is_absent(tmp_path, monkeypatch):
     """A record written before `number:` existed still reads — which is what
     makes the field introducible without a migration anyone has to run."""
     root = project(tmp_path, monkeypatch)
-    path = doc(root, "ADR-007")
+    path = doc(root, "FXL-007")
     assert scheme().number_of(path) == 7
     assert scheme().documents() == {7: path}
 
@@ -79,9 +77,9 @@ def test_a_number_in_the_body_is_prose_not_a_claim(tmp_path, monkeypatch):
     optimizer practices..."). The frontmatter boundary is what keeps prose
     from claiming an identity."""
     root = project(tmp_path, monkeypatch)
-    path = write(root, "record/decisions.d/ADR-007.md",
+    path = write(root, "record/fixtures.d/FXL-007.md",
                  "---\nstatus: Active\ntitle: 'A decision'\ndate: '2026-01-01'\n"
-                 "---\n\n# ADR-007: A decision\n\nhere mainly for the 10%\n"
+                 "---\n\n# FXL-007: A decision\n\nhere mainly for the 10%\n"
                  "number: the record's optimizer practices trade convergence\n")
     assert scheme().number_of(path) == 7
 
@@ -90,7 +88,7 @@ def test_a_temporary_document_has_no_number_yet(tmp_path, monkeypatch):
     """By design: a merge-allocated document holds no claim on the sequence
     until `luria concretize` assigns one (ADR-049)."""
     root = project(tmp_path, monkeypatch, allocate="merge")
-    doc(root, "ADR-tmpabcde")
+    doc(root, "FXL-tmpabcde")
     assert scheme().documents() == {}
     assert scheme().temp_documents().keys() == {"tmpabcde"}
 
@@ -99,7 +97,7 @@ def test_the_cache_expires_when_the_file_changes(tmp_path, monkeypatch):
     """Keyed on the stat rather than reset by hand, so a writer that forgets
     to invalidate cannot serve a stale identity."""
     root = project(tmp_path, monkeypatch)
-    path = doc(root, "ADR-007", number=42)
+    path = doc(root, "FXL-007", number=42)
     assert scheme().number_of(path) == 42
     import os
     path.write_text(path.read_text().replace("number: 42", "number: 43"))
@@ -111,7 +109,7 @@ def test_the_cache_expires_when_the_file_changes(tmp_path, monkeypatch):
 
 def test_a_disagreement_is_a_finding(tmp_path, monkeypatch):
     root = project(tmp_path, monkeypatch)
-    doc(root, "ADR-007", number=42)
+    doc(root, "FXL-007", number=42)
     errors: list[str] = []
     lint.check_numbers(errors)
     assert len(errors) == 1
@@ -120,7 +118,7 @@ def test_a_disagreement_is_a_finding(tmp_path, monkeypatch):
 
 def test_agreement_is_silent(tmp_path, monkeypatch):
     root = project(tmp_path, monkeypatch)
-    doc(root, "ADR-007", number=7)
+    doc(root, "FXL-007", number=7)
     errors: list[str] = []
     lint.check_numbers(errors)
     assert errors == []
@@ -130,7 +128,7 @@ def test_an_absent_field_is_not_a_disagreement(tmp_path, monkeypatch):
     """It is the repairable case, and reporting it here would name a finding
     whose remedy is a different command."""
     root = project(tmp_path, monkeypatch)
-    doc(root, "ADR-007")
+    doc(root, "FXL-007")
     errors: list[str] = []
     lint.check_numbers(errors)
     assert errors == []
@@ -140,7 +138,7 @@ def test_an_absent_field_is_not_a_disagreement(tmp_path, monkeypatch):
 
 def test_repair_populates_the_field_from_the_path(tmp_path, monkeypatch):
     root = project(tmp_path, monkeypatch)
-    path = doc(root, "ADR-007")
+    path = doc(root, "FXL-007")
     assert repair.populate_numbers(scheme()) == [path]
     assert "number: 7\n" in path.read_text()
     assert path.read_text().startswith("---\nnumber: 7\n")
@@ -148,14 +146,14 @@ def test_repair_populates_the_field_from_the_path(tmp_path, monkeypatch):
 
 def test_repair_is_idempotent(tmp_path, monkeypatch):
     root = project(tmp_path, monkeypatch)
-    doc(root, "ADR-007")
+    doc(root, "FXL-007")
     repair.populate_numbers(scheme())
     assert repair.populate_numbers(scheme()) == []
 
 
 def test_repair_leaves_a_temporary_document_alone(tmp_path, monkeypatch):
     root = project(tmp_path, monkeypatch, allocate="merge")
-    path = doc(root, "ADR-tmpabcde")
+    path = doc(root, "FXL-tmpabcde")
     before = path.read_text()
     assert repair.populate_numbers(scheme()) == []
     assert path.read_text() == before
@@ -172,19 +170,19 @@ def test_repair_never_invents_a_number(tmp_path, monkeypatch):
 
 def test_new_writes_the_field(tmp_path, monkeypatch):
     project(tmp_path, monkeypatch)
-    path = new.new_entry("adr", {"title": "First"}, None)
+    path = new.new_entry("fxl", {"title": "First"}, None)
     assert path.read_text().startswith("---\nnumber: 1\n")
     assert scheme().number_of(path) == 1
 
 
 def test_new_leaves_it_out_for_a_merge_allocated_scheme(tmp_path, monkeypatch):
     project(tmp_path, monkeypatch, allocate="merge")
-    path = new.new_entry("adr", {"title": "First"}, None)
+    path = new.new_entry("fxl", {"title": "First"}, None)
     assert "number:" not in path.read_text()
 
 
 def test_write_number_replaces_rather_than_duplicates(tmp_path, monkeypatch):
-    text = "---\nnumber: 3\nstatus: Active\n---\n\n# ADR-003\n"
+    text = "---\nnumber: 3\nstatus: Active\n---\n\n# FXL-003\n"
     out = new.write_number(text, 9)
     assert out.count("number:") == 1
     assert "number: 9" in out
@@ -199,10 +197,10 @@ def test_concretize_writes_the_field_when_it_assigns_the_number(
     """The one moment a merge-allocated document acquires a number at all."""
     from luria import concretize
     root = project(tmp_path, monkeypatch, allocate="merge")
-    doc(root, "ADR-001", number=1)
-    doc(root, "ADR-tmpabcde", title="Landed from a branch")
+    doc(root, "FXL-001", number=1)
+    doc(root, "FXL-tmpabcde", title="Landed from a branch")
     concretize.run()
-    landed = root / "record/decisions.d/ADR-002.md"
+    landed = root / "record/fixtures.d/FXL-002.md"
     assert landed.exists()
     assert "number: 2\n" in landed.read_text()
     assert scheme().number_of(landed) == 2
@@ -212,8 +210,8 @@ def test_unterminated_frontmatter_declares_nothing(tmp_path, monkeypatch):
     """`parse_frontmatter` treats an unclosed block as no frontmatter; reading
     identity has to agree, or the two disagree about what a document says."""
     root = project(tmp_path, monkeypatch)
-    path = write(root, "record/decisions.d/ADR-007.md",
-                 "---\nstatus: Active\nnumber: 42\n\n# ADR-007\n")
+    path = write(root, "record/fixtures.d/FXL-007.md",
+                 "---\nstatus: Active\nnumber: 42\n\n# FXL-007\n")
     assert config._declared_number(path) is None
     assert scheme().number_of(path) == 7
 
@@ -222,8 +220,8 @@ def test_an_indented_number_is_inside_another_field(tmp_path, monkeypatch):
     """A block scalar's continuation lines are indented, so the column-zero
     anchor is what keeps prose out of the identity."""
     root = project(tmp_path, monkeypatch)
-    path = write(root, "record/decisions.d/ADR-007.md",
+    path = write(root, "record/fixtures.d/FXL-007.md",
                  "---\nstatus: Active\nsummary: >-\n  we rejected\n"
-                 "  number: 42\ndate: '2026-01-01'\n---\n\n# ADR-007\n")
+                 "  number: 42\ndate: '2026-01-01'\n---\n\n# FXL-007\n")
     assert config._declared_number(path) is None
     assert scheme().number_of(path) == 7

@@ -200,6 +200,20 @@ def _merge(base: dict, override: dict) -> dict:
 # false-matching six-letter English after a prefix — `[a-z][a-z0-9]{5}`, the
 # first shape, read "the ADR-review process" as a temporary reference.
 TEMP_TAIL = r"tmp[a-z0-9]{5}"
+
+# The fixture namespace (ADR-tmpgody7). `FX` is the remote prefix whose every
+# composed code resolves to the note saying it is an example (ADR-034); the
+# names under it — `FXL` by convention, `FXM` where a second is needed — are
+# for a fixture project's OWN schemes, so that a code a test suite writes is
+# claimed by no scheme of the project running the suite. A leading match, not
+# a substring one: reserving `FX` at the front of a prefix costs a project
+# nothing it would have chosen, and reserving it anywhere would cost `AFX`.
+FIXTURE_NAMESPACE = "FX"
+
+
+def in_fixture_namespace(prefix: str) -> bool:
+    """Whether a scheme prefix falls in the reserved fixture namespace."""
+    return prefix.upper().startswith(FIXTURE_NAMESPACE)
 _TEMP_TAIL_RE = re.compile(rf"^{TEMP_TAIL}$")
 
 

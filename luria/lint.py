@@ -186,6 +186,26 @@ def check_status_vocabulary(errors: list[str]) -> None:
         errors.extend(statuses.problems(scheme))
 
 
+def check_reserved_prefix(errors: list[str]) -> None:
+    """A scheme declared in the reserved fixture namespace (ADR-tmpgody7).
+
+    Always wrong and always mechanically fixable, which is why it is an error
+    and not a report: the namespace exists so that a project's test suite can
+    spell codes nobody claims, and a project that claims one has quietly taken
+    that guarantee away from itself — its own fixture codes start resolving,
+    and the failure looks exactly like success until a real document lands on
+    the number.
+
+    The check reads the config, not the record, so it fires at declaration
+    time, before the first document makes the prefix expensive to change."""
+    for prefix in current().schemes:
+        if config_mod.in_fixture_namespace(prefix):
+            errors.append(
+                f"luria.toml: scheme {prefix} is in the reserved fixture "
+                f"namespace {config_mod.FIXTURE_NAMESPACE}\u2026 — pick another "
+                "prefix, or `rename_scheme` it if it already has documents")
+
+
 def check_contracts(errors: list[str]) -> None:
     """Each scheme's contract, enforced — what it `requires`, what its
     `references` hold, which of its `tag_groups` combine (ADR-040, ADR-060,
@@ -802,6 +822,7 @@ def run() -> None:
     check_frontmatter(errors)
     check_form_text(errors)
     check_status_vocabulary(errors)
+    check_reserved_prefix(errors)
     check_contracts(errors)
     check_view_dirs(errors)
     check_numbers(errors)

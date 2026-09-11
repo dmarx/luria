@@ -144,6 +144,22 @@ name = "fixtures"
 url  = "https://github.com/dmarx/luria/blob/main/docs/directives.md#fixture-codes"
 ```
 
+That covers a fixture code that should *resolve somewhere harmless*. A test
+suite usually wants the opposite: a code belonging to a scheme it declares
+itself, in a `tmp_path` project, which the project running the suite has never
+heard of. So the whole `FX` prefix is a reserved **namespace**, and no
+project declares a scheme whose prefix begins with it:
+
+- `FXL` is the local fixture scheme by convention.
+- `FXM` is the second one, for a fixture that needs two prefixes at once —
+  a `rename_scheme` migration, say.
+- Any other `FX…` name is available for the same purpose. `AFX` is not
+  reserved: the match is on the leading prefix, not a substring.
+
+`luria lint` refuses a declared scheme in the namespace, at the config rather
+than at each citation, so the guarantee cannot be taken away by accident.
+See [ADR-tmpgody7](../record/decisions.d/ADR-tmpgody7.md).
+
 ## Design notes
 
 - Directives are found by tokenising real comment syntax per file type, so
