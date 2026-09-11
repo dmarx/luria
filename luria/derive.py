@@ -228,8 +228,6 @@ class _Probe(dict):
         return ""
 
 
-# inactive-ok-block: ADR-087 — Proposed, from the same plan; cited for the
-# capability it added, not as settled evidence
 def value(meta: dict, rule: Derived, resolve=None):
     """The derived value for one document, or None when the template cannot
     be filled.
