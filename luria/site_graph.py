@@ -245,5 +245,60 @@ def block(view: dict, asset_url: str, height: str = "300px") -> str:
     )
 
 
+def load_view(path: Path) -> dict:
+    """A `Canvas — graph data (JSON)` export, checked enough to fail usefully.
+
+    The file is somebody's export pointed at by a config key, so every way of
+    getting it wrong — a path typo, the wrong JSON, a graph with nothing in it
+    — should say which, at build time. A site that builds and then shows an
+    empty box has told the author nothing.
+
+    Structural, not a schema: a `nodes` list whose entries carry an id and a
+    position is what the viewer needs and what distinguishes this file from any
+    other JSON. The rest is the exporter's business, and a check that enumerated
+    every optional field would reject next month's export for adding one.
+    """
+    if not path.exists():
+        raise SystemExit(
+            f"luria site: [luria.site] graph = {path} does not exist. Export it "
+            f"from strata-g with `Canvas — graph data (JSON)`.")
+    try:
+        view = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise SystemExit(f"luria site: {path} is not valid JSON — {exc}") from None
+    nodes = view.get("nodes") if isinstance(view, dict) else None
+    if not isinstance(nodes, list) or not nodes:
+        raise SystemExit(
+            f"luria site: {path} carries no nodes. Expected a strata-g graph "
+            f"export — an object with a non-empty `nodes` list.")
+    for node in nodes:
+        if not isinstance(node, dict) or "id" not in node or "x" not in node:
+            raise SystemExit(
+                f"luria site: {path} has a node with no id or no position "
+                f"({node!r:.60}). Expected a strata-g graph export.")
+    view.setdefault("edges", [])
+    view.setdefault("background", GRAPH_BACKGROUND)
+    view.setdefault("labelColor", GRAPH_LABEL_COLOR)
+    return view
+
+
+def unfollowable(view: dict) -> list[str]:
+    """Node labels whose URL the viewer will refuse to follow.
+
+    Reported rather than rejected: a graph whose nodes are not links is a
+    perfectly good picture, and so is one where only some are. What is not
+    good is a node that LOOKS clickable and silently is not, which is what a
+    relative or `javascript:` URL becomes — the viewer only ever writes an
+    href it recognises as http(s)."""
+    out = []
+    for node in view.get("nodes", []):
+        url = node.get("url")
+        if url is None:
+            continue
+        if not str(url).lower().startswith(("http://", "https://")):
+            out.append(str(node.get("label") or node.get("id")))
+    return out
+
+
 def asset_sha256() -> str:
     return hashlib.sha256(ASSET.read_bytes()).hexdigest()
