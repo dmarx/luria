@@ -35,6 +35,15 @@ def linkify_files(paths: list[Path], fix: bool = False) -> tuple[int, list[Path]
     for path in paths:
         text = path.read_text(encoding="utf-8")
         new, count = doc_refs.linkify(text, path, adrs, anchors)
+        # Two mechanical passes over the same text, reported as one number
+        # because they are one question to the author: "is every reference in
+        # this file spelled the way the config says?" The first spells bare
+        # references; the second moves links that still point into a
+        # document-rendered scheme's assembled view for a scheme that now
+        # cites pages (`cite`, config.Scheme). A project that never changes
+        # `cite` never sees the second one do anything.
+        new, moved = doc_refs.retarget_view_citations(new, path)
+        count += moved
         if not count:
             continue
         total += count

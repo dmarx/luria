@@ -581,7 +581,10 @@ def wikilink_target(inner: str, source: Path) -> str | None:
             if not m:
                 continue
         n = int(m.group(1))
-        if scheme.render == "document" and scheme.output:
+        # `cite = "page"` (the default) has nothing to add here: the page IS
+        # the document's own file, which is what the index path below already
+        # resolves. Only citing the assembled view is a different answer.
+        if scheme.render == "document" and scheme.output and scheme.cite == "view":
             anchor = f"{scheme.prefix.lower()}-{n}"
             if scheme.output == cfg.design_principles:
                 anchor = dp_anchors().get(n) or anchor
@@ -678,6 +681,86 @@ def dp_anchors() -> dict[int, str]:
             slug = re.sub(r"[^a-z0-9 -]", "", f"{num}. {m.group(2)}".lower())
             anchors[num] = slug.replace(" ", "-")
     return anchors
+
+
+MD_LINK_RE = re.compile(r"\[([^\]]*)\]\(([^)\s]+)\)")
+
+
+def _anchor_number(scheme, anchor: str) -> int | None:
+    """Which of `scheme`'s documents an anchor in its assembled view names.
+
+    The inverse of the two spellings the anchor can have: the constructed
+    `prefix-N`, and — for the principles document — whatever `dp_anchors`
+    discovered there, which may be a heading slug from a project that writes
+    its principles by hand."""
+    m = re.fullmatch(rf"{scheme.prefix.lower()}-0*(\d+)", anchor, re.IGNORECASE)
+    if m:
+        return int(m.group(1))
+    if scheme.output == current().design_principles:
+        for number, discovered in dp_anchors().items():
+            if discovered == anchor:
+                return number
+    return None
+
+
+def retarget_view_citations(text: str, source: Path) -> tuple[str, int]:
+    """Rewrite links that point INTO a document-rendered scheme's assembled
+    view at the cited document's own page, for a scheme whose `cite` is
+    "page". Returns the new text and how many links moved.
+
+    Flipping `cite` changes what a citation resolves to, which is enough for
+    every reference written from then on. It is not enough for the record you
+    already have: those citations are plain markdown links, and the linkifier
+    spells BARE references — it has no reason to look at a link that is
+    already written. On this project that was 330 links across 81 pages, so a
+    switch that only governed future links would have fixed nothing a reader
+    could see.
+
+    Deliberately narrow. The link TEXT is untouched, because it is the
+    author's sentence rather than a field. A link with no fragment is left
+    alone: pointing at the whole assembled document is a real thing to do. An
+    anchor that names no document is left alone too — rewriting it would swap
+    a dead fragment for a dead FILE, which is worse and hides it from the
+    lint."""
+    cfg = current()
+    schemes = [s for s in cfg.schemes.values()
+               if s.render == "document" and s.output and s.cite == "page"]
+    if not schemes:
+        return text, 0
+    base = cfg.link_base(source)
+    skip = code_spans(text) + [m.span() for m in COMMENT_RE.finditer(text)]
+
+    out, cursor, moved = [], 0, 0
+    for m in MD_LINK_RE.finditer(text):
+        if any(a <= m.start() < b for a, b in skip):
+            continue
+        target = m.group(2)
+        path_part, sep, fragment = target.partition("#")
+        if not sep or not fragment:
+            continue
+        for scheme in schemes:
+            if path_part:
+                try:
+                    cited = (base / path_part).resolve()
+                except OSError:                      # pragma: no cover
+                    continue
+                if cited != scheme.output.resolve():
+                    continue
+            elif source != scheme.output:
+                # A bare `#frag` is a link within whatever file this is. Only
+                # the view's own text can mean a principle by it.
+                continue
+            number = _anchor_number(scheme, fragment)
+            document = scheme.documents().get(number) if number else None
+            if document is None or document == source:
+                continue
+            out.append(text[cursor:m.start()])
+            out.append(f"[{m.group(1)}]({_relative(document, base)})")
+            cursor = m.end()
+            moved += 1
+            break
+    out.append(text[cursor:])
+    return "".join(out), moved
 
 
 def _relative(target: Path, base: Path) -> str:
@@ -786,7 +869,7 @@ def _temp_target(scheme, tail: str, source: Path, base: Path) -> str | None:
         target = documents.get(number)
     if target == source:
         return None
-    if scheme.render != "document":
+    if scheme.render != "document" or scheme.cite != "view":
         return _relative(target, base)
     if number is not None:
         anchor = f"{scheme.prefix.lower()}-{number}"
@@ -830,17 +913,18 @@ def resolve(ref: Ref, source: Path, adrs: dict[int, Path],
         # `formerly:` alias of a document already concretized.
         return _temp_target(scheme, ref.code, source, base)
 
-    # An index-rendered scheme resolves to the document's own file. `adrs` is
-    # passed in precomputed for the common case; any other scheme reads its
-    # directory, which is why `documents()` is the one place that glob lives.
-    if scheme.render != "document":
+    # The document's own file — every scheme but one that cites its assembled
+    # view (`cite = "view"`, config.Scheme). `adrs` is passed in precomputed
+    # for the common case; any other scheme reads its directory, which is why
+    # `documents()` is the one place that glob lives.
+    if scheme.render != "document" or scheme.cite != "view":
         target = (adrs if ref.prefix == "ADR" else scheme.documents()).get(
             ref.num)
         if target is None or target == source:
             return None
         return _relative(target, base)
 
-    # A document-rendered scheme resolves to an anchor in the assembled page.
+    # `cite = "view"`: an anchor in the assembled page rather than the source.
     # `anchors` wins where it has an entry: it is discovered from the document
     # itself, so it carries the heading-derived anchors of a project whose
     # principles are still one hand-written file (ADR-012). Constructed

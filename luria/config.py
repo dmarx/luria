@@ -155,6 +155,12 @@ DEFAULTS: dict = {
         "logo": "",
         "logo_dark": "",
         "theme": {},
+        # A graph the project designed itself, shown in place of Quartz's.
+        # Empty means Quartz's local graph, which is the default.
+        "graph": "",
+        "graph_height": "320px",
+        # Hops from the page's own node. 0 shows the whole graph on every page.
+        "graph_depth": 1,
     },
 }
 
@@ -477,6 +483,32 @@ class Scheme:
     # rather than merging into them (ADR-047), so there is nothing left to
     # inherit the key from.
     output: Path | None = None
+    # Where a CITATION of one of this scheme's codes points. Only a
+    # `render = "document"` scheme has the choice: its sources have two
+    # addresses, their own files and an anchor in the page they assemble into.
+    #
+    #   "page" — the cited document's own file. Durable in a way an anchor is
+    #            not: the anchors this generator emits are
+    #            `<a name="dp-3"></a>`, raw HTML that a publisher is free to
+    #            drop. Quartz does, which leaves every citation of a principle
+    #            on this project's own site pointing at a fragment that is not
+    #            there, while the same links work in the repository.
+    #   "view" — `output#anchor`, the assembled page. What every project did
+    #            before this key, and right where the set is meant to be read
+    #            in order and a section out of its context reads oddly.
+    #
+    # UNSET MEANS "what this scheme already does" — "view" for a document
+    # scheme, "page" for an index scheme, which has no second address. So the
+    # key changes nothing until a project sets it.
+    #
+    # The default is not "page" everywhere, and that is not timidity: a page
+    # target is only the better one once the sources ARE pages, and a document
+    # scheme's sources are not published. Defaulting to "page" today would
+    # send those citations out to the repository instead of into the site —
+    # measured on `examples/constitution`, 0 such links become 15, which
+    # `tests/test_examples.py::test_every_example_stages_its_own_site` asserts
+    # against by name.
+    cite: str = "view"
     # When this scheme's numbers are assigned (ADR-049). "filing" is today's
     # behaviour: `luria new` takes the next free number on the spot — right
     # for a single-writer record, and a distributed claim on a global counter
@@ -1142,6 +1174,37 @@ def _checked_converses(prefix: str, refs: tuple) -> tuple:
     return refs
 
 
+CITE_TARGETS = ("page", "view")
+
+
+def _cite(prefix: str, spec: dict) -> str:
+    """Read and check `[luria.schemes.X] cite`.
+
+    Unset resolves to what the scheme already does, so the key is inert until
+    a project sets it.
+
+    Two refusals rather than one, because they are different mistakes. An
+    unknown word is a typo; an EXPLICIT `cite = "view"` on an index scheme is
+    a request that cannot be honoured — there is no assembled document to
+    anchor into — and quietly resolving to the page anyway would answer a
+    question the project did not ask (DP-1)."""
+    render = str(spec.get("render", "index"))
+    # Unset resolves to the scheme's EXISTING behaviour, so adding this key
+    # changes nothing for a project that does not set it.
+    value = str(spec.get("cite") or ("view" if render == "document" else "page"))
+    if value not in CITE_TARGETS:
+        raise ValueError(
+            f'luria.toml: schemes.{prefix}.cite = "{value}" is not a target — '
+            f'use "page" (the cited document\'s own file) or "view" '
+            f'(an anchor in the document it assembles into)')
+    if value == "view" and render != "document":
+        raise ValueError(
+            f'luria.toml: schemes.{prefix} sets cite = "view" but is not '
+            f'render = "document", so it assembles no view to anchor into — '
+            f'drop the key, or set render = "document"')
+    return value
+
+
 def _references(prefix: str, raw: dict) -> tuple[Reference, ...]:
     """Read a scheme's `[luria.schemes.X.references]` table."""
     found = []
@@ -1441,6 +1504,16 @@ class Site:
         [luria.site.theme.light]
         light = "#f4f1e8"                      # any of Quartz's colour names
 
+    A project that would rather show a graph it designed than the page-link
+    one Quartz draws points at the export:
+
+        graph        = "docs/graphs/architecture.json"   # strata-g graph data
+        graph_height = "320px"                           # optional
+
+    Set, that graph replaces `Component.Graph` on every page — one curated map
+    of the project, the same everywhere, rather than a neighbourhood computed
+    per page. Unset, Quartz's local graph is what the site keeps.
+
     `logo_dark` is only needed when the artwork can't invert itself. A logo
     whose SVG exposes a `--luria-ink` custom property — the convention this
     project's own kit uses — is re-inked to the theme automatically, and one
@@ -1457,6 +1530,15 @@ class Site:
     logo: Path | None = None
     logo_dark: Path | None = None
     theme: dict = field(default_factory=dict)
+    # A graph the project laid out itself, exported from strata-g as
+    # `Canvas — graph data (JSON)`. Set, it is shown on every page IN PLACE OF
+    # Quartz's local graph; unset, Quartz's is what the site keeps.
+    graph: Path | None = None
+    graph_height: str = "320px"
+    # How much of the configured graph each page shows: hops from that page's
+    # own node. 1 is its immediate neighbourhood; 0 is the whole graph, which
+    # is the same picture everywhere.
+    graph_depth: int = 1
 
 
 @dataclass(frozen=True)
@@ -2098,6 +2180,7 @@ def _schemes(raw: dict, root: Path,
             render=spec.get("render", "index"),
             output=root / spec["output"] if spec.get("output") else None,
             allocate=spec.get("allocate", "filing"),
+            cite=_cite(prefix, spec),
             alias=_alias_template(prefix, spec.get("alias", "")),
             titles_generalize=bool(spec.get("titles_generalize", False)),
             requires=tuple(spec.get("requires", ())),
@@ -2150,6 +2233,9 @@ def _site(raw: dict, root: Path) -> Site:
         logo=root / spec["logo"] if spec.get("logo") else None,
         logo_dark=root / spec["logo_dark"] if spec.get("logo_dark") else None,
         theme=spec.get("theme", {}) or {},
+        graph=root / spec["graph"] if spec.get("graph") else None,
+        graph_height=spec.get("graph_height") or "320px",
+        graph_depth=int(spec.get("graph_depth", 1)),
     )
 
 
