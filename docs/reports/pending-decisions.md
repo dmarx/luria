@@ -5,12 +5,13 @@
 
 `Proposed` and `Deferred` both describe an open question. Neither says *since when*, and that is the signal: a decision proposed last week is pending; the same one a year later was either overdue or settled in code and never written back.
 
-**2 document(s) awaiting a decision.**
+**3 document(s) awaiting a decision.**
 
 | Open since | Status | Code | Cited | Unack. | Title |
 |---|---|---|--:|--:|---|
 | 2026-09-08 | Proposed | [ADR-089](../../record/decisions.d/ADR-089.md) | 0 | 0 | A derived field is read-only, unlike a derived URI |
 | 2026-09-10 | Proposed | [ADR-092](../../record/decisions.d/ADR-092.md) | 0 | 0 | A derivation may follow a reference: one hop, against written frontmatter |
+| 2026-09-12 | Proposed | [ADR-000](../../record/decisions.d/ADR-tmp6pv64.md) | 3 | 3 | A cited document gets a page, and where a citation points is configurable |
 
 The citation count is the second axis, and it flips the priority: an old proposal nothing references is a stalled idea worth closing, while an old proposal many files cite is a decision the codebase has already made and hasn't written down.
 

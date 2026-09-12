@@ -24,7 +24,7 @@ hand.
 
 ## Every change ships its record entry
 
-Run `luria new` in the same branch as the work — [DP-008](docs/design-principles.md#dp-8), and the reason is
+Run `luria new` in the same branch as the work — [DP-008](record/principles.d/DP-008.md), and the reason is
 economic rather than procedural: a fact filed while its context is loaded costs
 a paragraph, and re-derived cold it costs a session.
 
@@ -51,9 +51,9 @@ Cite decisions from code comments and docs by their bare code and run
 - A new lint check must be **always wrong and mechanically fixable** to
   fail the build; anything that needs human judgement becomes a *report*
   with an acknowledgement directive
-  ([docs/directives.md](docs/directives.md)) — [DP-001](docs/design-principles.md#dp-1) and [DP-010](docs/design-principles.md#dp-10)
+  ([docs/directives.md](docs/directives.md)) — [DP-001](record/principles.d/DP-001.md) and [DP-010](record/principles.d/DP-010.md)
   decide which of the two a check becomes. Fire a new guard on a real case
-  before trusting it, and note the firing in the devlog ([DP-006](docs/design-principles.md#dp-6):
+  before trusting it, and note the firing in the devlog ([DP-006](record/principles.d/DP-006.md):
   provisioned is not working, and a guard nobody fired reports what a clean
   one reports).
 - The configuration reference is generated from the dataclasses in

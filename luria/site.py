@@ -409,6 +409,24 @@ def _excluded(rel: str, site: Site) -> bool:
     return any(fnmatch.fnmatch(rel, pattern) for pattern in site.exclude)
 
 
+def document_source(path: Path, cfg) -> bool:
+    """Whether `path` is one code of a scheme that renders into ONE document.
+
+    A design principle is the case: `record/principles.d/DP-004.md` assembles
+    into `docs/design-principles.md`, so its links are spelled for `docs/` and
+    `link_base` reports it as a source rendered elsewhere — which is why it
+    went unpublished.
+
+    Not every source that answers that description. A changelog or devlog
+    fragment has no code, no title of its own and no identity apart from the
+    view it lands in; there is nothing to give a page TO. This is the shape
+    where the fragment IS a document — numbered, titled, statused, cited by
+    code — that happens to be rendered as a section of one."""
+    return any(scheme.render == "document" and scheme.output
+               and path.parent == scheme.dir
+               for scheme in cfg.schemes.values())
+
+
 def publishable(cfg=None, skip: Path | None = None) -> list[Path]:
     """Every markdown file the site publishes, in a stable order.
 
@@ -416,6 +434,12 @@ def publishable(cfg=None, skip: Path | None = None) -> list[Path]:
     some *other* directory is a source rendered into a view, and the view is
     already here. Excluding it is not tidiness — its links are spelled for
     where its prose lands, so publishing it in place would break every one.
+
+    `document_source` is the exception, and it is an exception to the
+    CONSEQUENCE rather than to the rule: those links really are spelled for
+    somewhere else, and `stage` re-spells them on the way out (`_rebase`). It
+    earns that because a cited document with no page of its own is the one
+    thing this record's own linter cannot say out loud.
 
     `skip` is the staging directory when it sits inside the project — the
     default `build/site` does. Without it the second run publishes the first
@@ -439,7 +463,7 @@ def publishable(cfg=None, skip: Path | None = None) -> list[Path]:
         rel = path.relative_to(cfg.root).as_posix()
         if _excluded(rel, cfg.site):
             continue
-        if cfg.link_base(path) != path.parent:
+        if cfg.link_base(path) != path.parent and not document_source(path, cfg):
             continue
         out.append(path)
     return out
@@ -463,7 +487,12 @@ def _alias(path: Path, cfg) -> str | None:
     *filename*, resolved by basename. For a file-per-code scheme those agree,
     and an alias makes the short URL agree too."""
     for scheme in cfg.schemes.values():
-        if scheme.render != "index" or path.parent != scheme.dir:
+        # Both shapes: a file-per-code scheme, and a document-rendered one now
+        # that its sources are pages. The alias is about the CODE having an
+        # address, which is equally true of either.
+        if path.parent != scheme.dir:
+            continue
+        if scheme.render == "document" and not scheme.output:
             continue
         number = scheme.number_of(path)
         if number is not None:
@@ -752,6 +781,51 @@ def landing_page(text: str, cfg) -> str:
     return "---\n" + yaml_text.rstrip("\n") + "\n" + added + "---\n" + body
 
 
+def _rebase(text: str, source: Path, cfg) -> str:
+    """Re-spell a document source's relative links for its own page.
+
+    A design principle's prose is written to be read in the assembled view, so
+    its targets resolve against `link_base` — `docs/` — not against the file's
+    own directory. `../record/decisions.d/ADR-006.md` is correct there and
+    wrong from `record/principles.d/`, which is where the page now lands.
+
+    So the source stays exactly as it is in the repository, where the fixer and
+    the lint both expect that spelling, and staging re-points each target on
+    the way out. Publishing without this would trade one broken link for
+    another, which is the failure it exists to prevent — and the reason it runs
+    BEFORE `_retarget`, whose "does this leave the published set" question is
+    only answerable once the path means what it says.
+
+    Only relative targets move. A URL, an anchor-only link and a specimen
+    inside a code span are all left alone, on the same rule the reference lint
+    uses: code is quoted, not asserted."""
+    base = cfg.link_base(source)
+    if base == source.parent:
+        return text
+    quoted = doc_refs.code_spans(text)
+
+    def fix(match: re.Match) -> str:
+        target = match.group(1)
+        if any(a <= match.start() < b for a, b in quoted):
+            return target
+        if NOT_A_PATH & set(target):
+            return target
+        path_part, sep, fragment = target.partition("#")
+        if not path_part:
+            return target
+        try:
+            absolute = (base / path_part).resolve()
+        except (ValueError, OSError):                    # pragma: no cover
+            return target
+        # posixpath, not os.path: these are link targets, which are `/`-joined
+        # wherever the build runs.
+        spelled = posixpath.relpath(absolute.as_posix(),
+                                    source.parent.resolve().as_posix())
+        return spelled + sep + fragment
+
+    return RELATIVE_TARGET_RE.sub(fix, text)
+
+
 def _retarget(text: str, source: Path, cfg, published: set[Path],
               staged_assets: dict[Path, Path], report: Report) -> str:
     """Send every relative link that leaves the published set somewhere real.
@@ -904,6 +978,10 @@ def stage(out: Path, cfg=None, nested: bool = True) -> Report:
         dest_rel = destination(path, cfg)
         if dest_rel.as_posix() == "index.md":
             text = landing_page(text, cfg)
+        # A document source's links are spelled for the view it assembles
+        # into; re-point them at its own page before anything asks where
+        # they land.
+        text = _rebase(text, path, cfg)
         text = _retarget(text, path, cfg, published, assets, report)
         dest = content / dest_rel
         dest.parent.mkdir(parents=True, exist_ok=True)
