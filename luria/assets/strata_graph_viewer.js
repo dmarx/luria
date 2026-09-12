@@ -6,7 +6,7 @@
 //
 //   source:   https://github.com/dmarx/strata-g
 //             web/src/graph/export/webappViewer.ts  (viewerScript())
-//   revision: 6870ddf7f08edfdecfb54053033308a5e57c9cff
+//   revision: 6d24cb6bce934f4e8666b93ae9d39a40fdecb42f
 //   pinned:   see LINEAGE_VIEWER_SHA256 in luria/site_graph.py
 //
 // Do not edit. To update: re-emit from strata-g, drop the file here, and
@@ -506,14 +506,31 @@
 
   Graph.prototype.connectedCallback = function () {
     if (this.__mounted) return;
+    // Two carriers, and the attribute is not a convenience.
+    //
+    // The island is the default: it reads in View Source and costs no
+    // encoding. But it only survives a pipeline that passes element CONTENT
+    // through untouched, and a static-site generator is exactly the pipeline
+    // that does not. Quartz (remark to hast to preact) re-serializes raw HTML
+    // and escapes a script element's text, so every double quote in the
+    // island reaches the browser as an entity — script content is raw text,
+    // so the browser does not decode it back, and JSON.parse throws on a page
+    // that looked perfectly fine in the source markdown.
+    //
+    // An ATTRIBUTE value is the one place HTML escaping round-trips by
+    // construction: whatever a serializer escapes, the parser decodes. So a
+    // producer whose output passes through a markup pipeline puts the JSON in
+    // data-graph instead, and gets the same bytes back.
     var island = this.querySelector('script[type="application/json"]');
-    if (!island) {
+    var attr = this.getAttribute("data-graph");
+    if (!island && attr === null) {
       // Upgrade timing, and the reason the SECOND embed on a page used to stay
       // blank. The first fragment's element is upgraded by customElements.define
       // running after it, so its children are already parsed. By the time the
       // parser reaches a later element the definition exists, so this fires at
       // the OPENING TAG — before the data script inside it is parsed, and
       // querySelector finds nothing. Wait for the parser to finish and retry.
+      // An attribute is already there at the opening tag, so it never waits.
       if (document.readyState === "loading") {
         var self = this;
         document.addEventListener("DOMContentLoaded", function () {
@@ -523,7 +540,7 @@
       return;
     }
     this.__mounted = true;
-    var data = JSON.parse(island.textContent);
+    var data = JSON.parse(island ? island.textContent : attr);
     // Open, not closed: the page's own scripts (and the test suite) can reach
     // in. There is nothing secret in here — the data is in the document.
     var shadow = this.attachShadow({ mode: "open" });
