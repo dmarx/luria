@@ -1,0 +1,1728 @@
+{
+  "nodes": [
+    {
+      "id": "record/decisions.d/ADR-001.md",
+      "url": "https://dmarx.github.io/luria/ADR-001",
+      "x": -1074.9890680436595,
+      "y": 21.798572835539353,
+      "size": 42.24922359499622,
+      "color": "#0072b2",
+      "label": "ADR-001",
+      "attrs": {
+        "code": "ADR-001",
+        "scheme": "ADR",
+        "title": "ADR-001: Four layers of record, each with a test for what belongs in it",
+        "status": "Active",
+        "in_force": 1,
+        "tags": "record",
+        "date": "2026-08-03",
+        "version": 2,
+        "word_count": 576,
+        "citations": 5,
+        "external": 0,
+        "url": "https://dmarx.github.io/luria/ADR-001",
+        "keep": 1
+      }
+    },
+    {
+      "id": "record/decisions.d/ADR-002.md",
+      "url": "https://dmarx.github.io/luria/ADR-002",
+      "x": -1008.8675791959653,
+      "y": -69.96733445901441,
+      "size": 66.89992295835181,
+      "color": "#0072b2",
+      "label": "ADR-002",
+      "attrs": {
+        "code": "ADR-002",
+        "scheme": "ADR",
+        "title": "ADR-002: Contributions write fragments; shared documents are generated views",
+        "status": "Active",
+        "in_force": 1,
+        "tags": "record mechanism",
+        "date": "2026-08-03",
+        "version": 2,
+        "word_count": 465,
+        "citations": 13,
+        "external": 0,
+        "url": "https://dmarx.github.io/luria/ADR-002",
+        "keep": 1
+      }
+    },
+    {
+      "id": "record/decisions.d/ADR-003.md",
+      "url": "https://dmarx.github.io/luria/ADR-003",
+      "x": -416.34594327792036,
+      "y": 1.9765239135235118,
+      "size": 69.34983296193094,
+      "color": "#0072b2",
+      "label": "ADR-003",
+      "attrs": {
+        "code": "ADR-003",
+        "scheme": "ADR",
+        "title": "ADR-003: Status is a closed vocabulary in frontmatter, enforced by lint",
+        "status": "Active",
+        "in_force": 1,
+        "tags": "record mechanism",
+        "date": "2026-08-03",
+        "version": 2,
+        "word_count": 429,
+        "citations": 14,
+        "external": 0,
+        "url": "https://dmarx.github.io/luria/ADR-003",
+        "keep": 1
+      }
+    },
+    {
+      "id": "record/decisions.d/ADR-004.md",
+      "url": "https://dmarx.github.io/luria/ADR-004",
+      "x": -977.6649953137565,
+      "y": 52.43961795146258,
+      "size": 56,
+      "color": "#0072b2",
+      "label": "ADR-004",
+      "attrs": {
+        "code": "ADR-004",
+        "scheme": "ADR",
+        "title": "ADR-004: The decision index is generated from frontmatter",
+        "status": "Active",
+        "in_force": 1,
+        "tags": "mechanism",
+        "date": "2026-08-03",
+        "version": 1,
+        "word_count": 401,
+        "citations": 9,
+        "external": 0,
+        "url": "https://dmarx.github.io/luria/ADR-004",
+        "keep": 1
+      }
+    },
+    {
+      "id": "record/decisions.d/ADR-005.md",
+      "url": "https://dmarx.github.io/luria/ADR-005",
+      "x": -867.6441428911784,
+      "y": -137.91850841066304,
+      "size": 86.42748367682174,
+      "color": "#0072b2",
+      "label": "ADR-005",
+      "attrs": {
+        "code": "ADR-005",
+        "scheme": "ADR",
+        "title": "ADR-005: References in prose are hyperlinks, enforced by lint",
+        "status": "Active",
+        "in_force": 1,
+        "tags": "mechanism",
+        "date": "2026-08-03",
+        "version": 1,
+        "word_count": 576,
+        "citations": 22,
+        "external": 0,
+        "url": "https://dmarx.github.io/luria/ADR-005",
+        "keep": 1
+      }
+    },
+    {
+      "id": "record/decisions.d/ADR-006.md",
+      "url": "https://dmarx.github.io/luria/ADR-006",
+      "x": -812.7494619587386,
+      "y": -279.05389409189195,
+      "size": 61.69924622639719,
+      "color": "#0072b2",
+      "label": "ADR-006",
+      "attrs": {
+        "code": "ADR-006",
+        "scheme": "ADR",
+        "title": "ADR-006: Reference schemes and paths are configuration, not constants",
+        "status": "Active",
+        "in_force": 1,
+        "tags": "mechanism",
+        "date": "2026-08-03",
+        "version": 1,
+        "word_count": 436,
+        "citations": 11,
+        "external": 0,
+        "url": "https://dmarx.github.io/luria/ADR-006",
+        "keep": 1
+      }
+    },
+    {
+      "id": "record/decisions.d/ADR-007.md",
+      "url": "https://dmarx.github.io/luria/ADR-007",
+      "x": -614.9125438189009,
+      "y": 124.24119285045074,
+      "size": 78.36753236814712,
+      "color": "#0072b2",
+      "label": "ADR-007",
+      "attrs": {
+        "code": "ADR-007",
+        "scheme": "ADR",
+        "title": "ADR-007: Document status is reported, not enforced",
+        "status": "Superseded",
+        "in_force": 0,
+        "tags": "process mechanism",
+        "date": "2026-08-03",
+        "version": 2,
+        "word_count": 622,
+        "citations": 18,
+        "external": 0,
+        "url": "https://dmarx.github.io/luria/ADR-007",
+        "keep": 1
+      }
+    },
+    {
+      "id": "record/decisions.d/ADR-009.md",
+      "url": "https://dmarx.github.io/luria/ADR-009",
+      "x": -970.6174510170808,
+      "y": 170.47195294228453,
+      "size": 58.92099788303083,
+      "color": "#0072b2",
+      "label": "ADR-009",
+      "attrs": {
+        "code": "ADR-009",
+        "scheme": "ADR",
+        "title": "ADR-009: Extracted with provenance, not imported",
+        "status": "Active",
+        "in_force": 1,
+        "tags": "process record",
+        "date": "2026-08-03",
+        "version": 1,
+        "word_count": 514,
+        "citations": 10,
+        "external": 0,
+        "url": "https://dmarx.github.io/luria/ADR-009",
+        "keep": 1
+      }
+    },
+    {
+      "id": "record/decisions.d/ADR-012.md",
+      "url": "https://dmarx.github.io/luria/ADR-012",
+      "x": -783.6271569879144,
+      "y": -3.563201776483656,
+      "size": 69.34983296193094,
+      "color": "#0072b2",
+      "label": "ADR-012",
+      "attrs": {
+        "code": "ADR-012",
+        "scheme": "ADR",
+        "title": "ADR-012: Principles are fragments too, rendered as a document",
+        "status": "Active",
+        "in_force": 1,
+        "tags": "record mechanism",
+        "date": "2026-08-03",
+        "version": 2,
+        "word_count": 895,
+        "citations": 14,
+        "external": 0,
+        "url": "https://dmarx.github.io/luria/ADR-012",
+        "keep": 1
+      }
+    },
+    {
+      "id": "record/decisions.d/ADR-013.md",
+      "url": "https://dmarx.github.io/luria/ADR-013",
+      "x": -848.1002768379641,
+      "y": 210.4999915738213,
+      "size": 66.89992295835181,
+      "color": "#0072b2",
+      "label": "ADR-013",
+      "attrs": {
+        "code": "ADR-013",
+        "scheme": "ADR",
+        "title": "ADR-013: A document's filename is its code; the title lives in the frontmatter",
+        "status": "Active",
+        "in_force": 1,
+        "tags": "record mechanism",
+        "date": "2026-08-03",
+        "version": 1,
+        "word_count": 993,
+        "citations": 13,
+        "external": 0,
+        "url": "https://dmarx.github.io/luria/ADR-013",
+        "keep": 1
+      }
+    },
+    {
+      "id": "record/decisions.d/ADR-014.md",
+      "url": "https://dmarx.github.io/luria/ADR-014",
+      "x": -780.5144971376574,
+      "y": 114.39490266084756,
+      "size": 46.090815370097204,
+      "color": "#0072b2",
+      "label": "ADR-014",
+      "attrs": {
+        "code": "ADR-014",
+        "scheme": "ADR",
+        "title": "ADR-014: A code that resolves to nothing is reported, not dropped",
+        "status": "Active",
+        "in_force": 1,
+        "tags": "mechanism record",
+        "date": "2026-08-03",
+        "version": 1,
+        "word_count": 1047,
+        "citations": 6,
+        "external": 0,
+        "url": "https://dmarx.github.io/luria/ADR-014",
+        "keep": 1
+      }
+    },
+    {
+      "id": "record/decisions.d/ADR-015.md",
+      "url": "https://dmarx.github.io/luria/ADR-015",
+      "x": -725.5369795490531,
+      "y": 198.56017042241717,
+      "size": 52.91168824543143,
+      "color": "#0072b2",
+      "label": "ADR-015",
+      "attrs": {
+        "code": "ADR-015",
+        "scheme": "ADR",
+        "title": "ADR-015: A foreign record gets a prefix; the config turns it into a URL",
+        "status": "Superseded",
+        "in_force": 0,
+        "tags": "record mechanism",
+        "date": "2026-08-03",
+        "version": 1,
+        "word_count": 1036,
+        "citations": 8,
+        "external": 0,
+        "url": "https://dmarx.github.io/luria/ADR-015",
+        "keep": 1
+      }
+    },
+    {
+      "id": "record/decisions.d/ADR-016.md",
+      "url": "https://dmarx.github.io/luria/ADR-016",
+      "x": -756.1249421245587,
+      "y": 338.1485829631539,
+      "size": 86.42748367682174,
+      "color": "#0072b2",
+      "label": "ADR-016",
+      "attrs": {
+        "code": "ADR-016",
+        "scheme": "ADR",
+        "title": "ADR-016: Remotes are public URLs, Luria is its own worked example, and every scheme versions",
+        "status": "Active",
+        "in_force": 1,
+        "tags": "record mechanism",
+        "date": "2026-08-03",
+        "version": 1,
+        "word_count": 981,
+        "citations": 22,
+        "external": 0,
+        "url": "https://dmarx.github.io/luria/ADR-016",
+        "keep": 1
+      }
+    },
+    {
+      "id": "record/decisions.d/ADR-018.md",
+      "url": "https://dmarx.github.io/luria/ADR-018",
+      "x": -897.7914418128918,
+      "y": -8.84006646521759,
+      "size": 42.24922359499622,
+      "color": "#0072b2",
+      "label": "ADR-018",
+      "attrs": {
+        "code": "ADR-018",
+        "scheme": "ADR",
+        "title": "ADR-018: The README's badges are counts derived from the record",
+        "status": "Active",
+        "in_force": 1,
+        "tags": "record mechanism",
+        "date": "2026-08-03",
+        "version": 2,
+        "word_count": 977,
+        "citations": 5,
+        "external": 0,
+        "url": "https://dmarx.github.io/luria/ADR-018",
+        "keep": 1
+      }
+    },
+    {
+      "id": "record/decisions.d/ADR-019.md",
+      "url": "https://dmarx.github.io/luria/ADR-019",
+      "x": -876.5381986656631,
+      "y": 93.62836315989844,
+      "size": 49.62352359916263,
+      "color": "#0072b2",
+      "label": "ADR-019",
+      "attrs": {
+        "code": "ADR-019",
+        "scheme": "ADR",
+        "title": "ADR-019: A wrong reason is corrected in place and versioned; a changed choice is superseded",
+        "status": "Active",
+        "in_force": 1,
+        "tags": "record process",
+        "date": "2026-08-03",
+        "version": 1,
+        "word_count": 677,
+        "citations": 7,
+        "external": 0,
+        "url": "https://dmarx.github.io/luria/ADR-019",
+        "keep": 1
+      }
+    },
+    {
+      "id": "record/decisions.d/ADR-021.md",
+      "url": "https://dmarx.github.io/luria/ADR-021",
+      "x": -684.3979660093524,
+      "y": -310.22279428074347,
+      "size": 66.89992295835181,
+      "color": "#0072b2",
+      "label": "ADR-021",
+      "attrs": {
+        "code": "ADR-021",
+        "scheme": "ADR",
+        "title": "ADR-021: The read/write boundary: views in docs/, sources in record/",
+        "status": "Active",
+        "in_force": 1,
+        "tags": "record mechanism",
+        "date": "2026-08-04",
+        "version": 1,
+        "word_count": 932,
+        "citations": 13,
+        "external": 0,
+        "url": "https://dmarx.github.io/luria/ADR-021",
+        "keep": 1
+      }
+    },
+    {
+      "id": "record/decisions.d/ADR-024.md",
+      "url": "https://dmarx.github.io/luria/ADR-024",
+      "x": -671.8727791807971,
+      "y": 17.21834416057872,
+      "size": 42.24922359499622,
+      "color": "#0072b2",
+      "label": "ADR-024",
+      "attrs": {
+        "code": "ADR-024",
+        "scheme": "ADR",
+        "title": "ADR-024: A remote reference is a prefix, a delimiter and a uid — numbers are the special case",
+        "status": "Active",
+        "in_force": 1,
+        "tags": "record mechanism",
+        "date": "2026-08-04",
+        "version": 1,
+        "word_count": 689,
+        "citations": 5,
+        "external": 0,
+        "url": "https://dmarx.github.io/luria/ADR-024",
+        "keep": 1
+      }
+    },
+    {
+      "id": "record/decisions.d/ADR-029.md",
+      "url": "https://dmarx.github.io/luria/ADR-029",
+      "x": -723.4042106043402,
+      "y": -184.24567026984505,
+      "size": 61.69924622639719,
+      "color": "#0072b2",
+      "label": "ADR-029",
+      "attrs": {
+        "code": "ADR-029",
+        "scheme": "ADR",
+        "title": "ADR-029: A generated view must be committed by something; the remedy says so where it is read",
+        "status": "Active",
+        "in_force": 1,
+        "tags": "process mechanism",
+        "date": "2026-08-05",
+        "version": 2,
+        "word_count": 1456,
+        "citations": 11,
+        "external": 0,
+        "url": "https://dmarx.github.io/luria/ADR-029",
+        "keep": 1
+      }
+    },
+    {
+      "id": "record/decisions.d/ADR-030.md",
+      "url": "https://dmarx.github.io/luria/ADR-030",
+      "x": -560.4215521827684,
+      "y": -26.271313020899186,
+      "size": 74,
+      "color": "#0072b2",
+      "label": "ADR-030",
+      "attrs": {
+        "code": "ADR-030",
+        "scheme": "ADR",
+        "title": "ADR-030: The CLI surface is the workflows, not the module layout",
+        "status": "Active",
+        "in_force": 1,
+        "tags": "mechanism process",
+        "date": "2026-08-07",
+        "version": 1,
+        "word_count": 929,
+        "citations": 16,
+        "external": 0,
+        "url": "https://dmarx.github.io/luria/ADR-030",
+        "keep": 1
+      }
+    },
+    {
+      "id": "record/decisions.d/ADR-032.md",
+      "url": "https://dmarx.github.io/luria/ADR-032",
+      "x": -681.6365164176154,
+      "y": -77.15808990037945,
+      "size": 49.62352359916263,
+      "color": "#0072b2",
+      "label": "ADR-032",
+      "attrs": {
+        "code": "ADR-032",
+        "scheme": "ADR",
+        "title": "ADR-032: The status reports are committed views, and the badges land on them",
+        "status": "Active",
+        "in_force": 1,
+        "tags": "mechanism record",
+        "date": "2026-08-07",
+        "version": 1,
+        "word_count": 651,
+        "citations": 7,
+        "external": 0,
+        "url": "https://dmarx.github.io/luria/ADR-032",
+        "keep": 1
+      }
+    },
+    {
+      "id": "record/decisions.d/ADR-035.md",
+      "url": "https://dmarx.github.io/luria/ADR-035",
+      "x": -420.2495317080931,
+      "y": 242.61525169431033,
+      "size": 74,
+      "color": "#0072b2",
+      "label": "ADR-035",
+      "attrs": {
+        "code": "ADR-035",
+        "scheme": "ADR",
+        "title": "ADR-035: Status enforcement is a dial — reported by default, failable by configuration",
+        "status": "Active",
+        "in_force": 1,
+        "tags": "mechanism process",
+        "date": "2026-08-07",
+        "version": 1,
+        "word_count": 590,
+        "citations": 16,
+        "external": 0,
+        "url": "https://dmarx.github.io/luria/ADR-035",
+        "keep": 1
+      }
+    },
+    {
+      "id": "record/decisions.d/ADR-036.md",
+      "url": "https://dmarx.github.io/luria/ADR-036",
+      "x": -602.0454310966973,
+      "y": -156.29626757397645,
+      "size": 58.92099788303083,
+      "color": "#0072b2",
+      "label": "ADR-036",
+      "attrs": {
+        "code": "ADR-036",
+        "scheme": "ADR",
+        "title": "ADR-036: One scaffold for every entry kind — `luria new`, driven by the config",
+        "status": "Active",
+        "in_force": 1,
+        "tags": "mechanism process",
+        "date": "2026-08-07",
+        "version": 2,
+        "word_count": 642,
+        "citations": 10,
+        "external": 0,
+        "url": "https://dmarx.github.io/luria/ADR-036",
+        "keep": 1
+      }
+    },
+    {
+      "id": "record/decisions.d/ADR-040.md",
+      "url": "https://dmarx.github.io/luria/ADR-040",
+      "x": -530.2848928515884,
+      "y": 350.2258241252681,
+      "size": 76.21590126111789,
+      "color": "#0072b2",
+      "label": "ADR-040",
+      "attrs": {
+        "code": "ADR-040",
+        "scheme": "ADR",
+        "title": "ADR-040: Migrations: renaming schemes and moving documents without losing the record's memory",
+        "status": "Active",
+        "in_force": 1,
+        "tags": "record mechanism",
+        "date": "2026-08-07",
+        "version": 1,
+        "word_count": 1389,
+        "citations": 17,
+        "external": 0,
+        "url": "https://dmarx.github.io/luria/ADR-040",
+        "keep": 1
+      }
+    },
+    {
+      "id": "record/decisions.d/ADR-042.md",
+      "url": "https://dmarx.github.io/luria/ADR-042",
+      "x": -573.6083231568776,
+      "y": -265.2418922724806,
+      "size": 49.62352359916263,
+      "color": "#0072b2",
+      "label": "ADR-042",
+      "attrs": {
+        "code": "ADR-042",
+        "scheme": "ADR",
+        "title": "ADR-042: The record publishes as a Quartz vault: paths preserved, sources withheld, frontmatter surfaced",
+        "status": "Active",
+        "in_force": 1,
+        "tags": "mechanism process",
+        "date": "2026-08-09",
+        "version": 2,
+        "word_count": 1482,
+        "citations": 7,
+        "external": 0,
+        "url": "https://dmarx.github.io/luria/ADR-042",
+        "keep": 1
+      }
+    },
+    {
+      "id": "record/decisions.d/ADR-044.md",
+      "url": "https://dmarx.github.io/luria/ADR-044",
+      "x": -478.97424677338665,
+      "y": -119.38169823515426,
+      "size": 46.090815370097204,
+      "color": "#0072b2",
+      "label": "ADR-044",
+      "attrs": {
+        "code": "ADR-044",
+        "scheme": "ADR",
+        "title": "ADR-044: The configuration reference is generated from the config schema",
+        "status": "Active",
+        "in_force": 1,
+        "tags": "mechanism",
+        "date": "2026-08-11",
+        "version": 1,
+        "word_count": 959,
+        "citations": 6,
+        "external": 0,
+        "url": "https://dmarx.github.io/luria/ADR-044",
+        "keep": 1
+      }
+    },
+    {
+      "id": "record/decisions.d/ADR-045.md",
+      "url": "https://dmarx.github.io/luria/ADR-045",
+      "x": -487.17984161260534,
+      "y": -307.03229721571444,
+      "size": 42.24922359499622,
+      "color": "#0072b2",
+      "label": "ADR-045",
+      "attrs": {
+        "code": "ADR-045",
+        "scheme": "ADR",
+        "title": "ADR-045: Worked configurations are executable examples, not prose",
+        "status": "Active",
+        "in_force": 1,
+        "tags": "mechanism record",
+        "date": "2026-08-11",
+        "version": 1,
+        "word_count": 786,
+        "citations": 5,
+        "external": 0,
+        "url": "https://dmarx.github.io/luria/ADR-045",
+        "keep": 1
+      }
+    },
+    {
+      "id": "record/decisions.d/ADR-047.md",
+      "url": "https://dmarx.github.io/luria/ADR-047",
+      "x": -578.7799146237992,
+      "y": -368.28980144448366,
+      "size": 49.62352359916263,
+      "color": "#0072b2",
+      "label": "ADR-047",
+      "attrs": {
+        "code": "ADR-047",
+        "scheme": "ADR",
+        "title": "ADR-047: A declared family replaces the default; settings still merge",
+        "status": "Active",
+        "in_force": 1,
+        "tags": "mechanism",
+        "date": "2026-08-11",
+        "version": 1,
+        "word_count": 595,
+        "citations": 7,
+        "external": 0,
+        "url": "https://dmarx.github.io/luria/ADR-047",
+        "keep": 1
+      }
+    },
+    {
+      "id": "record/decisions.d/ADR-049.md",
+      "url": "https://dmarx.github.io/luria/ADR-049",
+      "x": -632.4608876824856,
+      "y": 260.8298680881596,
+      "size": 56,
+      "color": "#0072b2",
+      "label": "ADR-049",
+      "attrs": {
+        "code": "ADR-049",
+        "scheme": "ADR",
+        "title": "ADR-049: Temporary codes at filing; concretized and aliased at the serialization point",
+        "status": "Active",
+        "in_force": 1,
+        "tags": "mechanism process",
+        "date": "2026-08-12",
+        "version": 1,
+        "word_count": 1271,
+        "citations": 9,
+        "external": 0,
+        "url": "https://dmarx.github.io/luria/ADR-049",
+        "keep": 1
+      }
+    },
+    {
+      "id": "record/decisions.d/ADR-054.md",
+      "url": "https://dmarx.github.io/luria/ADR-054",
+      "x": -501.17206189153063,
+      "y": 77.43606624833775,
+      "size": 42.24922359499622,
+      "color": "#0072b2",
+      "label": "ADR-054",
+      "attrs": {
+        "code": "ADR-054",
+        "scheme": "ADR",
+        "title": "ADR-054: A scheme can constrain which of its tags combine",
+        "status": "Active",
+        "in_force": 1,
+        "tags": "mechanism",
+        "date": "2026-08-16",
+        "version": 1,
+        "word_count": 810,
+        "citations": 5,
+        "external": 0,
+        "url": "https://dmarx.github.io/luria/ADR-054",
+        "keep": 1
+      }
+    },
+    {
+      "id": "record/decisions.d/ADR-056.md",
+      "url": "https://dmarx.github.io/luria/ADR-056",
+      "x": -384.15997622539567,
+      "y": -108.70982607456165,
+      "size": 42.24922359499622,
+      "color": "#0072b2",
+      "label": "ADR-056",
+      "attrs": {
+        "code": "ADR-056",
+        "scheme": "ADR",
+        "title": "ADR-056: A scheme declares which statuses it uses and what they mean",
+        "status": "Active",
+        "in_force": 1,
+        "tags": "record mechanism",
+        "date": "2026-08-16",
+        "version": 1,
+        "word_count": 799,
+        "citations": 5,
+        "external": 0,
+        "url": "https://dmarx.github.io/luria/ADR-056",
+        "keep": 1
+      }
+    },
+    {
+      "id": "record/decisions.d/ADR-060.md",
+      "url": "https://dmarx.github.io/luria/ADR-060",
+      "x": -229.91006786312195,
+      "y": 40.26572122650157,
+      "size": 66.89992295835181,
+      "color": "#0072b2",
+      "label": "ADR-060",
+      "attrs": {
+        "code": "ADR-060",
+        "scheme": "ADR",
+        "title": "ADR-060: Schemes declare their own shape — where the vocabulary lives, and what a field means",
+        "status": "Active",
+        "in_force": 1,
+        "tags": "mechanism",
+        "date": "2026-08-24",
+        "version": 1,
+        "word_count": 934,
+        "citations": 13,
+        "external": 0,
+        "url": "https://dmarx.github.io/luria/ADR-060",
+        "keep": 1
+      }
+    },
+    {
+      "id": "record/decisions.d/ADR-066.md",
+      "url": "https://dmarx.github.io/luria/ADR-066",
+      "x": -538.137533819389,
+      "y": 221.8321272666773,
+      "size": 42.24922359499622,
+      "color": "#0072b2",
+      "label": "ADR-066",
+      "attrs": {
+        "code": "ADR-066",
+        "scheme": "ADR",
+        "title": "ADR-066: Remote content endorsed by hash, drift compared offline",
+        "status": "Active",
+        "in_force": 1,
+        "tags": "mechanism",
+        "date": "2026-08-27",
+        "version": 2,
+        "word_count": 1094,
+        "citations": 5,
+        "external": 0,
+        "url": "https://dmarx.github.io/luria/ADR-066",
+        "keep": 1
+      }
+    },
+    {
+      "id": "record/decisions.d/ADR-068.md",
+      "url": "https://dmarx.github.io/luria/ADR-068",
+      "x": -488.19717593349617,
+      "y": -214.82894708160364,
+      "size": 46.090815370097204,
+      "color": "#0072b2",
+      "label": "ADR-068",
+      "attrs": {
+        "code": "ADR-068",
+        "scheme": "ADR",
+        "title": "ADR-068: Source repairs are committed on the branch that authored them; generated views on the default branch only",
+        "status": "Active",
+        "in_force": 1,
+        "tags": "mechanism process",
+        "date": "2026-09-03",
+        "version": 2,
+        "word_count": 1393,
+        "citations": 6,
+        "external": 0,
+        "url": "https://dmarx.github.io/luria/ADR-068",
+        "keep": 1
+      }
+    },
+    {
+      "id": "record/decisions.d/ADR-071.md",
+      "url": "https://dmarx.github.io/luria/ADR-071",
+      "x": -426.91489485277026,
+      "y": 123.5057771956014,
+      "size": 42.24922359499622,
+      "color": "#0072b2",
+      "label": "ADR-071",
+      "attrs": {
+        "code": "ADR-071",
+        "scheme": "ADR",
+        "title": "ADR-071: Typed edges come from fields, and a superseded document names its successor in `superseded_by:`",
+        "status": "Active",
+        "in_force": 1,
+        "tags": "mechanism",
+        "date": "2026-09-03",
+        "version": 1,
+        "word_count": 1291,
+        "citations": 5,
+        "external": 0,
+        "url": "https://dmarx.github.io/luria/ADR-071",
+        "keep": 1
+      }
+    },
+    {
+      "id": "record/decisions.d/ADR-072.md",
+      "url": "https://dmarx.github.io/luria/ADR-072",
+      "x": -334.02600975746174,
+      "y": 99.99611430142225,
+      "size": 49.62352359916263,
+      "color": "#0072b2",
+      "label": "ADR-072",
+      "attrs": {
+        "code": "ADR-072",
+        "scheme": "ADR",
+        "title": "ADR-072: The status note is its own field",
+        "status": "Active",
+        "in_force": 1,
+        "tags": "record mechanism",
+        "date": "2026-09-03",
+        "version": 1,
+        "word_count": 861,
+        "citations": 7,
+        "external": 0,
+        "url": "https://dmarx.github.io/luria/ADR-072",
+        "keep": 1
+      }
+    },
+    {
+      "id": "record/decisions.d/ADR-076.md",
+      "url": "https://dmarx.github.io/luria/ADR-076",
+      "x": -306.41882908072506,
+      "y": -52.76250607536941,
+      "size": 49.62352359916263,
+      "color": "#0072b2",
+      "label": "ADR-076",
+      "attrs": {
+        "code": "ADR-076",
+        "scheme": "ADR",
+        "title": "ADR-076: A frontmatter field can be backed by a scheme-local controlled vocabulary",
+        "status": "Active",
+        "in_force": 1,
+        "tags": "record mechanism",
+        "date": "2026-09-03",
+        "version": 1,
+        "word_count": 1994,
+        "citations": 7,
+        "external": 0,
+        "url": "https://dmarx.github.io/luria/ADR-076",
+        "keep": 1
+      }
+    },
+    {
+      "id": "record/principles.d/DP-015.md",
+      "url": "https://dmarx.github.io/luria/DP-015",
+      "x": 993.71790671895,
+      "y": -6.156352714087949,
+      "size": 42.24922359499622,
+      "color": "#e69f00",
+      "label": "DP-015",
+      "attrs": {
+        "code": "DP-015",
+        "scheme": "DP",
+        "title": "DP-015: An absence reads exactly like a success — give the silent case a signal",
+        "status": "Active",
+        "in_force": 1,
+        "tags": "craft",
+        "date": "2026-09-05",
+        "version": 1,
+        "word_count": 571,
+        "citations": 5,
+        "external": 0,
+        "url": "https://dmarx.github.io/luria/DP-015",
+        "keep": 1
+      }
+    }
+  ],
+  "edges": [
+    {
+      "source": "record/decisions.d/ADR-007.md",
+      "target": "record/decisions.d/ADR-035.md",
+      "color": "#1b222d87",
+      "size": 1,
+      "curvature": 0,
+      "directed": false
+    },
+    {
+      "source": "record/decisions.d/ADR-015.md",
+      "target": "record/decisions.d/ADR-016.md",
+      "color": "#1b222d87",
+      "size": 1,
+      "curvature": 0,
+      "directed": false
+    },
+    {
+      "source": "record/decisions.d/ADR-021.md",
+      "target": "record/decisions.d/ADR-012.md",
+      "color": "#1b222d87",
+      "size": 1,
+      "curvature": 0,
+      "directed": false
+    },
+    {
+      "source": "record/decisions.d/ADR-021.md",
+      "target": "record/decisions.d/ADR-013.md",
+      "color": "#1b222d87",
+      "size": 1,
+      "curvature": 0,
+      "directed": false
+    },
+    {
+      "source": "record/decisions.d/ADR-024.md",
+      "target": "record/decisions.d/ADR-016.md",
+      "color": "#1b222d87",
+      "size": 1,
+      "curvature": 0,
+      "directed": false
+    },
+    {
+      "source": "record/decisions.d/ADR-042.md",
+      "target": "record/decisions.d/ADR-005.md",
+      "color": "#1b222d87",
+      "size": 1,
+      "curvature": 0,
+      "directed": false
+    },
+    {
+      "source": "record/decisions.d/ADR-042.md",
+      "target": "record/decisions.d/ADR-021.md",
+      "color": "#1b222d87",
+      "size": 1,
+      "curvature": 0,
+      "directed": false
+    },
+    {
+      "source": "record/decisions.d/ADR-042.md",
+      "target": "record/decisions.d/ADR-029.md",
+      "color": "#1b222d87",
+      "size": 1,
+      "curvature": 0,
+      "directed": false
+    },
+    {
+      "source": "record/decisions.d/ADR-044.md",
+      "target": "record/decisions.d/ADR-006.md",
+      "color": "#1b222d87",
+      "size": 1,
+      "curvature": 0,
+      "directed": false
+    },
+    {
+      "source": "record/decisions.d/ADR-044.md",
+      "target": "record/decisions.d/ADR-021.md",
+      "color": "#1b222d87",
+      "size": 1,
+      "curvature": 0,
+      "directed": false
+    },
+    {
+      "source": "record/decisions.d/ADR-045.md",
+      "target": "record/decisions.d/ADR-006.md",
+      "color": "#1b222d87",
+      "size": 1,
+      "curvature": 0,
+      "directed": false
+    },
+    {
+      "source": "record/decisions.d/ADR-045.md",
+      "target": "record/decisions.d/ADR-044.md",
+      "color": "#1b222d87",
+      "size": 1,
+      "curvature": 0,
+      "directed": false
+    },
+    {
+      "source": "record/decisions.d/ADR-047.md",
+      "target": "record/decisions.d/ADR-006.md",
+      "color": "#1b222d87",
+      "size": 1,
+      "curvature": 0,
+      "directed": false
+    },
+    {
+      "source": "record/decisions.d/ADR-047.md",
+      "target": "record/decisions.d/ADR-045.md",
+      "color": "#1b222d87",
+      "size": 1,
+      "curvature": 0,
+      "directed": false
+    },
+    {
+      "source": "record/decisions.d/ADR-049.md",
+      "target": "record/decisions.d/ADR-036.md",
+      "color": "#1b222d87",
+      "size": 1,
+      "curvature": 0,
+      "directed": false
+    },
+    {
+      "source": "record/decisions.d/ADR-049.md",
+      "target": "record/decisions.d/ADR-040.md",
+      "color": "#1b222d87",
+      "size": 1,
+      "curvature": 0,
+      "directed": false
+    },
+    {
+      "source": "record/decisions.d/ADR-001.md",
+      "target": "record/decisions.d/ADR-019.md",
+      "color": "#1b222d87",
+      "size": 1,
+      "curvature": 0,
+      "directed": false
+    },
+    {
+      "source": "record/decisions.d/ADR-001.md",
+      "target": "record/decisions.d/ADR-002.md",
+      "color": "#1b222d87",
+      "size": 1,
+      "curvature": 0,
+      "directed": false
+    },
+    {
+      "source": "record/decisions.d/ADR-002.md",
+      "target": "record/decisions.d/ADR-004.md",
+      "color": "#1b222d87",
+      "size": 1,
+      "curvature": 0,
+      "directed": false
+    },
+    {
+      "source": "record/decisions.d/ADR-003.md",
+      "target": "record/decisions.d/ADR-004.md",
+      "color": "#1b222d87",
+      "size": 1,
+      "curvature": 0,
+      "directed": false
+    },
+    {
+      "source": "record/decisions.d/ADR-003.md",
+      "target": "record/decisions.d/ADR-072.md",
+      "color": "#1b222d87",
+      "size": 1,
+      "curvature": 0,
+      "directed": false
+    },
+    {
+      "source": "record/decisions.d/ADR-005.md",
+      "target": "record/decisions.d/ADR-004.md",
+      "color": "#1b222d87",
+      "size": 1,
+      "curvature": 0,
+      "directed": false
+    },
+    {
+      "source": "record/decisions.d/ADR-005.md",
+      "target": "record/decisions.d/ADR-007.md",
+      "color": "#1b222d87",
+      "size": 1,
+      "curvature": 0,
+      "directed": false
+    },
+    {
+      "source": "record/decisions.d/ADR-006.md",
+      "target": "record/decisions.d/ADR-005.md",
+      "color": "#1b222d87",
+      "size": 1,
+      "curvature": 0,
+      "directed": false
+    },
+    {
+      "source": "record/decisions.d/ADR-007.md",
+      "target": "record/decisions.d/ADR-003.md",
+      "color": "#1b222d87",
+      "size": 1,
+      "curvature": 0,
+      "directed": false
+    },
+    {
+      "source": "record/decisions.d/ADR-007.md",
+      "target": "record/decisions.d/ADR-004.md",
+      "color": "#1b222d87",
+      "size": 1,
+      "curvature": 0,
+      "directed": false
+    },
+    {
+      "source": "record/decisions.d/ADR-007.md",
+      "target": "record/decisions.d/ADR-030.md",
+      "color": "#1b222d87",
+      "size": 1,
+      "curvature": 0,
+      "directed": false
+    },
+    {
+      "source": "record/decisions.d/ADR-009.md",
+      "target": "record/decisions.d/ADR-032.md",
+      "color": "#1b222d87",
+      "size": 1,
+      "curvature": 0,
+      "directed": false
+    },
+    {
+      "source": "record/decisions.d/ADR-009.md",
+      "target": "record/decisions.d/ADR-016.md",
+      "color": "#1b222d87",
+      "size": 1,
+      "curvature": 0,
+      "directed": false
+    },
+    {
+      "source": "record/decisions.d/ADR-012.md",
+      "target": "record/decisions.d/ADR-009.md",
+      "color": "#1b222d87",
+      "size": 1,
+      "curvature": 0,
+      "directed": false
+    },
+    {
+      "source": "record/decisions.d/ADR-012.md",
+      "target": "record/decisions.d/ADR-003.md",
+      "color": "#1b222d87",
+      "size": 1,
+      "curvature": 0,
+      "directed": false
+    },
+    {
+      "source": "record/decisions.d/ADR-012.md",
+      "target": "record/decisions.d/ADR-006.md",
+      "color": "#1b222d87",
+      "size": 1,
+      "curvature": 0,
+      "directed": false
+    },
+    {
+      "source": "record/decisions.d/ADR-012.md",
+      "target": "record/decisions.d/ADR-002.md",
+      "color": "#1b222d87",
+      "size": 1,
+      "curvature": 0,
+      "directed": false
+    },
+    {
+      "source": "record/decisions.d/ADR-012.md",
+      "target": "record/decisions.d/ADR-004.md",
+      "color": "#1b222d87",
+      "size": 1,
+      "curvature": 0,
+      "directed": false
+    },
+    {
+      "source": "record/decisions.d/ADR-012.md",
+      "target": "record/decisions.d/ADR-005.md",
+      "color": "#1b222d87",
+      "size": 1,
+      "curvature": 0,
+      "directed": false
+    },
+    {
+      "source": "record/decisions.d/ADR-013.md",
+      "target": "record/decisions.d/ADR-003.md",
+      "color": "#1b222d87",
+      "size": 1,
+      "curvature": 0,
+      "directed": false
+    },
+    {
+      "source": "record/decisions.d/ADR-013.md",
+      "target": "record/decisions.d/ADR-007.md",
+      "color": "#1b222d87",
+      "size": 1,
+      "curvature": 0,
+      "directed": false
+    },
+    {
+      "source": "record/decisions.d/ADR-013.md",
+      "target": "record/decisions.d/ADR-004.md",
+      "color": "#1b222d87",
+      "size": 1,
+      "curvature": 0,
+      "directed": false
+    },
+    {
+      "source": "record/decisions.d/ADR-014.md",
+      "target": "record/decisions.d/ADR-009.md",
+      "color": "#1b222d87",
+      "size": 1,
+      "curvature": 0,
+      "directed": false
+    },
+    {
+      "source": "record/decisions.d/ADR-014.md",
+      "target": "record/decisions.d/ADR-007.md",
+      "color": "#1b222d87",
+      "size": 1,
+      "curvature": 0,
+      "directed": false
+    },
+    {
+      "source": "record/decisions.d/ADR-014.md",
+      "target": "record/decisions.d/ADR-013.md",
+      "color": "#1b222d87",
+      "size": 1,
+      "curvature": 0,
+      "directed": false
+    },
+    {
+      "source": "record/decisions.d/ADR-014.md",
+      "target": "record/decisions.d/ADR-005.md",
+      "color": "#1b222d87",
+      "size": 1,
+      "curvature": 0,
+      "directed": false
+    },
+    {
+      "source": "record/decisions.d/ADR-015.md",
+      "target": "record/decisions.d/ADR-014.md",
+      "color": "#1b222d87",
+      "size": 1,
+      "curvature": 0,
+      "directed": false
+    },
+    {
+      "source": "record/decisions.d/ADR-015.md",
+      "target": "record/decisions.d/ADR-009.md",
+      "color": "#1b222d87",
+      "size": 1,
+      "curvature": 0,
+      "directed": false
+    },
+    {
+      "source": "record/decisions.d/ADR-015.md",
+      "target": "record/decisions.d/ADR-013.md",
+      "color": "#1b222d87",
+      "size": 1,
+      "curvature": 0,
+      "directed": false
+    },
+    {
+      "source": "record/decisions.d/ADR-015.md",
+      "target": "record/decisions.d/ADR-007.md",
+      "color": "#1b222d87",
+      "size": 1,
+      "curvature": 0,
+      "directed": false
+    },
+    {
+      "source": "record/decisions.d/ADR-016.md",
+      "target": "record/decisions.d/ADR-013.md",
+      "color": "#1b222d87",
+      "size": 1,
+      "curvature": 0,
+      "directed": false
+    },
+    {
+      "source": "record/decisions.d/ADR-016.md",
+      "target": "record/decisions.d/ADR-012.md",
+      "color": "#1b222d87",
+      "size": 1,
+      "curvature": 0,
+      "directed": false
+    },
+    {
+      "source": "record/decisions.d/ADR-018.md",
+      "target": "record/decisions.d/ADR-007.md",
+      "color": "#1b222d87",
+      "size": 1,
+      "curvature": 0,
+      "directed": false
+    },
+    {
+      "source": "record/decisions.d/ADR-018.md",
+      "target": "record/decisions.d/ADR-006.md",
+      "color": "#1b222d87",
+      "size": 1,
+      "curvature": 0,
+      "directed": false
+    },
+    {
+      "source": "record/decisions.d/ADR-018.md",
+      "target": "record/decisions.d/ADR-016.md",
+      "color": "#1b222d87",
+      "size": 1,
+      "curvature": 0,
+      "directed": false
+    },
+    {
+      "source": "record/decisions.d/ADR-018.md",
+      "target": "record/decisions.d/ADR-002.md",
+      "color": "#1b222d87",
+      "size": 1,
+      "curvature": 0,
+      "directed": false
+    },
+    {
+      "source": "record/decisions.d/ADR-018.md",
+      "target": "record/decisions.d/ADR-015.md",
+      "color": "#1b222d87",
+      "size": 1,
+      "curvature": 0,
+      "directed": false
+    },
+    {
+      "source": "record/decisions.d/ADR-018.md",
+      "target": "record/decisions.d/ADR-019.md",
+      "color": "#1b222d87",
+      "size": 1,
+      "curvature": 0,
+      "directed": false
+    },
+    {
+      "source": "record/decisions.d/ADR-019.md",
+      "target": "record/decisions.d/ADR-002.md",
+      "color": "#1b222d87",
+      "size": 1,
+      "curvature": 0,
+      "directed": false
+    },
+    {
+      "source": "record/decisions.d/ADR-019.md",
+      "target": "record/decisions.d/ADR-016.md",
+      "color": "#1b222d87",
+      "size": 1,
+      "curvature": 0,
+      "directed": false
+    },
+    {
+      "source": "record/decisions.d/ADR-019.md",
+      "target": "record/decisions.d/ADR-003.md",
+      "color": "#1b222d87",
+      "size": 1,
+      "curvature": 0,
+      "directed": false
+    },
+    {
+      "source": "record/decisions.d/ADR-029.md",
+      "target": "record/decisions.d/ADR-018.md",
+      "color": "#1b222d87",
+      "size": 1,
+      "curvature": 0,
+      "directed": false
+    },
+    {
+      "source": "record/decisions.d/ADR-029.md",
+      "target": "record/decisions.d/ADR-009.md",
+      "color": "#1b222d87",
+      "size": 1,
+      "curvature": 0,
+      "directed": false
+    },
+    {
+      "source": "record/decisions.d/ADR-029.md",
+      "target": "record/decisions.d/ADR-068.md",
+      "color": "#1b222d87",
+      "size": 1,
+      "curvature": 0,
+      "directed": false
+    },
+    {
+      "source": "record/decisions.d/ADR-030.md",
+      "target": "record/decisions.d/ADR-029.md",
+      "color": "#1b222d87",
+      "size": 1,
+      "curvature": 0,
+      "directed": false
+    },
+    {
+      "source": "record/decisions.d/ADR-030.md",
+      "target": "record/decisions.d/ADR-005.md",
+      "color": "#1b222d87",
+      "size": 1,
+      "curvature": 0,
+      "directed": false
+    },
+    {
+      "source": "record/decisions.d/ADR-032.md",
+      "target": "record/decisions.d/ADR-007.md",
+      "color": "#1b222d87",
+      "size": 1,
+      "curvature": 0,
+      "directed": false
+    },
+    {
+      "source": "record/decisions.d/ADR-032.md",
+      "target": "record/decisions.d/ADR-018.md",
+      "color": "#1b222d87",
+      "size": 1,
+      "curvature": 0,
+      "directed": false
+    },
+    {
+      "source": "record/decisions.d/ADR-032.md",
+      "target": "record/decisions.d/ADR-021.md",
+      "color": "#1b222d87",
+      "size": 1,
+      "curvature": 0,
+      "directed": false
+    },
+    {
+      "source": "record/decisions.d/ADR-032.md",
+      "target": "record/decisions.d/ADR-030.md",
+      "color": "#1b222d87",
+      "size": 1,
+      "curvature": 0,
+      "directed": false
+    },
+    {
+      "source": "record/decisions.d/ADR-035.md",
+      "target": "record/decisions.d/ADR-030.md",
+      "color": "#1b222d87",
+      "size": 1,
+      "curvature": 0,
+      "directed": false
+    },
+    {
+      "source": "record/decisions.d/ADR-036.md",
+      "target": "record/decisions.d/ADR-030.md",
+      "color": "#1b222d87",
+      "size": 1,
+      "curvature": 0,
+      "directed": false
+    },
+    {
+      "source": "record/decisions.d/ADR-036.md",
+      "target": "record/decisions.d/ADR-002.md",
+      "color": "#1b222d87",
+      "size": 1,
+      "curvature": 0,
+      "directed": false
+    },
+    {
+      "source": "record/decisions.d/ADR-040.md",
+      "target": "record/decisions.d/ADR-016.md",
+      "color": "#1b222d87",
+      "size": 1,
+      "curvature": 0,
+      "directed": false
+    },
+    {
+      "source": "record/decisions.d/ADR-040.md",
+      "target": "record/decisions.d/ADR-019.md",
+      "color": "#1b222d87",
+      "size": 1,
+      "curvature": 0,
+      "directed": false
+    },
+    {
+      "source": "record/decisions.d/ADR-040.md",
+      "target": "record/decisions.d/ADR-035.md",
+      "color": "#1b222d87",
+      "size": 1,
+      "curvature": 0,
+      "directed": false
+    },
+    {
+      "source": "record/decisions.d/ADR-042.md",
+      "target": "record/decisions.d/ADR-068.md",
+      "color": "#1b222d87",
+      "size": 1,
+      "curvature": 0,
+      "directed": false
+    },
+    {
+      "source": "record/decisions.d/ADR-044.md",
+      "target": "record/decisions.d/ADR-024.md",
+      "color": "#1b222d87",
+      "size": 1,
+      "curvature": 0,
+      "directed": false
+    },
+    {
+      "source": "record/decisions.d/ADR-044.md",
+      "target": "record/decisions.d/ADR-036.md",
+      "color": "#1b222d87",
+      "size": 1,
+      "curvature": 0,
+      "directed": false
+    },
+    {
+      "source": "record/decisions.d/ADR-044.md",
+      "target": "record/decisions.d/ADR-030.md",
+      "color": "#1b222d87",
+      "size": 1,
+      "curvature": 0,
+      "directed": false
+    },
+    {
+      "source": "record/decisions.d/ADR-044.md",
+      "target": "record/decisions.d/ADR-040.md",
+      "color": "#1b222d87",
+      "size": 1,
+      "curvature": 0,
+      "directed": false
+    },
+    {
+      "source": "record/decisions.d/ADR-045.md",
+      "target": "record/decisions.d/ADR-003.md",
+      "color": "#1b222d87",
+      "size": 1,
+      "curvature": 0,
+      "directed": false
+    },
+    {
+      "source": "record/decisions.d/ADR-049.md",
+      "target": "record/decisions.d/ADR-013.md",
+      "color": "#1b222d87",
+      "size": 1,
+      "curvature": 0,
+      "directed": false
+    },
+    {
+      "source": "record/decisions.d/ADR-049.md",
+      "target": "record/decisions.d/ADR-014.md",
+      "color": "#1b222d87",
+      "size": 1,
+      "curvature": 0,
+      "directed": false
+    },
+    {
+      "source": "record/decisions.d/ADR-049.md",
+      "target": "record/decisions.d/ADR-035.md",
+      "color": "#1b222d87",
+      "size": 1,
+      "curvature": 0,
+      "directed": false
+    },
+    {
+      "source": "record/decisions.d/ADR-049.md",
+      "target": "record/decisions.d/ADR-019.md",
+      "color": "#1b222d87",
+      "size": 1,
+      "curvature": 0,
+      "directed": false
+    },
+    {
+      "source": "record/decisions.d/ADR-054.md",
+      "target": "record/decisions.d/ADR-040.md",
+      "color": "#1b222d87",
+      "size": 1,
+      "curvature": 0,
+      "directed": false
+    },
+    {
+      "source": "record/decisions.d/ADR-056.md",
+      "target": "record/decisions.d/ADR-003.md",
+      "color": "#1b222d87",
+      "size": 1,
+      "curvature": 0,
+      "directed": false
+    },
+    {
+      "source": "record/decisions.d/ADR-066.md",
+      "target": "record/decisions.d/ADR-016.md",
+      "color": "#1b222d87",
+      "size": 1,
+      "curvature": 0,
+      "directed": false
+    },
+    {
+      "source": "record/decisions.d/ADR-066.md",
+      "target": "record/decisions.d/ADR-035.md",
+      "color": "#1b222d87",
+      "size": 1,
+      "curvature": 0,
+      "directed": false
+    },
+    {
+      "source": "record/decisions.d/ADR-066.md",
+      "target": "record/decisions.d/ADR-040.md",
+      "color": "#1b222d87",
+      "size": 1,
+      "curvature": 0,
+      "directed": false
+    },
+    {
+      "source": "record/decisions.d/ADR-068.md",
+      "target": "record/decisions.d/ADR-002.md",
+      "color": "#1b222d87",
+      "size": 1,
+      "curvature": 0,
+      "directed": false
+    },
+    {
+      "source": "record/decisions.d/ADR-068.md",
+      "target": "record/decisions.d/ADR-005.md",
+      "color": "#1b222d87",
+      "size": 1,
+      "curvature": 0,
+      "directed": false
+    },
+    {
+      "source": "record/decisions.d/ADR-068.md",
+      "target": "record/decisions.d/ADR-021.md",
+      "color": "#1b222d87",
+      "size": 1,
+      "curvature": 0,
+      "directed": false
+    },
+    {
+      "source": "record/decisions.d/ADR-068.md",
+      "target": "record/decisions.d/ADR-032.md",
+      "color": "#1b222d87",
+      "size": 1,
+      "curvature": 0,
+      "directed": false
+    },
+    {
+      "source": "record/decisions.d/ADR-071.md",
+      "target": "record/decisions.d/ADR-003.md",
+      "color": "#1b222d87",
+      "size": 1,
+      "curvature": 0,
+      "directed": false
+    },
+    {
+      "source": "record/decisions.d/ADR-071.md",
+      "target": "record/decisions.d/ADR-012.md",
+      "color": "#1b222d87",
+      "size": 1,
+      "curvature": 0,
+      "directed": false
+    },
+    {
+      "source": "record/decisions.d/ADR-071.md",
+      "target": "record/decisions.d/ADR-060.md",
+      "color": "#1b222d87",
+      "size": 1,
+      "curvature": 0,
+      "directed": false
+    },
+    {
+      "source": "record/decisions.d/ADR-071.md",
+      "target": "record/decisions.d/ADR-035.md",
+      "color": "#1b222d87",
+      "size": 1,
+      "curvature": 0,
+      "directed": false
+    },
+    {
+      "source": "record/decisions.d/ADR-071.md",
+      "target": "record/decisions.d/ADR-007.md",
+      "color": "#1b222d87",
+      "size": 1,
+      "curvature": 0,
+      "directed": false
+    },
+    {
+      "source": "record/decisions.d/ADR-071.md",
+      "target": "record/decisions.d/ADR-072.md",
+      "color": "#1b222d87",
+      "size": 1,
+      "curvature": 0,
+      "directed": false
+    },
+    {
+      "source": "record/decisions.d/ADR-071.md",
+      "target": "record/decisions.d/ADR-016.md",
+      "color": "#1b222d87",
+      "size": 1,
+      "curvature": 0,
+      "directed": false
+    },
+    {
+      "source": "record/decisions.d/ADR-071.md",
+      "target": "record/decisions.d/ADR-015.md",
+      "color": "#1b222d87",
+      "size": 1,
+      "curvature": 0,
+      "directed": false
+    },
+    {
+      "source": "record/decisions.d/ADR-072.md",
+      "target": "record/decisions.d/ADR-056.md",
+      "color": "#1b222d87",
+      "size": 1,
+      "curvature": 0,
+      "directed": false
+    },
+    {
+      "source": "record/decisions.d/ADR-076.md",
+      "target": "record/decisions.d/ADR-054.md",
+      "color": "#1b222d87",
+      "size": 1,
+      "curvature": 0,
+      "directed": false
+    },
+    {
+      "source": "record/decisions.d/ADR-076.md",
+      "target": "record/decisions.d/ADR-003.md",
+      "color": "#1b222d87",
+      "size": 1,
+      "curvature": 0,
+      "directed": false
+    },
+    {
+      "source": "record/decisions.d/ADR-076.md",
+      "target": "record/decisions.d/ADR-056.md",
+      "color": "#1b222d87",
+      "size": 1,
+      "curvature": 0,
+      "directed": false
+    },
+    {
+      "source": "record/decisions.d/ADR-076.md",
+      "target": "record/decisions.d/ADR-060.md",
+      "color": "#1b222d87",
+      "size": 1,
+      "curvature": 0,
+      "directed": false
+    }
+  ],
+  "background": "#0f172a",
+  "labelColor": "#e2e8f0"
+}

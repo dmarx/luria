@@ -55,6 +55,12 @@ journals:
 site:
   exclude:
   - template/**
+  # The record's own map, shown on every page in place of Quartz's local
+  # graph (ADR-tmp0hx52): every decision and principle, sized by what cites
+  # them. Drawn in strata-g, not generated — docs/graphs/README.md has the
+  # recipe for redrawing it.
+  graph: docs/graphs/record-map.json
+  graph_height: 420px
   icon: assets/branding/luria-brainslug/luria_project_memory_icon.svg
   logo: assets/branding/luria-brainslug/luria_project_memory_lockup_horizontal.svg
   theme:
