@@ -60,7 +60,7 @@ site:
   # them. Drawn in strata-g, not generated — docs/graphs/README.md has the
   # recipe for redrawing it.
   graph: docs/graphs/record-map.json
-  graph_height: 420px
+  graph_height: 560px
   icon: assets/branding/luria-brainslug/luria_project_memory_icon.svg
   logo: assets/branding/luria-brainslug/luria_project_memory_lockup_horizontal.svg
   theme:
