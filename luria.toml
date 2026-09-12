@@ -108,6 +108,7 @@ allocate = "merge"
 # Principles are read as a whole, not browsed one at a time, so their view is a
 # document rather than a table (ADR-012). Same fragment convention either way.
 [luria.schemes.DP]
+cite   = "page"
 dir = "record/principles.d"
 active = "Active"
 render = "document"

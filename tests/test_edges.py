@@ -192,7 +192,7 @@ def test_the_record_line_names_what_a_decision_influenced():
     where = current().schemes["ADR"].dir / "ADR-035.md"
     inbound = [edges.Edge("DP-010", "influenced_by", "ADR-035", "frontmatter")]
     line = site.record_line({"status": "Active"}, where, inbound=inbound)
-    assert "| **Influenced** | [DP-010](../../docs/design-principles.md#dp-10) — " in line
+    assert "| **Influenced** | [DP-010](../principles.d/DP-010.md) — " in line
 
 
 def test_the_record_line_carries_a_declared_reference_both_ways(

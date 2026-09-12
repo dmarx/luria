@@ -50,8 +50,8 @@ worth citing, statuses that mean something, and views generated so they cannot
 drift from their sources.
 
 <!-- luria:badges -->
-[![needs decision: 2](https://img.shields.io/badge/needs%20decision-2-orange)](docs/reports/pending-decisions.md)
-[![cited, not in force: 0](https://img.shields.io/badge/cited,%20not%20in%20force-0-brightgreen)](docs/reports/reference-status.md)
+[![needs decision: 3](https://img.shields.io/badge/needs%20decision-3-orange)](docs/reports/pending-decisions.md)
+[![cited, not in force: 1](https://img.shields.io/badge/cited,%20not%20in%20force-1-orange)](docs/reports/reference-status.md)
 <!-- /luria:badges -->
 
 <!-- luria:site -->
@@ -221,7 +221,7 @@ Derived from [`CITATION.cff`](CITATION.cff) by `luria index`, which is also
 what GitHub reads for its *Cite this repository* button — so the two cannot
 disagree. Add `version = {...}` for the release you used; `pip show luria`
 prints it. Nothing pins one here, because a version written into a file by
-hand is a copy of the release tag, which is the drift [DP-3](docs/design-principles.md#dp-3) names and [ADR-053](record/decisions.d/ADR-053.md)
+hand is a copy of the release tag, which is the drift [DP-3](record/principles.d/DP-003.md) names and [ADR-053](record/decisions.d/ADR-053.md)
 removed.
 
 ## License

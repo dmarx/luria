@@ -425,8 +425,8 @@ Assembled from `changelog.d/` fragments on a cadence — never hand-edited
   `doc_refs.doc_files()` listed `README.md`, `CLAUDE.md` and `AGENTS.md` — the
   files an agent bootstraps from, which is a real category and the wrong one:
   what the reference rules care about is prose asserting the project's rules to
-  a reader. `CONTRIBUTING.md` states [DP-008](docs/design-principles.md#dp-8), [DP-006](docs/design-principles.md#dp-6), [DP-003](docs/design-principles.md#dp-3) and the
-  [DP-001](docs/design-principles.md#dp-1)/[DP-010](docs/design-principles.md#dp-10) split almost verbatim while citing none of them, and
+  a reader. `CONTRIBUTING.md` states [DP-008](record/principles.d/DP-008.md), [DP-006](record/principles.d/DP-006.md), [DP-003](record/principles.d/DP-003.md) and the
+  [DP-001](record/principles.d/DP-001.md)/[DP-010](record/principles.d/DP-010.md) split almost verbatim while citing none of them, and
   nothing linked or checked its references. Those citations are now written and
   held by the lint. Second instance of this gap — the first was
   `examples/README.md`, where a hand-written link pointed at a path that does
@@ -457,7 +457,7 @@ Assembled from `changelog.d/` fragments on a cadence — never hand-edited
 - **`grounds` is `many = true`.** It was scalar, so a practice sitting on a
   seam between two values could name only one. `PRACTICE-006` was that case and
   carried the second as a **tag** — a tag standing in for a reference the
-  schema could not express, which is [DP-016](docs/design-principles.md#dp-16)'s reading. It now names both
+  schema could not express, which is [DP-016](record/principles.d/DP-016.md)'s reading. It now names both
   (`VALUE-006` for what a correction costs the reader, `VALUE-001` for the
   requirement that it happen), and the `honesty` tag is dropped rather than
   kept beside the edge.
@@ -472,7 +472,7 @@ Assembled from `changelog.d/` fragments on a cadence — never hand-edited
   section with no document. A `nothing yet` block satisfies the check, which is
   the point rather than a loophole — three sections are accounted for by
   nothing deliberately, and an explicit "nothing, and nothing should" is a
-  different statement from silence ([DP-015](docs/design-principles.md#dp-15)).
+  different statement from silence ([DP-015](record/principles.d/DP-015.md)).
 
 ### Changed
 
@@ -484,29 +484,29 @@ Assembled from `changelog.d/` fragments on a cadence — never hand-edited
 
   They were ignored on the argument that a committed view nobody regenerates is
   the stale projection the examples argue against — which conflated *committed*
-  with *hand-maintained*. [DP-003](docs/design-principles.md#dp-3)'s first rung is *derive it*, and a view CI
+  with *hand-maintained*. [DP-003](record/principles.d/DP-003.md)'s first rung is *derive it*, and a view CI
   regenerates on every push is derived; this project's own `docs/` are
   committed on exactly that basis. The examples being the one exception was
-  [DP-016](docs/design-principles.md#dp-16)'s same-shape-opposite-rules, and the gap was real rather than
+  [DP-016](record/principles.d/DP-016.md)'s same-shape-opposite-rules, and the gap was real rather than
   stylistic: nothing regenerated them, so committing them first would have made
   the original argument true.
 - **`include_records` moves from `[luria.site]` to `[luria]`.** It says a
   project contains other projects, which generation needs as much as publishing
   — a key `luria index` had to reach into the site table to read is
-  [DP-016](docs/design-principles.md#dp-16)'s awkwardness. `Config.nested_records()` is the single answer all
+  [DP-016](record/principles.d/DP-016.md)'s awkwardness. `Config.nested_records()` is the single answer all
   three callers use, because a record that is published but never regenerated
-  is worse than either alone ([DP-004](docs/design-principles.md#dp-4)).
+  is worse than either alone ([DP-004](record/principles.d/DP-004.md)).
 - `luria site` stages a nested record from the record itself rather than
   copying it to a temporary directory and generating there. That copy existed
   only because the views were not committed.
 - `luria index` names the nested records it wrote rather than folding them into
   the tally: *"…60 devlog entries, plus examples/collocated, …"*. "78 files from
   77 ADRs" is arithmetic nobody can check, and a record that silently rendered
-  nothing would look exactly like one that rendered correctly ([DP-015](docs/design-principles.md#dp-15)).
+  nothing would look exactly like one that rendered correctly ([DP-015](record/principles.d/DP-015.md)).
 
 ### Changed
 
-- **[DP-012](docs/design-principles.md#dp-12) to v2**, generalized from "one decision, one thing" to **one
+- **[DP-012](record/principles.d/DP-012.md) to v2**, generalized from "one decision, one thing" to **one
   document, one thing**. Its test was always general; nothing in the wording
   said so, and a record of practices or claims would not have read itself as
   covered. Found in one that isn't: a record with no decisions in it at all.
@@ -530,32 +530,32 @@ Assembled from `changelog.d/` fragments on a cadence — never hand-edited
 
 ### Added
 
-- **[DP-015](docs/design-principles.md#dp-15)** — *an absence reads exactly like a success*. The premise
-  underneath [DP-001](docs/design-principles.md#dp-1), [DP-003](docs/design-principles.md#dp-3)'s fail-stale rung, [DP-006](docs/design-principles.md#dp-6) and
-  [DP-010](docs/design-principles.md#dp-10), each of which leans on the word *silent* at its load-bearing
+- **[DP-015](record/principles.d/DP-015.md)** — *an absence reads exactly like a success*. The premise
+  underneath [DP-001](record/principles.d/DP-001.md), [DP-003](record/principles.d/DP-003.md)'s fail-stale rung, [DP-006](record/principles.d/DP-006.md) and
+  [DP-010](record/principles.d/DP-010.md), each of which leans on the word *silent* at its load-bearing
   moment and none of which says why silence is the problem. Re-derived four
   times without being written down; a fifth time in another project
   ([SG-DP-022](https://github.com/dmarx/strata-g/blob/main/docs/design-principles.md#dp-22)). All four now cite it, so the unification is an edge rather
   than an assertion.
 - An audit of the principle set for restatements, whose result is mostly
-  negative and worth recording as such. [DP-002](docs/design-principles.md#dp-2), [DP-003](docs/design-principles.md#dp-3) and [DP-004](docs/design-principles.md#dp-4)
-  look like one principle and are not: [DP-003](docs/design-principles.md#dp-3) is asymmetric (a source and a
-  projection, so *derive it* is available), [DP-004](docs/design-principles.md#dp-4) is symmetric (two peers,
+  negative and worth recording as such. [DP-002](record/principles.d/DP-002.md), [DP-003](record/principles.d/DP-003.md) and [DP-004](record/principles.d/DP-004.md)
+  look like one principle and are not: [DP-003](record/principles.d/DP-003.md) is asymmetric (a source and a
+  projection, so *derive it* is available), [DP-004](record/principles.d/DP-004.md) is symmetric (two peers,
   so the remedy is consolidation and "choose the failure polarity" is
-  meaningless), and [DP-002](docs/design-principles.md#dp-2)'s failure mode is contention, which occurs with
-  no duplication at all. Every sampled citation of [DP-004](docs/design-principles.md#dp-4) invokes
-  divergence-between-implementations; none invokes [DP-003](docs/design-principles.md#dp-3)'s remedy ladder.
+  meaningless), and [DP-002](record/principles.d/DP-002.md)'s failure mode is contention, which occurs with
+  no duplication at all. Every sampled citation of [DP-004](record/principles.d/DP-004.md) invokes
+  divergence-between-implementations; none invokes [DP-003](record/principles.d/DP-003.md)'s remedy ladder.
   Merging them would make the advice a disjunction and cost ~130 citation sites
   their precision.
 
-- **[DP-016](docs/design-principles.md#dp-16)** — *an awkward structure is reporting a distinction the model
-  has stopped expressing*. Extracted from [DP-009](docs/design-principles.md#dp-9), where it was the third of
-  three jobs and had **never been cited** — [DP-012](docs/design-principles.md#dp-12)'s own symptom for a
+- **[DP-016](record/principles.d/DP-016.md)** — *an awkward structure is reporting a distinction the model
+  has stopped expressing*. Extracted from [DP-009](record/principles.d/DP-009.md), where it was the third of
+  three jobs and had **never been cited** — [DP-012](record/principles.d/DP-012.md)'s own symptom for a
   document carrying two things, firing on a principle. Promoted on its second
-  substrate: [DP-009](docs/design-principles.md#dp-9) found the reading in the file tree, and a typed
+  substrate: [DP-009](record/principles.d/DP-009.md) found the reading in the file tree, and a typed
   `overrides` edge found it again in the citation graph, which is not a tree
-  and which [DP-009](docs/design-principles.md#dp-9) does not cover. [DP-009](docs/design-principles.md#dp-9) goes to v2 and hands the
-  clause over; [DP-012](docs/design-principles.md#dp-12)'s edge test cites it as the general form.
+  and which [DP-009](record/principles.d/DP-009.md) does not cover. [DP-009](record/principles.d/DP-009.md) goes to v2 and hands the
+  clause over; [DP-012](record/principles.d/DP-012.md)'s edge test cites it as the general form.
 
 ### Added
 
@@ -922,7 +922,7 @@ Assembled from `changelog.d/` fragments on a cadence — never hand-edited
   and a BibTeX block at the bottom of the README **derived from it** by
   `luria index` — a new generated region alongside the badges, checked for
   staleness by `luria lint`. Two hand-written copies of a citation is the
-  drift [DP-3](docs/design-principles.md#dp-3) names, and a citation is a bad thing to have two versions of:
+  drift [DP-3](record/principles.d/DP-003.md) names, and a citation is a bad thing to have two versions of:
   the wrong one is the one that reaches somebody's bibliography.
 
   No version in either. The version comes from the release tag, and writing
@@ -1050,7 +1050,7 @@ Assembled from `changelog.d/` fragments on a cadence — never hand-edited
 ### Changed
 
 - Nine proposals adopted: [ADR-041](record/decisions.d/ADR-041.md), [ADR-052](record/decisions.d/ADR-052.md), [ADR-053](record/decisions.d/ADR-053.md), [ADR-054](record/decisions.d/ADR-054.md), [ADR-055](record/decisions.d/ADR-055.md),
-  [ADR-056](record/decisions.d/ADR-056.md), [ADR-060](record/decisions.d/ADR-060.md), [ADR-061](record/decisions.d/ADR-061.md) and [DP-010](docs/design-principles.md#dp-10). Each describes something the tree
+  [ADR-056](record/decisions.d/ADR-056.md), [ADR-060](record/decisions.d/ADR-060.md), [ADR-061](record/decisions.d/ADR-061.md) and [DP-010](record/principles.d/DP-010.md). Each describes something the tree
   already does; leaving them `Proposed` said the question was open when it
   had been settled in code.
 - [ADR-058](record/decisions.d/ADR-058.md), which asked the README to call luria a truth maintenance system,
@@ -1228,7 +1228,7 @@ Assembled from `changelog.d/` fragments on a cadence — never hand-edited
   now asserts the built wheel's version equals the release tag (`v` prefix
   tolerated) before the publish job ever runs. The version was a
   hand-maintained projection of a source of truth kept in two places, which is
-  what [DP-5](docs/design-principles.md#dp-5) predicts will drift; this is its
+  what [DP-5](record/principles.d/DP-005.md) predicts will drift; this is its
   rung-2 remedy — guard the property. Rung 1, deriving the version from the
   tag with `hatch-vcs`, is the better fix and needs `fetch-depth: 0` on the
   publish checkout, so it is left as a follow-up rather than bundled into a
@@ -1302,7 +1302,7 @@ Assembled from `changelog.d/` fragments on a cadence — never hand-edited
   landed but was missing from `FAILABLE`, so a project asking to enforce it was
   told *"which is no warning class"* — the dial rejecting a notch it was
   already printing on, which is
-  [DP-1](docs/design-principles.md#dp-1) inside the guard written to catch
+  [DP-1](record/principles.d/DP-001.md) inside the guard written to catch
   exactly that. The tuple entry itself rode in unremarked with the
   `narrow-titles` work; this is the test that would have caught the omission,
   and the changelog line it never got.
@@ -1316,7 +1316,7 @@ Assembled from `changelog.d/` fragments on a cadence — never hand-edited
   failure printed, "regenerate and commit the result", is the one thing
   `.gitignore` forbids. Downstream that meant a docs job red on every commit
   for a day, on a check nothing could satisfy, which is
-  [DP-1](docs/design-principles.md#dp-1) wearing a green hat: the tool refused
+  [DP-1](record/principles.d/DP-001.md) wearing a green hat: the tool refused
   and its explanation was impossible to act on. `--check` now excludes
   gitignored outputs from all three staleness kinds. Writing is unchanged —
   `luria index` still renders an ignored view, because *not committed* is not
@@ -1430,7 +1430,7 @@ Assembled from `changelog.d/` fragments on a cadence — never hand-edited
 
 ### Added
 
-- **[DP-010](docs/design-principles.md#dp-10), "One decision, one thing."** A decision with two unrelated halves
+- **[DP-010](record/principles.d/DP-010.md), "One decision, one thing."** A decision with two unrelated halves
   is one nobody can cite half of: the second half has no code, so nothing can
   point at it; superseding the first silently retires reasoning nobody meant to
   withdraw; and the alternatives section quietly covers whichever half the
@@ -1782,7 +1782,7 @@ filing exactly as before.
   - **The favicon is rasterized during the build**, from whatever `icon`
     points at, using the `sharp` Quartz already depends on. Point it at the
     vector master: no derived PNG is committed, so none can drift
-    ([DP-3](docs/design-principles.md#dp-3)).
+    ([DP-3](record/principles.d/DP-003.md)).
   - **The logo replaces the site title** in the sidebar, baked once per
     theme. Artwork exposing a `--luria-ink` custom property is re-inked to
     each theme automatically; anything else needs `logo_dark` or is used as
@@ -1883,7 +1883,7 @@ filing exactly as before.
   one is a lint violation naming the file and the remedy. This generalizes the
   old orphaned-tag-page check to every view directory, and also catches a
   journal book stranded by a granularity change.
-- [DP-9](docs/design-principles.md#dp-9) — structure is read before text, so
+- [DP-9](record/principles.d/DP-009.md) — structure is read before text, so
   affordances are spent deliberately: on shaping attention, on making
   locations discoverable, and as smells to read when they turn inconsistent.
   A structural signal beats a documentary one; the read/write boundary is the
@@ -1919,7 +1919,7 @@ filing exactly as before.
 - **`[luria.site]`, and almost nobody needs it**: the site's title, its
   Pages URL, and the base a link falls back to when it points at a
   repository file the site does not publish all derive from `issue_url` for
-  a GitHub project ([DP-3](docs/design-principles.md#dp-3)). Only `exclude`
+  a GitHub project ([DP-3](record/principles.d/DP-003.md)). Only `exclude`
   is genuinely per-project.
 - **Decisions carry a record line on the site**: status, date, issue and
   `influenced_by`, rendered under the title. Those facts live in
@@ -1984,7 +1984,7 @@ filing exactly as before.
   `<a name="dp-N">` beside each heading, and `luria link` prefers it over the
   heading slug: a principle is a living document, so a heading-derived anchor
   stops resolving the moment the wording moves — silently, which is the
-  fail-stale polarity [DP-3](docs/design-principles.md#dp-3) rules out. Projects
+  fail-stale polarity [DP-3](record/principles.d/DP-003.md) rules out. Projects
   whose principles are still one hand-written file keep the heading-slug
   fallback.
 
@@ -2130,7 +2130,7 @@ filing exactly as before.
   a link — the flagged decision, every citing line, every pending code. The
   reports carry no clock (ages read "open since <date>"), because a committed
   view that embeds today's date goes stale at midnight on every branch at
-  once ([DP-2](docs/design-principles.md#dp-2)). The default `reports` path
+  once ([DP-2](record/principles.d/DP-002.md)). The default `reports` path
   moves from `build/doc-reports` to `docs/reports`; `luria reports` still
   writes them standalone for the CI artifact.
 
@@ -2339,7 +2339,7 @@ filing exactly as before.
 - **`luria lint` reports a `title:` that disagrees with its body heading**, and
   a missing `title:`. The heading has to stay — someone opening the file alone
   needs one — so the two copies get a guard rather than a merge: rung 2 of
-  [DP-3](docs/design-principles.md#dp-3), since rung 1 isn't available.
+  [DP-3](record/principles.d/DP-003.md), since rung 1 isn't available.
 - **`tests/test_lint.py`**, covering the new check in both directions and
   across both schemes.
 
@@ -2365,7 +2365,7 @@ filing exactly as before.
   when the file disagrees with the docs or the CLI, the file is the one
   that's wrong. The restated command block and doctrine walkthroughs are
   gone; they had drifted twice in one week, exactly as
-  [DP-3](docs/design-principles.md#dp-3) predicts for hand-maintained
+  [DP-3](record/principles.d/DP-003.md) predicts for hand-maintained
   copies. The scaffolded `template/CLAUDE.md` gets the same treatment,
   mapping an adopting project instead of this one.
 
@@ -2486,7 +2486,7 @@ filing exactly as before.
   ([#21](https://github.com/dmarx/luria/issues/21), [#23](https://github.com/dmarx/luria/issues/23)).
 - Bare `luria badges` says on **stderr** that it only printed. As a `- run:`
   step it looked exactly like a write and exited 0 having done nothing
-  ([DP-1](docs/design-principles.md#dp-1)). Stdout is unchanged, so redirection still works.
+  ([DP-1](record/principles.d/DP-001.md)). Stdout is unchanged, so redirection still works.
 
 ### Documentation
 

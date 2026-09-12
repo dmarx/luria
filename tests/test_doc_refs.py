@@ -273,14 +273,23 @@ def test_journal_entry_links_resolve_from_its_book():
     assert f"({want}/ADR-004.md)" in out
 
 
-def test_design_principle_links_to_its_anchor():
+def test_design_principle_links_to_its_own_page():
+    """This record sets `cite = "page"`, so a principle is cited at the file it
+    publishes as rather than at an anchor in the assembled document. The other
+    setting is covered in tests/test_scheme_cite.py; here the point is which
+    one THIS record chose."""
     out, _ = doc_refs.linkify("per design-principles #1", ANY_MD)
-    assert "(design-principles.md#dp-1)" in out
+    # Not anchored on the opening paren: ANY_MD's base depends on which project
+    # fixture ran, and the claim is the TARGET, not the depth.
+    assert "record/principles.d/DP-001.md)" in out
+    assert "#dp-" not in out
 
 
-def test_design_principles_page_links_to_its_own_anchor():
+def test_the_assembled_document_cites_a_principle_at_its_page_too():
+    """No special case for citing from inside the view: under `cite = "page"`
+    the view is not the target, so there is no self-link to avoid."""
     out, _ = doc_refs.linkify("per design-principles #1", doc_refs.current().design_principles)
-    assert "[design-principles #1](#dp-1)" in out
+    assert "[design-principles #1](../record/principles.d/DP-001.md)" in out
 
 
 def test_explicit_anchor_beats_the_heading_slug(project):

@@ -28,23 +28,62 @@ def test_publishes_the_decisions_and_the_generated_views():
     assert "README.md" in published
 
 
-def test_never_publishes_a_source_that_renders_somewhere_else():
-    """Fragments, journal entries and a document-scheme's sources all write
-    links for the page they land in — staging them in place would break every
-    one, and duplicate the view besides."""
+def test_never_publishes_a_fragment():
+    """A fragment writes links for the page it lands in, has no code, no title
+    of its own and no identity apart from the view — staging it in place would
+    break every one of those links and duplicate the view besides."""
     cfg = current()
     published = {cfg.rel(p) for p in site.publishable()}
     assert not [p for p in published if p.startswith("record/changelog.d/")]
     assert not [p for p in published if p.startswith("record/devlog.d/")]
-    assert not [p for p in published if p.startswith("record/principles.d/")]
 
 
-def test_publishable_is_exactly_the_files_whose_links_resolve_in_place():
-    """The invariant, not the list: whatever the layout becomes, a published
-    page is one a reader can follow the links of from where it sits."""
+def test_publishes_a_document_schemes_sources_as_pages_too():
+    """A design principle is not a fragment. It is numbered, titled, statused,
+    versioned and cited by code — every property a decision has except an
+    address — so it gets one. The assembled view is still published; both, like
+    a decision and its index."""
+    cfg = current()
+    published = {cfg.rel(p) for p in site.publishable()}
+    assert "record/principles.d/DP-001.md" in published
+    assert "docs/design-principles.md" in published
+
+
+def test_a_published_page_is_one_whose_links_resolve_where_it_lands():
+    """The invariant, restated for the exception. It used to read
+    `link_base(path) == path.parent`, which is the same claim while every
+    source rendered elsewhere stayed unpublished. A document-scheme source
+    breaks that equality on purpose — its links are spelled for the view — and
+    earns it by being REBASED at stage time. Everything else still has to
+    resolve where it sits."""
     cfg = current()
     for path in site.publishable():
+        if site.document_source(path, cfg):
+            continue
         assert cfg.link_base(path) == path.parent, cfg.rel(path)
+
+
+def test_a_staged_principle_has_its_links_rebased_onto_its_own_page():
+    """The source spells `../record/decisions.d/ADR-006.md`, which is correct
+    from `docs/` and wrong from `record/principles.d/`. Publishing it without
+    re-spelling would trade one broken link for another."""
+    cfg = current()
+    source = cfg.root / "record" / "principles.d" / "DP-001.md"
+    text = "see [ADR-006](../record/decisions.d/ADR-006.md) for the rule\n"
+    assert site._rebase(text, source, cfg) == (
+        "see [ADR-006](../decisions.d/ADR-006.md) for the rule\n")
+
+
+def test_rebasing_leaves_a_specimen_in_a_code_span_alone():
+    cfg = current()
+    source = cfg.root / "record" / "principles.d" / "DP-001.md"
+    text = "write `[x](../record/decisions.d/ADR-006.md)` by hand\n"
+    assert site._rebase(text, source, cfg) == text
+
+
+def test_a_principle_answers_to_its_bare_code_like_a_decision():
+    cfg = current()
+    assert site._alias(cfg.root / "record" / "principles.d" / "DP-001.md", cfg) == "DP-001"
 
 
 def test_excludes_are_honoured():
@@ -382,18 +421,26 @@ def test_a_nested_record_is_staged_by_its_own_config(tmp_path, monkeypatch):
     `publishable()` tells a source from a view with
     `link_base(path) != path.parent`, and `link_base` answers from the
     *reading* config's schemes. The parent has no NOTE scheme, so under the
-    parent's config `NOTE-001.md` reads as ordinary prose and would be
-    published beside `docs/notes.md`, the document it renders into. Staged by
-    the child's own config, only the view appears."""
+    parent's config `NOTE-001.md` reads as ordinary prose.
+
+    This used to prove that by the source's ABSENCE, which stopped working the
+    day a document scheme's sources became pages: the child publishes it now,
+    on purpose. The discriminator is the code ALIAS. Only a config that knows
+    the NOTE scheme can give `NOTE-001.md` a `/NOTE-001` address; the parent,
+    reading it as prose, would publish the same file with no alias at all. So
+    the alias is exactly the thing that is present when the child staged it and
+    missing when the parent did."""
     root = parent(tmp_path, monkeypatch)
     child(root, "alpha")
     report = site.stage(tmp_path / "vault")
     content = tmp_path / "vault" / "content"
 
     assert (content / "sub" / "alpha" / "docs" / "notes.md").exists()
-    assert not (content / "sub" / "alpha" / "record" / "notes.d" / "NOTE-001.md").exists(), (
-        "the child's document-scheme source was published beside its assembled "
-        "view, which is what happens when the parent's config does the staging"
+    staged_source = content / "sub" / "alpha" / "record" / "notes.d" / "NOTE-001.md"
+    assert staged_source.exists(), "the child's document-scheme source is a page now"
+    assert "NOTE-001" in staged_source.read_text(encoding="utf-8").split("---")[1], (
+        "the source was published without its code alias, which is what happens "
+        "when the parent's config — which has no NOTE scheme — does the staging"
     )
     assert report.nested.get("sub/alpha", 0) > 0
     assert report.pages > report.nested["sub/alpha"], (

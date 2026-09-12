@@ -1,7 +1,7 @@
 # Design principles
 
 Standing values that guide Luria — the things a project keeps re-deriving in
-review, written down once so they can be cited by number ("per [DP-2](design-principles.md#dp-2)") instead of
+review, written down once so they can be cited by number ("per [DP-2](../record/principles.d/DP-002.md)") instead of
 re-argued.
 
 These are **principles, not decisions.** A [decision](decisions/README.md)
@@ -44,7 +44,7 @@ mechanism for saying "this is fine" becomes the mechanism for never hearing
 about it again.
 
 
-The reason a silent no-op is worse than a loud one is [DP-015](design-principles.md#dp-15): nothing
+The reason a silent no-op is worse than a loud one is [DP-015](../record/principles.d/DP-015.md): nothing
 happening and everything working produce the same observation, so the user's
 next move is to conclude the tool is broken rather than to look for the
 precondition.
@@ -100,7 +100,7 @@ Three remedies, in order of strength:
    asserts "the list contains these names" is the drifting list in a costume.
    Assert the invariant — *any change that alters the output must alter the
    projection* — and fire the guard once to prove it catches
-   ([DP-6](design-principles.md#6-fire-before-trusting)).
+   ([DP-6](../record/principles.d/DP-006.md)).
 3. **When a hand list must remain, choose its failure polarity** and say so in a
    comment. Fail-safe (the missed entry still works, suboptimally) and fail-loud
    (the miss is immediately visible) are both acceptable. **Fail-stale — the
@@ -111,7 +111,7 @@ In this package, the decision index is rung 1 and the reference lint is rung 2.
 
 
 Why fail-stale specifically is the unacceptable polarity, rather than merely
-the worst of three: it is the silent one, and [DP-015](design-principles.md#dp-15) is the general form —
+the worst of three: it is the silent one, and [DP-015](../record/principles.d/DP-015.md) is the general form —
 a missed entry that ships as wrong behaviour is indistinguishable from a
 complete list, so nothing about the system reports the gap.
 
@@ -188,7 +188,7 @@ difference between a guard someone trusts and a guard someone re-tests from
 scratch because they can't tell whether it works.
 
 
-The general case is [DP-015](design-principles.md#dp-15). An unfired guard emits exactly what a guard
+The general case is [DP-015](../record/principles.d/DP-015.md). An unfired guard emits exactly what a guard
 with nothing to catch emits, so "no findings" is not evidence of a clean tree
 until something has proved the instrument can speak.
 
@@ -260,17 +260,17 @@ happens to read that prose.
 untidiness to tolerate — the same shape carrying opposite rules, a file whose
 neighbours are the wrong kind. That reading turned out not to be about
 affordances at all: the citation graph reports the same class of fault the
-same way, so it is now [DP-016](design-principles.md#dp-16), and this is the tree half of it.
+same way, so it is now [DP-016](../record/principles.d/DP-016.md), and this is the tree half of it.
 
 Two disciplines keep the spend honest. **Structural beats documentary**: a
 comment saying "GENERATED — do not edit" is read after landing in the wrong
 place and enforces nothing; a directory name is read before, and a linter can
 hold it. And where the structure encodes a checkable property, walk it up
-[DP-5](design-principles.md#dp-5)'s ladder — the read/write boundary
+[DP-5](../record/principles.d/DP-005.md)'s ladder — the read/write boundary
 ([ADR-021](../record/decisions.d/ADR-021.md)) is this principle's worked
 application, and its payoff rung is a lint: a view directory holds only what
 the generator wrote, so a hand edit there fails with the polarity
-[DP-3](design-principles.md#dp-3) demands.
+[DP-3](../record/principles.d/DP-003.md) demands.
 
 <!-- url-ok-block: SG-DP-18 — the construction reaches the right document, but strata-g's legacy anchors are heading-derived and no template can produce the slug -->
 
@@ -322,7 +322,7 @@ the author pays in unwanted exposure, off-by-default. A switch where both
 answers feel true is usually two switches wearing one name — split it.
 
 
-Both halves of the rule descend from [DP-015](design-principles.md#dp-15). A default is the position that
+Both halves of the rule descend from [DP-015](../record/principles.d/DP-015.md). A default is the position that
 ships when nobody reads the docs, and its failure is silent by construction —
 so the polarity question is really "which direction can announce itself?", and
 the answer sets the default.
@@ -455,7 +455,7 @@ That is the useful property. The a-priori test needs an author to stop and ask.
 This one arrives as friction while writing something else, which is when a
 granularity defect is cheapest to notice and most likely to be noticed at all.
 
-The general form is [DP-016](design-principles.md#dp-16) — an awkward structure is reporting a
+The general form is [DP-016](../record/principles.d/DP-016.md) — an awkward structure is reporting a
 distinction the model has stopped expressing — and this is its granularity
 case. What that principle adds is the instruction not to resolve the
 awkwardness with a clarifying sentence, which is always available and always
@@ -525,7 +525,7 @@ it.
 
 So the mask belongs to the matcher's definition — written where the matching
 happens, and with a test that has seen it fire, because a guard is trusted
-only once it has been caught working ([DP-6](design-principles.md#dp-6)).
+only once it has been caught working ([DP-6](../record/principles.d/DP-006.md)).
 What does not count is an execution order that happens to write the ledger
 after the sweep, a glob that happens to miss the file, or a format the regex
 happens not to match. Those are real protection today and gone after the next
@@ -639,14 +639,14 @@ nothing is what success emits too.
 Each of these already exists here as its own principle, and each stays its own
 principle because the *remedies* differ. What they share is this diagnosis:
 
-- [DP-001](design-principles.md#dp-1) — a refusal that says nothing reads as a broken tool. Remedy: the
+- [DP-001](../record/principles.d/DP-001.md) — a refusal that says nothing reads as a broken tool. Remedy: the
   refusal explains itself.
-- [DP-003](design-principles.md#dp-3) — rung three is the polarity rule, and fail-stale is singled out as
+- [DP-003](../record/principles.d/DP-003.md) — rung three is the polarity rule, and fail-stale is singled out as
   the never-acceptable one precisely because it is the silent polarity. Remedy:
   derive, or guard the property, or choose a polarity that is not silence.
-- [DP-006](design-principles.md#dp-6) — provisioned is not working; an unfired guard reports what a
+- [DP-006](../record/principles.d/DP-006.md) — provisioned is not working; an unfired guard reports what a
   working one reports. Remedy: sabotage it once, and record that you did.
-- [DP-010](design-principles.md#dp-10) — the silent position of a switch is the one that ships, so it
+- [DP-010](../record/principles.d/DP-010.md) — the silent position of a switch is the one that ships, so it
   should be the position whose failure is visible. Remedy: guards default on,
   disclosures default off.
 
@@ -669,10 +669,10 @@ measurement should detect to confirm the reading moves.
 That is the general form of the remedy, and it is worth stating as an
 instruction rather than an observation: **for any silent path, either make it
 emit, or make the emitting case the only reachable one.** Counting the deviations
-is the second-best option and is what [DP-010](design-principles.md#dp-10) settles for; it works because a
+is the second-best option and is what [DP-010](../record/principles.d/DP-010.md) settles for; it works because a
 count of zero is itself a signal.
 
-*v1 · origin: Not one episode but an audit. Four principles in this record — [DP-001](design-principles.md#dp-1), [DP-003](design-principles.md#dp-3), [DP-006](design-principles.md#dp-6), [DP-010](design-principles.md#dp-10) — each lean on the word *silent* at the load-bearing moment, and none of them says why silence is the problem. The premise had been re-derived four times without once being written down*
+*v1 · origin: Not one episode but an audit. Four principles in this record — [DP-001](../record/principles.d/DP-001.md), [DP-003](../record/principles.d/DP-003.md), [DP-006](../record/principles.d/DP-006.md), [DP-010](../record/principles.d/DP-010.md) — each lean on the word *silent* at the load-bearing moment, and none of them says why silence is the problem. The premise had been re-derived four times without once being written down*
 
 <a name="dp-16"></a>
 
@@ -708,7 +708,7 @@ body then had to say *which sentence* of that practice it argued with — becaus
 the target carried two claims under one code. The edge was correct and the
 prose beside it was doing work the graph could not. Splitting the target let
 the edge name what it actually beat, and immediately exposed a second edge that
-did not hold at all ([DP-012](design-principles.md#dp-12) has the worked case).
+did not hold at all ([DP-012](../record/principles.d/DP-012.md) has the worked case).
 
 The same reading applies to an edge nobody can state without a condition, to a
 required reference that had to be filled with the nearest available document,
@@ -743,7 +743,7 @@ and for a layout the lint holds ([ADR-021](../record/decisions.d/ADR-021.md)): t
 awkwardness surface at authoring time instead of at the reader's expense, a
 year later.
 
-*v1 · shaped by [ADR-060](../record/decisions.d/ADR-060.md), [ADR-071](../record/decisions.d/ADR-071.md) · origin: Extracted from [DP-009](design-principles.md#dp-9), where it had been the third of three jobs and had never once been cited — the symptom [DP-012](design-principles.md#dp-12) names. Promoted on its second substrate: [DP-009](design-principles.md#dp-9) found it in the file tree (a `.stub` beside the page it feeds, two `README.md` files with opposite rules), and a typed `overrides` edge found it again in the citation graph, where the edge's prose had to name which clause of its target it argued with*
+*v1 · shaped by [ADR-060](../record/decisions.d/ADR-060.md), [ADR-071](../record/decisions.d/ADR-071.md) · origin: Extracted from [DP-009](../record/principles.d/DP-009.md), where it had been the third of three jobs and had never once been cited — the symptom [DP-012](../record/principles.d/DP-012.md) names. Promoted on its second substrate: [DP-009](../record/principles.d/DP-009.md) found it in the file tree (a `.stub` beside the page it feeds, two `README.md` files with opposite rules), and a typed `overrides` edge found it again in the citation graph, where the edge's prose had to name which clause of its target it argued with*
 
 <a name="dp-17"></a>
 
