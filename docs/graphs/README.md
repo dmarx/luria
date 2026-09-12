@@ -6,7 +6,8 @@ it replaces Quartz's local graph on every page of the published site.
 
 ## What this one shows
 
-The whole record, as **two kinds of edge at once** — 454 nodes, 827 edges:
+The whole record, as **two kinds of edge at once** — 454 nodes, 827 edges — of
+which each page shows the neighbourhood around **its own** node:
 
 | Edge | Count | Where it comes from |
 |---|---|---|
@@ -20,10 +21,16 @@ graph at the foot of each page knows only the rest. Here they are the same
 picture, told apart by colour, so "this page mentions that one" and "this
 decision replaced that one" do not look like the same claim.
 
-Nothing is filtered out. A map that quietly dropped documents would be one you
-cannot trust: a reader who looks for `ADR-070`, does not find it, and concludes
-it does not exist has been misled by the picture. Density is what the viewer's
-zoom, pan, search and **Fit** are for.
+Nothing is filtered out of the FILE. A map that quietly dropped documents would
+be one you cannot trust: a reader who looks for `ADR-070`, does not find it, and
+concludes it does not exist has been misled by the picture.
+
+What each page shows is a different question, and the answer is
+`[luria.site] graph_depth` — hops from that page's own node, **1** by default.
+A page is a place, and the useful picture there is where you are, not the whole
+atlas. Measured on this record: median **6 nodes** a page rather than 454, and
+**926 bytes** gzipped rather than 40 KB. `graph_depth = 0` restores the whole
+map on every page for a project that wants one poster.
 
 A document with a code links to its page. A file with no code — a guide, a
 generated view — has no `/<code>` address, so its node does not navigate.
@@ -55,9 +62,17 @@ Two layers in [strata-g](https://github.com/dmarx/strata-g), merged on filename.
    ([ADR-tmp40zph](../../record/decisions.d/ADR-tmp40zph.md)). A file with no code yields `""`, which the viewer
    declines to make a link of.
 4. On **🌐 Global defaults**, set edge **Color by** → `kind`.
-5. Bind node **Color by** `scheme`, **Size by** `citations`, **Label by**
-   `code`, **Link by** `url`. Fit to view.
-6. **Export → `Canvas — graph data (JSON)`** over `record-map.json`.
+5. Bind node **Color by** `scheme`, **Label by** `code`, **Link by** `url`.
+6. Set **Size by** `_uniform` and **Size scale** to about **32**, which exports
+   a node size near 9. That number is not taste: the viewer draws a node at
+   `max(1.5, size × min(1, cap/maxSize) × zoom)` and only labels one whose
+   radius clears **6** — and `min(1, …)` means it will only ever SHRINK a node,
+   never grow one, so the exported size has to carry it. Sizing by `citations`
+   pins the floor at 2, which renders at ~2.5px: the low-cited nodes lose their
+   labels and the high-cited ones grow big enough to cover the edges underneath.
+   Uniform costs the citation encoding and buys a legible map.
+7. Fit to view.
+8. **Export → `Canvas — graph data (JSON)`** over `record-map.json`.
 
 `Label by code` matters: merged containers otherwise inherit the vault node's
 long title and the labels collide into a paragraph.
@@ -73,7 +88,10 @@ is **reported** rather than rejected: the viewer only follows those, so such a
 node would look clickable and silently not be. `navigateOnClick` and the panel
 title default on here, because these nodes are pages of this site.
 
-The cost is the map inlined once per page: **40 KB gzipped**, on every page.
+The cost is a neighbourhood inlined per page: **926 bytes gzipped** at the
+median, 0.17 MB across the site. A nested record gets no configured graph at
+all — its pages are not nodes of this map, and this map is about a different
+record.
 
 ## It is a snapshot
 

@@ -341,12 +341,15 @@ class Report:
     unplaced: list[str] = field(default_factory=list)
     lineage: int = 0                    # record lines added to scheme docs
     graphs: int = 0                     # lineage graphs added to scheme docs
+    graph_pages: int = 0                # pages carrying the configured graph
     nested: dict[str, int] = field(default_factory=dict)   # record → its pages
 
     def lines(self) -> list[str]:
         out = [f"{self.pages} pages, {self.assets} assets staged",
                f"{self.lineage} record lines added, {self.graphs} with a lineage graph",
                f"{self.to_source} links redirected to the repository"]
+        if self.graph_pages:
+            out.append(f"{self.graph_pages} page(s) carry the configured graph")
         if self.nested:
             listed = ", ".join(f"{name} ({n})"
                                for name, n in sorted(self.nested.items()))
@@ -1009,6 +1012,32 @@ def brand(out: Path, cfg, report: Report) -> str:
         light="static/logo-light.svg", dark="static/logo-dark.svg")
 
 
+def _page_graph(path: Path, cfg, view, ids, asset_url, inherited) -> str:
+    """The configured graph as this page should show it, or `""`.
+
+    `inherited` is what a nested record is handed — `""`, because its pages are
+    not nodes of the parent's map and the parent's map whole is a picture of a
+    different record. A child keeps its own lineage graphs.
+
+    Otherwise each page shows the neighbourhood around its own node
+    (`site.graph_depth` hops, 1 by default; 0 means the whole graph). A page
+    with no node in the map gets no graph rather than an empty one."""
+    if inherited is not None:
+        return inherited
+    if view is None or not asset_url:
+        return ""
+    depth = cfg.site.graph_depth
+    if depth <= 0:
+        return site_graph.block(view, asset_url, cfg.site.graph_height)
+    centre = site_graph.node_id_for(path, cfg, ids)
+    if centre is None:
+        return ""
+    sliced = site_graph.ego_view(view, centre, depth)
+    if sliced is None or not sliced["nodes"]:
+        return ""
+    return site_graph.block(sliced, asset_url, cfg.site.graph_height)
+
+
 def stage(out: Path, cfg=None, nested: bool = True,
           url_base: str | None = None, asset_url: str | None = None,
           site_block: str | None = None) -> Report:
@@ -1026,9 +1055,10 @@ def stage(out: Path, cfg=None, nested: bool = True,
     lineage node would link to a 404. The parent knows where it is mounting
     the child, so the parent says. `asset_url` likewise points every record's
     graphs at the ONE viewer at the site root, rather than shipping a copy of
-    it per nested record. `site_block` carries the parent's configured graph
-    down: the layout is the parent's, so a child whose pages kept Quartz's
-    graph would be showing a component the layout no longer has."""
+    it per nested record. `site_block` is what a child is handed in place of a
+    configured graph — `""`, since the parent's map is about the parent's
+    record; the layout is still the parent's, so a child never gets Quartz's
+    graph back either."""
     cfg = cfg or current()
     out = out.resolve()
     content = out / "content"
@@ -1055,6 +1085,7 @@ def stage(out: Path, cfg=None, nested: bool = True,
     # site — it is the SAME picture on every page, which is the difference
     # between it and Quartz's local graph — and inlined per page, because the
     # viewer reads its data from the element rather than fetching it.
+    site_view, site_ids = None, set()
     if site_block is None and cfg.site.graph:
         if not asset_url:
             # Said out loud rather than silently skipped: the project asked for
@@ -1079,7 +1110,8 @@ def stage(out: Path, cfg=None, nested: bool = True,
                 report.unplaced.append(
                     f"[luria.site] graph: node {label!r} has a URL the viewer "
                     f"will not follow — http(s) only")
-            site_block = site_graph.block(view, asset_url, cfg.site.graph_height)
+            site_view = view
+            site_ids = {n["id"] for n in view["nodes"]}
 
     for path in pages:
         text = path.read_text(encoding="utf-8")
@@ -1119,21 +1151,28 @@ def stage(out: Path, cfg=None, nested: bool = True,
                     body = (body.rstrip("\n") + "\n\n## Lineage\n"
                             + site_graph.block(view, asset_url))
                     report.graphs += 1
-            if site_block:
+            page_block = _page_graph(path, cfg, site_view, site_ids,
+                                     asset_url, site_block)
+            if page_block:
                 # Where Quartz's graph stood: above the document's own heading,
                 # below the title block the layout renders. The swap is meant
                 # to be positional as well as functional — a reader who knew
                 # where to look for the graph still finds it there.
-                body = site_block + "\n" + body
+                body = page_block + "\n" + body
+                report.graph_pages += 1
             # The YAML itself is carried over verbatim — only the alias is
             # added — so a re-serialization can never quietly reorder or
             # requote a field the record is the source of truth for.
             text = ("---\n" + _with_alias(yaml_text, _alias(path, cfg))
                     + "---\n" + body)
-        elif site_block:
-            # A page with no frontmatter is still a page on this site, and the
-            # layout no longer has a graph component to fall back to.
-            text = site_block + "\n" + text
+        else:
+            page_block = _page_graph(path, cfg, site_view, site_ids,
+                                     asset_url, site_block)
+            if page_block:
+                # A page with no frontmatter is still a page on this site, and
+                # the layout no longer has a graph component to fall back to.
+                text = page_block + "\n" + text
+                report.graph_pages += 1
         dest_rel = destination(path, cfg)
         if dest_rel.as_posix() == "index.md":
             text = landing_page(text, cfg)
@@ -1168,11 +1207,17 @@ def stage(out: Path, cfg=None, nested: bool = True,
             # A project that configured its own graph gets its own graph and
             # not both: two graphs stacked above every document's first
             # paragraph is not a choice anyone would make deliberately.
-            graph_component="" if site_block else QUARTZ_GRAPH_COMPONENT),
+            graph_component=("" if (site_view is not None or site_block)
+                             else QUARTZ_GRAPH_COMPONENT)),
         encoding="utf-8")
 
     if nested:
-        stage_nested(content, cfg, report, site_block)
+        # A nested record gets NO configured graph. Its pages are not nodes of
+        # the parent's map, so there is no neighbourhood to cut for them — and
+        # the parent's map whole is a picture of a different record, which on
+        # an example's page says nothing and cost 38 KB gzipped a page to say
+        # it. They keep their own lineage graphs.
+        stage_nested(content, cfg, report, "")
 
     # One copy for the whole site, at the vault root — Quartz's `Assets`
     # emitter copies every non-markdown file under `content/` verbatim, so
@@ -1181,7 +1226,7 @@ def stage(out: Path, cfg=None, nested: bool = True,
     # one copy rather than shipping the viewer again each: the count that
     # decides whether anything needs it is the whole site's — a lineage graph
     # anywhere, or a configured graph, which is on every page.
-    if (report.graphs or site_block) and own_asset:
+    if (report.graphs or report.graph_pages or site_block) and own_asset:
         shutil.copyfile(site_graph.ASSET, content / site_graph.ASSET_NAME)
         report.assets += 1
     return report

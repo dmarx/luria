@@ -159,6 +159,8 @@ DEFAULTS: dict = {
         # Empty means Quartz's local graph, which is the default.
         "graph": "",
         "graph_height": "320px",
+        # Hops from the page's own node. 0 shows the whole graph on every page.
+        "graph_depth": 1,
     },
 }
 
@@ -1533,6 +1535,10 @@ class Site:
     # Quartz's local graph; unset, Quartz's is what the site keeps.
     graph: Path | None = None
     graph_height: str = "320px"
+    # How much of the configured graph each page shows: hops from that page's
+    # own node. 1 is its immediate neighbourhood; 0 is the whole graph, which
+    # is the same picture everywhere.
+    graph_depth: int = 1
 
 
 @dataclass(frozen=True)
@@ -2229,6 +2235,7 @@ def _site(raw: dict, root: Path) -> Site:
         theme=spec.get("theme", {}) or {},
         graph=root / spec["graph"] if spec.get("graph") else None,
         graph_height=spec.get("graph_height") or "320px",
+        graph_depth=int(spec.get("graph_depth", 1)),
     )
 
 
