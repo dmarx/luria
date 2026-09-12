@@ -270,11 +270,17 @@ def test_the_landing_page_is_named_and_still_answers_to_README(tmp_path):
     assert 'aliases:\n- "README"' in index
 
 
-def test_the_graph_sits_above_the_article_not_in_the_sidebar(tmp_path):
+def test_the_graph_sits_above_the_article_not_in_the_sidebar(project):
     """Quartz's sidebars stack below the content under 1200px, so a graph in
-    the right rail is at the bottom of the page on most windows (#71)."""
-    site.stage(tmp_path)
-    layout = (tmp_path / "quartz.layout.ts").read_text()
+    the right rail is at the bottom of the page on most windows (#71).
+
+    Run against a fixture project rather than this record, because this record
+    now configures a graph of its own (ADR-tmp0hx52) and so has no
+    `Component.Graph` to place. The claim is about where the layout puts
+    Quartz's graph when it has one."""
+    out = project / "build" / "site"
+    site.stage(out)
+    layout = (out / "quartz.layout.ts").read_text()
     before, _, right = layout.partition("right: [")
     assert "Component.Graph(" in before.split("left: [")[0]
     assert "Component.Graph(" not in right

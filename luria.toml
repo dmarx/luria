@@ -52,6 +52,12 @@ person would otherwise rediscover. Generated from the entries in \
 # visitor protection from.
 [luria.site]
 exclude = ["template/**"]
+# The record's own map, shown on every page in place of Quartz's local
+# graph (ADR-tmp0hx52): every decision and principle, sized by what cites
+# them. Drawn in strata-g, not generated — docs/graphs/README.md has the
+# recipe for redrawing it.
+graph = "docs/graphs/record-map.json"
+graph_height = "420px"
 # The brainslug kit is the identity; the site wears it rather than the
 # generator's. `icon` is the vector master — the favicon is rasterized from it
 # at build time, so no derived PNG is committed here to drift out of step

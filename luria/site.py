@@ -1066,6 +1066,15 @@ def stage(out: Path, cfg=None, nested: bool = True,
                 "the viewer from, so no graph is rendered")
         else:
             view = site_graph.load_view(cfg.site.graph)
+            # A click follows the node's link. The canvas exports never set
+            # this — in a data graph the inspector is the point — but here the
+            # nodes ARE pages of this site, so opening one is what a click
+            # means. Only a default: a file that says otherwise is obeyed.
+            view.setdefault("navigateOnClick", True)
+            # The panel's heading. A bare export carries no title and the
+            # viewer falls back to "Graph", which names nothing on a page that
+            # already has a title of its own.
+            view.setdefault("title", cfg.site.title)
             for label in site_graph.unfollowable(view):
                 report.unplaced.append(
                     f"[luria.site] graph: node {label!r} has a URL the viewer "

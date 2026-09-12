@@ -53,3 +53,5 @@ Luria's own memory, kept with the tool it ships:
   approaches, and the traps the next person would otherwise rediscover.
 - Status reports — [pending decisions](reports/pending-decisions.md) and
   [reference status](reports/reference-status.md): what awaits a human eye.
+- [Site graphs](graphs/README.md) — the picture the published site shows on
+  every page, and how to redraw it.
