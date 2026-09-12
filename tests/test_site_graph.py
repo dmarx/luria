@@ -137,13 +137,60 @@ def test_nodes_are_labelled_with_the_code_alone():
     assert centre["attrs"]["title"] == "First"
 
 
-def test_the_block_escapes_a_title_that_could_close_the_script_element():
-    v = view(title="</script><img src=x onerror=alert(1)>")
-    html = site_graph.block(v, "/viewer.js")
-    assert "</script><img" not in html
-    island = html.split('type="application/json">')[1].split("</script>")[0]
-    # Still the same string after parsing — escaped bytes, not lost data.
-    assert json.loads(island)["nodes"][0]["attrs"]["title"] == v["nodes"][0]["attrs"]["title"]
+def rendered(markdown: str) -> str:
+    """`markdown` through a CommonMark parser.
+
+    Quartz builds on remark/micromark. This is a different implementation of
+    the same specification, which is the point: what is being checked is a
+    CommonMark rule, not one renderer's habit.
+    """
+    from markdown_it import MarkdownIt
+    return MarkdownIt("commonmark").render(markdown)
+
+
+def test_the_block_survives_a_markdown_parser_intact():
+    """The bug this exists for shipped, and looked fine until the site built.
+
+    `<strata-g-graph …>` is a CommonMark "type 7" HTML-block opener, which
+    requires the tag to be alone on its line. Written on one line with its
+    data, the parser reads a PARAGRAPH containing inline HTML — and then the
+    markup is text, so the typographer curls the quotes in it. The staged
+    markdown looked correct; the built page carried JSON that cannot parse.
+    """
+    html = rendered("## Lineage\n" + site_graph.block(view(), "/viewer.js"))
+    assert "<p><strata-g-graph" not in html, "the element was parsed as a paragraph"
+    assert graph_data(html)[0]["nodes"][0]["id"] == "ADR-001"
+    assert '<script src="/viewer.js">' in html
+
+
+def test_the_one_line_form_is_what_a_parser_rejects():
+    """A positive control (DP-22).
+
+    The assertion above is only worth anything if the shape it rejects is the
+    shape that actually breaks — otherwise "no paragraph wrapper" could be
+    true of any markup at all and the test would pass on a fix that fixed
+    nothing.
+    """
+    one_line = site_graph.block(view(), "/viewer.js").replace('">\n</strata-g-graph>',
+                                                              '"></strata-g-graph>')
+    html = rendered("## Lineage\n" + one_line)
+    assert "<p><strata-g-graph" in html
+
+
+def test_a_title_that_is_markup_stays_data():
+    """A record can say anything, and these titles are record content.
+
+    The value lands in an attribute inside a document other people open, so
+    the claim is that it can neither close the attribute nor introduce a tag —
+    and that it is still the SAME STRING once a parser has decoded it. Escaped
+    bytes, not lost data.
+    """
+    nasty = '</strata-g-graph><img src=x onerror=alert(1)> "quoted" & ampersand'
+    html = site_graph.block(view(title=nasty), "/viewer.js")
+    assert "<img" not in html
+    assert "</strata-g-graph><img" not in html
+    parsed = graph_data(html)[0]
+    assert parsed["nodes"][0]["attrs"]["title"] == nasty
 
 
 # --- staged against this repo's own record -------------------------------
@@ -154,6 +201,30 @@ def test_the_block_escapes_a_title_that_could_close_the_script_element():
 ELEMENT = "<strata-g-graph "
 
 
+def graph_data(markup: str) -> list[dict]:
+    """Every lineage view in `markup`, read the way a BROWSER reads it.
+
+    Through an HTML parser rather than by slicing the string, because the
+    claim being made is precisely that the value survives a serialize/parse
+    round-trip: the attribute is written entity-escaped and has to come back
+    as the same bytes. Slicing the raw text would skip the half that matters.
+    """
+    from html.parser import HTMLParser
+
+    found: list[dict] = []
+
+    class Reader(HTMLParser):
+        def handle_starttag(self, tag, attrs):
+            if tag != "strata-g-graph":
+                return
+            value = dict(attrs).get("data-graph")
+            assert value is not None, "the element carries no data-graph"
+            found.append(json.loads(value.replace("\\u003c", "<")))
+
+    Reader(convert_charrefs=True).feed(markup)
+    return found
+
+
 def graphed(content):
     """Every staged page carrying a lineage graph, as (path, view)."""
     out = []
@@ -161,10 +232,10 @@ def graphed(content):
         text = path.read_text()
         if ELEMENT not in text:
             continue
-        island = text.split(ELEMENT, 1)[1].split(
-            'type="application/json">', 1)[1].split("</script>", 1)[0]
-        out.append((path, json.loads(island.replace("\\u003c", "<"))))
+        for view in graph_data(text):
+            out.append((path, view))
     return out
+
 
 def test_page_url_is_absolute_and_spells_quartzs_slug():
     cfg = current()

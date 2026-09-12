@@ -67,6 +67,30 @@ the real titles ran off the canvas and overlapped each other. The record line is
 two lines up and states every one of these edges in prose, so the graph carries
 the shape and the prose carries the words.
 
+**The graph data rides in a `data-graph` attribute, not a `<script>` island.**
+This is the detail that looks like an implementation choice and is not. A
+markdown pipeline does two things to an island, both measured against a real
+Quartz v4.5.2 build:
+
+- CommonMark only opens an HTML block when the tag is **alone on its line**.
+  Written on one line with its data, the element is parsed as a paragraph
+  containing inline HTML, the typographer curls every quote and the
+  `</script>` is relocated. That one is the producer's to fix, and the
+  newlines fix it.
+- Even as a clean HTML block, Quartz re-serializes raw HTML (remark → hast →
+  preact) and **escapes a script element's text children**. Script content is
+  raw text, so a browser never decodes those entities back: `JSON.parse`
+  throws on a page whose source markdown was exactly right. No amount of
+  escaping on this side helps.
+
+Four carriers were probed in a browser against a real build — script island,
+JSON in an attribute, base64 in the island, base64 in an attribute. The island
+is the only one that fails. An attribute value is the one place HTML escaping
+round-trips **by construction**: whatever a serializer escapes, the parser
+decodes. Plain JSON rather than base64, because it stays readable in View
+Source and needs no decoding step. strata-g's viewer reads either carrier; the
+island stays right for a self-contained file, which passes through no pipeline.
+
 **The viewer is vendored with a content-hash pin.** `luria/assets/` holds the
 payload; `LINEAGE_VIEWER_SHA256` pins it and a test compares them, so a copy
 edited in place is a failure rather than a surprise — the same offline-drift
@@ -91,6 +115,11 @@ discipline [ADR-016](ADR-016.md) applies to remote document content.
   slightly different each visit.
 - **Status quo — the record line alone.** It is correct and complete, and it is
   a table. Shape is what it cannot show.
+- **Base64 in the data island.** It survives the pipeline too, and was
+  rejected for being opaque: a reader viewing source sees a wall of base64
+  instead of the graph the page is claiming to show, and every debugging
+  session starts with a decode step. The attribute costs nothing and stays
+  legible.
 
 ## Consequences
 
@@ -103,6 +132,14 @@ labels with literal 2D-context colours, so a `var(--light)` would be dropped by
 half the widget. It is drawn as a single dark figure that reads on both of
 Quartz's themes. Fixing this properly needs a re-theme hook in the viewer
 upstream, not a change here.
+
+**A markdown generator's output is not verified until it is built.** The first
+version of this was driven in a browser and looked perfect — but the harness
+page was the raw block in a plain HTML document, which skips the markdown
+pipeline entirely, and the pipeline was where both bugs lived. The tests now
+run a CommonMark parser (`markdown-it-py`, a dev dependency for exactly this),
+and the attribute is read back through an HTML parser rather than sliced out
+of the string, because the round-trip is the claim.
 
 **This record now has an upstream.** The vendored viewer is generated from
 strata-g's `web/src/graph/export/webappViewer.ts`; updating it means re-emitting,

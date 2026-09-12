@@ -16,7 +16,11 @@
   drawn less than half the lineage.
 - The viewer is vendored from strata-g ([SG-ADR-237](https://github.com/dmarx/strata-g/blob/main/docs/decisions/ADR-237.md), [SG-ADR-238](https://github.com/dmarx/strata-g/blob/main/docs/decisions/ADR-238.md)) with a
   content-hash pin, served once from the site root, and written only when a
-  page references it.
+  page references it. The graph data rides in a `data-graph` attribute rather
+  than a `<script>` island: measured against a real Quartz build, a static-site
+  generator re-serializes raw HTML and escapes a script element's text, so an
+  island arrives as unparseable JSON. An attribute value is the one place HTML
+  escaping round-trips by construction.
 
 ### Changed
 

@@ -38,7 +38,14 @@ Changelog = "https://github.com/dmarx/luria/blob/main/CHANGELOG.md"
 luria = "luria.cli:main"
 
 [project.optional-dependencies]
-dev = ["pytest>=8", "build>=1"]
+# `markdown-it-py` is here because this package GENERATES markdown, and the
+# thing that broke was a markdown parsing rule: a `<tag>` sharing its line
+# with content is a paragraph, not an HTML block, so a data island written
+# that way came back from the site build with its quotes curled and its
+# `</script>` moved. Asserting the shape by hand would only re-encode my
+# reading of the spec; a CommonMark parser is the instrument. Quartz builds
+# on remark/micromark, CommonMark-compliant on exactly this rule.
+dev = ["pytest>=8", "build>=1", "markdown-it-py>=3"]
 # `-block` scope asks a language question — where does the block below this
 # comment end? — that a run of non-blank lines can only guess at. A grammar
 # answers it for every language it has, which is why this is one extra and not

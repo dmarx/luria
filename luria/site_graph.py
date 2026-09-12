@@ -38,7 +38,7 @@ ASSET = Path(__file__).parent / "assets" / "strata_graph_viewer.js"
 # The vendored viewer's content hash. A test compares the file to this, so the
 # two cannot drift silently — the same offline-drift discipline ADR-016 applies
 # to remote document content, applied to a vendored asset.
-LINEAGE_VIEWER_SHA256 = "46a62fba29676c29c6f302d962bd7fe671972c28503c44b95b502fc92fe54895"
+LINEAGE_VIEWER_SHA256 = "c692b9eae67287652e41b7ecba97b40de9b6493634a7569aaa2746b82f960ff0"
 
 # The filename the viewer is served under, at the site root.
 ASSET_NAME = "strata-graph-viewer.js"
@@ -206,16 +206,40 @@ def block(view: dict, asset_url: str, height: str = "300px") -> str:
 
     One `<script src>` for the viewer — shared by every page, unlike the
     self-contained snippet strata-g exports, because this is a site and a
-    cached script beats a copy per page — plus the element and its data.
+    cached script beats a copy per page — plus the element carrying its data.
 
-    The JSON goes through the same escaping strata-g uses: `<` is written as
-    its JSON escape so no value can close the script element, which matters
-    because these titles are record content and a record can say anything.
+    **The data rides in an attribute, not in a `<script>` island**, and that
+    is the whole reason this function has a docstring. Two things a markdown
+    pipeline does to an island, both measured against a real Quartz v4.5.2
+    build rather than reasoned about:
+
+    *A tag sharing its line with content is a PARAGRAPH.* CommonMark only
+    opens a "type 7" HTML block when the tag is alone on its line. Written on
+    one line, the whole element was parsed as inline HTML inside a paragraph,
+    the typographer curled every quote in the island and the `</script>` was
+    relocated. Hence the newlines below, which a test pins with a parser.
+
+    *Even as a clean HTML block, element CONTENT is re-serialized.* Quartz
+    goes remark → hast → preact, and a script element's text children come out
+    entity-escaped. Script content is raw text, so the browser never decodes
+    them back: `JSON.parse` throws on a page whose source was perfectly
+    correct, and no amount of escaping on this side helps.
+
+    An attribute value is the one place HTML escaping round-trips by
+    construction — whatever a serializer escapes, the parser decodes — so the
+    JSON goes in `data-graph` and arrives intact. strata-g's viewer reads
+    either carrier; the island remains right for a self-contained file, which
+    passes through no pipeline at all.
+
+    The value is escaped for an attribute context. `<` is written as its JSON
+    escape as well, belt and braces, because these titles are record content
+    and a record can say anything.
     """
     data = json.dumps(view, ensure_ascii=False).replace("<", "\\u003c")
+    attr = (data.replace("&", "&amp;").replace('"', "&quot;")
+                .replace("<", "&lt;").replace(">", "&gt;"))
     return (
-        f'\n<strata-g-graph style="height: {height}">'
-        f'<script type="application/json">{data}</script>'
+        f'\n<strata-g-graph style="height: {height}" data-graph="{attr}">\n'
         f"</strata-g-graph>\n"
         f'<script src="{asset_url}"></script>\n'
     )
