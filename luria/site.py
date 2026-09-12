@@ -57,7 +57,7 @@ import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from . import doc_refs, edges, statuses
+from . import doc_refs, edges, site_graph, statuses
 from .adr_index import parse_frontmatter
 from .config import Site, current
 
@@ -336,11 +336,12 @@ class Report:
     to_source: int = 0                  # links redirected at the repository
     unplaced: list[str] = field(default_factory=list)
     lineage: int = 0                    # record lines added to scheme docs
+    graphs: int = 0                     # lineage graphs added to scheme docs
     nested: dict[str, int] = field(default_factory=dict)   # record → its pages
 
     def lines(self) -> list[str]:
         out = [f"{self.pages} pages, {self.assets} assets staged",
-               f"{self.lineage} record lines added",
+               f"{self.lineage} record lines added, {self.graphs} with a lineage graph",
                f"{self.to_source} links redirected to the repository"]
         if self.nested:
             listed = ", ".join(f"{name} ({n})"
@@ -477,6 +478,84 @@ def destination(path: Path, cfg) -> Path:
     of it to have one."""
     rel = path.relative_to(cfg.root)
     return Path("index.md") if rel.as_posix() == "README.md" else rel
+
+
+def page_url(path: Path, cfg, url_base: str | None = None) -> str | None:
+    """The absolute URL `path` will answer at on the published site, or `None`
+    when there is no base to hang it on.
+
+    ABSOLUTE, and that is load-bearing rather than a preference: these URLs go
+    into the lineage graph's data island, and the viewer only ever writes an
+    `href` it recognises as `http(s)` (strata-g's `safeHref`). A site-relative
+    path would be refused and the nodes would stop linking anywhere. It is
+    also why a record without a `base_url` gets no lineage graphs at all —
+    a picture whose nodes do not navigate is worse than no picture.
+
+    The slug is Quartz's: `content/docs/decisions/ADR-042.md` is served at
+    `/docs/decisions/ADR-042`, and `index.md` at the root."""
+    # `url_base=""` is a deliberate "there is no base", distinct from `None`
+    # ("use the config's"): a nested record whose parent has no `base_url`
+    # must not fall back to its own, which would be missing the mount prefix.
+    base = (site_base(cfg) if url_base is None else url_base).rstrip("/")
+    if not base:
+        return None
+    rel = destination(path, cfg).as_posix()
+    slug = rel[:-len(".md")] if rel.endswith(".md") else rel
+    return f"{base}/" if slug == "index" else f"{base}/{slug}"
+
+
+def site_base(cfg) -> str:
+    """`https://<base_url>` with no trailing slash, or `""` when unconfigured."""
+    base = (cfg.site.base_url or "").strip().strip("/")
+    return f"https://{base}" if base else ""
+
+
+def lineage_index(pages, cfg, known: dict[str, str],
+                  url_base: str | None = None) -> dict[str, tuple[str, str]]:
+    """`{code: (title, absolute url)}` for every code the site can link to.
+
+    This is what the lineage graph resolves a neighbour through, and it is
+    built from the SAME `pages` list the staging loop walks — so a code the
+    record knows but the site withholds resolves to nothing and is dropped,
+    rather than being drawn as a node that links nowhere.
+
+    Two shapes of document, because a record has both. A file-per-code scheme
+    is one page and the page is the URL. A scheme that renders into ONE
+    assembled document (`render = "document"`, which is how design principles
+    are published) has no page per code — its codes are anchors in a single
+    page. Leaving those out is not a rounding error: on this record 50 of 122
+    typed-edge endpoints are principles, so a lineage graph without them would
+    be a picture of less than half the lineage.
+
+    The anchor is asked of `doc_refs.wikilink_target`, which is the resolver
+    the rest of the record already links through — cited from the assembled
+    document itself, where it answers with the bare `#anchor` (DP-4: one
+    speller for a target, not two)."""
+    out: dict[str, tuple[str, str]] = {}
+    for path in pages:
+        code = edges.code_of(path)
+        if not code:
+            continue
+        url = page_url(path, cfg, url_base)
+        if url:
+            out[code] = (known.get(code, ""), url)
+
+    published = set(pages)
+    for scheme in cfg.schemes.values():
+        if scheme.render == "index" or not scheme.output:
+            continue
+        if scheme.output not in published:
+            continue
+        page = page_url(scheme.output, cfg, url_base)
+        if not page:
+            continue
+        for code, title in known.items():
+            if code in out or not code.startswith(f"{scheme.prefix}-"):
+                continue
+            anchor = doc_refs.wikilink_target(code, scheme.output)
+            if anchor and anchor.startswith("#"):
+                out[code] = (title, page + anchor)
+    return out
 
 
 def _alias(path: Path, cfg) -> str | None:
@@ -926,13 +1005,23 @@ def brand(out: Path, cfg, report: Report) -> str:
         light="static/logo-light.svg", dark="static/logo-dark.svg")
 
 
-def stage(out: Path, cfg=None, nested: bool = True) -> Report:
+def stage(out: Path, cfg=None, nested: bool = True,
+          url_base: str | None = None, asset_url: str | None = None) -> Report:
     """Write the vault and its config under `out`. Idempotent: the content
     directory is rebuilt from scratch, so a rename in the record cannot leave
     a stale page behind to be served forever.
 
     `nested` is what stops a nested record from staging its own — see
-    `stage_nested`."""
+    `stage_nested`.
+
+    `url_base` and `asset_url` exist for exactly that nested case, and only
+    `stage_nested` passes them. A child record is mounted under a path its own
+    config has never heard of (`content/examples/constitution/`), so a URL it
+    spelled from its own `base_url` would be missing that prefix and every
+    lineage node would link to a 404. The parent knows where it is mounting
+    the child, so the parent says. `asset_url` likewise points every record's
+    graphs at the ONE viewer at the site root, rather than shipping a copy of
+    it per nested record."""
     cfg = cfg or current()
     out = out.resolve()
     content = out / "content"
@@ -947,6 +1036,13 @@ def stage(out: Path, cfg=None, nested: bool = True) -> Report:
     # frontmatter.
     typed = edges.graph()
     known = titles()
+    # Resolved once: every page's code, title and published URL, which is what
+    # a lineage graph needs to turn a neighbouring code into a node that links.
+    lineage_urls = lineage_index(pages, cfg, known, url_base)
+    own_asset = asset_url is None
+    base = (site_base(cfg) if url_base is None else url_base).rstrip("/")
+    if own_asset:
+        asset_url = f"{base}/{site_graph.ASSET_NAME}" if base else None
 
     for path in pages:
         text = path.read_text(encoding="utf-8")
@@ -970,6 +1066,22 @@ def stage(out: Path, cfg=None, nested: bool = True) -> Report:
                     report.unplaced.append(
                         f"{cfg.rel(path)} → unresolved in frontmatter: "
                         + " ".join(re.findall(r"\[\[[^\]]+\]\]", line)))
+            if asset_url and code and code in lineage_urls:
+                # The same typed edges the record line states, drawn. At the
+                # END of the document rather than under the title: the line is
+                # the authoritative statement and belongs above the fold; the
+                # graph is a place to go next, and 300px of it between a
+                # decision's title and its first paragraph would be a toll on
+                # every reader who came to read the decision.
+                view = site_graph.lineage_view(
+                    code, known.get(code, ""), lineage_urls[code][1],
+                    typed.outbound(code), typed.inbound(code),
+                    lineage_urls.get,
+                    site_graph.GRAPH_BACKGROUND, site_graph.GRAPH_LABEL_COLOR)
+                if view is not None:
+                    body = (body.rstrip("\n") + "\n\n## Lineage\n"
+                            + site_graph.block(view, asset_url))
+                    report.graphs += 1
             # The YAML itself is carried over verbatim — only the alias is
             # added — so a re-serialization can never quietly reorder or
             # requote a field the record is the source of truth for.
@@ -1009,6 +1121,16 @@ def stage(out: Path, cfg=None, nested: bool = True) -> Report:
 
     if nested:
         stage_nested(content, cfg, report)
+
+    # One copy for the whole site, at the vault root — Quartz's `Assets`
+    # emitter copies every non-markdown file under `content/` verbatim, so
+    # this is the one place a generator can put a script and have it served.
+    # AFTER the nested pass, because nested records point their graphs at this
+    # one copy rather than shipping the viewer again each: the count that
+    # decides whether anything needs it is the whole site's.
+    if report.graphs and own_asset:
+        shutil.copyfile(site_graph.ASSET, content / site_graph.ASSET_NAME)
+        report.assets += 1
     return report
 
 
@@ -1062,7 +1184,13 @@ def stage_nested(content: Path, cfg, report: Report) -> None:
                 # would for the parent, which is the contract the Pages
                 # workflow already runs on.
                 child_out = Path(tmp) / "vault"
-                child_report = stage(child_out, child, nested=False)
+                parent_base = site_base(cfg)
+                child_report = stage(
+                    child_out, child, nested=False,
+                    url_base=(f"{parent_base}/{rel.as_posix()}"
+                              if parent_base else ""),
+                    asset_url=(f"{parent_base}/{site_graph.ASSET_NAME}"
+                               if parent_base else ""))
             mount = content / rel
             if mount.exists():
                 shutil.rmtree(mount)
@@ -1071,6 +1199,7 @@ def stage_nested(content: Path, cfg, report: Report) -> None:
         report.pages += child_report.pages
         report.assets += child_report.assets
         report.lineage += child_report.lineage
+        report.graphs += child_report.graphs
         report.to_source += child_report.to_source
         report.unplaced += [f"{rel.as_posix()}/{u}" for u in child_report.unplaced]
 
