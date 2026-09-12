@@ -282,6 +282,50 @@ def load_view(path: Path) -> dict:
     return view
 
 
+def node_id_for(path: Path, cfg, ids: set) -> str | None:
+    """Which node of the configured graph is this page, if any.
+
+    Two shapes, because a designed map is usually composed of more than one
+    layer and they identify a document differently. strata-g's luria-record
+    backend ids a node by its repo-relative path; an Obsidian-vault layer ids
+    it by basename. Both are things this build already knows about the page it
+    is staging, so both are tried — path first, since it cannot collide."""
+    rel = cfg.rel(path)
+    if rel in ids:
+        return rel
+    return path.name if path.name in ids else None
+
+
+def ego_view(view: dict, centre: str, depth: int = 1) -> dict | None:
+    """`view` cut down to `centre` and everything within `depth` hops.
+
+    The positions, colours, sizes and labels are the author's, untouched — this
+    selects, it does not re-lay-out. A node keeps the place it was drawn in, so
+    the same document sits where you last saw it rather than being re-centred
+    into a new arrangement on every page.
+
+    `None` when the centre is not in the graph; the caller shows no graph at
+    all rather than an empty box."""
+    nodes = {n["id"]: n for n in view.get("nodes", [])}
+    if centre not in nodes:
+        return None
+    adjacent: dict[str, set] = {}
+    for edge in view.get("edges", []):
+        adjacent.setdefault(edge["source"], set()).add(edge["target"])
+        adjacent.setdefault(edge["target"], set()).add(edge["source"])
+    keep = {centre}
+    frontier = {centre}
+    for _ in range(max(0, depth)):
+        frontier = {n for f in frontier for n in adjacent.get(f, ())} - keep
+        keep |= frontier
+    return {
+        **view,
+        "nodes": [n for n in view["nodes"] if n["id"] in keep],
+        "edges": [e for e in view.get("edges", [])
+                  if e["source"] in keep and e["target"] in keep],
+    }
+
+
 def unfollowable(view: dict) -> list[str]:
     """Node labels whose URL the viewer will refuse to follow.
 
