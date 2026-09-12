@@ -37,7 +37,16 @@ generated view — has no `/<code>` address, so its node does not navigate.
 
 ## Redrawing it
 
-Two layers in [strata-g](https://github.com/dmarx/strata-g), merged on filename.
+Two layers in [strata-g](https://github.com/dmarx/strata-g).
+
+> **They do not fully merge, and that is measured, not assumed.** strata-g folds
+> nodes together when their on-screen LABELS match — not when their filenames
+> do. The record layer titles a decision `ADR-001: Four layers of record…` and
+> the vault layer reads the bare heading `Four layers of record…`, so 112
+> documents stay as two nodes. 120 others do merge, where the two labels happen
+> to coincide (a changelog fragment's title *is* its timestamp). A computed
+> column stripping the `CODE: ` prefix would fix it, except a virtual column
+> cannot be a label — see [strata-g#787](https://github.com/dmarx/strata-g/issues/787).
 
 > **Load the record FIRST.** The order matters: with the vault layer loaded
 > first, `kind` never reaches the edge Color-by catalog, even after the record
@@ -48,9 +57,8 @@ Two layers in [strata-g](https://github.com/dmarx/strata-g), merged on filename.
    `luria.toml`, mounts every document as a node carrying `code`, `scheme`,
    `status`, `citations` and the rest, and every typed reference as an edge.
 2. Add a second layer for the repository's markdown as an **Obsidian vault**.
-   Its edges are the markdown links. Nodes merge with the first layer's on
-   filename automatically — the vault labels by filename stem and the record's
-   `code` is that same string.
+   Its edges are the markdown links, and its nodes are titled from each file's
+   own heading.
 3. Add one **computed column** (`+ Column`), which is how a node gets a URL,
    since neither backend has one:
 
@@ -59,10 +67,11 @@ Two layers in [strata-g](https://github.com/dmarx/strata-g), merged on filename.
    | `url` | `code ? "https://dmarx.github.io/luria/" & code : ""` |
 
    One line, because every scheme document has a page and answers at `/<code>`
-   ([ADR-tmp40zph](../../record/decisions.d/ADR-tmp40zph.md)). A file with no code yields `""`, which the viewer
+   ([ADR-094](../../record/decisions.d/ADR-094.md)). A file with no code yields `""`, which the viewer
    declines to make a link of.
 4. On **🌐 Global defaults**, set edge **Color by** → `kind`.
-5. Bind node **Color by** `scheme`, **Label by** `code`, **Link by** `url`.
+5. Bind node **Color by** `scheme` and **Link by** `url`. Leave **Label by**
+   on `title`, its default.
 6. Set **Size by** `_uniform` and **Size scale** to about **32**, which exports
    a node size near 9. That number is not taste: the viewer draws a node at
    `max(1.5, size × min(1, cap/maxSize) × zoom)` and only labels one whose
@@ -74,8 +83,13 @@ Two layers in [strata-g](https://github.com/dmarx/strata-g), merged on filename.
 7. Fit to view.
 8. **Export → `Canvas — graph data (JSON)`** over `record-map.json`.
 
-`Label by code` matters: merged containers otherwise inherit the vault node's
-long title and the labels collide into a paragraph.
+**Why `title` and not `code`.** A map labelled `ADR-001`, `DP-004`, `ADR-093`
+is a map you cannot read without opening every node: the code is an address,
+not a name. Titles are long and the canvas cuts them at 60 characters, which is
+the cost — and it is the cheaper one. (The obvious repair, a computed column
+that truncates with an ellipsis, does not work: binding **Label by** to a
+virtual column is accepted by the select and ignored by the canvas,
+[strata-g#787](https://github.com/dmarx/strata-g/issues/787).)
 
 `citations` is the document's in-degree — how many others reference it, counting
 typed relations and prose citations, deduped where both join the same pair.

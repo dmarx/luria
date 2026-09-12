@@ -38,7 +38,7 @@ ASSET = Path(__file__).parent / "assets" / "strata_graph_viewer.js"
 # The vendored viewer's content hash. A test compares the file to this, so the
 # two cannot drift silently — the same offline-drift discipline ADR-016 applies
 # to remote document content, applied to a vendored asset.
-LINEAGE_VIEWER_SHA256 = "f2627b6c1d37e1e6e70bab743ff5950aeea829a3fe0546962e01f9b561f89aca"
+LINEAGE_VIEWER_SHA256 = "0311ae7057d78753a5f64a2cf0982ff2de63b7a648cd16cdbc4515b05366af88"
 
 # The filename the viewer is served under, at the site root.
 ASSET_NAME = "strata-graph-viewer.js"
