@@ -262,8 +262,15 @@ plugins:
   # huddled in the middle. Depth stays at 1 — depth 2 on a densely
   # cross-cited record renders a hairball with the current page lost in it,
   # which is a picture of nothing.
+  #
+  # `enabled` is a substitution, not a constant: a project that points
+  # `[luria.site] graph` at its own export gets that one INSTEAD of this,
+  # because two graphs stacked above every document's first paragraph is not
+  # a choice anyone would make deliberately. Quartz 5 gives the swap its own
+  # key; under v4 luria had to splice the component out of a generated TSX
+  # layout (ADR-101).
   - source: "@quartz-community/graph"
-    enabled: true
+    enabled: {graph_enabled}
     options:
       localGraph:
         depth: 1
@@ -1023,7 +1030,8 @@ def brand(out: Path, cfg, report: Report) -> str:
 
 
 def stage(out: Path, cfg=None, nested: bool = True,
-          url_base: str | None = None, asset_url: str | None = None) -> Report:
+          url_base: str | None = None, asset_url: str | None = None,
+          site_block: str | None = None) -> Report:
     """Write the vault and its config under `out`. Idempotent: the content
     directory is rebuilt from scratch, so a rename in the record cannot leave
     a stale page behind to be served forever.
@@ -1038,7 +1046,9 @@ def stage(out: Path, cfg=None, nested: bool = True,
     lineage node would link to a 404. The parent knows where it is mounting
     the child, so the parent says. `asset_url` likewise points every record's
     graphs at the ONE viewer at the site root, rather than shipping a copy of
-    it per nested record."""
+    it per nested record. `site_block` carries the parent's configured graph
+    down: the layout is the parent's, so a child whose pages kept Quartz's
+    graph would be showing a component the layout no longer has."""
     cfg = cfg or current()
     out = out.resolve()
     content = out / "content"
@@ -1067,6 +1077,27 @@ def stage(out: Path, cfg=None, nested: bool = True,
     base = (site_base(cfg) if url_base is None else url_base).rstrip("/")
     if own_asset:
         asset_url = f"{base}/{site_graph.ASSET_NAME}" if base else None
+
+    # The project's own graph, if it configured one. Built once for the whole
+    # site — it is the SAME picture on every page, which is the difference
+    # between it and Quartz's local graph — and inlined per page, because the
+    # viewer reads its data from the element rather than fetching it.
+    if site_block is None and cfg.site.graph:
+        if not asset_url:
+            # Said out loud rather than silently skipped: the project asked for
+            # a graph and is not getting one, and the reason is a different key
+            # (DP-1). The viewer is served from the site root, which needs a
+            # site to have a root.
+            report.unplaced.append(
+                "[luria.site] graph is set but there is no base_url to serve "
+                "the viewer from, so no graph is rendered")
+        else:
+            view = site_graph.load_view(cfg.site.graph)
+            for label in site_graph.unfollowable(view):
+                report.unplaced.append(
+                    f"[luria.site] graph: node {label!r} has a URL the viewer "
+                    f"will not follow — http(s) only")
+            site_block = site_graph.block(view, asset_url, cfg.site.graph_height)
 
     for path in pages:
         text = path.read_text(encoding="utf-8")
@@ -1106,11 +1137,21 @@ def stage(out: Path, cfg=None, nested: bool = True,
                     body = (body.rstrip("\n") + "\n\n## Lineage\n"
                             + site_graph.block(view, asset_url))
                     report.graphs += 1
+            if site_block:
+                # Where Quartz's graph stood: above the document's own heading,
+                # below the title block the layout renders. The swap is meant
+                # to be positional as well as functional — a reader who knew
+                # where to look for the graph still finds it there.
+                body = site_block + "\n" + body
             # The YAML itself is carried over verbatim — only the alias is
             # added — so a re-serialization can never quietly reorder or
             # requote a field the record is the source of truth for.
             text = ("---\n" + _with_alias(yaml_text, _alias(path, cfg))
                     + "---\n" + body)
+        elif site_block:
+            # A page with no frontmatter is still a page on this site, and the
+            # layout no longer has a graph component to fall back to.
+            text = site_block + "\n" + text
         dest_rel = destination(path, cfg)
         if dest_rel.as_posix() == "index.md":
             text = landing_page(text, cfg)
@@ -1140,20 +1181,26 @@ def stage(out: Path, cfg=None, nested: bool = True,
         QUARTZ_CONFIG.format(title=cfg.site.title,
                              base_url=cfg.site.base_url,
                              repo_url=repo_url or cfg.site.source_url,
-                             colors=colors(cfg.site)),
+                             colors=colors(cfg.site),
+                             # A project that configured its own graph gets its
+                             # own graph and not both: two graphs stacked above
+                             # every document's first paragraph is not a choice
+                             # anyone would make deliberately.
+                             graph_enabled="false" if site_block else "true"),
         encoding="utf-8")
     (out / "custom.scss").write_text(brand(out, cfg, report), encoding="utf-8")
 
     if nested:
-        stage_nested(content, cfg, report)
+        stage_nested(content, cfg, report, site_block)
 
     # One copy for the whole site, at the vault root — Quartz's `Assets`
     # emitter copies every non-markdown file under `content/` verbatim, so
     # this is the one place a generator can put a script and have it served.
     # AFTER the nested pass, because nested records point their graphs at this
     # one copy rather than shipping the viewer again each: the count that
-    # decides whether anything needs it is the whole site's.
-    if report.graphs and own_asset:
+    # decides whether anything needs it is the whole site's — a lineage graph
+    # anywhere, or a configured graph, which is on every page.
+    if (report.graphs or site_block) and own_asset:
         shutil.copyfile(site_graph.ASSET, content / site_graph.ASSET_NAME)
         report.assets += 1
     return report
@@ -1168,7 +1215,8 @@ def nested_records(cfg=None) -> list[Path]:
     return (cfg or current()).nested_records()
 
 
-def stage_nested(content: Path, cfg, report: Report) -> None:
+def stage_nested(content: Path, cfg, report: Report,
+                 site_block: str | None = None) -> None:
     """Stage each nested record into `content/<its path>/`.
 
     The reason this exists rather than the parent simply publishing the files:
@@ -1215,7 +1263,8 @@ def stage_nested(content: Path, cfg, report: Report) -> None:
                     url_base=(f"{parent_base}/{rel.as_posix()}"
                               if parent_base else ""),
                     asset_url=(f"{parent_base}/{site_graph.ASSET_NAME}"
-                               if parent_base else ""))
+                               if parent_base else ""),
+                    site_block=site_block or "")
             mount = content / rel
             if mount.exists():
                 shutil.rmtree(mount)
