@@ -40,4 +40,4 @@
   This record now sets `cite = "page"`; `luria repair` rewrote 98 files.
   Re-measured on the same build: **330 broken → 0**, and links to a principle's
   page **85 → 404, all resolving**. See
-  [ADR-tmp6pv64](record/decisions.d/ADR-tmp6pv64.md).
+  [ADR-094](record/decisions.d/ADR-094.md).
