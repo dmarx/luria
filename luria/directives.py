@@ -52,6 +52,24 @@ defaults to remember:
 
 - **file** (`-file`) — the whole document.
 
+Expiry
+------
+`until <YYYY-MM-DD>` anywhere in the arguments gives a directive a deadline
+(#58). After it passes, `find` does not return the directive at all, so every
+check behaves as if it were never written — uniform for the same reason the
+scopes are, because this is the one place directives are read. The date is
+inclusive: `until 2026-10-01` is the last day it holds.
+
+    <!-- inactive-ok: ADR-028 until 2026-10-01 — revisit when the API settles -->
+
+An expiry is a modifier, not one of the things the directive names, so it is
+lifted out of `args`. `find_expired` returns what `find` dropped, because inert
+is not the same as invisible — a check that starts failing again with the
+acknowledgement still above it is a puzzle rather than a report. A date that
+cannot be read leaves the directive live and is reported by `problems`: a typo
+should not silently mean "forever", and it should not silently drop a
+suppression either.
+
 A blank line between a directive and what it governs therefore needs `-block`:
 
     <!-- inactive-ok-block: ADR-159 --><!-- unexempt-block: codeblock -->
@@ -76,6 +94,7 @@ grammar, neither is a `#` inside a shell string.
 # unresolved-ok-file: ADR-157, ADR-159 — illustrative codes in the docstring above
 from __future__ import annotations
 
+import datetime as dt
 import io
 import re
 import tokenize
@@ -106,6 +125,29 @@ SHAPED_RE = re.compile(
 )
 
 
+def _split_expiry(args: tuple[str, ...]) -> tuple[tuple[str, ...], "dt.date | None", str | None]:
+    """Pull `until <YYYY-MM-DD>` out of a directive's arguments.
+
+    An expiry is a modifier on the directive, not one of the things it names,
+    so it leaves the argument list — otherwise every consumer that validates
+    arguments would report `until` as an unknown one.
+
+    An ISO date and nothing else. A duration ("two weeks") would need an anchor
+    the file does not carry, and `2026-10-01` is the anchor written down."""
+    lowered = [a.lower() for a in args]
+    if "until" not in lowered:
+        return args, None, None
+    at = lowered.index("until")
+    rest = args[at + 1:]
+    kept = args[:at] + rest[1:]
+    if not rest:
+        return kept, None, "until"
+    try:
+        return kept, dt.date.fromisoformat(rest[0]), None
+    except ValueError:
+        return kept, None, rest[0]
+
+
 @dataclass(frozen=True)
 class Directive:
     name: str                 # "inactive-ok", "unexempt"
@@ -116,9 +158,20 @@ class Directive:
     line: int                 # 1-based, where the comment starts
     span: tuple[int, int]     # char offsets of the whole comment in the text
     lines: frozenset[int]     # every line this directive governs
+    # `until <YYYY-MM-DD>` (#58), lifted out of `args` so the tokens that
+    # remain are the ones the directive is ABOUT. None when no expiry was
+    # written — and also None when one was written and could not be read,
+    # which `problems` says out loud rather than letting a typo mean "forever".
+    expires: dt.date | None = None
+    bad_expiry: str | None = None
 
     def covers(self, line: int) -> bool:
         return self.scope == FILE or line in self.lines
+
+    def expired(self, as_of: dt.date) -> bool:
+        """`until 2026-10-01` is good ON the 1st — a date somebody wrote as the
+        last day they meant it to hold, not the first day it stops."""
+        return self.expires is not None and as_of > self.expires
 
 
 def _fence_line_spans(text: str) -> list[tuple[int, int]]:
@@ -292,8 +345,21 @@ def _line_offsets(text: str) -> list[int]:
     return out or [0]
 
 
-def find(path: Path, text: str, names: set[str] | None = None) -> list[Directive]:
-    """Every directive in `path`, with the lines each one governs resolved."""
+def find(path: Path, text: str, names: set[str] | None = None,
+         as_of: dt.date | None = None) -> list[Directive]:
+    """Every LIVE directive in `path`, with the lines each one governs resolved.
+
+    An expired one (`until <date>`, #58) is simply absent: the linter behaves
+    as if it were never written, which is what an expiry is for. Dropping it
+    here rather than at each consumer is what makes that uniform — `find` is
+    the one place directives are read, so nothing downstream has to know the
+    feature exists. `find_expired` is how they stay reportable."""
+    today = as_of or dt.date.today()
+    return [d for d in _parse(path, text, names) if not d.expired(today)]
+
+
+def _parse(path: Path, text: str, names: set[str] | None = None) -> list[Directive]:
+    """Every directive in `path`, expired or not — one parser, two views."""
     spans = blocks(text, path)
     found: list[Directive] = []
     for line_no, offset, body in comment_fragments(path, text):
@@ -306,13 +372,26 @@ def find(path: Path, text: str, names: set[str] | None = None) -> list[Directive
         suffix = (m.group("scope") or "").lower()
         scope = FILE if suffix == "-file" else BLOCK if suffix == "-block" else LINE
         args = tuple(t for t in re.split(r"[,\s]+", m.group("args").strip()) if t)
+        args, expires, bad_expiry = _split_expiry(args)
         reason = body.split("—", 1)[1].strip().rstrip("->").strip() \
             if "—" in body else ""
         found.append(Directive(
             name, scope, args, reason, path, line_no,
             (offset, offset + len(body)),
-            _governed(scope, line_no, spans, path, text)))
+            _governed(scope, line_no, spans, path, text),
+            expires, bad_expiry))
     return found
+
+
+def find_expired(path: Path, text: str, names: set[str] | None = None,
+                 as_of: dt.date | None = None) -> list[Directive]:
+    """The directives `find` dropped because their date has passed.
+
+    Inert is not the same as invisible. A check that starts failing again with
+    no word about the acknowledgement sitting right above it is a puzzle rather
+    than a report, so the expiry is worth naming where the failure appears."""
+    today = as_of or dt.date.today()
+    return [d for d in _parse(path, text, names) if d.expired(today)]
 
 
 def _governed(scope: str, line: int, spans: list[tuple[int, int]],
@@ -388,6 +467,15 @@ def shaped_spans(text: str, names: set[str]) -> list[tuple[int, int]]:
 
 def problems(directive: Directive, valid_args: set[str] | None = None) -> str | None:
     """A directive that can't do anything is worth saying so about."""
+    if directive.bad_expiry is not None:
+        # Checked first: an expiry nobody can read is the problem that makes a
+        # directive outlive its author's intent, which is the exact rot `until`
+        # exists to stop. The directive stays LIVE meanwhile — dropping a
+        # suppression over a typo breaks a build for a reason the failure would
+        # not explain, and this report is the one that does.
+        got = ("`until` names no date" if directive.bad_expiry == "until"
+               else f"`until {directive.bad_expiry}` is not a date")
+        return f"`{directive.name}`: {got} — write it as `until YYYY-MM-DD`"
     if not directive.args:
         return f"`{directive.name}` names no argument"
     if valid_args is not None:

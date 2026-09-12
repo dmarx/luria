@@ -21,6 +21,42 @@ That is: a **name**, optional **scope suffix**, a colon, **arguments**
 em-dash, the **reason**. The reason is prose for the next reader; write
 one.
 
+## Giving one a deadline
+
+An acknowledgement is a promise about the future — *this reference to a
+`Proposed` decision is deliberate.* Some of those promises are permanent
+(*this page is that history*) and some are not (*circle back after the
+release*). The ones that are not go stale silently, which is the exact
+failure directives exist to prevent, one level up.
+
+So a directive can carry an expiry:
+
+```
+<!-- inactive-ok: ADR-028 until 2026-10-01 — revisit when the API settles -->
+```
+
+After that date `luria` behaves as if the directive were never written: the
+check it silenced starts reporting again. The date is **inclusive** — good on
+the 1st, gone on the 2nd — because somebody writing `until 2026-10-01` means
+the last day it holds, not the first day it does not.
+
+`until <date>` works on every directive, not just `inactive-ok`; it is part of
+the shape, like the scope suffix. An ISO date and nothing else — a duration
+("two weeks") would need an anchor the file does not carry, and the date *is*
+that anchor, written down.
+
+Two things it does not do quietly:
+
+- **An expired directive is reported.** `luria lint` names the file, the
+  directive, the date and the author's own reason, under
+  `expired-directives`. Silently dropping it would leave a check failing again
+  with the acknowledgement still sitting above it, which is a puzzle rather
+  than a report.
+- **A date it cannot read is reported, and the directive stays live.**
+  `until nextweek` is a typo, and dropping a suppression over a typo breaks a
+  build for a reason the failure message would not explain. The report is the
+  correction.
+
 Scope is how much text the directive governs:
 
 | spelling | governs |

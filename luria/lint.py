@@ -50,8 +50,8 @@ import re
 import sys
 
 from . import adr_index as builder
-from . import (adr_pending, badges, chains, ci, contract, doc_refs, frontmatter_shape,
-               journal, referents,
+from . import (adr_pending, badges, chains, ci, contract, directives, doc_refs,
+               frontmatter_shape, journal, referents,
                link_targets, narrow_titles, pins, ref_status, remotes,
                relations, sources, statuses, templates)
 from . import aliases as aliases_mod
@@ -749,6 +749,12 @@ def status_sections() -> list[tuple[str, str, list[str]]]:
             "stale-directives",
             f"{len(stale)} directive(s) no longer apply", sorted(stale)))
 
+    gone = expired_directives()
+    if gone:
+        sections.append((
+            "expired-directives",
+            f"{len(gone)} acknowledgement(s) have expired", gone))
+
     # One line, not the table: the point is that the number is never zero
     # silently. `luria reports` ranks them by age and citation count.
     rows = adr_pending.pending()
@@ -758,6 +764,33 @@ def status_sections() -> list[tuple[str, str, list[str]]]:
             adr_pending.headline(rows, dt.date.today(), current().stale_days)
             + " (`luria reports` for the table)", []))
     return sections
+
+
+def expired_directives(as_of: dt.date | None = None) -> list[str]:
+    """Acknowledgements whose `until <date>` has passed (#58).
+
+    They have already stopped suppressing anything — `directives.find` drops
+    them — so this is not the enforcement, it is the explanation. Without it a
+    check simply starts failing again with the acknowledgement still sitting
+    above it, and the author has to work out that the date is why.
+
+    Reported apart from "no longer apply", because they are different facts. A
+    stale acknowledgement means the subject moved under it: the document went
+    Active, the reference was deleted. An expired one did its job and ran out
+    of the time its author gave it, which is the outcome `until` was written to
+    produce."""
+    out = []
+    for path in ref_status.scanned_files():
+        try:
+            text = path.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):        # pragma: no cover
+            continue
+        for d in directives.find_expired(path, text, as_of=as_of):
+            named = ", ".join(d.args) or d.name
+            because = f" — {d.reason}" if d.reason else ""
+            out.append(f"{current().rel(path)}:{d.line}: "
+                       f"`{d.name}: {named}` expired {d.expires}{because}")
+    return sorted(out)
 
 
 def report_warnings(errors: list[str]) -> None:

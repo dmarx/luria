@@ -1,0 +1,130 @@
+---
+number: 0
+status: Proposed
+title: 'An acknowledgement can carry its own deadline'
+tags:
+- architecture
+- record
+date: '2026-09-12'
+summary: >-
+  A directive may be written `until <YYYY-MM-DD>`; after that date `find` stops
+  returning it, so every check behaves as if it were never written, and `luria
+  lint` reports what expired. Rejected: a relative duration, which needs an
+  anchor the file does not carry; and a version milestone, which needs a
+  project-version concept luria does not have.
+---
+
+# ADR-tmpj2uc1: An acknowledgement can carry its own deadline
+
+## Context
+
+A directive is a promise about the future. `inactive-ok: ADR-028 — proposed,
+but this is what shipped` says *I know this cites something not in force, and
+that is deliberate.*
+
+Some of those promises are permanent. `inactive-ok-file: ADR-010 — this page is
+that history` will be true for as long as the page exists, and the check should
+never ask again.
+
+Others are not, and [#58](https://github.com/dmarx/luria/issues/58) names the
+shape: *reference a proposed decision that you want to circle back to,
+annotate so the linter doesn't care that it's proposed.* "Circle back" has a
+horizon. The acknowledgement does not, so it outlives the intent that produced
+it — and it does so **silently**, because its whole job is to silence a check.
+That is precisely the failure mode directives exist to prevent, reproduced one
+level up: the record asserts something nobody has re-examined, and nothing says
+so.
+
+`luria` already reports an acknowledgement that no longer *applies* — the
+document went Active, the reference moved. It has no way to notice one that
+simply ran out of time, because nothing in it carries time.
+
+## Decision
+
+**A directive may carry `until <YYYY-MM-DD>`, and after that date it is not
+returned at all.**
+
+```
+<!-- inactive-ok: ADR-028 until 2026-10-01 — revisit when the API settles -->
+```
+
+Three things make this the shape it is.
+
+**It is part of the syntax, not a feature of one directive.** `until` is
+parsed by the same parser that reads the name and the scope suffix, so every
+directive gets it — the promise [ADR-008](ADR-008.md) made when it said a third
+directive is a name rather than a new syntax, kept for a modifier too.
+
+**An expired directive is dropped at `find`.** That function is the one place
+directives are read — ten call sites go through it — so dropping it there is
+what makes "behaves as if the annotation isn't even there" true everywhere
+without a single consumer knowing the feature exists. The expiry is lifted out
+of `args` on the way, because it is a modifier rather than one of the things
+the directive names; leaving it in would make every consumer that validates
+arguments report `until` as an unknown one.
+
+**The date is inclusive.** `until 2026-10-01` is good on the 1st and gone on
+the 2nd. Somebody writing that date means the last day it holds, not the first
+day it does not.
+
+Two loudness rules follow from what this is for:
+
+- **What expired is reported**, as its own lint finding rather than folded into
+  "no longer applies". They are different facts: a stale acknowledgement means
+  the subject moved under it; an expired one did its job and ran out of the
+  time its author gave it. Inert must not mean invisible — a check that starts
+  failing again with the acknowledgement still sitting above it is a puzzle
+  rather than a report, so the finding names the file, the directive, the date
+  and the author's own reason.
+- **A date that cannot be read leaves the directive live, and is reported.**
+  `until nextweek` is a typo. Dropping the suppression over it would break a
+  build for a reason the failure message would not explain; keeping it and
+  naming the typo says what to fix without breaking anything. What must not
+  happen is the third option, where a typo silently means "forever" — the rot
+  this whole decision exists to stop.
+
+## Alternatives considered
+
+- **A relative duration — `for 2w`, which is how the request was first
+  phrased.** Rejected on the anchor. A duration is measured from something, and
+  a comment in a file carries no reliable "written on": git says when the line
+  last moved, which is not the same as when the promise was made, and a
+  reformat would silently extend every deadline in the repository. An absolute
+  date *is* the anchor, written down where the reader can see it. "Two weeks"
+  remains the way to think about it and `until 2026-09-26` the way to write it;
+  a helper that does that arithmetic is a convenience this does not need to
+  decide.
+
+- **A version milestone — `until 1.0.0`,** which
+  [#58](https://github.com/dmarx/luria/issues/58) raises by pointing at
+  [#189](https://github.com/dmarx/luria/pull/189). The right idea for a
+  deadline that is about a release rather than a calendar, and not shippable
+  yet: it needs to know *which* version, and luria has no concept of the
+  project's own version at all — `luria/__init__.py` carries the package's, not
+  the record's, and an adopter's record is not luria. [#189](https://github.com/dmarx/luria/issues/189)'s own sunset is a
+  prose string for exactly that reason. Deferred rather than declined; when a
+  project-version source exists, `until 1.0.0` parses in the same slot and the
+  only new code is the comparison.
+
+- **Report the expiry but keep suppressing.** Safer, and it misses the point.
+  The issue asks for the linter to behave as if the annotation were not there,
+  and a warning that can be scrolled past is what an unbounded acknowledgement
+  already is.
+
+- **Status quo.** Every acknowledgement is forever, and "circle back to this"
+  is a thing the record cannot say.
+
+## Consequences
+
+Nothing in this repository uses `until` yet, and that is deliberate rather than
+an oversight: every acknowledgement currently in the record is permanent, and
+giving one an invented deadline to demonstrate the feature would be writing
+down a decision nobody made. The first real use is the next provisional
+acknowledgement somebody writes.
+
+A project upgrading into this version is unaffected — a directive with no
+`until` is parsed exactly as before, which the tests pin directly.
+
+`find` now takes an `as_of` date, defaulting to today, following
+`adr_pending`'s existing convention. A test that depends on the wall clock
+passes until the day it does not.
