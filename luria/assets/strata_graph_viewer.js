@@ -6,7 +6,7 @@
 //
 //   source:   https://github.com/dmarx/strata-g
 //             web/src/graph/export/webappViewer.ts  (viewerScript())
-//   revision: 6d24cb6bce934f4e8666b93ae9d39a40fdecb42f
+//   revision: 982b21d9564673a74f19b2176cf78d21ed007d07
 //   pinned:   see LINEAGE_VIEWER_SHA256 in luria/site_graph.py
 //
 // Do not edit. To update: re-emit from strata-g, drop the file here, and
