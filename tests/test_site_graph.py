@@ -226,13 +226,21 @@ def graph_data(markup: str) -> list[dict]:
 
 
 def graphed(content):
-    """Every staged page carrying a lineage graph, as (path, view)."""
+    """Every staged page carrying a LINEAGE graph, as (path, view).
+
+    Scoped to what follows the `## Lineage` heading, because this record also
+    configures a site-wide graph (ADR-tmp0hx52) which puts a second
+    `<strata-g-graph>` at the top of every page. Counting elements would count
+    that one too, and every assertion here is about the generated one."""
     out = []
     for path in sorted(content.rglob("*.md")):
         text = path.read_text()
-        if ELEMENT not in text:
+        if "## Lineage" not in text:
             continue
-        for view in graph_data(text):
+        tail = text.split("## Lineage", 1)[1]
+        if ELEMENT not in tail:
+            continue
+        for view in graph_data(tail):
             out.append((path, view))
     return out
 
@@ -322,6 +330,9 @@ def test_the_graph_goes_below_the_prose_the_record_line_states(tmp_path):
     its first paragraph is a toll on every reader who came to read it."""
     site.stage(tmp_path)
     text = (tmp_path / "content" / "record" / "decisions.d" / "ADR-002.md").read_text()
-    assert text.index("| **Status**") < text.index(ELEMENT)
     assert "## Lineage" in text
+    # The LINEAGE element, not the site graph's — this record configures one,
+    # and it sits above the heading on purpose.
+    assert text.index("| **Status**") < text.index("## Lineage")
+    assert ELEMENT in text.split("## Lineage", 1)[1]
     assert text.rstrip().endswith("</script>")
