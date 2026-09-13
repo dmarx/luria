@@ -155,12 +155,6 @@ DEFAULTS: dict = {
         "logo": "",
         "logo_dark": "",
         "theme": {},
-        # A graph the project designed itself, shown in place of Quartz's.
-        # Empty means Quartz's local graph, which is the default.
-        "graph": "",
-        "graph_height": "320px",
-        # Hops from the page's own node. 0 shows the whole graph on every page.
-        "graph_depth": 1,
     },
 }
 
@@ -1504,16 +1498,6 @@ class Site:
         [luria.site.theme.light]
         light = "#f4f1e8"                      # any of Quartz's colour names
 
-    A project that would rather show a graph it designed than the page-link
-    one Quartz draws points at the export:
-
-        graph        = "docs/graphs/architecture.json"   # strata-g graph data
-        graph_height = "320px"                           # optional
-
-    Set, that graph replaces `Component.Graph` on every page — one curated map
-    of the project, the same everywhere, rather than a neighbourhood computed
-    per page. Unset, Quartz's local graph is what the site keeps.
-
     `logo_dark` is only needed when the artwork can't invert itself. A logo
     whose SVG exposes a `--luria-ink` custom property — the convention this
     project's own kit uses — is re-inked to the theme automatically, and one
@@ -1530,15 +1514,6 @@ class Site:
     logo: Path | None = None
     logo_dark: Path | None = None
     theme: dict = field(default_factory=dict)
-    # A graph the project laid out itself, exported from strata-g as
-    # `Canvas — graph data (JSON)`. Set, it is shown on every page IN PLACE OF
-    # Quartz's local graph; unset, Quartz's is what the site keeps.
-    graph: Path | None = None
-    graph_height: str = "320px"
-    # How much of the configured graph each page shows: hops from that page's
-    # own node. 1 is its immediate neighbourhood; 0 is the whole graph, which
-    # is the same picture everywhere.
-    graph_depth: int = 1
 
 
 @dataclass(frozen=True)
@@ -2233,9 +2208,6 @@ def _site(raw: dict, root: Path) -> Site:
         logo=root / spec["logo"] if spec.get("logo") else None,
         logo_dark=root / spec["logo_dark"] if spec.get("logo_dark") else None,
         theme=spec.get("theme", {}) or {},
-        graph=root / spec["graph"] if spec.get("graph") else None,
-        graph_height=spec.get("graph_height") or "320px",
-        graph_depth=int(spec.get("graph_depth", 1)),
     )
 
 
