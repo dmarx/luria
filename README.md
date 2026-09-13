@@ -50,8 +50,8 @@ worth citing, statuses that mean something, and views generated so they cannot
 drift from their sources.
 
 <!-- luria:badges -->
-[![needs decision: 4](https://img.shields.io/badge/needs%20decision-4-orange)](docs/reports/pending-decisions.md)
-[![cited, not in force: 0](https://img.shields.io/badge/cited,%20not%20in%20force-0-brightgreen)](docs/reports/reference-status.md)
+[![needs decision: 6](https://img.shields.io/badge/needs%20decision-6-orange)](docs/reports/pending-decisions.md)
+[![cited, not in force: 3](https://img.shields.io/badge/cited,%20not%20in%20force-3-orange)](docs/reports/reference-status.md)
 <!-- /luria:badges -->
 
 <!-- luria:site -->

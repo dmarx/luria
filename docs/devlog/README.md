@@ -7,6 +7,9 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 ## Currently — [September 2026](2026-09.md)
 
 - [12 Sep 21:59 — Two halves of one fix: a page to cite, and a citation that points at it](2026-09.md#20260912215952)
+- [12 Sep 06:52 — A morphing SPA and a label that was never bound](2026-09.md#20260912065231)
+- [12 Sep 02:27 — A graph you drew, on every page, instead of the one Quartz computes](2026-09.md#20260912022705)
+- [11 Sep 23:58 — A typed-lineage graph on every page that has lineage](2026-09.md#20260911235842)
 - [11 Sep 05:41 — Lint only column-0 HTML comments in YAML frontmatter](2026-09.md#20260911054100)
 - [11 Sep 01:23 — Reserving a namespace instead of blanking three suites](2026-09.md#20260911012308)
 - [10 Sep 22:10 — Grouping the pending report, and being caught twice by the specimen-code hazard](2026-09.md#20260910221041)
@@ -60,9 +63,9 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 
 ## All books
 
-97 entries across 2 books, newest first.
+100 entries across 2 books, newest first.
 
 | Book | Entries | First | Last |
 |---|--:|---|---|
-| [2026-09](2026-09.md) | 51 | 2026-09-03 | 2026-09-12 |
+| [2026-09](2026-09.md) | 54 | 2026-09-03 | 2026-09-12 |
 | [2026-08](2026-08.md) | 46 | 2026-08-03 | 2026-08-28 |
