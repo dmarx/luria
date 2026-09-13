@@ -60,7 +60,7 @@ every node.
 principles have no page each. Measured on this record, 50 of 122 typed-edge
 endpoints are principles — leaving them out would have drawn less than half the
 lineage. The anchor is asked of `doc_refs.wikilink_target`, the resolver
-everything else links through, rather than spelled a second time ([DP-4](../../docs/design-principles.md#dp-4)).
+everything else links through, rather than spelled a second time ([DP-4](../principles.d/DP-004.md)).
 
 **Nodes are labelled with the code alone.** Measured, not preferred: at 300px
 the real titles ran off the canvas and overlapped each other. The record line is
