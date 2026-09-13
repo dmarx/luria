@@ -322,6 +322,18 @@ logo_dark = "assets/brand/lockup-inverted.svg"   # optional
 light = "#f4f1e8"                      # any of Quartz's colour names
 ```
 
+A project that would rather show a graph it designed than the page-link
+one Quartz draws points at the export:
+
+```toml
+graph        = "docs/graphs/architecture.json"   # strata-g graph data
+graph_height = "320px"                           # optional
+```
+
+Set, that graph replaces `Component.Graph` on every page — one curated map
+of the project, the same everywhere, rather than a neighbourhood computed
+per page. Unset, Quartz's local graph is what the site keeps.
+
 `logo_dark` is only needed when the artwork can't invert itself. A logo
 whose SVG exposes a `--luria-ink` custom property — the convention this
 project's own kit uses — is re-inked to the theme automatically, and one
@@ -338,6 +350,8 @@ that doesn't is used as it is in both modes.
 | `logo` | `Path \| None` | *unset* |
 | `logo_dark` | `Path \| None` | *unset* |
 | `theme` | `dict` | *unset* |
+| `graph` | `Path \| None` | *unset* |
+| `graph_height` | `str` | `"320px"` |
 
 ## Environment variables
 

@@ -1,0 +1,31 @@
+{
+  "nodes": [
+    {
+      "id": "m1",
+      "x": -28.738011516696584,
+      "y": 0.23268115239711712,
+      "size": 5,
+      "color": "#475569",
+      "label": "First",
+      "attrs": {
+        "title": "First",
+        "notes": "**bold** insight about m1"
+      }
+    },
+    {
+      "id": "m2",
+      "x": 27.879417353402694,
+      "y": -2.1273633348143273,
+      "size": 5,
+      "color": "#475569",
+      "label": "Second",
+      "attrs": {
+        "title": "Second",
+        "notes": "plain words for m2"
+      }
+    }
+  ],
+  "edges": [],
+  "background": "#0f172a",
+  "labelColor": "#e2e8f0"
+}
