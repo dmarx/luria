@@ -14,13 +14,20 @@ you fetch it.
 The check is a title comparison, and the reason it can exist at all is that
 the remote already knows how to reach the thing.
 
-Offline, like everything else
------------------------------
-`luria lint` does not open sockets (ADR-016), so this follows `pins`: an
-explicit command reaches the network and writes what it found into
-`remotes.lock.json`; the lint reads the committed file and compares. CI, a
-train and a laptop then answer the question identically, and the answer is
-reviewable in a diff.
+Offline by default, and asking is a policy
+-----------------------------------------
+This follows `pins`: an explicit command reaches the network and writes what
+it found into `remotes.lock.json`, and the lint compares against the committed
+file, so CI, a train and a laptop answer the question identically and the
+answer is reviewable in a diff.
+
+`[luria.lint] network` decides whether the lint may ask about what the
+lockfile does not already know: `"auto"` (the default) asks, `"never"` answers
+only from the file, `"require"` makes not being able to ask a finding. So the
+lint DOES open sockets by default, for the citation a contribution just added
+— which is exactly when a citation is most likely to be wrong. This paragraph
+used to say it never did, which was true when it was written and had not been
+for some time.
 
 Where a title comes from
 ------------------------
@@ -60,6 +67,7 @@ class, which is more than enough noise to get a check switched off.
 from __future__ import annotations
 
 import html
+import random
 import re
 import time
 import urllib.error
@@ -150,7 +158,33 @@ def _title_url(remote, uid: str) -> str:
 # the other half is telling a throttle apart from an answer, which HTTP
 # already does and the first version of this did not.
 COURTESY = 3.0
-ATTEMPTS = 3
+
+# A throttle is an answer: it says "not now", and asking again in three seconds
+# is asking the same host the same question it just declined. The retries this
+# replaces cost 9 seconds per identifier and changed the outcome in none of the
+# cases that motivated them, because a rate limit is a property of the window,
+# not of the request (#250). `Retry-After` is the one exception — when a host
+# says how long, waiting that long is the request it asked for — and it is
+# honoured up to `RETRY_AFTER_CAP`, beyond which the run stops rather than
+# blocks for minutes on a courtesy API.
+RETRY_AFTER_CAP = 10.0
+
+# How often `--resolve` flushes what it has learned. A run that is killed or
+# throttled used to write nothing at all, so the whole window was wasted.
+CHECKPOINT_EVERY = 10
+
+# Which remotes have said "not now" during THIS run. A rate limit belongs to a
+# host and a window, so the second throttled identifier tells us nothing the
+# first did not: once a remote refuses, the rest of its identifiers are
+# reported unasked instead of each paying its own round trip. Per-process, and
+# deliberately not persisted — the next run is a new window.
+_REFUSING: dict[str, str] = {}
+
+
+def forget_refusals() -> None:
+    """Clear the per-run circuit breaker. For tests, and for a caller that
+    runs more than one pass in one process."""
+    _REFUSING.clear()
 
 # What came back, as a fact rather than as an absence. The distinction this
 # type exists for: "upstream has no such identifier" and "upstream would not
@@ -166,6 +200,10 @@ class Fetched:
     status: str
     title: str = ""
     detail: str = ""
+    # Seconds the host asked us to wait, when it said. Was parsed and then
+    # spent only on the message string, so the one piece of scheduling
+    # information a throttle carries was formatted and thrown away (#250).
+    retry_after: float | None = None
 
     @property
     def known(self) -> bool:
@@ -192,7 +230,8 @@ def _once(url: str, pattern: str) -> Fetched:
             wait = _retry_after(error)
             return Fetched("throttled",
                            detail=f"HTTP {error.code}"
-                                  + (f", retry after {wait:g}s" if wait else ""))
+                                  + (f", retry after {wait:g}s" if wait else ""),
+                           retry_after=wait)
         return Fetched("unreachable", detail=f"HTTP {error.code}")
     except (urllib.error.URLError, OSError, ValueError) as error:
         return Fetched("unreachable", detail=str(error)[:80])
@@ -206,34 +245,80 @@ def _once(url: str, pattern: str) -> Fetched:
 
 
 def _fetch(url: str, pattern: str) -> Fetched:
-    """Ask, backing off only for the answers that mean "ask again later".
+    """Ask once, and wait only when the host said how long to wait.
 
-    A 404 is an answer and is not retried; a 429 is not an answer and is. The
-    first version retried everything blindly and reported every failure the
-    same way, which is how a throttled batch of fifteen wrote nothing to the
-    lockfile and read afterwards as fifteen documents in agreement.
+    A 404 is an answer. A 429 is not an answer, and the previous version
+    treated "not an answer" as "ask again soon" — three attempts, 3s then 6s.
+    Under a sustained rate limit that is 9 seconds per identifier to arrive at
+    the same `throttled` it already had after the first, and the caller pays it
+    once per identifier (#250).
+
+    `Retry-After` is different: a host that says when to come back has told us
+    the request that will succeed, so a short one is honoured. A long one is
+    not slept through — a build that blocks for two minutes on a metadata
+    courtesy API is worse than a build that reports what it could not check.
     """
-    delay = COURTESY
-    for attempt in range(ATTEMPTS):
-        got = _once(url, pattern)
-        if got.known or got.status == "unparsed":
-            return got
-        if attempt < ATTEMPTS - 1:
-            time.sleep(delay)
-            delay *= 2
+    got = _once(url, pattern)
+    if got.known or got.status == "unparsed" or got.status == "unreachable":
+        return got
+    wait = got.retry_after
+    if wait is not None and 0 < wait <= RETRY_AFTER_CAP:
+        time.sleep(wait)
+        return _once(url, pattern)
     return got
 
 
 def ask(ident: "Identifier") -> Fetched | None:
     """Ask upstream what one identifier is, or None when the remote has not
-    declared how to ask. The single place a socket is opened."""
+    declared how to ask. The single place a socket is opened.
+
+    A remote that has already refused during this run is not asked again: the
+    breaker is here rather than in `resolve` so that every caller inherits it,
+    including the lint's per-identifier check, where a sustained throttle
+    otherwise costs a round trip for each unknown citation.
+    """
     remote = current().remotes.get(ident.remote)
     if remote is None or not remote.title_re:
         return None
+    if (refused := _REFUSING.get(ident.remote)) is not None:
+        return Fetched("throttled", detail=f"{refused}; not asked again "
+                                           f"this run")
     url = _title_url(remote, ident.uid)
     if not url:
         return None
-    return _fetch(url, remote.title_re)
+    got = _fetch(url, remote.title_re)
+    if got.status == "throttled":
+        _REFUSING[ident.remote] = got.detail
+    return got
+
+
+def _queue(only: tuple[str, ...], known: dict) -> list["Identifier"]:
+    """The identifiers to ask about, unsettled ones first.
+
+    An identifier the lockfile has no entry for is one no run has ever
+    settled — a new citation, or one a throttle cut a previous run off
+    before. Asking those first is what makes an interrupted run make
+    progress: the old order was the record's own, so a throttle partway
+    through meant the same tail went unresolved run after run.
+
+    Within each group the order is shuffled, so one identifier that always
+    errors cannot sit at the head of the queue forever and spend the window
+    on itself. That is also why the seed is not fixed.
+    """
+    picked: list["Identifier"] = []
+    seen: set[str] = set()
+    for ident in identifiers():
+        if only and ident.remote not in only and ident.key not in only:
+            continue
+        if ident.key in seen:
+            continue
+        seen.add(ident.key)
+        picked.append(ident)
+    unsettled = [i for i in picked if i.key not in known]
+    settled = [i for i in picked if i.key in known]
+    random.shuffle(unsettled)
+    random.shuffle(settled)
+    return unsettled + settled
 
 
 def resolve(only: tuple[str, ...] = ()) -> list[str]:
@@ -243,27 +328,41 @@ def resolve(only: tuple[str, ...] = ()) -> list[str]:
     or `unreachable` answer is NOT written: an entry that says nothing is
     read later as agreement, so the absence has to stay an absence and be
     reported here instead.
+
+    Three things make this survive a rate limit rather than be defeated by
+    one (#250). Unsettled identifiers are asked first, so an interrupted run
+    keeps the answers nobody had. What it learned is checkpointed as it goes,
+    so a run that is throttled — or killed — keeps them. And a remote that
+    refuses ends there: the courtesy pause between requests is the floor on
+    this command's cost, and paying it 200 more times against a host that is
+    saying no is how an eleven-minute command became one nobody ran.
     """
     from . import remotes
     state_now = dict(remotes._read_lockfile().get("titles", {}))
     problems: list[str] = []
-    seen: set[str] = set()
-    for ident in identifiers():
-        if only and ident.remote not in only and ident.key not in only:
-            continue
-        if ident.key in seen:
-            continue
-        seen.add(ident.key)
+    learned = 0
+    for ident in _queue(only, state_now):
         got = ask(ident)
         if got is None:
             continue                      # remote has not declared how to ask
         if got.status == "ok":
             state_now[ident.key] = {"title": got.title}
+            learned += 1
         elif got.status == "absent":
             state_now[ident.key] = {"status": "absent", "detail": got.detail}
+            learned += 1
         else:
             problems.append(f"{ident.key}: {got.status} — {got.detail}")
-        if got.status != "absent":
+            if _REFUSING.get(ident.remote):
+                # Everything else for this remote is now answered from the
+                # breaker without a socket, so the loop finishes fast and the
+                # report still names every identifier this run did not settle.
+                continue
+        # Checkpoint: the answers are the expensive part, and a run that dies
+        # in the middle used to write nothing at all.
+        if learned and learned % CHECKPOINT_EVERY == 0:
+            remotes.write_lock(titles=state_now)
+        if got.status == "ok":
             time.sleep(COURTESY)
     remotes.write_lock(titles=state_now)
     return problems
