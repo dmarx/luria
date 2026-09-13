@@ -6,13 +6,13 @@ it replaces Quartz's local graph on every page of the published site.
 
 ## What this one shows
 
-The whole record, as **two kinds of edge at once** — 454 nodes, 827 edges — of
+The whole record, as **two kinds of edge at once** — 456 nodes, 922 edges — of
 which each page shows the neighbourhood around **its own** node:
 
 | Edge | Count | Where it comes from |
 |---|---|---|
-| markdown link | 345 | one page links to another |
-| `cites` | 421 | prose names a code |
+| markdown link | 313 | one page links to another |
+| `cites` | 548 | prose names a code |
 | `influenced_by` | 58 | frontmatter |
 | `superseded_by` | 3 | frontmatter |
 
@@ -28,8 +28,8 @@ concludes it does not exist has been misled by the picture.
 What each page shows is a different question, and the answer is
 `[luria.site] graph_depth` — hops from that page's own node, **1** by default.
 A page is a place, and the useful picture there is where you are, not the whole
-atlas. Measured on this record: median **6 nodes** a page rather than 454, and
-**926 bytes** gzipped rather than 40 KB. `graph_depth = 0` restores the whole
+atlas. Measured on this record: median **7 nodes** a page rather than 456, and
+**1,062 bytes** gzipped rather than 39 KB. `graph_depth = 0` restores the whole
 map on every page for a project that wants one poster.
 
 A document with a code links to its page. A file with no code — a guide, a
@@ -43,7 +43,7 @@ Two layers in [strata-g](https://github.com/dmarx/strata-g).
 > nodes together when their on-screen LABELS match — not when their filenames
 > do. The record layer titles a decision `ADR-001: Four layers of record…` and
 > the vault layer reads the bare heading `Four layers of record…`, so 112
-> documents stay as two nodes. 120 others do merge, where the two labels happen
+> documents stay as two nodes. 122 others do merge, where the two labels happen
 > to coincide (a changelog fragment's title *is* its timestamp). A computed
 > column stripping the `CODE: ` prefix would fix it, except a virtual column
 > cannot be a label — see [strata-g#787](https://github.com/dmarx/strata-g/issues/787).
