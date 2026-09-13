@@ -18,7 +18,7 @@
   It works on **every** directive, not just `inactive-ok`: `until` is parsed by
   the same parser that reads the name and the scope suffix, so it is part of
   the shape rather than a feature of one word. See
-  [ADR-tmpj2uc1](record/decisions.d/ADR-tmpj2uc1.md).
+  [ADR-095](record/decisions.d/ADR-095.md).
 
 - **`luria lint` reports what expired**, as its own `expired-directives`
   finding — the file, the directive, the date and the author's own reason.
