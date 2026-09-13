@@ -119,8 +119,8 @@ extended_by = { scheme = "LIT", converse = "extends" }
 def test_a_relation_is_its_own_converse_when_it_says_so(tmp_path, monkeypatch):
     project(tmp_path, monkeypatch)
     pairs = relations.pairs()
-    assert ("LIT", "compared_against", "compared_against") in pairs
-    assert ("LIT", "extends", "extended_by") in pairs
+    assert ("LIT", "compared_against", "compared_against", "LIT") in pairs
+    assert ("LIT", "extends", "extended_by", "LIT") in pairs
 
 
 # --- what gets completed ----------------------------------------------------

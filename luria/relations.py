@@ -59,8 +59,14 @@ class Repair:
     op: str = "add"
 
 
-def pairs() -> list[tuple[str, str, str]]:
-    """Every declared converse, as (scheme, field, converse field).
+def pairs() -> list[tuple[str, str, str, str]]:
+    """Every declared converse, as (scheme, field, converse field, converse
+    scheme).
+
+    The fourth element is where a relation's far side lives, and it is the
+    declaring scheme only when the relation does not cross one:
+    `SOTA.introduced_by` holds `LIT` codes, so its converse `introduces` is a
+    field on `LIT` (#253).
 
     Both directions appear, so a caller iterating this sees each edge from
     the side that declares it. A self-converse relation appears once."""
@@ -68,7 +74,7 @@ def pairs() -> list[tuple[str, str, str]]:
     for prefix, scheme in current().schemes.items():
         for ref in scheme.references:
             if ref.converse:
-                out.append((prefix, ref.field, ref.converse))
+                out.append((prefix, ref.field, ref.converse, ref.scheme))
     return sorted(set(out))
 
 
@@ -81,17 +87,35 @@ def _codes(doc: Adr, name: str, contract) -> list[str]:
     return [str(v).strip() for v in (values_of(spec, doc.meta.get(name)) or [])]
 
 
-def _held(prefix: str) -> tuple[dict[str, Adr], dict[str, dict[str, set[str]]]]:
-    """Every document of one scheme, and what each declares in every field
-    that has a converse — filtered to codes that land, since a reference
-    outside the scheme is the contract's finding rather than an edge here."""
-    scheme = current().schemes[prefix]
-    docs = {d.code: d for d in load_scheme(scheme)}
+def _documents(prefix: str) -> dict[str, Adr]:
+    """Every document of one scheme, by code."""
+    return {d.code: d for d in load_scheme(current().schemes[prefix])}
+
+
+def _reads(owner: str, field: str, target: dict[str, Adr]) -> dict[str, set[str]]:
+    """What each document of `owner` declares in `field`, filtered to codes
+    that land in `target` — the scheme whose codes the field holds.
+
+    Filtering against the *target* rather than the owner is what makes this
+    work when the relation crosses: a reference outside the scheme it names
+    is the contract's finding, not an edge here, and which scheme that is
+    depends on the field."""
+    scheme = current().schemes[owner]
     contract = for_scheme(scheme)
-    fields = {f for p, f, _ in pairs() if p == prefix}
-    held = {f: {c: {x for x in _codes(d, f, contract) if x in docs}
-                for c, d in docs.items()} for f in sorted(fields)}
-    return docs, held
+    return {c: {x for x in _codes(d, field, contract) if x in target}
+            for c, d in _documents(owner).items()}
+
+
+def _held(prefix: str, field: str, back: str, far: str
+          ) -> tuple[dict[str, Adr], dict[str, Adr], dict[str, dict[str, set[str]]]]:
+    """Both sides of one pair: the near documents, the far documents, and
+    what each side declares. For a relation that does not cross, the two
+    document sets are the same object and this is the old behaviour."""
+    near_docs = _documents(prefix)
+    far_docs = near_docs if far == prefix else _documents(far)
+    held = {field: _reads(prefix, field, far_docs),
+            back: _reads(far, back, near_docs)}
+    return near_docs, far_docs, held
 
 
 def edges(prefix: str, field: str) -> dict[str, set[str]]:
@@ -102,26 +126,32 @@ def edges(prefix: str, field: str) -> dict[str, set[str]]:
     anyone runs the fixer. Completion makes the two agree on disk; this makes
     them agree in every reading meanwhile. A field with no declared converse
     is simply itself."""
-    scheme = current().schemes[prefix]
-    docs = {d.code: d for d in load_scheme(scheme)}
-    contract = for_scheme(scheme)
+    spec = next((r for r in current().schemes[prefix].references
+                 if r.field == field), None)
+    far = spec.scheme if spec else prefix
+    docs = _documents(prefix)
+    far_docs = docs if far == prefix else _documents(far)
 
-    def read(name: str) -> dict[str, set[str]]:
-        return {c: {x for x in _codes(d, name, contract) if x in docs}
-                for c, d in docs.items()}
-
-    out = read(field)
+    out = _reads(prefix, field, far_docs)
     back = converse_of(prefix, field)
     if back:
-        for code, others in read(back).items():
+        # The far side names this one, so its reading inverts into this
+        # scheme's code space whether or not the relation crosses.
+        for code, others in _reads(far, back, docs).items():
             for other in others:
-                out[other].add(code)
+                out.setdefault(other, set()).add(code)
     return out
 
 
 def converse_of(prefix: str, field: str) -> str:
     """The field holding `field` read backwards, or "" if none is declared."""
-    return next((c for p, f, c in pairs() if p == prefix and f == field), "")
+    return next((c for p, f, c, _ in pairs() if p == prefix and f == field), "")
+
+
+def converse_scheme_of(prefix: str, field: str) -> str:
+    """Which scheme that converse field lives on — `prefix` itself unless the
+    relation crosses."""
+    return next((s for p, f, _, s in pairs() if p == prefix and f == field), "")
 
 
 def _contradictions(field: str, back: str, held: dict) -> set[tuple[str, str]]:
@@ -170,19 +200,28 @@ def _at_head(prefix: str, fields: set[str]) -> dict[str, str] | None:
     return out
 
 
-def _committed(prefix: str, field: str, back: str) -> tuple[set, set] | None:
-    """The two edge sets as HEAD held them: declared forward, and declared
-    from the converse side. `None` when there is no baseline."""
-    texts = _at_head(prefix, {field, back})
+def _side_at_head(prefix: str, field: str) -> dict[str, list[str]] | None:
+    """What each of one scheme's documents declared in one field at HEAD."""
+    texts = _at_head(prefix, {field})
     if texts is None:
         return None
-    cfg, held = current(), {}
-    for rel, text in texts.items():
-        meta = parse_frontmatter(text)[0]
-        code = Path(rel).stem
-        held[code] = {f: _listed(meta.get(f)) for f in (field, back)}
-    forward = {(a, b) for a, f in held.items() for b in f[field]}
-    reverse = {(a, b) for b, f in held.items() for a in f[back]}
+    return {Path(rel).stem: _listed(parse_frontmatter(text)[0].get(field))
+            for rel, text in texts.items()}
+
+
+def _committed(prefix: str, field: str, back: str,
+               far: str) -> tuple[set, set] | None:
+    """The two edge sets as HEAD held them: declared forward, and declared
+    from the converse side. `None` when there is no baseline.
+
+    Each side is read out of its own scheme's directory, which is the same
+    directory twice unless the relation crosses."""
+    near = _side_at_head(prefix, field)
+    far_held = _side_at_head(far, back)
+    if near is None or far_held is None:
+        return None
+    forward = {(a, b) for a, codes in near.items() for b in codes}
+    reverse = {(a, b) for b, codes in far_held.items() for a in codes}
     return forward, reverse
 
 
@@ -204,7 +243,8 @@ def _now(field: str, back: str, held: dict) -> tuple[set, set]:
     return forward, reverse
 
 
-def _intents(prefix: str, field: str, back: str, docs: dict, held: dict
+def _intents(prefix: str, field: str, back: str, far: str,
+             docs: dict, far_docs: dict, held: dict
              ) -> tuple[list[Repair], list[tuple[str, str]]]:
     """What to do about every edge either side declares, and the conflicts.
 
@@ -224,17 +264,23 @@ def _intents(prefix: str, field: str, back: str, docs: dict, held: dict
     committed before the fixer ran looks like nothing changed — but it is
     self-correcting: delete it once more and the deletion *is* a change."""
     now_f, now_b = _now(field, back, held)
-    base = _committed(prefix, field, back)
+    base = _committed(prefix, field, back, far)
     was_f, was_b = base if base else (set(), set())
     repairs: list[Repair] = []
     clashes: list[tuple[str, str]] = []
     # A directed relation asserted both ways is a contradiction whichever
     # fields carry it: A extends B and B extends A leaves neither earlier.
     # Completing it would only write the second half of the cycle.
+    #
+    # A crossing relation cannot express one: every edge runs from a document
+    # of one scheme to a document of another, so the reversed edge is never in
+    # the set. Guarded on the scheme rather than left to fall out, because
+    # "it happens not to match" and "it cannot match" read the same in a set
+    # comprehension and only the second is a reason not to check.
     both_ways = ({e for e in now_f | now_b if e[::-1] in (now_f | now_b)}
-                 if field != back else set())
+                 if field != back and far == prefix else set())
     for a, b in sorted(now_f | now_b | was_f | was_b):
-        if a not in docs or b not in docs:
+        if a not in docs or b not in far_docs:
             continue
         edge = (a, b)
         if edge in both_ways:
@@ -251,12 +297,12 @@ def _intents(prefix: str, field: str, back: str, docs: dict, held: dict
             if edge in now_f:
                 repairs.append(Repair(docs[a].path, field, b, "remove"))
             if edge in now_b:
-                repairs.append(Repair(docs[b].path, back, a, "remove"))
+                repairs.append(Repair(far_docs[b].path, back, a, "remove"))
         else:
             if edge not in now_f:
                 repairs.append(Repair(docs[a].path, field, b, "add"))
             if edge not in now_b:
-                repairs.append(Repair(docs[b].path, back, a, "add"))
+                repairs.append(Repair(far_docs[b].path, back, a, "add"))
     return repairs, clashes
 
 
@@ -286,6 +332,17 @@ def _applied(meta: dict, entries: list[Repair]) -> dict:
     return out
 
 
+def _contract_for(path: Path):
+    """The contract of whichever scheme owns this document. A repair can now
+    land in either of a pair's two schemes, so the contract that judges it is
+    a property of the file, not of the relation."""
+    cfg = current()
+    for scheme in cfg.schemes.values():
+        if path.parent == scheme.dir:
+            return for_scheme(scheme)
+    return None
+
+
 def _blocked(prefix: str, docs: dict, repairs: list[Repair]
              ) -> tuple[list[Repair], list[tuple[Repair, str]]]:
     """Split repairs into the ones that are safe to write and the ones that
@@ -300,17 +357,19 @@ def _blocked(prefix: str, docs: dict, repairs: list[Repair]
     Only *new* violations block. A document already in breach somewhere else
     still gets its back-references, or one unrelated mistake would freeze
     every relation it stands in."""
-    scheme = current().schemes[prefix]
-    contract = for_scheme(scheme)
-    # `superseded_by` names any scheme, which has no one set of codes to
-    # resolve against — the same exemption the lint makes.
-    known = {f.reference: resolvable(f.reference) for f in contract.fields
-             if f.reference and f.reference != ANY_SCHEME}
     by_path: dict[Path, list[Repair]] = {}
     for entry in repairs:
         by_path.setdefault(entry.path, []).append(entry)
     safe, held_back = [], []
     for path, entries in by_path.items():
+        contract = _contract_for(path)
+        if contract is None:
+            safe += entries
+            continue
+        # `superseded_by` names any scheme, which has no one set of codes to
+        # resolve against — the same exemption the lint makes.
+        known = {f.reference: resolvable(f.reference) for f in contract.fields
+                 if f.reference and f.reference != ANY_SCHEME}
         rel = current().rel(path)
         meta = parse_frontmatter(path.read_text(encoding="utf-8"))[0]
         was = set(violations(contract, rel, meta, known))
@@ -327,10 +386,11 @@ def _all_repairs() -> tuple[list[Repair], list[tuple[Repair, str]]]:
     """Every edit the declared pairs need, and every one held back."""
     out: list[Repair] = []
     stopped: list[tuple[Repair, str]] = []
-    for prefix, field, back in pairs():
-        docs, held = _held(prefix)
-        safe, blocked = _blocked(prefix, docs,
-                                 _intents(prefix, field, back, docs, held)[0])
+    for prefix, field, back, far in pairs():
+        docs, far_docs, held = _held(prefix, field, back, far)
+        safe, blocked = _blocked(
+            prefix, docs,
+            _intents(prefix, field, back, far, docs, far_docs, held)[0])
         out += safe
         stopped += blocked
     return out, stopped
@@ -356,9 +416,10 @@ def rows() -> list[str]:
             f"({breach.split(': ', 1)[-1]}), so the pair is left one-sided — "
             f"the relation and the contract disagree, and which gives is a "
             f"person's call")
-    for prefix, field, back in pairs():
-        docs, held = _held(prefix)
-        repairs, clashes = _intents(prefix, field, back, docs, held)
+    for prefix, field, back, far in pairs():
+        docs, far_docs, held = _held(prefix, field, back, far)
+        repairs, clashes = _intents(prefix, field, back, far,
+                                    docs, far_docs, held)
         repairs = _blocked(prefix, docs, repairs)[0]
         for a, b in clashes:
             if _mutual(field, back, held, (a, b)):
@@ -432,9 +493,13 @@ def relation_spans(path, text: str) -> list[tuple[int, int]]:
     fields = {f for chain in cfg.chains.values()
               for f in (*chain.relation, chain.sibling)
               if f and path.parent == cfg.schemes[chain.scheme].dir}
-    fields |= {f for prefix, field, back in pairs()
-               for f in (field, back)
-               if path.parent == cfg.schemes[prefix].dir}
+    # Each side of a pair belongs to its own scheme's directory, which is the
+    # same directory twice unless the relation crosses.
+    for prefix, field, back, far in pairs():
+        if path.parent == cfg.schemes[prefix].dir:
+            fields.add(field)
+        if path.parent == cfg.schemes[far].dir:
+            fields.add(back)
     if not fields:
         return []
     spans, at, active = [], 0, False
