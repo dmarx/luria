@@ -40,10 +40,10 @@ The cost was not theoretical. `luria.toml` carried it as a known limitation on
 
 And the case that forced it: a practice declaring `introduced_by:` — the paper
 that first stated the recommendation — with no way to ask a paper what it
-originated. That is the argument #211 already made for `extended_by`, that the
+originated. That is the argument [#211](https://github.com/dmarx/luria/issues/211) already made for `extended_by`, that the
 fork in a line should be legible from the trunk and not only from the branches.
 It just happens to cross. Without the field, the answer lives in prose on both
-sides and drifts, which is the whole reason relations are fields (ADR-036).
+sides and drifts, which is the whole reason relations are fields ([ADR-036](ADR-036.md)).
 
 ## Decision
 
@@ -82,7 +82,7 @@ from the document's own directory instead of from the relation's near end.
   derivable and therefore a second place for the same fact to live: the field
   already declares `scheme`, and the converse necessarily belongs to it. A key
   that can disagree with something else in the same table is a key that
-  eventually will (DP-3).
+  eventually will ([DP-3](../principles.d/DP-003.md)).
 - **A qualified name, `converse = "LIT.introduces"`.** Reads well and is worse:
   it invents a second naming syntax for references, one the rest of the config
   does not use, and it still has to be checked against the field's `scheme` —
@@ -90,7 +90,7 @@ from the document's own directory instead of from the relation's near end.
 - **Leave it, and write the reverse edge in prose.** The status quo, and the
   thing this project exists to stop. It is also what the two records already
   did: a paragraph on both sides, which is how the residual chain went stale in
-  six documents before ADR-036.
+  six documents before [ADR-036](ADR-036.md).
 - **Let a converse name any scheme at all, unchecked.** Removes the constraint
   and the guarantee together. The fixer writes files; it has to know that the
   far side can hold what it is about to write there.
@@ -110,4 +110,4 @@ into `relations.pairs()` will need the fourth element.
 
 What this does **not** do is give the two ends different words for what they
 mean; `introduced_by` and `introduces` are documented in a TOML comment like
-every other relation, which is #254 and a separate decision.
+every other relation, which is [#254](https://github.com/dmarx/luria/issues/254) and a separate decision.
