@@ -38,6 +38,7 @@ generator substitutes `{placeholders}`, and tags get their own generated pages.
 
 from __future__ import annotations
 
+import copy
 import os.path
 import posixpath
 import re
@@ -147,7 +148,56 @@ def parse_frontmatter(text: str) -> tuple[dict, str]:
     end = text.find("\n---\n", 3)
     if end == -1:
         return {}, text
-    return yaml.safe_load(text[4 : end + 1]) or {}, text[end + 5 :]
+    return _load_yaml(text[4 : end + 1]) or {}, text[end + 5 :]
+
+
+# libyaml where the wheel has it, the pure-Python parser where it doesn't. The
+# frontmatter of a record is small and there is a lot of it, so the loader is
+# most of the parse cost — and `yaml.safe_load` silently takes the slow one.
+_SafeLoader = getattr(yaml, "CSafeLoader", yaml.SafeLoader)
+
+
+def _load_yaml(text: str):
+    return yaml.load(text, Loader=_SafeLoader)
+
+
+# path → ((mtime_ns, size), meta, body), on the same bargain `_NUMBER_CACHE`
+# takes: every writer of a document bumps its mtime, so the cache invalidates
+# itself and no caller has to remember to drop it. That property is what makes
+# a cache safe here at all — `field_edit` and `repair` write documents mid-run
+# and then read them back.
+_DOCUMENT_CACHE: dict[Path, tuple[tuple[int, int], dict, str]] = {}
+
+
+def read_document(path: Path) -> tuple[dict, str]:
+    """This document's frontmatter and body, parsed at most once per revision.
+
+    Every `Adr` construction parsed the file it names, and the schemes are
+    loaded once per consumer rather than once per run: a 729-document record
+    parsed 16,872 frontmatter blocks on one `luria lint`, about 23 per
+    document, and the YAML was 70 of its 95 seconds (#249).
+
+    The returned mapping is copied per caller. `Adr` folds derived fields into
+    the dict it is handed, and a shared mapping would let one reading's
+    derivation leak into the next — the failure the per-`Adr` resolver in
+    `Adr.__init__` exists to avoid (#233), reintroduced one layer down."""
+    try:
+        st = path.stat()
+    except OSError:
+        return parse_frontmatter(path.read_text(encoding="utf-8"))
+    key = (st.st_mtime_ns, st.st_size)
+    hit = _DOCUMENT_CACHE.get(path)
+    if hit is None or hit[0] != key:
+        meta, body = parse_frontmatter(path.read_text(encoding="utf-8"))
+        hit = (key, meta, body)
+        _DOCUMENT_CACHE[path] = hit
+    return copy.deepcopy(hit[1]), hit[2]
+
+
+def forget_documents() -> None:
+    """Drop the parse cache — for tests that rewrite a fixture faster than the
+    filesystem's mtime resolution can distinguish."""
+    _DOCUMENT_CACHE.clear()
 
 
 class Adr:
@@ -162,7 +212,7 @@ class Adr:
         # A merge-allocated document awaiting concretization (ADR-049): no
         # number yet, addressed by its temporary tail.
         self.tail = scheme.temp_of(path)
-        self.meta, body = parse_frontmatter(path.read_text(encoding="utf-8"))
+        self.meta, body = read_document(path)
         # Derived fields resolve here, once, so every reader downstream — a
         # chain's invariant, a facet, a report column — meets an ordinary
         # field and needs to know nothing about where it came from (#216).
