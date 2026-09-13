@@ -6,6 +6,7 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 
 ## Currently — [September 2026](2026-09.md)
 
+- [13 Sep 20:35 — The same-scheme converse rule was an assumption, not a constraint](2026-09.md#20260913203524)
 - [13 Sep 19:58 — The retries were paying nine seconds an identifier to learn nothing](2026-09.md#20260913195853)
 - [13 Sep 19:53 — The record was parsed twenty-three times per document per lint](2026-09.md#20260913195343)
 - [12 Sep 21:59 — Two halves of one fix: a page to cite, and a citation that points at it](2026-09.md#20260912215952)
@@ -62,9 +63,9 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 
 ## All books
 
-99 entries across 2 books, newest first.
+100 entries across 2 books, newest first.
 
 | Book | Entries | First | Last |
 |---|--:|---|---|
-| [2026-09](2026-09.md) | 53 | 2026-09-03 | 2026-09-13 |
+| [2026-09](2026-09.md) | 54 | 2026-09-03 | 2026-09-13 |
 | [2026-08](2026-08.md) | 46 | 2026-08-03 | 2026-08-28 |

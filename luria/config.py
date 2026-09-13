@@ -1136,7 +1136,7 @@ def _checked_converses(prefix: str, refs: tuple, schemes: dict) -> tuple:
     **The converse lives on the scheme whose codes the field holds**, which
     is the declaring scheme itself only when the relation does not cross one.
     `SOTA.introduced_by` holds `LIT` codes, so its converse `introduces` is a
-    field on `LIT` holding `SOTA` codes — and until ADR-tmp02d4w that could
+    field on `LIT` holding `SOTA` codes — and until ADR-097 that could
     not be declared at all, so a crossing relation was sayable from one end
     and unreachable from the other (#253).
 
