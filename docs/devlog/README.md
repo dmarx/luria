@@ -6,6 +6,7 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 
 ## Currently — [September 2026](2026-09.md)
 
+- [13 Sep 19:53 — The record was parsed twenty-three times per document per lint](2026-09.md#20260913195343)
 - [12 Sep 21:59 — Two halves of one fix: a page to cite, and a citation that points at it](2026-09.md#20260912215952)
 - [11 Sep 05:41 — Lint only column-0 HTML comments in YAML frontmatter](2026-09.md#20260911054100)
 - [11 Sep 01:23 — Reserving a namespace instead of blanking three suites](2026-09.md#20260911012308)
@@ -60,9 +61,9 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 
 ## All books
 
-97 entries across 2 books, newest first.
+98 entries across 2 books, newest first.
 
 | Book | Entries | First | Last |
 |---|--:|---|---|
-| [2026-09](2026-09.md) | 51 | 2026-09-03 | 2026-09-12 |
+| [2026-09](2026-09.md) | 52 | 2026-09-03 | 2026-09-13 |
 | [2026-08](2026-08.md) | 46 | 2026-08-03 | 2026-08-28 |
