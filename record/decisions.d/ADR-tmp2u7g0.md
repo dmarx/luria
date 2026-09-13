@@ -118,6 +118,6 @@ moment. That case is now handled by the next run rather than by this one,
 which is the trade — and `Retry-After` covers the hosts that say so.
 
 Filed `Proposed`. The breaker and the ordering are provisioned, and provisioned
-is not working (DP-006): the firing that matters is a real throttle on a real
+is not working ([DP-006](../principles.d/DP-006.md)): the firing that matters is a real throttle on a real
 record, and the devlog entry beside this decision is where it will be recorded
 when it happens.
