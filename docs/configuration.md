@@ -352,6 +352,7 @@ that doesn't is used as it is in both modes.
 | `theme` | `dict` | *unset* |
 | `graph` | `Path \| None` | *unset* |
 | `graph_height` | `str` | `"320px"` |
+| `graph_depth` | `int` | `1` |
 
 ## Environment variables
 

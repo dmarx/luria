@@ -83,3 +83,5 @@ Everything not listed here is at Luria's default.
 | `site.icon` | `assets/branding/luria-brainslug/luria_project_memory_icon.svg` | *empty* |
 | `site.logo` | `assets/branding/luria-brainslug/luria_project_memory_lockup_horizontal.svg` | *empty* |
 | `site.theme` | *2 keys set* | *empty* |
+| `site.graph` | `docs/graphs/record-map.json` | *empty* |
+| `site.graph_height` | `560px` | `320px` |

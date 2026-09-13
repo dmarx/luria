@@ -15,21 +15,34 @@ from pathlib import Path
 import pytest
 
 from luria import site, site_graph
+from test_site_graph import graph_data
+
+from _scheme import decision
 from luria.config import current, load
 
 FIXTURE = Path(__file__).parent / "fixtures" / "strata_g_export.json"
 
 
+# The fixture project stages exactly two pages. A map whose node ids are those
+# pages is what lets the per-page slicing be tested at all: a graph of unrelated
+# ids is a graph no page is in, which is a different (also tested) case.
+PAGE_A = "record/decisions.d/ADR-001.md"      # matched by repo path
+PAGE_B = "design-principles.md"               # matched by basename
+
+
 def write_graph(root: Path, **over) -> Path:
     view = {
         "nodes": [
-            {"id": "a", "x": 0.0, "y": 0.0, "size": 12.0, "color": "#f28e2b",
+            {"id": PAGE_A, "x": 0.0, "y": 0.0, "size": 12.0, "color": "#f28e2b",
              "label": "A", "attrs": {}, "url": "https://example.test/a"},
-            {"id": "b", "x": 80.0, "y": 40.0, "size": 8.0, "color": "#4e79a7",
+            {"id": PAGE_B, "x": 80.0, "y": 40.0, "size": 8.0, "color": "#4e79a7",
              "label": "B", "attrs": {}, "url": "https://example.test/b"},
+            {"id": "far-away", "x": 400.0, "y": 0.0, "size": 5.0,
+             "color": "#59a14f", "label": "Far", "attrs": {},
+             "url": "https://example.test/far"},
         ],
-        "edges": [{"source": "a", "target": "b", "color": "#888", "size": 2,
-                   "curvature": 0, "directed": True}],
+        "edges": [{"source": PAGE_A, "target": PAGE_B, "color": "#888",
+                   "size": 2, "curvature": 0, "directed": True}],
         "background": "#1f2430", "labelColor": "#e2e8f0",
     }
     view.update(over)
@@ -39,7 +52,8 @@ def write_graph(root: Path, **over) -> Path:
     return path
 
 
-def configure(root: Path, value: str, base_url: str = "example.test/rec") -> None:
+def configure(root: Path, value: str, base_url: str = "example.test/rec",
+              depth: int | None = None) -> None:
     """Point the fixture project's [luria.site] at a graph.
 
     A `base_url` comes with it because the viewer is served from the site
@@ -51,6 +65,8 @@ def configure(root: Path, value: str, base_url: str = "example.test/rec") -> Non
     site = f'\n[luria.site]\ngraph = "{value}"\n'
     if base_url:
         site += f'base_url = "{base_url}"\n'
+    if depth is not None:
+        site += f"graph_depth = {depth}\n"
     toml.write_text(toml.read_text() + site)
     from luria import config as cfg_mod
     cfg_mod.reset()
@@ -128,7 +144,7 @@ def test_a_graph_without_a_base_url_is_reported_rather_than_skipped(project):
     assert any("no base_url" in u for u in report.unplaced), report.unplaced
 
 
-def test_the_configured_graph_replaces_it_on_every_page(project):
+def test_the_configured_graph_replaces_quartzs(project):
     write_graph(project)
     configure(project, "docs/graphs/map.json")
     out = project / "build" / "site"
@@ -141,7 +157,61 @@ def test_the_configured_graph_replaces_it_on_every_page(project):
     assert pages, "the fixture project staged nothing"
     for page in pages:
         assert "<strata-g-graph " in page.read_text(), page
+    assert report.graph_pages == len(pages)
     assert report.unplaced == []
+
+
+def test_each_page_shows_its_own_neighbourhood(project):
+    """The whole map on every page is the same picture everywhere, which is a
+    poster rather than a map of where you are. Each page shows the nodes within
+    `graph_depth` hops of its own."""
+    decision(project, 1, "Active")      # so PAGE_A is a page that exists
+    write_graph(project)
+    configure(project, "docs/graphs/map.json")
+    out = project / "build" / "site"
+    site.stage(out)
+
+    ids = {}
+    for page in (out / "content").rglob("*.md"):
+        views = graph_data(page.read_text())
+        ids[page.name] = {n["id"] for n in views[0]["nodes"]} if views else None
+    assert set(ids) == {"ADR-001.md", "design-principles.md"}, ids
+    # ADR-001 and design-principles are joined by an edge, so each sees the
+    # other — and NEITHER sees the unconnected third node.
+    assert ids["ADR-001.md"] == {PAGE_A, PAGE_B}, ids
+    assert ids["design-principles.md"] == {PAGE_A, PAGE_B}, ids
+    assert all("far-away" not in i for i in ids.values()), ids
+    # The instrument check (DP-22): the map HAS a node these pages exclude, so
+    # "no far-away" is a cut being made rather than a node that never existed.
+    whole = json.loads((project / "docs" / "graphs" / "map.json").read_text())
+    assert len(whole["nodes"]) == 3
+
+
+def test_depth_zero_puts_the_whole_graph_on_every_page(project):
+    """The old behaviour, kept as a dial rather than deleted: a project that
+    wants one curated poster everywhere says `graph_depth = 0`."""
+    write_graph(project)
+    configure(project, "docs/graphs/map.json", depth=0)
+    out = project / "build" / "site"
+    site.stage(out)
+    for page in (out / "content").rglob("*.md"):
+        assert len(graph_data(page.read_text())[0]["nodes"]) == 3, page
+
+
+def test_a_page_that_is_not_in_the_map_gets_no_graph(project):
+    """Better than an empty box, and the same rule the lineage graph follows."""
+    path = write_graph(project)
+    view = json.loads(path.read_text())
+    for node in view["nodes"]:
+        node["id"] = "nothing-here-" + node["id"]
+    view["edges"] = []
+    path.write_text(json.dumps(view))
+    configure(project, "docs/graphs/map.json")
+    out = project / "build" / "site"
+    report = site.stage(out)
+    assert report.graph_pages == 0
+    for page in (out / "content").rglob("*.md"):
+        assert "<strata-g-graph " not in page.read_text(), page
 
 
 def test_the_graph_sits_where_quartzs_did_above_the_heading(project):

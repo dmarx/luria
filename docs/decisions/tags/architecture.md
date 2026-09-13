@@ -2,7 +2,7 @@
 
 # ADRs tagged `architecture`
 
-4 of 95 decisions. Back to the [full index](../README.md).
+6 of 97 decisions. Back to the [full index](../README.md).
 
 | # | Title | Summary | Status |
 |---|---|---|---|
@@ -10,3 +10,5 @@
 | [ADR-078](../../../record/decisions.d/ADR-078.md) | A nested record's views are generated and committed with the parent's | `luria index` regenerates every nested record's views from the root, and `--check` fails on a stale one, so they are committed like this project's own. `include_records` moves out of `[luria.site]` in the same change: it says a project contains other projects, which generation needs as much as publishing does. | Active |
 | [ADR-094](../../../record/decisions.d/ADR-094.md) | A cited document gets a page, and where a citation points is configurable | A `render = "document"` scheme's sources are published as pages, and a new `cite` key chooses whether a citation of its codes resolves to that page or to an anchor in the assembled view. This record sets "page"; unset keeps today's behaviour. Rejected: emitting anchors that survive each publisher, and shipping the key without the pages, which sends citations off-site. | Proposed |
 | [ADR-095](../../../record/decisions.d/ADR-095.md) | An acknowledgement can carry its own deadline | A directive may be written `until <YYYY-MM-DD>`; after that date `find` stops returning it, so every check behaves as if it were never written, and `luria lint` reports what expired. Rejected: a relative duration, which needs an anchor the file does not carry; and a version milestone, which needs a project-version concept luria does not have. | Proposed |
+| [ADR-tmpronup](../../../record/decisions.d/ADR-tmpronup.md) | A document's typed lineage is drawn on its page, beside Quartz's graph | `luria site` renders each document's typed edges as an interactive graph at the foot of its page, using strata-g's vendored export viewer. Rejected: replacing Quartz's `Component.Graph` with it, which was the first plan — measured, the typed-edge graph reaches 47% of scheme documents and none of the journal entries, so the swap would have left most pages with an empty box where a neighbourhood used to be. | Proposed |
+| [ADR-tmp0hx52](../../../record/decisions.d/ADR-tmp0hx52.md) | A project can show a graph it designed in place of Quartz's | `[luria.site] graph` points at a strata-g `Canvas — graph data (JSON)` export; set, that one curated picture replaces `Component.Graph` on every page. Opt-in, and the inverse of the generated lineage graph: one graph the project laid out, everywhere, rather than a neighbourhood computed per page. Rejected: a Quartz component that fetches the data (needs a network request and a viewer change), and base64 in the file (opaque for no gain). | Proposed |

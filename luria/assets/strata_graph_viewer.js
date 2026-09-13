@@ -1,24 +1,3 @@
-// Vendored from strata-g's graph export viewer ([[SG-ADR-237]], [[SG-ADR-238]]).
-//
-// PROVENANCE — this file is generated, not written here. It is the payload
-// strata-g's `Canvas — embeddable snippet` export inlines, lifted so that
-// `luria site` can serve one copy for the whole site instead of one per page.
-//
-//   source:   https://github.com/dmarx/strata-g
-//             web/src/graph/export/webappViewer.ts  (viewerScript())
-//   revision: 982b21d9564673a74f19b2176cf78d21ed007d07
-//   pinned:   see LINEAGE_VIEWER_SHA256 in luria/site_graph.py
-//
-// Do not edit. To update: re-emit from strata-g, drop the file here, and
-// update the pin — the test that compares them is what tells you the two
-// have drifted (the same offline-drift discipline [[ADR-016]] applies to
-// remote document content).
-//
-// The body below is strata-g's source, verbatim. It cites strata-g's own
-// decisions by bare code, which are not this record's:
-// unresolved-ok-file: ADR-237 — strata-g's numbering, inside its own source
-// unresolved-ok-file: ADR-238 — the same
-// unresolved-ok-file: ADR-170 — the same
 
 (function () {
   "use strict";
@@ -540,12 +519,27 @@
       return;
     }
     this.__mounted = true;
-    var data = JSON.parse(island ? island.textContent : attr);
+    this.render(JSON.parse(island ? island.textContent : attr));
+  };
+
+  // Mount, or REPLACE what is mounted. Separate from connectedCallback because
+  // an element can get new data without ever being disconnected — see
+  // attributeChangedCallback.
+  Graph.prototype.render = function (data) {
+    var all = (window.__strataGGraphs = window.__strataGGraphs || []);
+    if (this.graph) {
+      var at = all.indexOf(this.graph);
+      if (at !== -1) all.splice(at, 1);
+      var wasHandle = window.__strataGExport === this.graph;
+      this.graph.destroy();
+      this.graph = null;
+      if (wasHandle) window.__strataGExport = null;
+    }
     // Open, not closed: the page's own scripts (and the test suite) can reach
     // in. There is nothing secret in here — the data is in the document.
-    var shadow = this.attachShadow({ mode: "open" });
+    var shadow = this.shadowRoot || this.attachShadow({ mode: "open" });
+    shadow.textContent = "";
     this.graph = mount(shadow, data, this);
-    var all = (window.__strataGGraphs = window.__strataGGraphs || []);
     all.push(this.graph);
     // The single-graph handle the standalone page has published since ADR-237.
     // Kept pointing at the FIRST graph so anything already scripting an
@@ -555,8 +549,37 @@
     this.dispatchEvent(new CustomEvent("strata-g-ready", { bubbles: true }));
   };
 
+  // New data on an element that was never disconnected.
+  //
+  // A static-site generator with client-side routing is the case: Quartz swaps
+  // the article in place and MORPHS this element rather than replacing it, so
+  // data-graph gets the new page's graph while connectedCallback never runs
+  // again. The rendered graph then belongs to the page you came from — and
+  // only a full page load, which is what following one of this graph's own
+  // node links happens to be, ever corrected it.
+  //
+  // Only the attribute carrier can be watched this way; a script-island
+  // producer that rewrites the island's text in place gets no callback,
+  // because element content is not an attribute. That is a reason to prefer
+  // the attribute wherever a router is in play, not only where markup is
+  // re-serialized.
+  Graph.observedAttributes = ["data-graph"];
+
+  Graph.prototype.attributeChangedCallback = function (name, before, after) {
+    if (name !== "data-graph" || !this.__mounted) return;
+    if (before === after || after === null) return;
+    this.render(JSON.parse(after));
+  };
+
   Graph.prototype.disconnectedCallback = function () {
-    if (this.graph) this.graph.destroy();
+    if (this.graph) {
+      var all = window.__strataGGraphs || [];
+      var at = all.indexOf(this.graph);
+      if (at !== -1) all.splice(at, 1);
+      if (window.__strataGExport === this.graph) window.__strataGExport = null;
+      this.graph.destroy();
+      this.graph = null;
+    }
   };
 
   customElements.define(TAG, Graph);

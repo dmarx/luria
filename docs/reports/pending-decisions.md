@@ -5,17 +5,19 @@
 
 `Proposed` and `Deferred` both describe an open question. Neither says *since when*, and that is the signal: a decision proposed last week is pending; the same one a year later was either overdue or settled in code and never written back.
 
-**4 document(s) awaiting a decision.**
+**6 document(s) awaiting a decision.**
 
 | Open since | Status | Code | Cited | Unack. | Title |
 |---|---|---|--:|--:|---|
 | 2026-09-08 | Proposed | [ADR-089](../../record/decisions.d/ADR-089.md) | 0 | 0 | A derived field is read-only, unlike a derived URI |
 | 2026-09-10 | Proposed | [ADR-092](../../record/decisions.d/ADR-092.md) | 0 | 0 | A derivation may follow a reference: one hop, against written frontmatter |
-| 2026-09-12 | Proposed | [ADR-094](../../record/decisions.d/ADR-094.md) | 0 | 0 | A cited document gets a page, and where a citation points is configurable |
+| 2026-09-11 | Proposed | [ADR-tmpronup](../../record/decisions.d/ADR-tmpronup.md) | 2 | 2 | A document's typed lineage is drawn on its page, beside Quartz's graph |
+| 2026-09-12 | Proposed | [ADR-094](../../record/decisions.d/ADR-094.md) | 2 | 2 | A cited document gets a page, and where a citation points is configurable |
+| 2026-09-12 | Proposed | [ADR-tmp0hx52](../../record/decisions.d/ADR-tmp0hx52.md) | 2 | 2 | A project can show a graph it designed in place of Quartz's |
 | 2026-09-12 | Proposed | [ADR-095](../../record/decisions.d/ADR-095.md) | 0 | 0 | An acknowledgement can carry its own deadline |
 
 The citation count is the second axis, and it flips the priority: an old proposal nothing references is a stalled idea worth closing, while an old proposal many files cite is a decision the codebase has already made and hasn't written down.
 
 This count and the reference-status report's will differ, and that is not an off-by-one. That report covers documents something actually **cites** and hasn't acknowledged; this one covers every **undecided** document. One here is missing from there for exactly one of two reasons: nothing cites it, or every citation carries an `inactive-ok` annotation.
 
-**Cited nowhere at all** (4): [ADR-089](../../record/decisions.d/ADR-089.md), [ADR-092](../../record/decisions.d/ADR-092.md), [ADR-094](../../record/decisions.d/ADR-094.md), [ADR-095](../../record/decisions.d/ADR-095.md) — these are the cheapest to close, since nothing depends on the answer.
+**Cited nowhere at all** (3): [ADR-089](../../record/decisions.d/ADR-089.md), [ADR-092](../../record/decisions.d/ADR-092.md), [ADR-095](../../record/decisions.d/ADR-095.md) — these are the cheapest to close, since nothing depends on the answer.
