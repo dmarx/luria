@@ -51,7 +51,7 @@ The load-bearing details:
 
 **The file is validated at build time, with the error naming which way it is
 wrong** — missing, not JSON, not a graph, a node without a position. A site
-that builds and then shows an empty box has told the author nothing ([DP-1](../../docs/design-principles.md#dp-1)).
+that builds and then shows an empty box has told the author nothing ([DP-1](../principles.d/DP-001.md)).
 
 **A node whose URL the viewer will not follow is reported, not rejected.** A
 graph whose nodes are not links is a perfectly good picture; a node that looks
