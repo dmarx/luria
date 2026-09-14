@@ -6,6 +6,7 @@ rule to prose. The motivating case came from a downstream record whose decision
 said "exactly one strength tag" and whose fourth argument shipped with none,
 four documents before anyone counted.
 """
+from _config import merged
 from pathlib import Path
 
 import pytest
@@ -86,32 +87,33 @@ def test_excluded_by_is_silent_when_the_group_is_absent(tmp_path, monkeypatch):
 
 
 def test_at_most_one_allows_zero(tmp_path, monkeypatch):
-    cfg = CONFIG.replace('require = "exactly-one"', 'require = "at-most-one"')
+    cfg = merged(CONFIG, {"schemes": {"ARG": {"tag_groups": {
+        "strength": {"require": "at-most-one"}}}}})
     assert errors_for(tmp_path, monkeypatch, cfg=cfg) == []
 
 
 def test_a_scheme_with_no_groups_is_unconstrained(tmp_path, monkeypatch):
     """Every record that predates this feature."""
-    cfg = CONFIG.split("""
-                       schemes:
-                         ARG:
-                           tag_groups:
-                             strength: {}
-                       """)[0]
+    import yaml as _yaml
+    raw = _yaml.safe_load(CONFIG)
+    raw["schemes"]["ARG"].pop("tag_groups")
+    cfg = _yaml.dump(raw, sort_keys=False)
     assert errors_for(tmp_path, monkeypatch, "anything", cfg=cfg) == []
 
 
 def test_an_unknown_rule_is_a_config_error(tmp_path, monkeypatch):
     """Caught at parse time. A misspelled rule that surfaced as 'no
     violations' would be the quiet failure this feature exists to remove."""
-    cfg = CONFIG.replace('require = "exactly-one"', 'require = "one"')
+    cfg = merged(CONFIG, {"schemes": {"ARG": {"tag_groups": {
+        "strength": {"require": "one"}}}}})
     with pytest.raises(ValueError, match="require = 'one'"):
         project(tmp_path, monkeypatch, "sound", cfg=cfg)
         config.current()
 
 
 def test_a_group_with_no_tags_is_a_config_error(tmp_path, monkeypatch):
-    cfg = CONFIG.replace('tags = ["sound", "overreach", "invalid"]', "tags = []")
+    cfg = merged(CONFIG, {"schemes": {"ARG": {"tag_groups": {
+        "strength": {"tags": []}}}}})
     with pytest.raises(ValueError, match="lists no tags"):
         project(tmp_path, monkeypatch, "sound", cfg=cfg)
         config.current()
