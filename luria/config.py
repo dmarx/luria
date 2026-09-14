@@ -59,6 +59,10 @@ which files they cover — the exact class of bug ADR-002 exists to prevent. One
 config object, resolved once from disk.
 """
 
+# inactive-ok-file: ADR-tmp1wx7r — Proposed. Every mention names it as the
+# decision this file implements or is written against; the citation is to
+# the reasoning, not a claim the decision is settled.
+
 # inactive-ok-file: ADR-098 — Proposed. Every mention names it as the decision
 # this module implements; the citation is to the reasoning, not a claim the
 # decision is settled.
@@ -526,12 +530,19 @@ class Scheme:
     # `render = "document"` scheme has the choice: its sources have two
     # addresses, their own files and an anchor in the page they assemble into.
     #
-    #   "page" — the cited document's own file. Durable in a way an anchor is
-    #            not: the anchors this generator emits are
-    #            `<a name="dp-3"></a>`, raw HTML that a publisher is free to
-    #            drop. Quartz does, which leaves every citation of a principle
-    #            on this project's own site pointing at a fragment that is not
-    #            there, while the same links work in the repository.
+    #   "page" — the cited document's own file. Right where a section read
+    #            out of its context reads oddly, and where a reader following
+    #            a citation wants the one document rather than the set.
+    #
+    #            This key's original reason was wrong and is worth recording:
+    #            it said the anchors "are raw HTML that a publisher is free to
+    #            drop, and Quartz does". Quartz does not — the `<a>` is in the
+    #            published HTML. What it did was emit `name` where a
+    #            single-page app can only find `id`, so the fragment was
+    #            unreachable by the router and reachable by every other means,
+    #            including the repository a contributor checks it in. The
+    #            generator emits `id` now (ADR-tmp1wx7r). `cite` keeps its
+    #            other reason, which was always the real one.
     #   "view" — `output#anchor`, the assembled page. What every project did
     #            before this key, and right where the set is meant to be read
     #            in order and a section out of its context reads oddly.

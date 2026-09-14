@@ -128,7 +128,7 @@ def test_two_schemes_render_in_their_two_shapes(example):
     # A document render renumbers codes into the reader's numbering and emits
     # a stable anchor keyed to the number — `SPEC-001` becomes `## 1.` at
     # `#spec-1`, which is what a remote's `anchor` template constructs against.
-    assert '<a name="spec-1"></a>' in document
+    assert '<a id="spec-1"></a>' in document
     assert document.startswith("# SPEC documents"), (
         "a scheme with no README.stub is titled after itself, not after "
         "this package's principles")

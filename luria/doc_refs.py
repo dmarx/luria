@@ -35,6 +35,10 @@ renders into `docs/devlog/` (ADR-020). `link_base()` maps a path to the
 directory its links must resolve from.
 """
 
+# inactive-ok-file: ADR-tmp1wx7r — Proposed. Every mention names it as the
+# decision this file implements or is written against; the citation is to
+# the reasoning, not a claim the decision is settled.
+
 # unresolved-ok-file: ADR-919, ADR-157, DP-017, DP-018 — illustrative codes in
 # this module's prose. The DP pair became visible once scheme references were
 # found by pattern rather than by hardcoded kind; they were always here.
@@ -655,7 +659,11 @@ def adr_paths() -> dict[int, Path]:
     return scheme.documents() if scheme else {}
 
 
-EXPLICIT_ANCHOR_RE = re.compile(r'^<a name="[a-z]+-(\d+)"></a>\s*$')
+# Read either spelling, emit `id` (ADR-tmp1wx7r): a project whose
+# principles are still one hand-written file may anchor them by `name`, and
+# that file resolves fine in the repository — it is only the published site
+# that cannot reach it, which is the finding, not a reason to stop reading it.
+EXPLICIT_ANCHOR_RE = re.compile(r'^<a (?:id|name)="[a-z]+-(\d+)"></a>\s*$')
 HEADING_ANCHOR_RE = re.compile(r"^##\s+(\d+)\.\s+(.+?)\s*$")
 
 
@@ -1055,8 +1063,16 @@ def _apply(text: str, refs: list[Ref], source: Path, adrs: dict[int, Path],
     return "".join(out)
 
 
-def doc_files() -> list[Path]:
+def doc_files(views: bool = False) -> list[Path]:
     """Every file the reference rules apply to.
+
+    `views` keeps the generated pages in. Off by default and right for every
+    reference rule — a view is rewritten by the next build, so a finding
+    about one is a finding nobody can act on where it is reported. The
+    anchor check is the exception that earns the flag: a generated page can
+    link into another generated page, which is where luria's own devlog
+    index put 55 unreachable fragments, and a check that only reads sources
+    is a check shaped so it cannot see them (ADR-tmp1wx7r, DP-4).
 
     `*.stub` counts. A stub is the one hand-written part of a generated view,
     and its prose lands in a page the lint then skips *because* it is
@@ -1085,7 +1101,8 @@ def doc_files() -> list[Path]:
         paths += sorted(journal.dir.rglob("*.md"))
     seen, out = set(), []
     for path in paths:
-        if path.exists() and path not in seen and not cfg.is_generated(path):
+        if path.exists() and path not in seen and (
+                views or not cfg.is_generated(path)):
             seen.add(path)
             out.append(path)
     return out

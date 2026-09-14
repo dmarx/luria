@@ -1,0 +1,188 @@
+# tests/test_anchors.py
+"""An anchor a fragment link can actually reach.
+
+The generator emitted `<a name="dp-3"></a>`. That resolves in the repository
+and on GitHub, because a real navigation falls back to `a[name]` when no
+element carries the `id`. It does not resolve on a Quartz site: Quartz is a
+single-page app, and its router scrolls with
+
+    document.getElementById(decodeURIComponent(url.hash.substring(1)))
+
+which finds an `id` and nothing else (quartz v4.5.2,
+`components/scripts/spa.inline.ts`). So every citation of a principle and
+every devlog entry link landed at the top of the page it named, on the one
+surface those views are published to — and worked everywhere a contributor
+would look for the bug.
+
+`id` satisfies both. These are the tests for that, and for the check that
+keeps a hand-written anchor from reintroducing it.
+"""
+
+# inactive-ok-file: ADR-tmp1wx7r — Proposed. Every mention names it as the
+# decision this file implements or is written against; the citation is to
+# the reasoning, not a claim the decision is settled.
+
+from __future__ import annotations
+
+from _config import merged
+
+import re
+from pathlib import Path
+
+from luria import adr_index, config, journal, lint
+
+ANCHOR_RE = re.compile(r'<a\s+([^>]*)></a>')
+
+
+def attrs(html: str) -> list[str]:
+    return [m.group(1) for m in ANCHOR_RE.finditer(html)]
+
+
+def test_a_journal_book_anchors_its_entries_by_id(project, monkeypatch):
+    """55 links in one book of this project's own devlog, every one of them
+    landing at the top of the page on the published site."""
+    root = _journal_project(project, monkeypatch)
+    j = config.current().journals["devlog"]
+    key, filed = next(iter(journal.books(j).items()))
+    book = journal.render_book(j, key, filed)
+    assert '<a id="20260901120000"></a>' in book
+    assert "<a name=" not in book
+
+
+def test_an_assembled_documents_anchors_are_ids(project, monkeypatch):
+    """The same fix on the other emitter: a `render = "document"` scheme
+    gives each source an anchor in the page it assembles into, and a citation
+    with `cite = "view"` points at it."""
+    root = _document_project(project, monkeypatch)
+    scheme = config.current().schemes["DP"]
+    page = adr_index.render_document(scheme, adr_index.load_scheme(scheme))
+    assert '<a id="dp-1"></a>' in page
+    assert "<a name=" not in page
+
+
+def test_an_anchor_reachable_only_by_name_is_a_finding(project, monkeypatch):
+    """A hand-written `<a name=>` in prose somebody links to. The generator
+    cannot be the only thing that knows this rule, or the next hand-written
+    anchor puts the bug back."""
+    root = _linked_pair(project, monkeypatch, '<a name="here"></a>')
+    errors: list[str] = []
+    lint.check_anchors(errors)
+    assert any("here" in e and "luria link --fix" in e for e in errors), errors
+
+
+def test_an_anchor_that_is_an_id_is_silent(project, monkeypatch):
+    root = _linked_pair(project, monkeypatch, '<a id="here"></a>')
+    errors: list[str] = []
+    lint.check_anchors(errors)
+    assert errors == [], errors
+
+
+def test_a_fragment_naming_a_heading_is_silent(project, monkeypatch):
+    """A heading gets an `id` from every renderer there is. Only an explicit
+    anchor can be addressable in one place and not another."""
+    root = _linked_pair(project, monkeypatch, "## Here", frag="here")
+    errors: list[str] = []
+    lint.check_anchors(errors)
+    assert errors == [], errors
+
+
+def test_the_fixer_rewrites_the_anchor_it_named(project, monkeypatch):
+    """`--fix` repairs the TARGET, because that is where the defect is: the
+    link is spelled correctly and the thing it names cannot be found."""
+    root = _linked_pair(project, monkeypatch, '<a name="here"></a>')
+    from luria import link_refs
+    assert link_refs.fix_anchors(fix=True)
+    assert '<a id="here"></a>' in (root / "docs" / "target.md").read_text()
+    errors: list[str] = []
+    lint.check_anchors(errors)
+    assert errors == [], errors
+
+
+def test_a_view_is_named_as_the_generators_to_fix(project, monkeypatch):
+    """The defect is the same and the remedy is not. An edit written into a
+    view is erased by the next build, so a finding that said `luria link
+    --fix` would be sending the reader to make a change that vanishes."""
+    root = _journal_project(project, monkeypatch)
+    book = root / "docs" / "devlog" / "2026-09.md"
+    book.parent.mkdir(parents=True, exist_ok=True)
+    book.write_text('# Book\n\n<a name="20260901120000"></a>\n\n## An entry\n')
+    (root / "record" / "decisions.d" / "ADR-001.md").write_text(
+        "---\nstatus: Active\ntitle: 'A decision'\nversion: 1\ntags:\n- x\n"
+        "date: '2026-01-01'\n---\n\n# ADR-001: A decision\n\n"
+        "See [the entry](../../docs/devlog/2026-09.md#20260901120000).\n")
+    config.reset()
+    errors: list[str] = []
+    lint.check_anchors(errors)
+    assert any("luria index" in e for e in errors), errors
+    assert not any("link --fix" in e for e in errors), errors
+
+    # And the fixer leaves it exactly as it is.
+    from luria import link_refs
+    before = book.read_text()
+    assert link_refs.fix_anchors(fix=True) == 0
+    assert book.read_text() == before
+
+
+def test_a_view_linking_into_a_view_is_seen(project, monkeypatch):
+    """The motivating case, and the one a source-only scan cannot reach: a
+    journal's index links into its books, and both are generated. 55 such
+    links sat in this project's own devlog for as long as the journal has
+    existed, and every reference check in the tool read past them."""
+    root = _journal_project(project, monkeypatch)
+    out = root / "docs" / "devlog"
+    out.mkdir(parents=True, exist_ok=True)
+    (out / "2026-09.md").write_text(
+        '# Book\n\n<a name="20260901120000"></a>\n\n## An entry\n')
+    (out / "README.md").write_text(
+        "# Development log\n\n"
+        "- [An entry](2026-09.md#20260901120000)\n")
+    config.reset()
+    errors: list[str] = []
+    lint.check_anchors(errors)
+    assert len(errors) == 1, errors
+    assert "docs/devlog/README.md" in errors[0]
+    assert "luria index" in errors[0]
+
+
+# --- fixtures -------------------------------------------------------------
+
+def _extend(root: Path, extra: dict) -> None:
+    path = root / "luria.yaml"
+    path.write_text(merged(path.read_text(), extra))
+    config.reset()
+
+
+def _journal_project(root: Path, monkeypatch) -> Path:
+    _extend(root, {"journals": {"devlog": {
+        "dir": "record/devlog.d", "output": "docs/devlog",
+        "granularity": "month", "title": "Development log"}}})
+    d = root / "record" / "devlog.d" / "2026" / "09" / "01"
+    d.mkdir(parents=True)
+    (d / "120000.md").write_text(
+        "---\ncreated: '2026-09-01 12:00:00'\ntitle: 'An entry'\n---\n\nBody.\n")
+    config.reset()
+    return root
+
+
+def _document_project(root: Path, monkeypatch) -> Path:
+    _extend(root, {"schemes": {"DP": {
+        "dir": "record/principles.d", "output": "docs/design-principles.md",
+        "render": "document"}}})
+    d = root / "record" / "principles.d"
+    d.mkdir(parents=True, exist_ok=True)
+    (d / "DP-001.md").write_text(
+        "---\nstatus: Active\ntitle: 'A principle'\nversion: 1\n"
+        "date: '2026-01-01'\n---\n\n# DP-001: A principle\n\nBody.\n")
+    config.reset()
+    return root
+
+
+def _linked_pair(root: Path, monkeypatch, anchor: str, frag: str = "here") -> Path:
+    (root / "docs").mkdir(exist_ok=True)
+    (root / "docs" / "target.md").write_text(f"# Target\n\n{anchor}\n\nBody.\n")
+    (root / "docs" / "source.md").write_text(
+        f"# Source\n\nSee [the thing](target.md#{frag}).\n")
+    (root / "docs" / "README.md").write_text(
+        "# Docs\n\n- [Target](target.md)\n- [Source](source.md)\n")
+    config.reset()
+    return root

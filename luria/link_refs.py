@@ -18,6 +18,10 @@ with `--fix` instead of hand-editing (ADR-005).
 behaviour, for a run that must touch nothing but link text.
 """
 
+# inactive-ok-file: ADR-tmp1wx7r — Proposed. Every mention names it as the
+# decision this file implements or is written against; the citation is to
+# the reasoning, not a claim the decision is settled.
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -54,6 +58,36 @@ def linkify_files(paths: list[Path], fix: bool = False) -> tuple[int, list[Path]
     return total, written
 
 
+def fix_anchors(fix: bool = False) -> int:
+    """Rewrite every `<a name=>` something links to into an `<a id=>`.
+
+    Whole-record rather than per-path, and it edits the TARGET: the link is
+    spelled correctly and the thing it names cannot be found, so narrowing
+    to the files named on the command line would repair the half of a pair
+    the defect is not in (ADR-tmp1wx7r).
+
+    Returns the number of files changed — or that would change."""
+    from . import anchors as anchors_mod
+    cfg = current()
+    wanted: dict[Path, set[str]] = {}
+    for f in anchors_mod.scan(doc_refs.doc_files(views=True), cfg.is_generated,
+                                   cfg.link_base):
+        # Never a view: the next `luria index` overwrites it, so a repair
+        # written there is a repair that vanishes. The generator emits `id`.
+        if not f.generated:
+            wanted.setdefault(f.target, set()).add(f.fragment)
+    changed = 0
+    for target, fragments in wanted.items():
+        text = target.read_text(encoding="utf-8")
+        fresh = anchors_mod.repair(text, fragments)
+        if fresh == text:
+            continue
+        changed += 1
+        if fix:
+            target.write_text(fresh, encoding="utf-8")
+    return changed
+
+
 def run(*paths: str, fix: bool = False, links_only: bool = False) -> None:
     """Rewrite bare references as links and complete declared relations —
     every doc, or just PATHS. Reports what would change; --fix writes it.
@@ -65,6 +99,11 @@ def run(*paths: str, fix: bool = False, links_only: bool = False) -> None:
     total, _ = linkify_files(files, fix)
     verb = "linked" if fix else "would link"
     print(f"{verb} {total} reference(s) in {len(files)} file(s)")
+    if repaired := fix_anchors(fix):
+        did = "rewrote" if fix else "would rewrite"
+        print(f"{did} a reachable anchor in {repaired} file(s) — "
+              f"`<a name=>` is addressable on a real navigation and not in a "
+              f"published site's router")
     if links_only:
         return
     repairs = relations.complete(fix=fix)
