@@ -157,6 +157,8 @@ def test_one_pass_reports_fields_and_groups_together(tmp_path, monkeypatch):
                    """
                    schemes:
                      SOTA:
+                       requires:
+                       - arxiv
                        references:
                          source:
                            scheme: LIT
@@ -240,6 +242,8 @@ def test_a_finding_names_the_key_that_declared_the_obligation(tmp_path, monkeypa
                    """
                    schemes:
                      SOTA:
+                       requires:
+                       - arxiv
                        references:
                          source:
                            scheme: LIT
@@ -259,6 +263,8 @@ def test_a_merged_obligation_names_both_keys(tmp_path, monkeypatch):
                    """
                    schemes:
                      SOTA:
+                       requires:
+                       - source
                        references:
                          source:
                            scheme: LIT
@@ -296,6 +302,8 @@ def test_describe_is_one_renderer_for_the_whole_contract(tmp_path, monkeypatch):
             """
             schemes:
               SOTA:
+                requires:
+                - arxiv
                 references:
                   source:
                     scheme: LIT
