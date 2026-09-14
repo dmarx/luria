@@ -32,21 +32,31 @@ def project(tmp_path, monkeypatch):
     """A minimal but complete record, for tests that need a controlled tree."""
     (tmp_path / "docs" / "decisions").mkdir(parents=True)
     # `status:` is a field a scheme declares (#181), so a record that wants
-    # its words checked says which vocabulary backs them.
+    # its words checked says which vocabulary backs them — and since
+    # ADR-tmp8hp25 the words themselves live in the config, named once, so
+    # that two schemes can share them.
     (tmp_path / "record" / "decisions.d").mkdir(parents=True, exist_ok=True)
-    (tmp_path / "record" / "decisions.d" / "statuses.yaml").write_text(
-        "Active:\n  blurb: in force\nProposed:\n  blurb: not yet\n"
-        "Deferred:\n  blurb: parked\nSuperseded:\n  blurb: replaced\n"
-        "Rejected:\n  blurb: declined\n"
-    )
-    (tmp_path / "luria.toml").write_text(
-        '[luria]\nissue_url = "https://example.test/issues/{n}"\n'
-        # Declaring a family replaces the shipped one (ADR-047), so the
-        # scheme is written out whole rather than having a `fields` table
-        # bolted onto a default that then vanishes.
-        '[luria.schemes.ADR]\ndir = "record/decisions.d"\n'
-        'output = "docs/decisions"\nactive = "Active"\nrender = "index"\n'
-        '[luria.schemes.ADR.fields.status]\nvocabulary = "statuses"\n'
+    (tmp_path / "luria.yaml").write_text(
+        """
+        issue_url: https://example.test/issues/{n}
+        vocabularies:
+          record-statuses:
+            Active: {blurb: in force}
+            Proposed: {blurb: not yet}
+            Deferred: {blurb: parked}
+            Superseded: {blurb: replaced}
+            Rejected: {blurb: declined}
+        schemes:
+          ADR:
+            dir: record/decisions.d
+            output: docs/decisions
+            active: Active
+            render: index
+            statuses: record-statuses
+            fields:
+              status:
+                vocabulary: record-statuses
+        """
     )
     (tmp_path / "docs" / "design-principles.md").write_text(
         "# Design principles\n\n## 1. First value\n\nBody.\n"

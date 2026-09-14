@@ -6,7 +6,7 @@ findings about a form nobody filed.
 
 But that exemption made it the only file in the record that states the schema
 and is never compared to it — and it is the file every document is a copy of.
-A drift between `luria.toml` and the template does not produce one wrong
+A drift between `luria.yaml` and the template does not produce one wrong
 document; it produces every subsequent document, in the wrong shape, with the
 lint reporting each of them as fine, because each of them is.
 
@@ -14,6 +14,8 @@ Shape only. Values stay placeholders.
 """
 
 from __future__ import annotations
+
+from _config import merged
 
 from pathlib import Path
 
@@ -30,17 +32,14 @@ def write(root: Path, rel: str, text: str) -> Path:
 
 
 def project(tmp_path, monkeypatch, sota_extra: str = "") -> Path:
-    write(tmp_path, "luria.toml", f"""
-[luria]
-issue_url = "https://example.test/issues/{{n}}"
-
-[luria.schemes.LIT]
-dir = "record/literature.d"
-
-[luria.schemes.SOTA]
-dir = "record/practices.d"
-{sota_extra}
-""")
+    write(tmp_path, "luria.yaml", merged("""
+                                  issue_url: https://example.test/issues/{n}
+                                  schemes:
+                                    LIT:
+                                      dir: record/literature.d
+                                    SOTA:
+                                      dir: record/practices.d
+                                  """, sota_extra))
     monkeypatch.setenv("LURIA_ROOT", str(tmp_path))
     config.reset()
     return tmp_path
@@ -53,10 +52,23 @@ def template(root: Path, scheme_dir: str, *fields: str) -> Path:
     return write(root, f"{scheme_dir}/_template.md", "\n".join(front) + "\n")
 
 
-PLURAL = ('[luria.schemes.SOTA.references]\n'
-          'source = { scheme = "LIT", required = true, many = true }')
-SCALAR = ('[luria.schemes.SOTA.references]\n'
-          'source = { scheme = "LIT", required = true }')
+PLURAL = ("""
+schemes:
+  SOTA:
+    references:
+      source:
+        scheme: LIT
+        required: true
+        many: true
+""")
+SCALAR = ("""
+schemes:
+  SOTA:
+    references:
+      source:
+        scheme: LIT
+        required: true
+""")
 
 
 def test_a_scalar_scaffold_for_a_plural_field_is_a_finding(tmp_path, monkeypatch):
@@ -105,8 +117,15 @@ def test_an_optional_field_missing_from_the_form_is_clean(tmp_path, monkeypatch)
     author's to add, and demanding it in the template would make every
     document carry an empty key."""
     root = project(tmp_path, monkeypatch,
-                   '[luria.schemes.SOTA.references]\n'
-                   'source = { scheme = "LIT", required = false, many = true }')
+                   """
+                   schemes:
+                     SOTA:
+                       references:
+                         source:
+                           scheme: LIT
+                           required: false
+                           many: true
+                   """)
     template(root, "record/practices.d")
     assert templates.rows() == []
 
@@ -116,8 +135,15 @@ def test_an_optional_field_present_in_the_wrong_shape_is_still_a_finding(
     """Absent is the author's choice; present-and-wrong is copied into every
     document."""
     root = project(tmp_path, monkeypatch,
-                   '[luria.schemes.SOTA.references]\n'
-                   'source = { scheme = "LIT", required = false, many = true }')
+                   """
+                   schemes:
+                     SOTA:
+                       references:
+                         source:
+                           scheme: LIT
+                           required: false
+                           many: true
+                   """)
     template(root, "record/practices.d", "source: LIT-000")
     assert len(templates.rows()) == 1
 
@@ -198,8 +224,15 @@ def test_a_conditionally_required_field_is_demanded_at_the_forms_own_status(
     scheme must say what would settle it — so the form has to prompt for it
     (#170 meeting #169)."""
     root = project(tmp_path, monkeypatch,
-                   '[luria.schemes.SOTA.fields.promote_when]\n'
-                   'required_when = { status = ["Proposed"] }\n')
+                   """
+                   schemes:
+                     SOTA:
+                       fields:
+                         promote_when:
+                           required_when:
+                             status:
+                             - Proposed
+                   """)
     template(root, "record/practices.d")
     rows = templates.rows()
     assert len(rows) == 1 and "promote_when" in rows[0]
@@ -208,7 +241,14 @@ def test_a_conditionally_required_field_is_demanded_at_the_forms_own_status(
 def test_it_is_not_demanded_when_the_form_starts_elsewhere(
         tmp_path, monkeypatch):
     root = project(tmp_path, monkeypatch,
-                   '[luria.schemes.SOTA.fields.promote_when]\n'
-                   'required_when = { status = ["Deferred"] }\n')
+                   """
+                   schemes:
+                     SOTA:
+                       fields:
+                         promote_when:
+                           required_when:
+                             status:
+                             - Deferred
+                   """)
     template(root, "record/practices.d")
     assert templates.rows() == []

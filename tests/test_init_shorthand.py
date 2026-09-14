@@ -3,7 +3,7 @@
 The conventional scheme table is four lines and three of them follow from the
 prefix, which makes them the first thing a new project types and the part with
 no decision in it. The shorthand is an argument rather than a stored format:
-what lands in `luria.toml` is the ordinary explicit table, so nothing reads the
+what lands in `luria.yaml` is the ordinary explicit table, so nothing reads the
 shorthand back and a reader of the config sees what every other project sees.
 """
 
@@ -80,8 +80,11 @@ def test_the_config_it_writes_is_ordinary_toml(tmp_path):
     """No shorthand survives into the file — the whole design. A reader of
     this config sees what every other project's config looks like."""
     scaffold(tmp_path, schemes="RFC:document")
-    text = (tmp_path / "luria.toml").read_text()
-    assert "[luria.schemes.RFC]" in text
+    text = (tmp_path / "luria.yaml").read_text()
+    assert """
+           schemes:
+             RFC: {}
+           """ in text
     assert 'render = "document"' in text
     assert "--schemes" not in text
 
@@ -109,7 +112,9 @@ def test_shorthand_against_an_existing_config_is_refused(tmp_path):
     """The shorthand extends the shipped template. Where a config already
     exists the shape is somebody's decision, and appending to it from a flag
     would edit a file the project owns."""
-    (tmp_path / "luria.toml").write_text('[luria]\nissue_url = ""\n')
+    (tmp_path / "luria.yaml").write_text("""
+                                         issue_url: ''
+                                         """)
     with pytest.raises(SystemExit, match="already exists"):
         init.plan(tmp_path, schemes="RFC")
 
@@ -204,7 +209,7 @@ def test_an_explicit_url_wins(tmp_path):
 
 def test_it_writes_the_config_and_nothing_else(tmp_path):
     init.config_run(into=str(tmp_path), schemes="RFC")
-    assert (tmp_path / "luria.toml").exists()
+    assert (tmp_path / "luria.yaml").exists()
     assert not (tmp_path / "record").exists(), "no scaffold"
     assert not (tmp_path / "docs").exists()
 
@@ -214,19 +219,19 @@ def test_the_file_is_what_init_would_have_written(tmp_path, monkeypatch):
     the config and then inits gets a shape neither of them described."""
     init.config_run(into=str(tmp_path), schemes="RFC:document",
                     journals="incidents:day")
-    written = (tmp_path / "luria.toml").read_text()
+    written = (tmp_path / "luria.yaml").read_text()
 
     other = tmp_path / "other"
     other.mkdir()
     planned = dict(init.plan(other, None, "", "RFC:document", "incidents:day"))
-    assert planned[other / "luria.toml"] == written
+    assert planned[other / "luria.yaml"] == written
 
 
 def test_editing_it_then_initing_scaffolds_the_edit(tmp_path, monkeypatch):
     """The flow this exists for: rename a directory before anything is
     created, rather than moving it afterwards."""
     init.config_run(into=str(tmp_path), schemes="RFC")
-    cfg_file = tmp_path / "luria.toml"
+    cfg_file = tmp_path / "luria.yaml"
     cfg_file.write_text(cfg_file.read_text().replace(
         'dir    = "record/rfcs.d"', 'dir    = "record/proposals.d"'))
 
@@ -239,27 +244,37 @@ def test_editing_it_then_initing_scaffolds_the_edit(tmp_path, monkeypatch):
 
 
 def test_it_refuses_to_overwrite(tmp_path):
-    (tmp_path / "luria.toml").write_text('[luria]\nissue_url = ""\n')
+    (tmp_path / "luria.yaml").write_text("""
+                                         issue_url: ''
+                                         """)
     with pytest.raises(SystemExit, match="already started"):
         init.config_run(into=str(tmp_path))
 
 
 def test_stdout_prints_without_writing(tmp_path, capsys):
     init.config_run(into=str(tmp_path), schemes="RFC", stdout=True)
-    assert "[luria.schemes.RFC]" in capsys.readouterr().out
-    assert not (tmp_path / "luria.toml").exists()
+    assert """
+           schemes:
+             RFC: {}
+           """ in capsys.readouterr().out
+    assert not (tmp_path / "luria.yaml").exists()
 
 
 def test_stdout_works_over_an_existing_config(tmp_path, capsys):
     """Looking is not writing, so the refusal above does not apply — this is
     how you see what the shorthand would have produced."""
-    (tmp_path / "luria.toml").write_text('[luria]\nissue_url = ""\n')
+    (tmp_path / "luria.yaml").write_text("""
+                                         issue_url: ''
+                                         """)
     init.config_run(into=str(tmp_path), schemes="RFC", stdout=True)
-    assert "[luria.schemes.RFC]" in capsys.readouterr().out
+    assert """
+           schemes:
+             RFC: {}
+           """ in capsys.readouterr().out
 
 
 def test_it_infers_the_issue_url_too(tmp_path):
     repo(tmp_path, "git@github.com:acme/widgets.git")
     init.config_run(into=str(tmp_path))
     assert 'issue_url = "https://github.com/acme/widgets/issues/{n}"' in \
-        (tmp_path / "luria.toml").read_text()
+        (tmp_path / "luria.yaml").read_text()

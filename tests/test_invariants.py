@@ -8,6 +8,8 @@ was wrong.
 
 from __future__ import annotations
 
+from _config import merged
+
 from pathlib import Path
 
 from luria import config, invariants, reports
@@ -21,19 +23,34 @@ def write(root: Path, rel: str, text: str) -> Path:
 
 
 RELATIONS = """
-[luria.schemes.LIT.references]
-extends = { scheme = "LIT", required = false, many = true, converse = "extended_by" }
-extended_by = { scheme = "LIT", required = false, many = true, converse = "extends" }
-compared_against = { scheme = "LIT", required = false, many = true, converse = "compared_against" }
+schemes:
+  LIT:
+    references:
+      extends:
+        scheme: LIT
+        required: false
+        many: true
+        converse: extended_by
+      extended_by:
+        scheme: LIT
+        required: false
+        many: true
+        converse: extends
+      compared_against:
+        scheme: LIT
+        required: false
+        many: true
+        converse: compared_against
 """
 
 CHAIN = """
-[luria.chains.lineage]
-scheme    = "LIT"
-relation  = "extends"
-sibling   = "compared_against"
-output    = "docs/lineage.md"
-invariant = "tags"
+chains:
+  lineage:
+    scheme: LIT
+    relation: extends
+    sibling: compared_against
+    output: docs/lineage.md
+    invariant: tags
 """
 
 # The same chain, declaring nothing about any field.
@@ -41,15 +58,13 @@ SILENT = CHAIN.replace('invariant = "tags"\n', "")
 
 
 def project(tmp_path, monkeypatch, extra: str = RELATIONS + CHAIN) -> Path:
-    write(tmp_path, "luria.toml", f"""
-[luria]
-issue_url = "https://example.test/issues/{{n}}"
-
-[luria.schemes.LIT]
-dir = "record/literature.d"
-output = "docs/literature"
-{extra}
-""")
+    write(tmp_path, "luria.yaml", merged("""
+                                  issue_url: https://example.test/issues/{n}
+                                  schemes:
+                                    LIT:
+                                      dir: record/literature.d
+                                      output: docs/literature
+                                  """, extra))
     monkeypatch.setenv("LURIA_ROOT", str(tmp_path))
     config.reset()
     return tmp_path

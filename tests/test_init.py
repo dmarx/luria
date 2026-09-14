@@ -25,21 +25,21 @@ def test_a_kept_claude_md_gets_the_map_pointer(tmp_path, capsys):
 
 # --- the scaffold is planned from configuration (ADR-048) ----------------
 
-CUSTOM = """\
-[luria]
-issue_url = "https://github.com/acme/team/issues/{n}"
-[luria.schemes.RFC]
-dir = "record/rfcs.d"
-output = "docs/rfcs"
-# `status:` is a field a scheme declares (#181). The scaffold writes the
-# vocabulary file; this says which field it backs.
-[luria.schemes.RFC.fields.status]
-vocabulary = "statuses"
-[luria.journals.incidents]
-dir = "record/incidents.d"
-output = "docs/incidents"
-granularity = "year"
-title = "Incident log"
+CUSTOM = """
+issue_url: https://github.com/acme/team/issues/{n}
+schemes:
+  RFC:
+    dir: record/rfcs.d
+    output: docs/rfcs
+    fields:
+      status:
+        vocabulary: statuses
+journals:
+  incidents:
+    dir: record/incidents.d
+    output: docs/incidents
+    granularity: year
+    title: Incident log
 """
 
 
@@ -72,7 +72,7 @@ def test_init_config_scaffolds_the_declared_shape(tmp_path, monkeypatch):
     into.mkdir()
     init.run(into=str(into), config=str(src))
 
-    assert (into / "luria.toml").read_text() == CUSTOM
+    assert (into / "luria.yaml").read_text() == CUSTOM
     assert (into / "record" / "rfcs.d" / "_template.md").exists()
     assert (into / "record" / "rfcs.d" / "README.stub").exists()
     assert (into / "record" / "incidents.d" / "_template.md").exists()
@@ -96,7 +96,9 @@ def test_init_config_refuses_a_project_that_already_has_one(tmp_path):
     record would build directories the project's own machinery doesn't know
     about — an error, not a skip."""
     import pytest
-    (tmp_path / "luria.toml").write_text('[luria]\nissue_url = ""\n')
+    (tmp_path / "luria.yaml").write_text("""
+                                         issue_url: ''
+                                         """)
     src = tmp_path / "other.toml"
     src.write_text(CUSTOM)
     with pytest.raises(SystemExit):
@@ -104,11 +106,11 @@ def test_init_config_refuses_a_project_that_already_has_one(tmp_path):
 
 
 def test_init_scaffolds_from_the_projects_own_config(tmp_path):
-    """A project that already has a `luria.toml` gets that config's shape,
+    """A project that already has a `luria.yaml` gets that config's shape,
     not the template's. This was the old wart: init used to copy the fixed
     tree regardless, scaffolding decision directories for a record whose
     config declared none."""
-    (tmp_path / "luria.toml").write_text(CUSTOM)
+    (tmp_path / "luria.yaml").write_text(CUSTOM)
     init.run(into=str(tmp_path))
     assert (tmp_path / "record" / "rfcs.d" / "_template.md").exists()
     assert not (tmp_path / "record" / "decisions.d").exists()
@@ -119,7 +121,7 @@ def test_generic_template_matches_new_entrys_contract(tmp_path, monkeypatch):
     (ADR-036); a scaffolded template that misspelled it would copy the
     placeholder into every real document."""
     from luria import new
-    (tmp_path / "luria.toml").write_text(CUSTOM)
+    (tmp_path / "luria.yaml").write_text(CUSTOM)
     init.run(into=str(tmp_path))
     repoint(tmp_path, monkeypatch)
     text = new.new_entry("rfc", {}, None).read_text()
@@ -135,7 +137,7 @@ def test_generated_stub_placeholders_are_single_braced(tmp_path):
     The hand-shipped decisions stub uses single braces and was always right;
     this pins the generated ones to the same spelling.
     """
-    (tmp_path / "luria.toml").write_text(CUSTOM)
+    (tmp_path / "luria.yaml").write_text(CUSTOM)
     init.run(into=str(tmp_path))
     stub = (tmp_path / "record" / "rfcs.d" / "README.stub").read_text()
     assert "{categories}" in stub and "{table}" in stub

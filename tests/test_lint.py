@@ -15,6 +15,7 @@ agree. So the guard needs firing, not just provisioning
 
 # unresolved-ok-file: ADR-tmpabcde — a fixture temporary code, deliberately
 # naming no document: what is under test is the shape reaching a workflow file.
+from _config import merged
 import sys
 
 import pytest
@@ -24,6 +25,15 @@ REPO = Path(__file__).resolve().parents[1]
 
 from luria import lint  # noqa: E402
 from tests import _scheme  # noqa: E402
+
+
+def _listed(raw: str) -> list[str]:
+    """`'"a", "b"'` -> `["a", "b"]`.
+
+    The fixtures built a TOML array by interpolating its innards. A YAML config
+    takes the list itself, so the parsing that used to happen in the config
+    parser happens here."""
+    return [x.strip().strip('"\'') for x in raw.split(",") if x.strip()]
 
 
 def errors_for(project) -> list[str]:
@@ -68,12 +78,20 @@ def test_a_body_with_no_heading_is_not_a_disagreement(project):
 def test_the_check_covers_every_scheme(project):
     """Not just decisions — a principle's title drifts the same way, and more
     often, because principles are expected to be reworded (ADR-012)."""
-    (project / "luria.toml").write_text(
-        '[luria]\nissue_url = "https://example.test/issues/{n}"\n'
-        '[luria.schemes.ADR]\ndir = "docs/decisions"\n'
-        '[luria.schemes.VP]\ndir = "docs/values"\n'
-        'render = "document"\noutput = "docs/values.md"\n'
-        '[luria.schemes.VP.fields.status]\nvocabulary = "statuses"\n')
+    (project / "luria.yaml").write_text(
+        """
+        issue_url: https://example.test/issues/{n}
+        schemes:
+          ADR:
+            dir: docs/decisions
+          VP:
+            dir: docs/values
+            render: document
+            output: docs/values.md
+            fields:
+              status:
+                vocabulary: statuses
+        """)
     path = project / "docs" / "values" / "VP-001.md"
     path.parent.mkdir(parents=True, exist_ok=True)
     (path.parent / "statuses.yaml").write_text("Active:\n  blurb: in force\n")
@@ -90,9 +108,14 @@ def test_the_check_covers_every_scheme(project):
 
 
 def journal_project(project) -> Path:
-    (project / "luria.toml").write_text(
-        '[luria]\nissue_url = "https://example.test/issues/{n}"\n'
-        '[luria.journals.devlog]\ndir = "devlog.d"\noutput = "docs/devlog"\n')
+    (project / "luria.yaml").write_text(
+        """
+        issue_url: https://example.test/issues/{n}
+        journals:
+          devlog:
+            dir: devlog.d
+            output: docs/devlog
+        """)
     from luria import config
     config.reset()
     return project / "devlog.d"
@@ -224,10 +247,14 @@ def test_a_hand_written_file_in_a_view_dir_is_a_violation(project):
     property, and its failure polarity points the right way — the stray file
     fails the build rather than quietly surviving beside the views."""
     from luria import config
-    (project / "luria.toml").write_text(
-        '[luria]\nissue_url = "https://example.test/issues/{n}"\n'
-        '[luria.schemes.ADR]\ndir = "record/decisions.d"\n'
-        'output = "docs/decisions"\n')
+    (project / "luria.yaml").write_text(
+        """
+        issue_url: https://example.test/issues/{n}
+        schemes:
+          ADR:
+            dir: record/decisions.d
+            output: docs/decisions
+        """)
     config.reset()
     from tests import _scheme
     _scheme.decision(project, 1, "Active")
@@ -249,10 +276,14 @@ def test_a_stale_view_is_not_the_lint_s_question(project):
     there as it is. `luria index --check` asks the question on the default
     branch (ADR-068)."""
     from luria import adr_index, config
-    (project / "luria.toml").write_text(
-        '[luria]\nissue_url = "https://example.test/issues/{n}"\n'
-        '[luria.schemes.ADR]\ndir = "record/decisions.d"\n'
-        'output = "docs/decisions"\n')
+    (project / "luria.yaml").write_text(
+        """
+        issue_url: https://example.test/issues/{n}
+        schemes:
+          ADR:
+            dir: record/decisions.d
+            output: docs/decisions
+        """)
     config.reset()
     from tests import _scheme
     _scheme.decision(project, 1, "Active")
@@ -267,10 +298,14 @@ def test_a_view_the_generator_no_longer_writes_is_not_a_stray(project):
     hand-written one: main's copy of a tag page for a tag the branch
     dropped, say. `luria index` deletes it where views are committed."""
     from luria import config
-    (project / "luria.toml").write_text(
-        '[luria]\nissue_url = "https://example.test/issues/{n}"\n'
-        '[luria.schemes.ADR]\ndir = "record/decisions.d"\n'
-        'output = "docs/decisions"\n')
+    (project / "luria.yaml").write_text(
+        """
+        issue_url: https://example.test/issues/{n}
+        schemes:
+          ADR:
+            dir: record/decisions.d
+            output: docs/decisions
+        """)
     config.reset()
     from tests import _scheme
     _scheme.decision(project, 1, "Active")
@@ -291,9 +326,9 @@ def dial_project(project, fail_on: str = "", mute: str = "") -> None:
     page = project / "docs" / "notes.md"
     page.parent.mkdir(parents=True, exist_ok=True)
     page.write_text("Still leaning on ADR-012 here.\n")
-    (project / "luria.toml").write_text(
-        '[luria]\nissue_url = "https://example.test/issues/{n}"\n'
-        f'[luria.lint]\nfail_on = [{fail_on}]\nmute = [{mute}]\n')
+    (project / "luria.yaml").write_text(
+        merged("issue_url: https://example.test/issues/{n}\n",
+               {"lint": {"fail_on": _listed(fail_on), "mute": _listed(mute)}}))
     from luria import config
     config.reset()
 
@@ -356,9 +391,13 @@ def test_a_wrong_notch_is_an_error(project, capsys):
 
 def test_pending_documents_can_be_promoted(project, capsys):
     _scheme.decision(project, 2, "Proposed")
-    (project / "luria.toml").write_text(
-        '[luria]\nissue_url = "https://example.test/issues/{n}"\n'
-        '[luria.lint]\nfail_on = ["pending-documents"]\n')
+    (project / "luria.yaml").write_text(
+        """
+        issue_url: https://example.test/issues/{n}
+        lint:
+          fail_on:
+          - pending-documents
+        """)
     from luria import config
     config.reset()
     errors, _ = dial_errors(capsys)
@@ -372,7 +411,7 @@ def workflow_project(project, text: str, fail_on: str = "") -> None:
     wf = project / ".github" / "workflows" / "docs.yml"
     wf.parent.mkdir(parents=True)
     wf.write_text(text)
-    (project / "luria.toml").write_text(
+    (project / "luria.yaml").write_text(
         '[luria]\nissue_url = "https://example.test/issues/{n}"\n'
         f'[luria.lint]\nfail_on = [{fail_on}]\n')
     from luria import config
@@ -409,10 +448,14 @@ def test_a_numbered_code_in_a_workflow_is_fine(project):
 
 def formed_project(project, template_summary: str) -> None:
     from luria import config
-    (project / "luria.toml").write_text(
-        '[luria]\nissue_url = "https://example.test/issues/{n}"\n'
-        '[luria.schemes.ADR]\ndir = "record/decisions.d"\n'
-        'output = "docs/decisions"\n')
+    (project / "luria.yaml").write_text(
+        """
+        issue_url: https://example.test/issues/{n}
+        schemes:
+          ADR:
+            dir: record/decisions.d
+            output: docs/decisions
+        """)
     config.reset()
     d = project / "record" / "decisions.d"
     d.mkdir(parents=True, exist_ok=True)

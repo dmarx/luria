@@ -15,6 +15,8 @@ one set of literal values; deliberately not an expression language.
 
 from __future__ import annotations
 
+from _config import merged
+
 from pathlib import Path
 
 import pytest
@@ -29,22 +31,27 @@ def write(root: Path, rel: str, text: str) -> Path:
     return path
 
 
-CONDITION = ('[luria.schemes.SOTA.fields.promote_when]\n'
-             'required_when = { status = ["Proposed", "Deferred"] }\n')
+CONDITION = ("""
+schemes:
+  SOTA:
+    fields:
+      promote_when:
+        required_when:
+          status:
+          - Proposed
+          - Deferred
+""")
 
 
 def project(tmp_path, monkeypatch, sota_extra: str = CONDITION) -> Path:
-    write(tmp_path, "luria.toml", f"""
-[luria]
-issue_url = "https://example.test/issues/{{n}}"
-
-[luria.schemes.LIT]
-dir = "record/literature.d"
-
-[luria.schemes.SOTA]
-dir = "record/practices.d"
-{sota_extra}
-""")
+    write(tmp_path, "luria.yaml", merged("""
+                                  issue_url: https://example.test/issues/{n}
+                                  schemes:
+                                    LIT:
+                                      dir: record/literature.d
+                                    SOTA:
+                                      dir: record/practices.d
+                                  """, sota_extra))
     monkeypatch.setenv("LURIA_ROOT", str(tmp_path))
     config.reset()
     return tmp_path
@@ -111,9 +118,17 @@ def test_it_composes_with_a_reference_declaration(tmp_path, monkeypatch):
     """`required_when` is a property of a field, so it applies to a typed one
     the same way."""
     project(tmp_path, monkeypatch,
-            '[luria.schemes.SOTA.references]\n'
-            'blocked_by = { scheme = "LIT", required = false, '
-            'required_when = { status = ["Deferred"] } }\n')
+            """
+            schemes:
+              SOTA:
+                references:
+                  blocked_by:
+                    scheme: LIT
+                    required: false
+                    required_when:
+                      status:
+                      - Deferred
+            """)
     scheme = config.current().schemes["SOTA"]
     def run(status, **extra):
         meta = {"status": status, "title": "A practice", "tags": ["record"],
@@ -132,9 +147,16 @@ def test_unconditional_and_conditional_together_is_a_config_error(
     nothing, which is the quiet failure a declaration exists to remove."""
     with pytest.raises(ValueError, match="always required"):
         project(tmp_path, monkeypatch,
-                '[luria.schemes.SOTA.fields.promote_when]\n'
-                'required = true\n'
-                'required_when = { status = ["Proposed"] }\n')
+                """
+                schemes:
+                  SOTA:
+                    fields:
+                      promote_when:
+                        required: true
+                        required_when:
+                          status:
+                          - Proposed
+                """)
         config.current()
 
 
@@ -144,8 +166,17 @@ def test_two_conditions_is_a_config_error(tmp_path, monkeypatch):
     that refuses."""
     with pytest.raises(ValueError, match="one field"):
         project(tmp_path, monkeypatch,
-                '[luria.schemes.SOTA.fields.promote_when]\n'
-                'required_when = { status = ["Proposed"], tags = ["x"] }\n')
+                """
+                schemes:
+                  SOTA:
+                    fields:
+                      promote_when:
+                        required_when:
+                          status:
+                          - Proposed
+                          tags:
+                          - x
+                """)
         config.current()
 
 
@@ -153,8 +184,14 @@ def test_an_empty_value_list_is_a_config_error(tmp_path, monkeypatch):
     """A condition that can never be true is a requirement that never fires."""
     with pytest.raises(ValueError, match="no values"):
         project(tmp_path, monkeypatch,
-                '[luria.schemes.SOTA.fields.promote_when]\n'
-                'required_when = { status = [] }\n')
+                """
+                schemes:
+                  SOTA:
+                    fields:
+                      promote_when:
+                        required_when:
+                          status: []
+                """)
         config.current()
 
 
@@ -162,8 +199,13 @@ def test_a_field_table_declaring_nothing_is_still_an_error(
         tmp_path, monkeypatch):
     with pytest.raises(ValueError, match="declares no type"):
         project(tmp_path, monkeypatch,
-                '[luria.schemes.SOTA.fields.promote_when]\n'
-                'many = true\n')
+                """
+                schemes:
+                  SOTA:
+                    fields:
+                      promote_when:
+                        many: true
+                """)
         config.current()
 
 
@@ -197,16 +239,30 @@ def test_the_scheme_is_not_empty_for_a_condition_alone(tmp_path, monkeypatch):
 def test_a_misspelled_condition_field_is_refused(tmp_path, monkeypatch):
     with pytest.raises(ValueError, match="staus"):
         project(tmp_path, monkeypatch,
-                '[luria.schemes.SOTA.fields.promote_when]\n'
-                'required_when = { staus = ["Proposed"] }\n')
+                """
+                schemes:
+                  SOTA:
+                    fields:
+                      promote_when:
+                        required_when:
+                          staus:
+                          - Proposed
+                """)
         config.current()
 
 
 def test_the_refusal_names_what_the_scheme_could_have_meant(tmp_path, monkeypatch):
     with pytest.raises(ValueError, match="status"):
         project(tmp_path, monkeypatch,
-                '[luria.schemes.SOTA.fields.promote_when]\n'
-                'required_when = { staus = ["Proposed"] }\n')
+                """
+                schemes:
+                  SOTA:
+                    fields:
+                      promote_when:
+                        required_when:
+                          staus:
+                          - Proposed
+                """)
         config.current()
 
 
@@ -214,8 +270,15 @@ def test_a_miscased_status_value_is_refused(tmp_path, monkeypatch):
     """`proposed` is not a status, and a condition naming it never holds."""
     with pytest.raises(ValueError, match="proposed"):
         project(tmp_path, monkeypatch,
-                '[luria.schemes.SOTA.fields.promote_when]\n'
-                'required_when = { status = ["proposed"] }\n')
+                """
+                schemes:
+                  SOTA:
+                    fields:
+                      promote_when:
+                        required_when:
+                          status:
+                          - proposed
+                """)
         config.current()
 
 
@@ -224,8 +287,15 @@ def test_a_status_outside_what_the_scheme_declares_is_refused(
     """A scheme narrowing the vocabulary in `statuses.yaml` narrows what a
     condition on `status` can name too."""
     root = project(tmp_path, monkeypatch,
-                   '[luria.schemes.SOTA.fields.promote_when]\n'
-                   'required_when = { status = ["Deferred"] }\n')
+                   """
+                   schemes:
+                     SOTA:
+                       fields:
+                         promote_when:
+                           required_when:
+                             status:
+                             - Deferred
+                   """)
     write(root, "record/practices.d/statuses.yaml",
           "Active:\n  label: In force\nProposed:\n  label: Not yet\n")
     config.reset()
@@ -236,17 +306,32 @@ def test_a_status_outside_what_the_scheme_declares_is_refused(
 def test_a_condition_on_tags_is_accepted(tmp_path, monkeypatch):
     """`tags` is a built-in axis the scheme always has."""
     project(tmp_path, monkeypatch,
-            '[luria.schemes.SOTA.fields.promote_when]\n'
-            'required_when = { tags = ["record"] }\n')
+            """
+            schemes:
+              SOTA:
+                fields:
+                  promote_when:
+                    required_when:
+                      tags:
+                      - record
+            """)
     assert config.current().schemes["SOTA"]
 
 
 def test_a_condition_on_a_declared_reference_is_accepted(tmp_path, monkeypatch):
     project(tmp_path, monkeypatch,
-            '[luria.schemes.SOTA.references]\n'
-            'source = { scheme = "LIT" }\n\n'
-            '[luria.schemes.SOTA.fields.promote_when]\n'
-            'required_when = { source = ["LIT-001"] }\n')
+            """
+            schemes:
+              SOTA:
+                references:
+                  source:
+                    scheme: LIT
+                fields:
+                  promote_when:
+                    required_when:
+                      source:
+                      - LIT-001
+            """)
     assert config.current().schemes["SOTA"]
 
 
@@ -255,18 +340,31 @@ def test_a_condition_on_a_free_text_field_leaves_its_values_alone(
     """A field with no vocabulary has no set to check against, and refusing
     on that ground would forbid the ordinary case."""
     project(tmp_path, monkeypatch,
-            'requires = ["stage"]\n\n'
-            '[luria.schemes.SOTA.fields.promote_when]\n'
-            'required_when = { stage = ["blocked"] }\n')
+            """
+            schemes:
+              SOTA:
+                fields:
+                  promote_when:
+                    required_when:
+                      stage:
+                      - blocked
+            """)
     assert config.current().schemes["SOTA"]
 
 
 def test_a_value_outside_a_vocabulary_field_is_refused(tmp_path, monkeypatch):
     root = project(tmp_path, monkeypatch,
-                   '[luria.schemes.SOTA.fields.worlds]\n'
-                   'vocabulary = "worlds"\n\n'
-                   '[luria.schemes.SOTA.fields.promote_when]\n'
-                   'required_when = { worlds = ["C"] }\n')
+                   """
+                   schemes:
+                     SOTA:
+                       fields:
+                         worlds:
+                           vocabulary: worlds
+                         promote_when:
+                           required_when:
+                             worlds:
+                             - C
+                   """)
     write(root, "record/practices.d/worlds.yaml", "A:\n  label: A\nB:\n  label: B\n")
     config.reset()
     with pytest.raises(ValueError, match="C"):
@@ -275,10 +373,17 @@ def test_a_value_outside_a_vocabulary_field_is_refused(tmp_path, monkeypatch):
 
 def test_a_value_inside_a_vocabulary_field_is_accepted(tmp_path, monkeypatch):
     root = project(tmp_path, monkeypatch,
-                   '[luria.schemes.SOTA.fields.worlds]\n'
-                   'vocabulary = "worlds"\n\n'
-                   '[luria.schemes.SOTA.fields.promote_when]\n'
-                   'required_when = { worlds = ["B"] }\n')
+                   """
+                   schemes:
+                     SOTA:
+                       fields:
+                         worlds:
+                           vocabulary: worlds
+                         promote_when:
+                           required_when:
+                             worlds:
+                             - B
+                   """)
     write(root, "record/practices.d/worlds.yaml", "A:\n  label: A\nB:\n  label: B\n")
     config.reset()
     assert config.current().schemes["SOTA"]
@@ -291,10 +396,18 @@ def test_a_vocabulary_default_makes_the_condition_hold(tmp_path, monkeypatch):
     frontmatter made the condition never hold for precisely the documents it
     was written about."""
     root = project(tmp_path, monkeypatch,
-                   '[luria.schemes.SOTA.fields.worlds]\n'
-                   'vocabulary = "worlds"\ndefault = "B"\n\n'
-                   '[luria.schemes.SOTA.fields.promote_when]\n'
-                   'required_when = { worlds = ["B"] }\n')
+                   """
+                   schemes:
+                     SOTA:
+                       fields:
+                         worlds:
+                           vocabulary: worlds
+                           default: B
+                         promote_when:
+                           required_when:
+                             worlds:
+                             - B
+                   """)
     write(root, "record/practices.d/worlds.yaml", "A:\n  label: A\nB:\n  label: B\n")
     config.reset()
     scheme = config.current().schemes["SOTA"]
@@ -307,8 +420,15 @@ def test_a_vocabulary_default_makes_the_condition_hold(tmp_path, monkeypatch):
 def test_a_list_valued_condition_field_matches_any_element(
         tmp_path, monkeypatch):
     project(tmp_path, monkeypatch,
-            '[luria.schemes.SOTA.fields.promote_when]\n'
-            'required_when = { tags = ["record"] }\n')
+            """
+            schemes:
+              SOTA:
+                fields:
+                  promote_when:
+                    required_when:
+                      tags:
+                      - record
+            """)
     scheme = config.current().schemes["SOTA"]
     def run(tags):
         meta = {"status": "Active", "title": "A practice", "tags": tags}
@@ -322,9 +442,15 @@ def test_a_missing_condition_field_does_not_hold(tmp_path, monkeypatch):
     """Absent is "the condition is not met", not an error: the document
     check has its own finding for a missing required field."""
     project(tmp_path, monkeypatch,
-            'requires = ["stage"]\n\n'
-            '[luria.schemes.SOTA.fields.promote_when]\n'
-            'required_when = { stage = ["blocked"] }\n')
+            """
+            schemes:
+              SOTA:
+                fields:
+                  promote_when:
+                    required_when:
+                      stage:
+                      - blocked
+            """)
     scheme = config.current().schemes["SOTA"]
     meta = {"status": "Active", "title": "A practice", "tags": ["record"]}
     out = contract.violations(contract.for_scheme(scheme),

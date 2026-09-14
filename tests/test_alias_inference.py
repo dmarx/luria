@@ -9,6 +9,8 @@ specimen spelling here cannot read as a citation of any real document.
 
 from __future__ import annotations
 
+from _config import merged
+
 from pathlib import Path
 
 import pytest
@@ -24,15 +26,13 @@ def write(root: Path, rel: str, text: str) -> Path:
 
 
 def project(tmp_path, monkeypatch, alias: str = 'alias = "FXL-{authors[0]}-{year}-{number}"') -> Path:
-    write(tmp_path, "luria.toml", f"""
-[luria]
-issue_url = "https://example.test/issues/{{n}}"
-
-[luria.schemes.FXL]
-dir = "record/fixtures.d"
-output = "docs/fixtures"
-{alias}
-""")
+    write(tmp_path, "luria.yaml", merged("""
+                                  issue_url: https://example.test/issues/{n}
+                                  schemes:
+                                    FXL:
+                                      dir: record/fixtures.d
+                                      output: docs/fixtures
+                                  """, alias))
     monkeypatch.setenv("LURIA_ROOT", str(tmp_path))
     config.reset()
     aliases.reset()

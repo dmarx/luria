@@ -4,7 +4,7 @@
 to `Site` publishes a documented, defaulted, parsed setting with no further
 work — including, if nobody notices, one that nothing reads. That is worse
 than an undocumented feature: the reference tells a reader to set `graph`,
-`luria.toml` accepts it, `config.load` parses it into a `Path`, and the site
+`luria.yaml` accepts it, `config.load` parses it into a `Path`, and the site
 comes out exactly as it would have without it. Nothing fails, so nothing
 says so.
 
@@ -44,10 +44,9 @@ def test_every_site_setting_is_read_by_something():
     found = _consumers()
     unread = sorted(name for name, mods in found.items() if not mods)
     assert not unread, (
-        f"[luria.site] {', '.join(unread)} appear(s) in the schema and the "
-        "generated reference, but no module reads it. Either wire the "
-        "setting up or take it out — a documented key that does nothing is "
-        "a promise the tool does not keep.")
+        """
+        site: {}
+        """)
 
 
 def test_the_check_can_tell_a_read_field_from_an_unread_one():

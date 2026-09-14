@@ -10,6 +10,10 @@ default that is an effective value and never a rewrite.
 
 from __future__ import annotations
 
+import yaml
+
+from _config import merged
+
 from pathlib import Path
 
 import pytest
@@ -46,23 +50,20 @@ def scene(root: Path, n: int, extra: str = "") -> Path:
     return write(root, f"record/scenes.d/SCENE-{n:03d}.md", "\n".join(front) + "\n")
 
 
-def world(tmp_path, monkeypatch, table: str = 'many = true\ndefault = ["B"]',
-          vocab: str = WORLDS, name: str = "worlds", field: str | None = None,
-          extra: str = "") -> Path:
+def world(tmp_path, monkeypatch, table: dict | None = None,
+          vocab: str | None = WORLDS, name: str = "worlds",
+          field: str | None = None, extra: dict | None = None) -> Path:
     field = field or name
-    write(tmp_path, "luria.toml", f"""
-[luria]
-issue_url = "https://example.test/issues/{{n}}"
-[luria.schemes.SCENE]
-dir = "record/scenes.d"
-output = "docs/scenes"
-{extra}
-[luria.schemes.SCENE.fields.{field}]
-vocabulary = "{name}"
-{table}
-""")
+    table = {"many": True, "default": ["B"]} if table is None else table
+    cfg: dict = {"issue_url": "https://example.test/issues/{n}",
+                 "schemes": {"SCENE": {"dir": "record/scenes.d",
+                                       "output": "docs/scenes",
+                                       "fields": {field: {"vocabulary": name,
+                                                          **table}}}}}
+    # The values live in the config now, under the name the field asks for.
     if vocab is not None:
-        write(tmp_path, f"record/scenes.d/{name}.yaml", vocab)
+        cfg["vocabularies"] = {name: yaml.safe_load(vocab)}
+    write(tmp_path, "luria.yaml", merged(cfg, extra or {}))
     write(tmp_path, "docs/README.md", "# Docs\n\n- [Scenes](scenes/README.md)\n"
                                       "- [The record](record.md)\n")
     monkeypatch.setenv("LURIA_ROOT", str(tmp_path))
@@ -156,9 +157,12 @@ luria:
 
 def test_a_field_has_one_declaration(tmp_path, monkeypatch):
     world(tmp_path, monkeypatch, extra="""
-[luria.schemes.SCENE.references]
-worlds = { scheme = "SCENE" }
-""")
+                                       schemes:
+                                         SCENE:
+                                           references:
+                                             worlds:
+                                               scheme: SCENE
+                                       """)
     with pytest.raises(ValueError, match="one declaration"):
         current()
 

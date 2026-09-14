@@ -188,11 +188,17 @@ def test_outputs_covers_every_scheme(project, monkeypatch):
     from tests import _scheme
     _scheme.decision(project, 1, "Active")
     value(project, 1, "A value")
-    (project / "luria.toml").write_text(
-        '[luria]\nissue_url = "https://example.test/issues/{n}"\n'
-        '[luria.schemes.ADR]\ndir = "docs/decisions"\n'
-        '[luria.schemes.VP]\ndir = "docs/values"\n'
-        'render = "document"\noutput = "docs/values.md"\n')
+    (project / "luria.yaml").write_text(
+        """
+        issue_url: https://example.test/issues/{n}
+        schemes:
+          ADR:
+            dir: docs/decisions
+          VP:
+            dir: docs/values
+            render: document
+            output: docs/values.md
+        """)
     from luria import config
     config.reset()
 
@@ -266,10 +272,14 @@ def test_split_scheme_rows_link_into_the_source_tree(project, monkeypatch):
     prefix — the row's own link, the summary's links and the status note all
     take the same one."""
     from luria import config
-    (project / "luria.toml").write_text(
-        '[luria]\nissue_url = "https://example.test/issues/{n}"\n'
-        '[luria.schemes.ADR]\ndir = "record/decisions.d"\n'
-        'output = "docs/decisions"\n')
+    (project / "luria.yaml").write_text(
+        """
+        issue_url: https://example.test/issues/{n}
+        schemes:
+          ADR:
+            dir: record/decisions.d
+            output: docs/decisions
+        """)
     config.reset()
     from tests import _scheme
     _scheme.decision(project, 1, "Active", summary="see [ADR-002](ADR-002.md)")
@@ -287,10 +297,14 @@ def test_stub_lives_with_the_sources_and_renders_in_the_view(project):
     """The stub is authored, so it sits on the write side; the view directory
     holds only what the generator wrote (ADR-021)."""
     from luria import config
-    (project / "luria.toml").write_text(
-        '[luria]\nissue_url = "https://example.test/issues/{n}"\n'
-        '[luria.schemes.ADR]\ndir = "record/decisions.d"\n'
-        'output = "docs/decisions"\n')
+    (project / "luria.yaml").write_text(
+        """
+        issue_url: https://example.test/issues/{n}
+        schemes:
+          ADR:
+            dir: record/decisions.d
+            output: docs/decisions
+        """)
     config.reset()
     from tests import _scheme
     _scheme.decision(project, 1, "Active")
@@ -303,12 +317,18 @@ def test_stub_lives_with_the_sources_and_renders_in_the_view(project):
 
 def test_orphans_reports_strays_in_every_view_dir(project):
     from luria import config
-    (project / "luria.toml").write_text(
-        '[luria]\nissue_url = "https://example.test/issues/{n}"\n'
-        '[luria.schemes.ADR]\ndir = "record/decisions.d"\n'
-        'output = "docs/decisions"\n'
-        '[luria.journals.devlog]\ndir = "record/devlog.d"\n'
-        'output = "docs/devlog"\n')
+    (project / "luria.yaml").write_text(
+        """
+        issue_url: https://example.test/issues/{n}
+        schemes:
+          ADR:
+            dir: record/decisions.d
+            output: docs/decisions
+        journals:
+          devlog:
+            dir: record/devlog.d
+            output: docs/devlog
+        """)
     config.reset()
     from tests import _scheme
     _scheme.decision(project, 1, "Active")
@@ -327,9 +347,13 @@ def test_a_collocated_view_dir_is_not_policed(project):
     """With no separate `output` the scheme's directory holds the sources —
     calling every ADR an orphan would fail the entire pre-record layout."""
     from luria import config
-    (project / "luria.toml").write_text(
-        '[luria]\nissue_url = "https://example.test/issues/{n}"\n'
-        '[luria.schemes.ADR]\ndir = "docs/decisions"\n')
+    (project / "luria.yaml").write_text(
+        """
+        issue_url: https://example.test/issues/{n}
+        schemes:
+          ADR:
+            dir: docs/decisions
+        """)
     config.reset()
     from tests import _scheme
     _scheme.decision(project, 1, "Active")
@@ -414,10 +438,16 @@ def _rfc_project(tmp_path, monkeypatch):
     """A project whose only index scheme is RFC, so the tag page has to name
     something other than this package's own vocabulary."""
     from luria import config
-    (tmp_path / "luria.toml").write_text(
-        '[luria]\nissue_url = "https://example.test/{n}"\n'
-        '[luria.schemes.RFC]\ndir = "record/rfcs.d"\noutput = "docs/rfcs"\n'
-        'active = "Active"\nrender = "index"\n')
+    (tmp_path / "luria.yaml").write_text(
+        """
+        issue_url: https://example.test/{n}
+        schemes:
+          RFC:
+            dir: record/rfcs.d
+            output: docs/rfcs
+            active: Active
+            render: index
+        """)
     d = tmp_path / "record" / "rfcs.d"
     d.mkdir(parents=True)
     (d / "RFC-001.md").write_text(

@@ -1,0 +1,76 @@
+vocabularies:
+  lit-tags:
+    optimization:
+      label: Optimization
+      blurb: optimizers, schedules, batch size
+    stability:
+      label: Stability
+      blurb: normalization, initialization, gradient handling
+    systems:
+      label: Systems
+      blurb: hardware, kernels, memory
+  lit-statuses:
+    Active:
+      label: In the anthology
+      blurb: worth reading, whether or not a practice was drawn from it
+    Rejected:
+      label: Attic
+      blurb: retired with a reason, and the reason is kept
+    Superseded:
+      label: Superseded
+      blurb: later work covers this better, and the note names it
+  sota-statuses:
+    Active:
+      label: Current practice
+      blurb: what you should do today, and the reason is one click away
+    Deferred:
+      label: Not yet judged
+      blurb: probably right, not yet worth asserting
+    Superseded:
+      label: Replaced
+      blurb: something newer does this better, and the record says what
+issue_url: https://github.com/acme/anthology/issues/{n}
+schemes:
+  LIT:
+    dir: record/literature.d
+    output: docs/literature
+    render: index
+    field_groups:
+      source:
+        fields:
+        - arxiv
+        - doi
+        - url
+        require: at-least-one
+    fields:
+      status:
+        vocabulary: lit-statuses
+    tags: lit-tags
+    statuses: lit-statuses
+  SOTA:
+    dir: record/practices.d
+    output: docs/practices
+    render: index
+    references:
+      source:
+        scheme: LIT
+        required: true
+    tag_groups:
+      primary_topic:
+        require: exactly-one
+        tags:
+        - optimization
+        - stability
+        - systems
+    fields:
+      status:
+        vocabulary: sota-statuses
+    tags: lit-tags
+    statuses: sota-statuses
+remotes:
+  ARXIV:
+    name: arXiv
+    uid: (\d{4})[.:](\d{4,5})(v\d+)?
+    url: https://arxiv.org/abs/{1}.{2}
+site:
+  title: Knowledge base

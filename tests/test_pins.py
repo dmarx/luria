@@ -74,9 +74,14 @@ def test_a_declared_pin_url_wins_over_the_github_rebase(project):
 
 def test_a_scheme_level_pin_url_scopes_the_declaration(project):
     with_remote(project,
-        '[luria.remotes.UP.schemes.VP]\n'
-        'url = "https://up.example/values/{number}"\n'
-        'pin_url = "https://up.example/raw/values-{number}.txt"\n')
+        """
+        remotes:
+          UP:
+            schemes:
+              VP:
+                url: https://up.example/values/{number}
+                pin_url: https://up.example/raw/values-{number}.txt
+        """)
     remote = config.current().remotes["UP"]
     assert pins.stable_url(remote, "VP-18") == (
         "https://up.example/raw/values-18.txt")
@@ -203,8 +208,14 @@ def test_an_existing_pin_is_its_own_registration(project, monkeypatch):
 
 def test_a_scheme_level_declaration_scopes_the_registration(project, monkeypatch):
     """`pin = true` on one scheme covers that code family and no other."""
-    with_remote(project, '[luria.remotes.UP.schemes.RFC]\n'
-                         'dir = "docs/rfcs"\npin = true\n')
+    with_remote(project, """
+                         remotes:
+                           UP:
+                             schemes:
+                               RFC:
+                                 dir: docs/rfcs
+                                 pin: true
+                         """)
     cite(project, "per UP-RFC-7 and UP-ADR-032\n")
     serve(monkeypatch, b"body")
     pins.endorse(())
@@ -227,8 +238,15 @@ def test_a_declared_but_unpinnable_citation_names_the_remedy(project):
     """`pin = true` on a remote with no stable-bytes construction cannot be
     honoured — the row says so and names `pin_url`, instead of demanding a
     `--pin` that would refuse."""
-    with_remote(project, ARXIV.replace("[luria.remotes.ARXIV]\n",
-                                       "[luria.remotes.ARXIV]\npin = true\n"))
+    with_remote(project, ARXIV.replace("""
+                                       remotes:
+                                         ARXIV: {}
+                                       """,
+                                       """
+                                       remotes:
+                                         ARXIV:
+                                           pin: true
+                                       """))
     cite(project, "see ARXIV-2403.05530\n")
     lines = pins.drift_lines()
     assert len(lines) == 1 and "pin_url" in lines[0]
@@ -273,7 +291,11 @@ def test_remote_drift_can_be_promoted_to_a_failure(project, monkeypatch, capsys)
     """The dial works for this class like any other (ADR-035): named in
     `fail_on`, the drifted pins fail the build instead of printing."""
     from luria import lint
-    with_remote(project, '[luria.lint]\nfail_on = ["remote-drift"]\n')
+    with_remote(project, """
+                         lint:
+                           fail_on:
+                           - remote-drift
+                         """)
     cite(project, "per UP-ADR-032 upstream\n")
     remotes.write_lock(pinned={"UP": {"ADR-032": {
         "endorsed": "sha256:aaa", "seen": "sha256:bbb"}}})

@@ -250,25 +250,30 @@ def _scheme_table(prefix: str, render: str) -> str:
                if render == "document" else
                "browsed one at a time, so its view is an index plus tag pages")
     return (
-        "\n# %s — %s.\n"
-        "# The paths follow the prefix; rename them if this family is better\n"
-        "# called something other than what its codes spell.\n"
-        "[luria.schemes.%s]\n"
-        'dir    = "record/%s.d"\n'
-        'output = "%s"\n'
-        'render = "%s"\n' % (prefix, reading, prefix, slug, output, render))
+        "\n  # %s — %s.\n"
+        "  # The paths follow the prefix; rename them if this family is better\n"
+        "  # called something other than what its codes spell.\n"
+        "  %s:\n"
+        "    dir: record/%s.d\n"
+        "    output: %s\n"
+        "    render: %s\n"
+        # Every scheme names the same vocabulary rather than getting a copy
+        # of it, which is the whole point of the table being central
+        # (ADR-tmp8hp25).
+        "    statuses: record-statuses\n"
+        % (prefix, reading, prefix, slug, output, render))
 
 
 def _journal_table(name: str, granularity: str) -> str:
     title = name.replace("-", " ").replace("_", " ").capitalize()
     return (
-        "\n# %s — dated entries that persist and are never revised, collected\n"
-        "# into one book per %s.\n"
-        "[luria.journals.%s]\n"
-        'dir         = "record/%s.d"\n'
-        'output      = "docs/%s"\n'
-        'granularity = "%s"\n'
-        'title       = "%s"\n'
+        "\n  # %s — dated entries that persist and are never revised, collected\n"
+        "  # into one book per %s.\n"
+        "  %s:\n"
+        "    dir: record/%s.d\n"
+        "    output: docs/%s\n"
+        "    granularity: %s\n"
+        "    title: %s\n"
         % (name, granularity, name, name, name, granularity, title))
 
 
@@ -284,21 +289,47 @@ def shorthand_tables(text: str, schemes: str, journals: str) -> str:
     for item in (s for s in schemes.split(",") if s.strip()):
         prefix, render = _spec(item, RENDERS, "index", "scheme")
         prefix = prefix.upper()
-        if "[luria.schemes.%s]" % prefix in text:
+        if "\n  %s:\n" % prefix in text:
             raise SystemExit(
                 "luria init: the template already declares %s; drop it from "
                 "--schemes and edit the table it writes" % prefix)
         added.append(_scheme_table(prefix, render))
     for item in (s for s in journals.split(",") if s.strip()):
         name, granularity = _spec(item, GRANULARITIES, "month", "journal")
-        if "[luria.journals.%s]" % name in text:
+        if "\n  %s:\n" % name in text:
             raise SystemExit(
                 "luria init: the template already declares the %s journal; "
                 "drop it from --journals and edit its table" % name)
         added.append(_journal_table(name, granularity))
     if not added:
         return text
-    return text.rstrip("\n") + "\n" + "".join(added)
+    return _insert_under(text, "schemes:", [a for a in added if "\n    dir: record" in a
+                                            and "granularity" not in a],
+                         "journals:", [a for a in added if "granularity" in a])
+
+
+def _insert_under(text: str, first_key: str, first_blocks: list,
+                  second_key: str, second_blocks: list) -> str:
+    """Append blocks INSIDE a top-level mapping rather than after it.
+
+    TOML tables concatenate: a new `[luria.schemes.RFC]` at the end of the file
+    belonged to `schemes` wherever it landed. YAML nests by indentation, so an
+    indented block at the end of the document attaches to whatever the last
+    top-level key happens to be — which is silent, and wrong."""
+    for key, blocks in ((first_key, first_blocks), (second_key, second_blocks)):
+        if not blocks:
+            continue
+        lines = text.splitlines(keepends=True)
+        try:
+            at = next(i for i, l in enumerate(lines) if l.startswith(key))
+        except StopIteration:
+            text = text.rstrip("\n") + "\n" + key + "\n" + "".join(blocks)
+            continue
+        end = next((i for i in range(at + 1, len(lines))
+                    if lines[i].strip() and not lines[i].startswith((" ", "\t"))),
+                   len(lines))
+        text = "".join(lines[:end]) + "".join(blocks) + "".join(lines[end:])
+    return text
 
 
 def _read(rel: str) -> str:
@@ -361,13 +392,11 @@ def _scheme_files(scheme: Scheme) -> dict[Path, str]:
         return {
             scheme.dir / "_template.md": _read("record/decisions.d/_template.md"),
             scheme.stub: _read("record/decisions.d/README.stub"),
-            scheme.tags_yaml: _read("record/decisions.d/tags.yaml"),
-            scheme.statuses_yaml: _statuses_yaml(scheme),
         }
     if scheme.prefix == "DP" and scheme.render == "document":
         return {scheme.dir / src.name: src.read_text(encoding="utf-8")
                 for src in sorted((TEMPLATE / "record/principles.d").glob("*"))
-                if src.is_file()} | {scheme.statuses_yaml: _statuses_yaml(scheme)}
+                if src.is_file()}
     stub = (GENERIC_STUB_DOCUMENT if scheme.render == "document"
             else GENERIC_STUB_INDEX)
     subs = {"{PREFIX}": scheme.prefix, "{prefix}": scheme.prefix.lower()}
@@ -375,8 +404,7 @@ def _scheme_files(scheme: Scheme) -> dict[Path, str]:
     for key, value in subs.items():
         template = template.replace(key, value)
     return {scheme.dir / "_template.md": template,
-            scheme.stub: stub.replace("{PREFIX}", scheme.prefix),
-            scheme.statuses_yaml: _statuses_yaml(scheme)}
+            scheme.stub: stub.replace("{PREFIX}", scheme.prefix)}
 
 
 # What each status means, written into the scaffold rather than inherited

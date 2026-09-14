@@ -13,11 +13,17 @@ def _project(root: Path, monkeypatch) -> None:
     (root / "record" / "principles.d").mkdir(parents=True)
     (root / "record" / "decisions.d").mkdir(parents=True)
     (root / "docs").mkdir(exist_ok=True)
-    (root / "luria.toml").write_text(
-        '[luria]\nissue_url = "https://example.test/issues/{n}"\n'
-        '[luria.schemes.ADR]\ndir = "record/decisions.d"\n'
-        '[luria.schemes.DP]\ndir = "record/principles.d"\n'
-        'render = "document"\noutput = "docs/design-principles.md"\n')
+    (root / "luria.yaml").write_text(
+        """
+        issue_url: https://example.test/issues/{n}
+        schemes:
+          ADR:
+            dir: record/decisions.d
+          DP:
+            dir: record/principles.d
+            render: document
+            output: docs/design-principles.md
+        """)
     (root / "record" / "decisions.d" / "ADR-007.md").write_text(
         "---\nstatus: Active\ntitle: 'A decision'\ntags:\n- record\n"
         "date: '2026-01-01'\n---\n\n# ADR-007: A decision\n\nBody.\n")

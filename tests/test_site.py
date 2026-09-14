@@ -6,6 +6,7 @@ spelled for the view's directory. That rule is derived from `link_base`, so
 these tests assert the *invariant* over the real corpus rather than a list of
 directories that would drift the day one moved (DP-3).
 """
+from _config import merged
 import re
 from pathlib import Path
 
@@ -349,9 +350,13 @@ def test_artwork_that_cannot_be_re_inked_is_left_alone():
 
 
 def test_missing_artwork_is_named_not_skipped(project):
-    (project / "luria.toml").write_text(
-        '[luria]\nissue_url = "https://example.test/issues/{n}"\n'
-        '[luria.site]\nicon = "nope/icon.svg"\nlogo = "nope/logo.svg"\n')
+    (project / "luria.yaml").write_text(
+        """
+        issue_url: https://example.test/issues/{n}
+        site:
+          icon: nope/icon.svg
+          logo: nope/logo.svg
+        """)
     from luria import config as config_module
     config_module.reset()
     report = site.stage(project / "build" / "site")
@@ -377,7 +382,7 @@ def parent(tmp_path, monkeypatch, include='include_records = ["sub/*"]') -> Path
     project contains other projects, which `luria index` needs as much as the
     site does (ADR-078)."""
     (tmp_path / "docs").mkdir(parents=True, exist_ok=True)
-    (tmp_path / "luria.toml").write_text(
+    (tmp_path / "luria.yaml").write_text(
         '[luria]\nissue_url = "https://example.test/issues/{n}"\n'
         f"{include}\n")
     (tmp_path / "README.md").write_text("# Parent\n\nThe outer record.\n")
@@ -392,16 +397,12 @@ def child(root: Path, name: str) -> Path:
     has never heard of — which is the condition the mount exists for."""
     place = root / "sub" / name
     (place / "record" / "notes.d").mkdir(parents=True)
-    (place / "luria.toml").write_text(f"""
-[luria]
-issue_url = "https://example.test/{name}/issues/{{n}}"
-[luria.site]
-title = "{name}"
-[luria.schemes.NOTE]
-dir = "record/notes.d"
-output = "docs/notes.md"
-render = "document"
-""")
+    (place / "luria.yaml").write_text(merged({
+        "issue_url": f"https://example.test/{name}/issues/{{n}}",
+        "site": {"title": name},
+        "schemes": {"NOTE": {"dir": "record/notes.d",
+                             "output": "docs/notes.md",
+                             "render": "document"}}}))
     (place / "record" / "notes.d" / "NOTE-001.md").write_text(
         "---\nstatus: Active\ntitle: 'One'\nversion: 1\ntags: [x]\n"
         "date: '2026-01-01'\n---\n\n# NOTE-001: One\n\nBody.\n")
@@ -554,10 +555,15 @@ def test_an_orphan_in_a_nested_view_directory_is_an_orphan(tmp_path, monkeypatch
     root = parent(tmp_path, monkeypatch)
     place = root / "sub" / "beta"
     (place / "record" / "memos.d").mkdir(parents=True)
-    (place / "luria.toml").write_text(
-        '[luria]\nissue_url = "https://example.test/beta/issues/{n}"\n'
-        '[luria.schemes.MEMO]\ndir = "record/memos.d"\n'
-        'output = "docs/memos"\nrender = "index"\n')
+    (place / "luria.yaml").write_text(
+        """
+        issue_url: https://example.test/beta/issues/{n}
+        schemes:
+          MEMO:
+            dir: record/memos.d
+            output: docs/memos
+            render: index
+        """)
     (place / "record" / "memos.d" / "MEMO-001.md").write_text(
         "---\nstatus: Active\ntitle: 'One'\nversion: 1\ntags: [x]\n"
         "date: '2026-01-01'\n---\n\n# MEMO-001: One\n\nBody.\n")

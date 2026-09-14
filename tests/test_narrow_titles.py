@@ -11,9 +11,20 @@ on a shipped list would be asserting the shipped list.
 
 from __future__ import annotations
 
+from _config import merged
+
 from pathlib import Path
 
 from luria import config, lint, narrow_titles
+
+
+def _listed(raw: str) -> list[str]:
+    """`'"a", "b"'` -> `["a", "b"]`.
+
+    The fixtures built a TOML array by interpolating its innards. A YAML config
+    takes the list itself, so the parsing that used to happen in the config
+    parser happens here."""
+    return [x.strip().strip('"\'') for x in raw.split(",") if x.strip()]
 
 
 def _project(root: Path, monkeypatch, terms: str = "", generalize: bool = True
@@ -25,14 +36,13 @@ def _project(root: Path, monkeypatch, terms: str = "", generalize: bool = True
     are the corpus a narrow-title check would otherwise read."""
     (root / "record" / "values.d").mkdir(parents=True, exist_ok=True)
     (root / "docs").mkdir(parents=True, exist_ok=True)
-    (root / "luria.toml").write_text(
-        '[luria]\nissue_url = "https://example.test/issues/{n}"\n'
-        f'[luria.lint]\nnarrow_terms = [{terms}]\n'
-        '[luria.schemes.VP]\n'
-        'dir = "record/values.d"\n'
-        'render = "document"\n'
-        'output = "docs/values.md"\n'
-        f'titles_generalize = {str(generalize).lower()}\n')
+    (root / "luria.yaml").write_text(
+        merged("issue_url: https://example.test/issues/{n}\n",
+               {"lint": {"narrow_terms": _listed(terms)},
+                "schemes": {"VP": {"dir": "record/values.d",
+                                   "render": "document",
+                                   "output": "docs/values.md",
+                                   "titles_generalize": generalize}}}))
     monkeypatch.setenv("LURIA_ROOT", str(root))
     config.reset()
 

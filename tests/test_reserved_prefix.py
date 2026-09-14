@@ -13,20 +13,18 @@ them landing in its record.
 
 from __future__ import annotations
 
+from _config import merged
+
 from pathlib import Path
 
 from luria import config, lint
 
 
 def project(tmp_path, monkeypatch, prefix: str) -> Path:
-    (tmp_path / "luria.toml").write_text(f"""
-[luria]
-issue_url = "https://example.test/issues/{{n}}"
-
-[luria.schemes.{prefix}]
-dir = "record/{prefix.lower()}.d"
-output = "docs/{prefix.lower()}"
-""")
+    (tmp_path / "luria.yaml").write_text(merged(
+        "issue_url: https://example.test/issues/{n}\n",
+        {"schemes": {prefix: {"dir": f"record/{prefix.lower()}.d",
+                              "output": f"docs/{prefix.lower()}"}}}))
     monkeypatch.setenv("LURIA_ROOT", str(tmp_path))
     config.reset()
     return tmp_path

@@ -13,6 +13,8 @@ related one document's field to another's.
 
 from __future__ import annotations
 
+from _config import merged
+
 from pathlib import Path
 
 import pytest
@@ -28,37 +30,38 @@ def write(root: Path, rel: str, text: str) -> Path:
 
 
 FOLLOW = """
-[luria.schemes.SOTA.fields.published]
-derive = "{published}"
-from   = "source[0]"
+schemes:
+  SOTA:
+    fields:
+      published:
+        derive: '{published}'
+        from: source[0]
 """
 
 
 def project(tmp_path, monkeypatch, extra: str = FOLLOW) -> Path:
-    write(tmp_path, "luria.toml", f"""
-[luria]
-issue_url = "https://example.test/issues/{{n}}"
-
-[luria.schemes.LIT]
-dir = "record/literature.d"
-output = "docs/literature"
-
-# A followed template reads the TARGET scheme's fields, so the target has to
-# declare them. That is the point: an undeclared name would resolve to
-# nothing on every document, which is the quiet failure eager validation
-# exists to turn into a load error.
-[luria.schemes.LIT.fields.published]
-required = true
-
-[luria.schemes.SOTA]
-dir = "record/practices.d"
-output = "docs/practices"
-
-[luria.schemes.SOTA.references]
-source = {{ scheme = "LIT", required = true, many = true }}
-paper  = {{ scheme = "LIT", required = false, many = false }}
-{extra}
-""")
+    write(tmp_path, "luria.yaml", merged("""
+                                  issue_url: https://example.test/issues/{n}
+                                  schemes:
+                                    LIT:
+                                      dir: record/literature.d
+                                      output: docs/literature
+                                      fields:
+                                        published:
+                                          required: true
+                                    SOTA:
+                                      dir: record/practices.d
+                                      output: docs/practices
+                                      references:
+                                        source:
+                                          scheme: LIT
+                                          required: true
+                                          many: true
+                                        paper:
+                                          scheme: LIT
+                                          required: false
+                                          many: false
+                                  """, extra))
     monkeypatch.setenv("LURIA_ROOT", str(tmp_path))
     config.reset()
     return tmp_path
@@ -183,12 +186,17 @@ def test_it_reads_written_frontmatter_not_the_target_s_own_derivation(
     resolves to nothing rather than chaining — which is what makes a cycle
     impossible by construction rather than by detection."""
     extra = FOLLOW + """
-[luria.schemes.LIT.fields.issued]
-required = true
-
-[luria.schemes.LIT.references]
-origin = { scheme = "LIT", required = false, many = false }
-"""
+                     schemes:
+                       LIT:
+                         fields:
+                           issued:
+                             required: true
+                         references:
+                           origin:
+                             scheme: LIT
+                             required: false
+                             many: false
+                     """
     root = project(tmp_path, monkeypatch, extra)
     write(root, "record/literature.d/LIT-009.md",
           "---\nstatus: Active\ntitle: 'Paper 9'\ndate: '2026-01-01'\n"
@@ -275,7 +283,13 @@ def test_many_on_a_followed_derivation_names_the_derive_line(tmp_path, monkeypat
 
 def test_from_alone_renders_nothing(tmp_path, monkeypatch):
     root = project(tmp_path, monkeypatch,
-                   '[luria.schemes.SOTA.fields.published]\nfrom = "source[0]"\n')
+                   """
+                   schemes:
+                     SOTA:
+                       fields:
+                         published:
+                           from: source[0]
+                   """)
     with pytest.raises(ValueError, match="renders nothing"):
         config.current()
 

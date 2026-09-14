@@ -103,9 +103,13 @@ def test_a_new_family_appears_without_touching_the_renderer(unusual):
     before = record_doc.render()
     assert "POLICY-001" not in before
     (unusual / "policy.d").mkdir()
-    (unusual / "luria.toml").write_text(
-        (unusual / "luria.toml").read_text()
-        + '\n[luria.schemes.POLICY]\ndir = "policy.d"\n')
+    (unusual / "luria.yaml").write_text(
+        (unusual / "luria.yaml").read_text()
+        + """
+          schemes:
+            POLICY:
+              dir: policy.d
+          """)
     config.reset()
     assert "`POLICY-001`" in record_doc.render()
 
@@ -120,9 +124,13 @@ def test_settings_table_shows_what_changed_and_not_what_did_not(unusual):
 def test_a_nested_table_is_one_row_not_one_row_per_colour(project):
     """A theme is one choice with two dozen colours in it. Flattened all the
     way it buries every other row, which is how a diff stops being readable."""
-    (project / "luria.toml").write_text(
-        (project / "luria.toml").read_text()
-        + '\n[luria.site.theme.light]\n'
+    (project / "luria.yaml").write_text(
+        (project / "luria.yaml").read_text()
+        + """
+          site:
+            theme:
+              light: {}
+          """
         + "".join(f'c{i} = "#00000{i}"\n' for i in range(9)))
     config.reset()
     text = record_doc.render()
@@ -170,14 +178,22 @@ def test_the_page_says_when_no_scheme_demands_more_than_the_standard_fields(unus
 
 
 def test_the_page_lists_each_obligation_with_where_it_was_declared(unusual):
-    (unusual / "luria.toml").write_text(
-        (unusual / "luria.toml").read_text()
-        + '\n[luria.schemes.RFC.tag_groups.track]\n'
-          'tags = ["fast", "slow"]\nrequire = "exactly-one"\n')
+    (unusual / "luria.yaml").write_text(
+        (unusual / "luria.yaml").read_text()
+        + """
+          schemes:
+            RFC:
+              tag_groups:
+                track:
+                  tags:
+                  - fast
+                  - slow
+                  require: exactly-one
+          """)
     config.reset()
-    text = (unusual / "luria.toml").read_text().replace(
+    text = (unusual / "luria.yaml").read_text().replace(
         'active = "Ratified"', 'active = "Ratified"\nrequires = ["champion"]')
-    (unusual / "luria.toml").write_text(text)
+    (unusual / "luria.yaml").write_text(text)
     config.reset()
     section = record_doc.render().split("## What an entry must carry")[1].split("\n## ")[0]
     assert "`RFC`" in section

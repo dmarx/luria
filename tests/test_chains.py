@@ -10,6 +10,8 @@ fact and were corrected in two places by luck.
 
 from __future__ import annotations
 
+from _config import merged
+
 from pathlib import Path
 
 import pytest
@@ -25,32 +27,45 @@ def write(root: Path, rel: str, text: str) -> Path:
 
 
 CHAIN = """
-[luria.chains.lineage]
-scheme   = "LIT"
-relation = "extends"
-sibling  = "compared_against"
-output   = "docs/lineage.md"
-title    = "Lines of work"
+chains:
+  lineage:
+    scheme: LIT
+    relation: extends
+    sibling: compared_against
+    output: docs/lineage.md
+    title: Lines of work
 """
 
 RELATIONS = """
-[luria.schemes.LIT.references]
-extends = { scheme = "LIT", required = false, many = true, converse = "extended_by" }
-extended_by = { scheme = "LIT", required = false, many = true, converse = "extends" }
-compared_against = { scheme = "LIT", required = false, many = true, converse = "compared_against" }
+schemes:
+  LIT:
+    references:
+      extends:
+        scheme: LIT
+        required: false
+        many: true
+        converse: extended_by
+      extended_by:
+        scheme: LIT
+        required: false
+        many: true
+        converse: extends
+      compared_against:
+        scheme: LIT
+        required: false
+        many: true
+        converse: compared_against
 """
 
 
 def project(tmp_path, monkeypatch, extra: str = RELATIONS + CHAIN) -> Path:
-    write(tmp_path, "luria.toml", f"""
-[luria]
-issue_url = "https://example.test/issues/{{n}}"
-
-[luria.schemes.LIT]
-dir = "record/literature.d"
-output = "docs/literature"
-{extra}
-""")
+    write(tmp_path, "luria.yaml", merged("""
+                                  issue_url: https://example.test/issues/{n}
+                                  schemes:
+                                    LIT:
+                                      dir: record/literature.d
+                                      output: docs/literature
+                                  """, extra))
     monkeypatch.setenv("LURIA_ROOT", str(tmp_path))
     config.reset()
     return tmp_path
@@ -182,11 +197,12 @@ def test_succession_is_not_expected_to_be_symmetric(tmp_path, monkeypatch):
 def test_no_sibling_relation_declared_means_no_symmetry_finding(
         tmp_path, monkeypatch):
     root = project(tmp_path, monkeypatch, RELATIONS + """
-[luria.chains.lineage]
-scheme   = "LIT"
-relation = "extends"
-output   = "docs/lineage.md"
-""")
+                                                      chains:
+                                                        lineage:
+                                                          scheme: LIT
+                                                          relation: extends
+                                                          output: docs/lineage.md
+                                                      """)
     note(root, 1, "One design")
     note(root, 2, "The other", compared_against=["LIT-001"])
     assert chains.rows() == []
@@ -242,11 +258,12 @@ def test_an_undeclared_relation_is_a_config_error(tmp_path, monkeypatch):
     render nothing, and nothing is indistinguishable from current (DP-15)."""
     with pytest.raises(ValueError, match="extends"):
         project(tmp_path, monkeypatch, """
-[luria.chains.lineage]
-scheme   = "LIT"
-relation = "extends"
-output   = "docs/lineage.md"
-""")
+                                       chains:
+                                         lineage:
+                                           scheme: LIT
+                                           relation: extends
+                                           output: docs/lineage.md
+                                       """)
         config.current()
 
 
@@ -254,11 +271,12 @@ def test_a_chain_over_an_undeclared_scheme_is_a_config_error(
         tmp_path, monkeypatch):
     with pytest.raises(ValueError, match="NOPE"):
         project(tmp_path, monkeypatch, RELATIONS + """
-[luria.chains.lineage]
-scheme   = "NOPE"
-relation = "extends"
-output   = "docs/lineage.md"
-""")
+                                                   chains:
+                                                     lineage:
+                                                       scheme: NOPE
+                                                       relation: extends
+                                                       output: docs/lineage.md
+                                                   """)
         config.current()
 
 
@@ -348,19 +366,25 @@ def test_prose_naming_a_retired_step_is_still_a_citation(
 # renders an agreed trunk and a disputed branch identically.
 
 SHOWN = """
-[luria.chains.lineage]
-scheme   = "LIT"
-relation = "extends"
-sibling  = "compared_against"
-output   = "docs/lineage.md"
-title    = "Lines of work"
-facet_by = ["status", "consensus"]
+chains:
+  lineage:
+    scheme: LIT
+    relation: extends
+    sibling: compared_against
+    output: docs/lineage.md
+    title: Lines of work
+    facet_by:
+    - status
+    - consensus
 """
 
 VOCAB = """
-[luria.schemes.LIT.fields.consensus]
-vocabulary = "consensus"
-default    = "unassessed"
+schemes:
+  LIT:
+    fields:
+      consensus:
+        vocabulary: consensus
+        default: unassessed
 """
 
 
@@ -426,12 +450,14 @@ def test_facet_by_names_every_axis_including_status(
     built-in axis after #181 made it a declared vocabulary like any other.
     The chain names what it shows; `status` is in that list or it is not."""
     root = project(tmp_path, monkeypatch, RELATIONS + VOCAB + """
-[luria.chains.lineage]
-scheme   = "LIT"
-relation = "extends"
-output   = "docs/lineage.md"
-facet_by = ["consensus"]
-""")
+                                                              chains:
+                                                                lineage:
+                                                                  scheme: LIT
+                                                                  relation: extends
+                                                                  output: docs/lineage.md
+                                                                  facet_by:
+                                                                  - consensus
+                                                              """)
     write(root, "record/literature.d/consensus.yaml",
           "unassessed:\n  label: Not judged\ncontested:\n  label: In dispute\n")
     config.reset()
@@ -455,12 +481,13 @@ def test_facet_by_defaults_to_status_alone(tmp_path, monkeypatch):
 def test_a_scalar_facet_by_still_reads(tmp_path, monkeypatch):
     """One field is a list of one, written the shorter way."""
     root = project(tmp_path, monkeypatch, RELATIONS + """
-[luria.chains.lineage]
-scheme   = "LIT"
-relation = "extends"
-output   = "docs/lineage.md"
-facet_by = "status"
-""")
+                                                      chains:
+                                                        lineage:
+                                                          scheme: LIT
+                                                          relation: extends
+                                                          output: docs/lineage.md
+                                                          facet_by: status
+                                                      """)
     config.reset()
     assert config.current().chains["lineage"].facet_by == ("status",)
 
@@ -468,12 +495,15 @@ facet_by = "status"
 def test_a_facet_naming_nothing_is_refused(tmp_path, monkeypatch):
     with pytest.raises(ValueError, match="nowhere"):
         project(tmp_path, monkeypatch, RELATIONS + """
-[luria.chains.lineage]
-scheme   = "LIT"
-relation = "extends"
-output   = "docs/lineage.md"
-facet_by = ["status", "nowhere"]
-""")
+                                                   chains:
+                                                     lineage:
+                                                       scheme: LIT
+                                                       relation: extends
+                                                       output: docs/lineage.md
+                                                       facet_by:
+                                                       - status
+                                                       - nowhere
+                                                   """)
         config.current()
 
 
@@ -531,20 +561,45 @@ def test_a_second_parent_is_named_rather_than_dropped(tmp_path, monkeypatch):
 # renders them identically. Two relations say it, and they are one line.
 
 SIGNED = """
-[luria.schemes.LIT.references]
-extends = { scheme = "LIT", required = false, many = true, converse = "extended_by" }
-extended_by = { scheme = "LIT", required = false, many = true, converse = "extends" }
-corrects = { scheme = "LIT", required = false, many = true, converse = "corrected_by" }
-corrected_by = { scheme = "LIT", required = false, many = true, converse = "corrects" }
-compared_against = { scheme = "LIT", required = false, many = true, converse = "compared_against" }
+schemes:
+  LIT:
+    references:
+      extends:
+        scheme: LIT
+        required: false
+        many: true
+        converse: extended_by
+      extended_by:
+        scheme: LIT
+        required: false
+        many: true
+        converse: extends
+      corrects:
+        scheme: LIT
+        required: false
+        many: true
+        converse: corrected_by
+      corrected_by:
+        scheme: LIT
+        required: false
+        many: true
+        converse: corrects
+      compared_against:
+        scheme: LIT
+        required: false
+        many: true
+        converse: compared_against
 """
 
 SIGNED_CHAIN = """
-[luria.chains.lineage]
-scheme   = "LIT"
-relation = ["extends", "corrects"]
-output   = "docs/lineage.md"
-title    = "Lines of work"
+chains:
+  lineage:
+    scheme: LIT
+    relation:
+    - extends
+    - corrects
+    output: docs/lineage.md
+    title: Lines of work
 """
 
 
@@ -587,11 +642,14 @@ def test_the_header_names_every_spine_relation(tmp_path, monkeypatch):
 def test_a_spine_relation_the_scheme_does_not_declare_is_refused(
         tmp_path, monkeypatch):
     project(tmp_path, monkeypatch, SIGNED + """
-[luria.chains.lineage]
-scheme   = "LIT"
-relation = ["extends", "supersedes"]
-output   = "docs/lineage.md"
-""")
+                                            chains:
+                                              lineage:
+                                                scheme: LIT
+                                                relation:
+                                                - extends
+                                                - supersedes
+                                                output: docs/lineage.md
+                                            """)
     with pytest.raises(ValueError, match="supersedes"):
         config.current()
 

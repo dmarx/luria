@@ -15,10 +15,16 @@ from luria import badges, config
 REPO = Path(__file__).resolve().parents[1]
 
 TWO_SCHEMES = (
-    '[luria]\nissue_url = "https://example.test/issues/{n}"\n'
-    '[luria.schemes.ADR]\ndir = "docs/decisions"\n'
-    '[luria.schemes.VP]\ndir = "docs/values"\n'
-    'render = "document"\noutput = "docs/values.md"\n'
+    """
+issue_url: https://example.test/issues/{n}
+schemes:
+  ADR:
+    dir: docs/decisions
+  VP:
+    dir: docs/values
+    render: document
+    output: docs/values.md
+"""
 )
 
 
@@ -31,7 +37,7 @@ def principle(root: Path, number: int, status: str, title: str = "A value") -> P
 
 
 def with_schemes(project) -> None:
-    (project / "luria.toml").write_text(TWO_SCHEMES)
+    (project / "luria.yaml").write_text(TWO_SCHEMES)
     config.reset()
 
 

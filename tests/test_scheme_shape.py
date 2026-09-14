@@ -7,6 +7,7 @@ restated by hand — four copies of one vocabulary, and a citation rule that
 turned out to check only that a field was not blank.
 """
 
+from _config import merged
 from pathlib import Path
 
 import pytest
@@ -53,25 +54,22 @@ def two_schemes(tmp_path, monkeypatch):
     """Two schemes sharing one vocabulary file, as the motivating record has."""
     def build(toml_extra: str = ""):
         write(tmp_path, "record/topics.yaml", VOCAB)
-        write(tmp_path, "luria.toml", f"""
-[luria]
-issue_url = "https://example.test/issues/{{n}}"
-
-[luria.schemes.LIT]
-dir  = "record/literature.d"
-tags = "record/topics.yaml"
-
-[luria.schemes.LIT.tag_groups.primary_topic]
-require = "exactly-one"
-
-[luria.schemes.SOTA]
-dir  = "record/practices.d"
-tags = "record/topics.yaml"
-
-[luria.schemes.SOTA.tag_groups.primary_topic]
-require = "exactly-one"
-{toml_extra}
-""")
+        write(tmp_path, "luria.yaml", merged("""
+                                      issue_url: https://example.test/issues/{n}
+                                      schemes:
+                                        LIT:
+                                          dir: record/literature.d
+                                          tags: record/topics.yaml
+                                          tag_groups:
+                                            primary_topic:
+                                              require: exactly-one
+                                        SOTA:
+                                          dir: record/practices.d
+                                          tags: record/topics.yaml
+                                          tag_groups:
+                                            primary_topic:
+                                              require: exactly-one
+                                      """, toml_extra))
         monkeypatch.setenv("LURIA_ROOT", str(tmp_path))
         config.reset()
         return tmp_path
@@ -80,8 +78,12 @@ require = "exactly-one"
 
 
 REFERENCES = """
-[luria.schemes.SOTA.references]
-source = { scheme = "LIT", required = true }
+schemes:
+  SOTA:
+    references:
+      source:
+        scheme: LIT
+        required: true
 """
 
 
@@ -89,7 +91,7 @@ source = { scheme = "LIT", required = true }
 
 def test_two_schemes_can_share_one_vocabulary_file(two_schemes):
     """The duplication this removes: the shared terms were previously written
-    once per scheme in tags.yaml and again per scheme in luria.toml."""
+    once per scheme in tags.yaml and again per scheme in luria.yaml."""
     root = two_schemes()
     cfg = config.current()
     assert cfg.schemes["LIT"].tags_yaml == root / "record/topics.yaml"
@@ -248,8 +250,14 @@ def test_a_linked_reference_still_reads(two_schemes):
 
 
 def test_an_optional_reference_may_be_absent(two_schemes):
-    root = two_schemes('\n[luria.schemes.SOTA.references]\n'
-                       'source = { scheme = "LIT", required = false }\n')
+    root = two_schemes("""
+                       schemes:
+                         SOTA:
+                           references:
+                             source:
+                               scheme: LIT
+                               required: false
+                       """)
     doc(root, "record/practices.d/SOTA-001.md", code="SOTA-001",
         title="No source", tags=["optimization"])
     errors = []
@@ -258,7 +266,12 @@ def test_an_optional_reference_may_be_absent(two_schemes):
 
 
 def test_referencing_an_undeclared_scheme_is_a_config_error(two_schemes):
-    two_schemes('\n[luria.schemes.SOTA.references]\n'
-                'source = { scheme = "NOPE" }\n')
+    two_schemes("""
+                schemes:
+                  SOTA:
+                    references:
+                      source:
+                        scheme: NOPE
+                """)
     with pytest.raises(ValueError, match="not declared"):
         config.current()

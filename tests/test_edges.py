@@ -93,10 +93,15 @@ def test_a_code_in_any_other_status_note_is_not_an_edge(project):
 def test_a_foreign_successor_is_not_an_edge(project):
     """A remote's namespace is theirs (ADR-016); the graph has no node for
     it, so there is nothing for the edge to land on."""
-    (project / "luria.toml").write_text(
-        (project / "luria.toml").read_text()
-        + '[luria.remotes.LU]\nname = "luria"\nrepo = "dmarx/luria"\n'
-          'dir = "record/decisions.d"\n')
+    (project / "luria.yaml").write_text(
+        (project / "luria.yaml").read_text()
+        + """
+          remotes:
+            LU:
+              name: luria
+              repo: dmarx/luria
+              dir: record/decisions.d
+          """)
     config.reset()
     path = decision(project, 1, "Superseded", superseded_by=["LU-ADR-013"])
     assert edges.outbound(adr(path)) == []
@@ -222,7 +227,7 @@ def test_a_staged_page_carries_its_inbound_edges(project):
 # --- one edge per code in a plural reference ------------------------------
 
 def scenes(tmp_path, monkeypatch, many: bool = True) -> Path:
-    write(tmp_path, "luria.toml", f"""
+    write(tmp_path, "luria.yaml", f"""
 [luria]
 issue_url = "https://example.test/issues/{{n}}"
 [luria.schemes.SCENE]

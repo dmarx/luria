@@ -12,28 +12,32 @@ import pytest
 
 from luria import config, lint
 
-CONFIG = """\
-[luria]
-issue_url = "https://example.test/{n}"
-
-[luria.schemes.ARG]
-dir = "record/arguments.d"
-output = "docs/arguments"
-active = "Active"
-render = "index"
-
-[luria.schemes.ARG.tag_groups.strength]
-tags = ["sound", "overreach", "invalid"]
-require = "exactly-one"
-
-[luria.schemes.ARG.tag_groups.failure]
-tags = ["equivocation", "gap"]
-excluded_by = ["sound"]
+CONFIG = """
+issue_url: https://example.test/{n}
+schemes:
+  ARG:
+    dir: record/arguments.d
+    output: docs/arguments
+    active: Active
+    render: index
+    tag_groups:
+      strength:
+        tags:
+        - sound
+        - overreach
+        - invalid
+        require: exactly-one
+      failure:
+        tags:
+        - equivocation
+        - gap
+        excluded_by:
+        - sound
 """
 
 
 def project(tmp_path: Path, monkeypatch, *tags: str, cfg: str = CONFIG) -> Path:
-    (tmp_path / "luria.toml").write_text(cfg)
+    (tmp_path / "luria.yaml").write_text(cfg)
     d = tmp_path / "record" / "arguments.d"
     d.mkdir(parents=True)
     block = ("tags:\n" + "".join(f"- {t}\n" for t in tags)) if tags else "tags: []\n"
@@ -88,7 +92,12 @@ def test_at_most_one_allows_zero(tmp_path, monkeypatch):
 
 def test_a_scheme_with_no_groups_is_unconstrained(tmp_path, monkeypatch):
     """Every record that predates this feature."""
-    cfg = CONFIG.split("[luria.schemes.ARG.tag_groups.strength]")[0]
+    cfg = CONFIG.split("""
+                       schemes:
+                         ARG:
+                           tag_groups:
+                             strength: {}
+                       """)[0]
     assert errors_for(tmp_path, monkeypatch, "anything", cfg=cfg) == []
 
 

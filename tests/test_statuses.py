@@ -14,7 +14,12 @@ actually opens.
 borrows a live sequence's prefix is the hazard that rule exists for.
 """
 
+
 from __future__ import annotations
+
+from _config import merged
+
+import yaml
 
 import pytest
 
@@ -28,20 +33,15 @@ def _project(root: Path, monkeypatch, uniform_share: float | None = None,
              retires_on: str | None = None) -> None:
     (root / "record" / "values.d").mkdir(parents=True, exist_ok=True)
     (root / "docs").mkdir(parents=True, exist_ok=True)
-    share = "" if uniform_share is None else f"uniform_share = {uniform_share}\n"
-    extra = share
-    if active is not None:
-        extra += f'active = "{active}"\n'
-    if successor is not None:
-        extra += f'successor = "{successor}"\n'
-    if retires_on is not None:
-        extra += f'retires_on = "{retires_on}"\n'
-    (root / "luria.toml").write_text(
-        '[luria]\nissue_url = "https://example.test/issues/{n}"\n'
-        '[luria.schemes.VP]\n'
-        'dir = "record/values.d"\n'
-        'render = "index"\n'
-        'output = "docs/values"\n' + extra)
+    vp: dict = {"dir": "record/values.d", "render": "index",
+                "output": "docs/values"}
+    for key, value in (("uniform_share", uniform_share), ("active", active),
+                       ("successor", successor), ("retires_on", retires_on)):
+        if value is not None:
+            vp[key] = value
+    (root / "luria.yaml").write_text(merged(
+        {"issue_url": "https://example.test/issues/{n}",
+         "schemes": {"VP": vp}}))
     monkeypatch.setenv("LURIA_ROOT", str(root))
     config.reset()
 
@@ -61,11 +61,19 @@ def _value(root: Path, number: int, status: str = "Active",
     return path
 
 
-def _wire(root: Path) -> None:
-    toml = root / "luria.toml"
-    wiring = '[luria.schemes.VP.fields.status]\nvocabulary = "statuses"\n'
-    if wiring not in toml.read_text():
-        toml.write_text(toml.read_text() + wiring)
+def _wire(root: Path, values: dict | None = None) -> None:
+    """Point `status:` at the named vocabulary, and declare it.
+
+    The values used to be a `statuses.yaml` beside the records; since
+    ADR-tmp8hp25 they are in the config under a name, so wiring the field and
+    declaring the words are one edit rather than two files."""
+    path = root / "luria.yaml"
+    wiring: dict = {"schemes": {"VP": {
+        "fields": {"status": {"vocabulary": "vp-statuses"}},
+        "statuses": "vp-statuses"}}}
+    if values is not None:
+        wiring["vocabularies"] = {"vp-statuses": values}
+    path.write_text(merged(path.read_text(), wiring))
     config.reset()
 
 
@@ -75,8 +83,7 @@ def _declare(root: Path, text: str) -> None:
     The file alone declares nothing since `status:` became an ordinary
     controlled field (#181): `statuses.yaml` is the values, the `fields`
     table is the wiring — the split ADR-076 draws for every vocabulary."""
-    (root / "record" / "values.d" / "statuses.yaml").write_text(text)
-    _wire(root)
+    _wire(root, yaml.safe_load(text) or {})
 
 
 def _scheme():
@@ -340,12 +347,15 @@ def test_a_document_rendered_scheme_is_exempt(tmp_path, monkeypatch):
     expected state, not a smell — principles are superseded by revision, and
     `version:` carries that."""
     _project(tmp_path, monkeypatch)
-    (tmp_path / "luria.toml").write_text(
-        '[luria]\nissue_url = "https://example.test/issues/{n}"\n'
-        '[luria.schemes.VP]\n'
-        'dir = "record/values.d"\n'
-        'render = "document"\n'
-        'output = "docs/values.md"\n')
+    (tmp_path / "luria.yaml").write_text(
+        """
+        issue_url: https://example.test/issues/{n}
+        schemes:
+          VP:
+            dir: record/values.d
+            render: document
+            output: docs/values.md
+        """)
     config.reset()
     _values(tmp_path, 12)
     assert statuses.uniform(_scheme()) is None
@@ -367,8 +377,8 @@ def test_the_class_is_failable(tmp_path, monkeypatch):
 def _uniform_project(root: Path, monkeypatch, ack: str | None) -> None:
     _project(root, monkeypatch)
     if ack:
-        text = (root / "luria.toml").read_text()
-        (root / "luria.toml").write_text(text + f'uniform_ok = "{ack}"\n')
+        text = (root / "luria.yaml").read_text()
+        (root / "luria.yaml").write_text(text + f'uniform_ok = "{ack}"\n')
         config.reset()
     for n in range(1, statuses.FLOOR + 1):
         _value(root, n)
@@ -648,12 +658,20 @@ def test_declaring_the_field_yourself_replaces_the_default(tmp_path, monkeypatch
     nothing beside it."""
     (tmp_path / "record" / "values.d").mkdir(parents=True, exist_ok=True)
     (tmp_path / "docs").mkdir(parents=True, exist_ok=True)
-    (tmp_path / "luria.toml").write_text(
-        '[luria]\nissue_url = "https://example.test/issues/{n}"\n'
-        '[luria.schemes.VP]\ndir = "record/values.d"\nrender = "index"\n'
-        'output = "docs/values"\n'
-        '[luria.schemes.VP.references]\n'
-        'superseded_by = { scheme = "VP", required = false, many = true }\n')
+    (tmp_path / "luria.yaml").write_text(
+        """
+        issue_url: https://example.test/issues/{n}
+        schemes:
+          VP:
+            dir: record/values.d
+            render: index
+            output: docs/values
+            references:
+              superseded_by:
+                scheme: VP
+                required: false
+                many: true
+        """)
     monkeypatch.setenv("LURIA_ROOT", str(tmp_path))
     config.reset()
     fields = [f for f in contract.for_scheme(_scheme()).fields
@@ -761,9 +779,15 @@ def test_the_upgrade_does_not_load_the_config_it_repairs(tmp_path, monkeypatch):
     is unrunnable in exactly the situation it exists for."""
     from luria import upgrade
     _project(tmp_path, monkeypatch)
-    (tmp_path / "luria.toml").write_text(
-        (tmp_path / "luria.toml").read_text()
-        + '[luria.schemes.VP.fields.bogus]\nvocabulary = "nothing"\n')
+    (tmp_path / "luria.yaml").write_text(
+        (tmp_path / "luria.yaml").read_text()
+        + """
+          schemes:
+            VP:
+              fields:
+                bogus:
+                  vocabulary: nothing
+          """)
     config.reset()
     with pytest.raises(ValueError):
         config.current()

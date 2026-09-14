@@ -1,0 +1,87 @@
+vocabularies:
+  # The words this record's documents may use, and what each means.
+  #
+  # A DEFAULT, not a law: rename these, drop the ones you do not want,
+  # add your own. Every check reads this. The one rule is that a
+  # scheme's `active` word has to appear here — it is how everything
+  # decides what is in force, so a vocabulary without it means no
+  # document ever is.
+  #
+  # Named once and referenced by every scheme that uses it, so two
+  # schemes sharing a vocabulary cannot drift apart (ADR-tmp8hp25).
+  record-statuses:
+    Active:
+      blurb: in force — the current answer, and what a citation should normally point at
+    Proposed:
+      blurb: not in force yet — an open question, so citing it as settled is the thing the report catches
+    Deferred:
+      blurb: not in force and not being worked on; the question is real and the answer is waiting on something
+    Superseded:
+      blurb: no longer in force because something replaced it; the successor is named in the field, not the prose
+    Rejected:
+      blurb: no longer in force and nothing replaced it — kept because a rejection is worth being able to point at
+  adr-tags:
+    record:
+      label: The record
+      blurb: what the four layers hold, and the rules between them
+    mechanism:
+      label: Mechanism
+      blurb: collectors, generators, the lint, the directive vocabulary
+    process:
+      label: Process
+      blurb: how the machinery is adopted, run, and reported on
+issue_url: ''
+paths:
+  docs: docs
+  decisions: record/decisions.d
+  design_principles: docs/design-principles.md
+  reports: docs/reports
+fragments:
+  record/changelog.d: CHANGELOG.md
+journals:
+  devlog:
+    dir: record/devlog.d
+    output: docs/devlog
+    granularity: month
+    title: Development log
+code:
+  globs: []
+  historical:
+  - CHANGELOG.md
+schemes:
+  ADR:
+    dir: record/decisions.d
+    output: docs/decisions
+    active: Active
+    render: index
+    successor: superseded_by
+    retires_on: Superseded
+    fields:
+      status:
+        vocabulary: statuses
+    tags: adr-tags
+  DP:
+    dir: record/principles.d
+    active: Active
+    render: document
+    output: docs/design-principles.md
+    successor: superseded_by
+    retires_on: Superseded
+    fields:
+      status:
+        vocabulary: statuses
+remotes:
+  LU:
+    name: luria
+    repo: dmarx/luria
+    ref: main
+    dir: record/decisions.d
+    schemes:
+      DP:
+        document: docs/design-principles.md
+  FX:
+    name: fixtures
+    url: https://github.com/dmarx/luria/blob/main/docs/directives.md#fixture-codes
+lint:
+  fail_on:
+  - workflow-temp-codes

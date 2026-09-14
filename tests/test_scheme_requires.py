@@ -18,9 +18,13 @@ from luria import config, lint
 def _project(root: Path, monkeypatch, requires: str = "") -> Path:
     (root / "record" / "norms.d").mkdir(parents=True, exist_ok=True)
     (root / "docs").mkdir(exist_ok=True)
-    (root / "luria.toml").write_text(
-        '[luria]\nissue_url = "https://example.test/issues/{n}"\n'
-        '[luria.schemes.NRM]\ndir = "record/norms.d"\n'
+    (root / "luria.yaml").write_text(
+        """
+        issue_url: https://example.test/issues/{n}
+        schemes:
+          NRM:
+            dir: record/norms.d
+        """
         + (f"requires = [{requires}]\n" if requires else ""))
     doc = root / "record" / "norms.d" / "NRM-001.md"
     doc.write_text("---\nstatus: Active\ntitle: 'A norm'\ntags:\n- record\n"

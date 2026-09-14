@@ -1,0 +1,55 @@
+vocabularies:
+  scene-tags:
+    court:
+      label: Court
+      blurb: scenes at the capital
+    road:
+      label: Road
+      blurb: scenes in transit
+  scene-statuses:
+    Active:
+      blurb: in force — the current answer, and what a citation should normally point at
+    Proposed:
+      blurb: not in force yet — an open question, so citing it as settled is what the reference report
+        catches
+    Deferred:
+      blurb: not in force and not being worked on; the question is real and the answer waits on something
+    Superseded:
+      blurb: no longer in force because something replaced it; the successor is named in the field, not
+        in the prose
+    Rejected:
+      blurb: no longer in force and nothing replaced it — kept because a rejection is worth being able
+        to point at
+  worlds:
+    A:
+      label: The unbroken line
+      blurb: the treaty holds and the capital never burns
+    B:
+      label: The main line
+      blurb: the trajectory most scenes sit in; an absent `worlds:` means this
+    C:
+      label: The long winter
+      blurb: the harvest fails in the second year
+issue_url: https://github.com/acme/bible/issues/{n}
+schemes:
+  SCENE:
+    dir: record/scenes.d
+    output: docs/scenes
+    render: index
+    references:
+      follows:
+        scheme: SCENE
+        many: true
+        required: false
+    fields:
+      worlds:
+        vocabulary: worlds
+        many: true
+        default:
+        - B
+      status:
+        vocabulary: scene-statuses
+    tags: scene-tags
+    statuses: scene-statuses
+site:
+  title: World bible

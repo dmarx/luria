@@ -73,8 +73,13 @@ def test_citation_counts_come_from_the_reference_scan(project):
     codebase cites everywhere is a decision already made in code."""
     decision(project, 2, "Proposed")
     (project / "notes.md").write_text("we follow ADR-002 here\n")
-    (project / "luria.toml").write_text(
-        '[luria]\nissue_url = ""\n[luria.code]\nglobs = ["notes.md"]\n')
+    (project / "luria.yaml").write_text(
+        """
+        issue_url: ''
+        code:
+          globs:
+          - notes.md
+        """)
     from luria import config
     config.reset()
     r, = pending.pending()
@@ -89,8 +94,13 @@ def test_headline_reconciles_with_the_reference_report(project):
     decision(project, 3, "Deferred")
     (project / "notes.md").write_text(
         "ADR-002 <!-- inactive-ok: ADR-002 — deliberate -->\nand ADR-003\n")
-    (project / "luria.toml").write_text(
-        '[luria]\nissue_url = ""\n[luria.code]\nglobs = ["notes.md"]\n')
+    (project / "luria.yaml").write_text(
+        """
+        issue_url: ''
+        code:
+          globs:
+          - notes.md
+        """)
     from luria import config
     config.reset()
 
@@ -111,11 +121,17 @@ def test_every_scheme_is_covered(project):
     a report covering one scheme goes blind the day a second is configured
     (ADR-018)."""
     from _scheme import decision
-    (project / "luria.toml").write_text(
-        '[luria]\nissue_url = "https://example.test/issues/{n}"\n'
-        '[luria.schemes.ADR]\ndir = "docs/decisions"\n'
-        '[luria.schemes.VP]\ndir = "docs/values"\n'
-        'render = "document"\noutput = "docs/values.md"\n')
+    (project / "luria.yaml").write_text(
+        """
+        issue_url: https://example.test/issues/{n}
+        schemes:
+          ADR:
+            dir: docs/decisions
+          VP:
+            dir: docs/values
+            render: document
+            output: docs/values.md
+        """)
     from luria import config
     config.reset()
     decision(project, 1, "Proposed", "An open decision")

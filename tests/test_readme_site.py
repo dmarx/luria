@@ -11,14 +11,24 @@ from pathlib import Path
 from luria import config, lint, readme, site
 from luria.config import current
 
-BASE = ('[luria]\nissue_url = "https://github.com/dmarx/demo/issues/{n}"\n'
-        '[luria.schemes.ADR]\ndir = "docs/decisions"\n')
-PUBLISHES = BASE + '[luria.site]\nexclude = []\n'
-UNPUBLISHED = BASE + '[luria.site]\npublish = false\n'
+BASE = ("""
+issue_url: https://github.com/dmarx/demo/issues/{n}
+schemes:
+  ADR:
+    dir: docs/decisions
+""")
+PUBLISHES = BASE + """
+                   site:
+                     exclude: []
+                   """
+UNPUBLISHED = BASE + """
+                     site:
+                       publish: false
+                     """
 
 
 def at(project, toml: str) -> Path:
-    (project / "luria.toml").write_text(toml)
+    (project / "luria.yaml").write_text(toml)
     config.reset()
     return project
 
@@ -35,9 +45,14 @@ def test_the_region_carries_the_derived_url(project):
 def test_a_project_that_derives_no_url_renders_nothing(project):
     """A non-GitHub issue URL derives no base_url, and inventing one would be
     a link to a page that does not exist."""
-    at(project, '[luria]\nissue_url = "https://example.test/issues/{n}"\n'
-                '[luria.schemes.ADR]\ndir = "docs/decisions"\n'
-                '[luria.site]\nexclude = []\n')
+    at(project, """
+                issue_url: https://example.test/issues/{n}
+                schemes:
+                  ADR:
+                    dir: docs/decisions
+                site:
+                  exclude: []
+                """)
     assert site.readme_region() == ""
 
 

@@ -14,7 +14,11 @@ def load_text(tmp_path, text):
 
 
 def test_a_declared_family_replaces_the_default(tmp_path):
-    cfg = load_text(tmp_path, '[luria.schemes.RFC]\ndir = "rfcs"\n')
+    cfg = load_text(tmp_path, """
+                              schemes:
+                                RFC:
+                                  dir: rfcs
+                              """)
     assert set(cfg.schemes) == {"RFC"}, "declaring RFC removed the ADR default"
 
 
@@ -28,7 +32,11 @@ def test_a_declared_scheme_key_is_unset_by_omission(tmp_path):
     """The sharp edge the old rule had: `output` inherited `docs/decisions`
     from the default ADR entry, so the documented way to keep an existing
     layout silently relocated the index."""
-    cfg = load_text(tmp_path, '[luria.schemes.ADR]\ndir = "decisions"\n')
+    cfg = load_text(tmp_path, """
+                              schemes:
+                                ADR:
+                                  dir: decisions
+                              """)
     assert cfg.schemes["ADR"].output is None
     assert cfg.schemes["ADR"].view == cfg.schemes["ADR"].dir
 
@@ -36,14 +44,21 @@ def test_a_declared_scheme_key_is_unset_by_omission(tmp_path):
 def test_settings_tables_still_merge_per_key(tmp_path):
     """`paths` is Luria's vocabulary, not the project's — setting one key must
     not clear the others, or every partial override becomes a broken config."""
-    cfg = load_text(tmp_path, '[luria.paths]\ndocs = "documentation"\n')
+    cfg = load_text(tmp_path, """
+                              paths:
+                                docs: documentation
+                              """)
     assert cfg.docs == tmp_path / "documentation"
     assert cfg.reports == tmp_path / "docs" / "reports", "reports kept default"
 
 
 def test_declaring_journals_does_not_touch_schemes(tmp_path):
     """Replacement is per family: each table is judged on its own presence."""
-    cfg = load_text(tmp_path, '[luria.journals.log]\n'
-                              'dir = "log.d"\noutput = "docs/log"\n')
+    cfg = load_text(tmp_path, """
+                              journals:
+                                log:
+                                  dir: log.d
+                                  output: docs/log
+                              """)
     assert set(cfg.journals) == {"log"}
     assert set(cfg.schemes) == {"ADR"}

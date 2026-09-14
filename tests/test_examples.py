@@ -1,6 +1,6 @@
 """The worked configurations in `examples/` are run, not just read.
 
-A `luria.toml` block in a guide is a claim nobody executes, and this project's
+A `luria.yaml` block in a guide is a claim nobody executes, and this project's
 founding observation is that every surface governed by prose alone had
 drifted. So each example is built into a temporary directory, the real
 `luria index` and `luria lint` run against it, and the capability it advertises
@@ -501,7 +501,7 @@ def test_a_document_may_be_superseded_across_schemes(example):
 def test_every_example_stages_its_own_site(example, tmp_path, name):
     """Each example is a whole record, so each publishes as its own site.
 
-    The root `luria.toml` excludes `examples/**` from *this project's* site,
+    The root `luria.yaml` excludes `examples/**` from *this project's* site,
     and that reads like the examples cannot be published. It is the opposite
     claim: they are excluded because each is a separate record, and the parent
     config cannot stage a child's. `Config.link_base` is the reason — the

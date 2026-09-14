@@ -23,12 +23,20 @@ from luria import (aliases, concretize, config, doc_refs, lint, migrate,
 def _record_project(tmp_path, monkeypatch):
     """A project whose FXM-004 used to be FXL-4 — the post-migration shape."""
     (tmp_path / "docs").mkdir()
-    (tmp_path / "luria.toml").write_text(
-        '[luria]\nissue_url = "https://example.test/issues/{n}"\n'
-        '[luria.paths]\ndesign_principles = "docs/guiding-principles.md"\n'
-        '[luria.schemes.FXM]\ndir = "record/principles.d"\n'
-        'render = "document"\noutput = "docs/guiding-principles.md"\n'
-        '[luria.remotes.SG]\nrepo = "example/strata-g"\n'
+    (tmp_path / "luria.yaml").write_text(
+        """
+        issue_url: https://example.test/issues/{n}
+        paths:
+          design_principles: docs/guiding-principles.md
+        schemes:
+          FXM:
+            dir: record/principles.d
+            render: document
+            output: docs/guiding-principles.md
+        remotes:
+          SG:
+            repo: example/strata-g
+        """
     )
     fxm_dir = tmp_path / "record" / "principles.d"
     fxm_dir.mkdir(parents=True)
@@ -62,17 +70,28 @@ def _premigration_project(tmp_path, monkeypatch):
     another project (its namespace survives), LU mirrors this one (its
     composed codes follow the rename)."""
     (tmp_path / "docs").mkdir()
-    (tmp_path / "luria.toml").write_text(
-        '[luria]\nissue_url = "https://example.test/issues/{n}"\n'
-        '[luria.paths]\ndesign_principles = "docs/design-principles.md"\n'
-        '[luria.schemes.FXL]\ndir = "record/principles.d"\n'
-        'render = "document"\noutput = "docs/design-principles.md"\n'
-        '[luria.remotes.SG]\nrepo = "example/strata-g"\n'
-        '[luria.remotes.SG.schemes.FXL]\n'
-        'document = "docs/design-principles.md"\n'
-        '[luria.remotes.LU]\nrepo = "example/this-project"\n'
-        '[luria.remotes.LU.schemes.FXL]\n'
-        'document = "docs/design-principles.md"\n'
+    (tmp_path / "luria.yaml").write_text(
+        """
+        issue_url: https://example.test/issues/{n}
+        paths:
+          design_principles: docs/design-principles.md
+        schemes:
+          FXL:
+            dir: record/principles.d
+            render: document
+            output: docs/design-principles.md
+        remotes:
+          SG:
+            repo: example/strata-g
+            schemes:
+              FXL:
+                document: docs/design-principles.md
+          LU:
+            repo: example/this-project
+            schemes:
+              FXL:
+                document: docs/design-principles.md
+        """
     )
     (tmp_path / "docs" / "design-principles.md").write_text(
         "<!-- GENERATED -->\n\n# Principles\n\n"
@@ -186,14 +205,30 @@ def test_rename_scheme_end_to_end(tmp_path, monkeypatch, capsys):
     assert "# FXM-004: Fourth value" in moved, "own heading swept"
     assert "citing FXM-1 sometimes" in moved, "cross-citations swept"
 
-    config_text = (root / "luria.toml").read_text()
-    assert "[luria.schemes.FXM]" in config_text
-    assert "[luria.schemes.FXL]" not in config_text
+    config_text = (root / "luria.yaml").read_text()
+    assert """
+           schemes:
+             FXM: {}
+           """ in config_text
+    assert """
+           schemes:
+             FXL: {}
+           """ not in config_text
     assert 'design_principles = "docs/guiding-principles.md"' in config_text
     assert 'output = "docs/guiding-principles.md"' in config_text
-    assert "[luria.remotes.LU.schemes.FXM]" in config_text, "mirror follows"
+    assert """
+           remotes:
+             LU:
+               schemes:
+                 FXM: {}
+           """ in config_text, "mirror follows"
     assert config_text.count('document = "docs/guiding-principles.md"') == 1
-    assert "[luria.remotes.SG.schemes.FXL]" in config_text, "theirs stays"
+    assert """
+           remotes:
+             SG:
+               schemes:
+                 FXL: {}
+           """ in config_text, "theirs stays"
     assert 'document = "docs/design-principles.md"' in config_text, \
         "SG's own path untouched by the section-aware pass"
 
@@ -253,9 +288,13 @@ def test_move_doc_lands_provisional_then_concretizes(tmp_path, monkeypatch):
     aliases: the code it migrated from, and the temporary code it wore in
     between."""
     root = _premigration_project(tmp_path, monkeypatch)
-    (root / "luria.toml").write_text(
-        (root / "luria.toml").read_text()
-        + '[luria.schemes.VAL]\ndir = "record/values.d"\n')
+    (root / "luria.yaml").write_text(
+        (root / "luria.yaml").read_text()
+        + """
+          schemes:
+            VAL:
+              dir: record/values.d
+          """)
     (root / "record" / "values.d").mkdir(parents=True)
     config.reset()
     aliases.reset()
@@ -300,9 +339,13 @@ def test_two_moves_into_one_scheme_do_not_collide(tmp_path, monkeypatch):
     printed two lines saying so in plain sight. Temporary codes make the
     collision structurally impossible rather than arithmetically avoided."""
     root = _premigration_project(tmp_path, monkeypatch)
-    (root / "luria.toml").write_text(
-        (root / "luria.toml").read_text()
-        + '[luria.schemes.VAL]\ndir = "record/values.d"\n')
+    (root / "luria.yaml").write_text(
+        (root / "luria.yaml").read_text()
+        + """
+          schemes:
+            VAL:
+              dir: record/values.d
+          """)
     (root / "record" / "values.d").mkdir(parents=True)
     config.reset()
     aliases.reset()
@@ -336,9 +379,13 @@ def test_move_doc_supersede_copies_and_tombstones(tmp_path, monkeypatch):
     the assigned number along with every other occurrence, so the status line
     ends up pointing at the real one without the migration having to know it."""
     root = _premigration_project(tmp_path, monkeypatch)
-    (root / "luria.toml").write_text(
-        (root / "luria.toml").read_text()
-        + '[luria.schemes.VAL]\ndir = "record/values.d"\n')
+    (root / "luria.yaml").write_text(
+        (root / "luria.yaml").read_text()
+        + """
+          schemes:
+            VAL:
+              dir: record/values.d
+          """)
     (root / "record" / "values.d").mkdir(parents=True)
     config.reset()
     aliases.reset()
@@ -407,10 +454,15 @@ def test_a_same_render_move_keeps_its_links_untouched(tmp_path, monkeypatch):
     would be churn, and would quietly relink bare references the author left
     bare on purpose elsewhere in the file."""
     root = _premigration_project(tmp_path, monkeypatch)
-    (root / "luria.toml").write_text(
-        (root / "luria.toml").read_text()
-        + '[luria.schemes.SRC]\ndir = "record/src.d"\n'
-          '[luria.schemes.DST]\ndir = "record/dst.d"\n')
+    (root / "luria.yaml").write_text(
+        (root / "luria.yaml").read_text()
+        + """
+          schemes:
+            SRC:
+              dir: record/src.d
+            DST:
+              dir: record/dst.d
+          """)
     (root / "record" / "src.d").mkdir(parents=True)
     (root / "record" / "dst.d").mkdir(parents=True)
     (root / "record" / "src.d" / "SRC-001.md").write_text(
@@ -444,9 +496,13 @@ def test_a_worded_citation_of_a_moved_document_is_rebuilt(tmp_path,
     re-links to the address that was just vacated. The whole citation has to
     become the new code."""
     root = _premigration_project(tmp_path, monkeypatch)
-    (root / "luria.toml").write_text(
-        (root / "luria.toml").read_text()
-        + '[luria.schemes.VAL]\ndir = "record/values.d"\n')
+    (root / "luria.yaml").write_text(
+        (root / "luria.yaml").read_text()
+        + """
+          schemes:
+            VAL:
+              dir: record/values.d
+          """)
     (root / "record" / "values.d").mkdir(parents=True)
     page = root / "docs" / "worded.md"
     page.write_text(
@@ -472,10 +528,16 @@ def _worded_move_project(tmp_path, monkeypatch):
     by code and in prose — and a spec that moves FXL-4 into an index-rendered
     scheme."""
     root = _premigration_project(tmp_path, monkeypatch)
-    (root / "luria.toml").write_text(
-        (root / "luria.toml").read_text()
-        + '[luria.code]\nglobs = ["src/*.py"]\n'
-          '[luria.schemes.VAL]\ndir = "record/values.d"\n')
+    (root / "luria.yaml").write_text(
+        (root / "luria.yaml").read_text()
+        + """
+          code:
+            globs:
+            - src/*.py
+          schemes:
+            VAL:
+              dir: record/values.d
+          """)
     (root / "record" / "values.d").mkdir(parents=True)
     (root / "src").mkdir()
     (root / "src" / "engine.py").write_text(

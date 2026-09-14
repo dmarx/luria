@@ -14,24 +14,30 @@ import json
 from luria import config, lint, sources
 
 SOURCE_TOML = (
-    '[luria]\nissue_url = "https://example.test/issues/{n}"\n'
-    '[luria.lint]\nnetwork = "never"\n'
-    '[luria.remotes.ARXIV]\n'
-    'uid = "(\\\\d{4})[.:](\\\\d{4,5})"\n'
-    'url = "https://arxiv.org/abs/{1}.{2}"\n'
-    'uris.title = "https://export.example/api?id={1}.{2}"\n'
-    'title_re = "<title>(.*?)</title>"\n'
-    '[luria.schemes.LIT]\n'
-    'dir = "record/literature.d"\n'
-    'render = "index"\n'
-    'output = "docs/literature"\n'
+    """
+issue_url: https://example.test/issues/{n}
+lint:
+  network: never
+remotes:
+  ARXIV:
+    uid: (\d{4})[.:](\d{4,5})
+    url: https://arxiv.org/abs/{1}.{2}
+    uris:
+      title: https://export.example/api?id={1}.{2}
+    title_re: <title>(.*?)</title>
+schemes:
+  LIT:
+    dir: record/literature.d
+    render: index
+    output: docs/literature
+"""
 )
 
 
 def _project(project, extra: str = "", network: str = "never") -> None:
     (project / "record" / "literature.d").mkdir(parents=True, exist_ok=True)
     (project / "docs" / "literature").mkdir(parents=True, exist_ok=True)
-    (project / "luria.toml").write_text(
+    (project / "luria.yaml").write_text(
         SOURCE_TOML.replace('network = "never"', f'network = "{network}"') + extra)
     config.reset()
 
@@ -256,7 +262,11 @@ def test_the_title_url_indexes_the_uid_capture_groups(project):
 def test_a_remote_with_no_title_uri_is_skipped(project):
     """Most remotes are records, not metadata APIs. Declaring nothing means
     the check has no opinion, rather than an opinion it cannot support."""
-    _project(project, extra='[luria.remotes.TICKET]\nuid = "[A-Z]+-\\\\d+"\n'
-                            'url = "https://tickets.example/{uid}"\n')
+    _project(project, extra="""
+                            remotes:
+                              TICKET:
+                                uid: '[A-Z]+-\d+'
+                                url: https://tickets.example/{uid}
+                            """)
     remote = config.current().remotes["TICKET"]
     assert sources._title_url(remote, "OPS-1") == ""

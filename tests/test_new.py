@@ -5,6 +5,7 @@ The contract under test: identity fields a machine can compute are computed
 placeholder, and the path comes back for an editor to take over. Kinds are
 derived from config, never hardcoded.
 """
+from _config import merged
 import datetime as dt
 from pathlib import Path
 
@@ -15,9 +16,14 @@ from luria.config import current
 
 
 def test_the_default_kind_is_the_journal(project):
-    (project / "luria.toml").write_text(
-        '[luria]\nissue_url = ""\n'
-        '[luria.journals.devlog]\ndir = "devlog.d"\noutput = "docs/devlog"\n')
+    (project / "luria.yaml").write_text(
+        """
+        issue_url: ''
+        journals:
+          devlog:
+            dir: devlog.d
+            output: docs/devlog
+        """)
     from luria import config
     config.reset()
 
@@ -66,9 +72,13 @@ def test_named_fields_are_optional_but_honoured(project):
 
 
 def test_a_fragment_takes_the_given_name(project):
-    (project / "luria.toml").write_text(
-        '[luria]\nissue_url = ""\n'
-        '[luria.fragments."changelog.d"]\nfile = "CHANGELOG.md"\n')
+    (project / "luria.yaml").write_text(
+        """
+        issue_url: ''
+        fragments:
+          changelog.d:
+            file: CHANGELOG.md
+        """)
     from luria import config
     config.reset()
     (project / "changelog.d").mkdir()
@@ -87,9 +97,13 @@ def test_an_unnamed_fragment_is_stamped_like_a_journal_entry(project):
     after a squash merge and refiled: `luria new changelog` reopened the
     MERGED fragment and muddled two PRs into one batch."""
     import re
-    (project / "luria.toml").write_text(
-        '[luria]\nissue_url = ""\n'
-        '[luria.fragments."changelog.d"]\nfile = "CHANGELOG.md"\n')
+    (project / "luria.yaml").write_text(
+        """
+        issue_url: ''
+        fragments:
+          changelog.d:
+            file: CHANGELOG.md
+        """)
     from luria import config
     config.reset()
     (project / "changelog.d").mkdir()
@@ -128,12 +142,16 @@ def test_a_comma_separated_tags_flag_survives_fire(project):
 # the contract declares, for the same reason the template does.
 
 def _plural_project(project, many: bool = True):
-    (project / "luria.toml").write_text(
-        '[luria]\nissue_url = "https://example.test/issues/{n}"\n\n'
-        '[luria.schemes.LIT]\ndir = "record/literature.d"\n\n'
-        '[luria.schemes.SOTA]\ndir = "record/practices.d"\n\n'
-        '[luria.schemes.SOTA.references]\n'
-        f'source = {{ scheme = "LIT", required = true, many = {str(many).lower()} }}\n')
+    (project / "luria.yaml").write_text(
+        merged("""
+issue_url: https://example.test/issues/{n}
+schemes:
+  LIT:
+    dir: record/literature.d
+  SOTA:
+    dir: record/practices.d
+""", {"schemes": {"SOTA": {"references": {
+            "source": {"scheme": "LIT", "required": True, "many": many}}}}}))
     from luria import config
     config.reset()
     scheme = current().schemes["SOTA"]
@@ -202,10 +220,14 @@ def test_an_unfilled_summary_is_dropped_not_copied_from_the_form(project):
     and two Proposed decisions reached the published index saying it. The
     key goes; the comment above it stays as the instruction."""
     from luria import config, new
-    (project / "luria.toml").write_text(
-        '[luria]\nissue_url = "https://example.test/issues/{n}"\n'
-        '[luria.schemes.ADR]\ndir = "record/decisions.d"\n'
-        'output = "docs/decisions"\n')
+    (project / "luria.yaml").write_text(
+        """
+        issue_url: https://example.test/issues/{n}
+        schemes:
+          ADR:
+            dir: record/decisions.d
+            output: docs/decisions
+        """)
     config.reset()
     d = project / "record" / "decisions.d"
     d.mkdir(parents=True, exist_ok=True)

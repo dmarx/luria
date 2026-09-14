@@ -23,6 +23,8 @@ wrote a link by looking at the output.
 
 from __future__ import annotations
 
+from _config import merged
+
 from pathlib import Path
 
 import pytest
@@ -36,15 +38,12 @@ def _project(root: Path, monkeypatch, cite: str | None = None,
     into `docs/design-principles.md`."""
     (root / "record" / "principles.d").mkdir(parents=True, exist_ok=True)
     (root / "docs").mkdir(parents=True, exist_ok=True)
-    cite_line = f'cite = "{cite}"\n' if cite is not None else ""
-    output = 'output = "docs/design-principles.md"\n' if render == "document" \
-        else 'output = "docs/principles"\n'
-    (root / "luria.toml").write_text(
-        "[luria]\n"
-        "[luria.schemes.DP]\n"
-        'dir = "record/principles.d"\n'
-        f'render = "{render}"\n'
-        f"{output}{cite_line}")
+    output = ("docs/design-principles.md" if render == "document"
+              else "docs/principles")
+    scheme = {"dir": "record/principles.d", "render": render, "output": output}
+    if cite is not None:
+        scheme["cite"] = cite
+    (root / "luria.yaml").write_text(merged({"schemes": {"DP": scheme}}))
     monkeypatch.setenv("LURIA_ROOT", str(root))
     config.reset()
 

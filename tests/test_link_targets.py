@@ -32,16 +32,20 @@ def _project(root: Path, monkeypatch) -> None:
     (root / "record" / "notes.d").mkdir(parents=True, exist_ok=True)
     (root / "record" / "log.d").mkdir(parents=True, exist_ok=True)
     (root / "docs").mkdir(parents=True, exist_ok=True)
-    (root / "luria.toml").write_text(
-        '[luria]\nissue_url = "https://example.test/issues/{n}"\n'
-        '[luria.schemes.NT]\n'
-        'dir = "record/notes.d"\n'
-        'render = "index"\n'
-        'output = "docs/notes"\n'
-        '[luria.journals.log]\n'
-        'dir = "record/log.d"\n'
-        'output = "docs/log"\n'
-        'granularity = "day"\n')
+    (root / "luria.yaml").write_text(
+        """
+        issue_url: https://example.test/issues/{n}
+        schemes:
+          NT:
+            dir: record/notes.d
+            render: index
+            output: docs/notes
+        journals:
+          log:
+            dir: record/log.d
+            output: docs/log
+            granularity: day
+        """)
     monkeypatch.setenv("LURIA_ROOT", str(root))
     config.reset()
 
