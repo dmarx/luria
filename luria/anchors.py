@@ -26,6 +26,10 @@ the TARGET — the link is spelled correctly and the thing it names cannot be
 found.
 """
 
+# inactive-ok-file: ADR-tmp29lk4 — Proposed. Every mention names it as
+# the decision this file implements or is written against; the citation
+# is to the reasoning, not a claim the decision is settled.
+
 from __future__ import annotations
 
 import os
@@ -33,12 +37,13 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
+from . import slugs
+
 # `<a name="x">`, and only in the empty-anchor form the generator wrote and a
 # person writes by hand. An `<a name=… href=…>` is a link that happens to
 # carry a legacy name, not an anchor somebody is pointing at.
 NAME_ANCHOR_RE = re.compile(r'<a\s+name="([^"]+)"\s*>\s*</a>')
 ID_RE = re.compile(r'<[a-zA-Z][^>]*\sid="([^"]+)"')
-HEADING_RE = re.compile(r"^#{1,6}\s+(.*?)\s*$", re.M)
 # A markdown link whose target is a relative path with a fragment. Absolute
 # URLs are somebody else's page, and a bare `#frag` is this page's own, which
 # the same rules cover when the page itself is scanned.
@@ -46,28 +51,29 @@ FRAGMENT_LINK_RE = re.compile(
     r"\[[^\]]*\]\((?!https?:|mailto:|#)([^)\s#]+\.md)#([^)\s]+)\)")
 
 
-def slug(heading: str) -> str:
-    """A heading's own anchor, GitHub's way.
-
-    Renderers differ in the details and this is the common core — enough to
-    recognise a fragment that names a heading, which is all this needs. Being
-    generous here is deliberate: the finding this module exists for is about
-    an anchor nothing but a real navigation can reach, and a heading is never
-    that."""
-    text = re.sub(r"<[^>]+>", "", heading).strip().lower()
-    text = re.sub(r"[^\w\s-]", "", text, flags=re.UNICODE)
-    return re.sub(r"\s+", "-", text)
-
-
 def addressable(text: str) -> set[str]:
-    """Every fragment this document can be reached at from anywhere."""
-    return set(ID_RE.findall(text)) | {slug(h) for h in HEADING_RE.findall(text)}
+    """Every fragment this document can be reached at from anywhere.
+
+    The heading half is `slugs`, which is the same function the generator
+    uses to WRITE these links — deliberately, because a check computing the
+    anchor a second way would agree with the generator and not with the
+    publisher, which is the failure it exists to catch (ADR-tmp29lk4)."""
+    return set(ID_RE.findall(text)) | set(slugs.anchors_for(text).values())
 
 
 def by_name_only(text: str) -> set[str]:
     """Fragments this document answers to on a real navigation and nowhere
     else."""
     return set(NAME_ANCHOR_RE.findall(text)) - addressable(text)
+
+
+@dataclass(frozen=True)
+class Reach:
+    """How a document can be reached: every fragment that resolves, the ones
+    that resolve only on a real navigation, and whether it could be read."""
+    addressable: set[str]
+    named: set[str]
+    known: bool
 
 
 @dataclass(frozen=True)
@@ -81,6 +87,11 @@ class Finding:
     # generator's to fix, and an edit written there is erased by the next
     # build.
     generated: bool = False
+    # "name-only": the target answers on a real navigation and nowhere else,
+    # which `--fix` repairs. "missing": it answers nowhere at all, which only
+    # a person can resolve — a typo, a reworded heading, or a link written
+    # against a page that has since changed.
+    kind: str = "name-only"
 
 
 def scan(documents: dict[Path, str], generated=None, base=None) -> list[Finding]:
@@ -105,18 +116,20 @@ def scan(documents: dict[Path, str], generated=None, base=None) -> list[Finding]
     and nonsense from the source's own folder."""
     generated = generated or (lambda _p: False)
     base = base or (lambda p: p.parent)
-    cache: dict[Path, set[str]] = {}
+    cache: dict[Path, Reach] = {}
     found: list[Finding] = []
 
-    def anchors_at(target: Path) -> set[str]:
+    def anchors_at(target: Path) -> Reach:
         if target not in cache:
             text = documents.get(target)
+            known = text is not None
             if text is None:
                 try:
                     text = target.read_text(encoding="utf-8")
+                    known = True
                 except (OSError, UnicodeDecodeError):
                     text = ""
-            cache[target] = by_name_only(text)
+            cache[target] = Reach(addressable(text), by_name_only(text), known)
         return cache[target]
 
     for path, text in documents.items():
@@ -126,9 +139,18 @@ def scan(documents: dict[Path, str], generated=None, base=None) -> list[Finding]
             # directory `luria index` has not created yet fails on the
             # filesystem and reads fine, which is what a renderer does.
             target = Path(os.path.normpath(where / m.group(1)))
-            if m.group(2) in anchors_at(target):
-                found.append(Finding(path, text.count("\n", 0, m.start()) + 1,
-                                     target, m.group(2), generated(path)))
+            frag, line = m.group(2), text.count("\n", 0, m.start()) + 1
+            reach = anchors_at(target)
+            if frag in reach.named:
+                found.append(Finding(path, line, target, frag,
+                                     generated(path), "name-only"))
+            elif reach.known and frag not in reach.addressable:
+                # `known` guards the case where the target could not be read
+                # at all: a link into a file this record does not own is not
+                # this record's finding, and reporting every one of them
+                # would bury the ones that are.
+                found.append(Finding(path, line, target, frag,
+                                     generated(path), "missing"))
     # A stub's prose is *in* the page it renders into, so the same link is
     # found twice — once where a person wrote it and once in the view. One
     # defect, reported where it can be acted on.

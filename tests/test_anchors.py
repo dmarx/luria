@@ -18,6 +18,10 @@ would look for the bug.
 keeps a hand-written anchor from reintroducing it (ADR-099).
 """
 
+# inactive-ok-file: ADR-tmp29lk4 — Proposed. Every mention names it as
+# the decision this file implements or is written against; the citation
+# is to the reasoning, not a claim the decision is settled.
+
 # inactive-ok-file: ADR-099 — Proposed. Every mention names it as the
 # decision this file implements or is written against; the citation is to
 # the reasoning, not a claim the decision is settled.
@@ -185,3 +189,98 @@ def _linked_pair(root: Path, monkeypatch, anchor: str, frag: str = "here") -> Pa
         "# Docs\n\n- [Target](target.md)\n- [Source](source.md)\n")
     config.reset()
     return root
+
+
+# --- a fragment that reaches nothing (ADR-tmp29lk4) ------------------------
+#
+# Checkable only since luria owns a slugger: a heading's anchor is assigned
+# by the publisher, and a check that guessed at it would report links that
+# work. The generator writes these links now, so the check is also the guard
+# on the generator.
+
+def test_a_fragment_that_names_no_heading_and_no_id_is_a_finding(
+        project, monkeypatch):
+    root = _linked_pair(project, monkeypatch, "## Something else", frag="here")
+    errors: list[str] = []
+    lint.check_anchors(errors)
+    assert len(errors) == 1, errors
+    assert "reaches no heading and no `id`" in errors[0]
+
+
+def test_a_reworded_heading_is_what_this_catches(project, monkeypatch):
+    """The fragility the slug switch buys, made loud. A contents list links
+    the heading; somebody rewords the heading; the link goes nowhere and
+    nothing else in the record would have said so."""
+    root = _linked_pair(project, monkeypatch, "## Here", frag="here")
+    (root / "docs" / "target.md").write_text("# Target\n\n## Here now\n\nBody.\n")
+    config.reset()
+    errors: list[str] = []
+    lint.check_anchors(errors)
+    assert any("#here" in e for e in errors), errors
+
+
+def test_a_fragment_naming_a_heading_that_is_there_is_silent(
+        project, monkeypatch):
+    _linked_pair(project, monkeypatch, "## Here", frag="here")
+    errors: list[str] = []
+    lint.check_anchors(errors)
+    assert errors == [], errors
+
+
+def test_a_link_into_a_file_this_record_does_not_own_is_not_a_finding(
+        project, monkeypatch):
+    """Reporting every one of those would bury the ones that are ours."""
+    root = _linked_pair(project, monkeypatch, "## Here", frag="here")
+    (root / "docs" / "source.md").write_text(
+        "# Source\n\nSee [elsewhere](../../outside/thing.md#whatever).\n")
+    config.reset()
+    errors: list[str] = []
+    lint.check_anchors(errors)
+    assert errors == [], errors
+
+
+# --- the contents list links what the page offers (ADR-tmp29lk4) -----------
+
+def test_a_books_contents_links_the_heading_not_the_timestamp(
+        project, monkeypatch):
+    """Both addresses resolve. Only one is the one the page hands a reader —
+    Quartz puts its ¶ anchor and its own sidebar TOC on the heading — and a
+    contents list pointing somewhere else is two addresses for one entry."""
+    root = _journal_project(project, monkeypatch)
+    j = config.current().journals["devlog"]
+    key, filed = next(iter(journal.books(j).items()))
+    book = journal.render_book(j, key, filed)
+    assert "](#an-entry)" in book
+    assert "](#20260901120000)" not in book
+    # The durable anchor stays, unlinked: a citation written by hand needs
+    # something that does not move when the title is reworded.
+    assert '<a id="20260901120000"></a>' in book
+
+
+def test_the_journal_index_links_the_same_anchor_as_the_book(
+        project, monkeypatch):
+    root = _journal_project(project, monkeypatch)
+    j = config.current().journals["devlog"]
+    grouped = journal.books(j)
+    index = journal.render_index(j, grouped)
+    key, filed = next(iter(grouped.items()))
+    book = journal.render_book(j, key, filed)
+    assert f"]({key}.md#an-entry)" in index
+    assert "](#an-entry)" in book
+
+
+def test_an_entry_body_heading_shifts_the_slugs_after_it(
+        project, monkeypatch):
+    """Why the slug is computed over the whole book rather than off the
+    titles: a heading inside one entry's body consumes a slug, and a later
+    entry with the same title is `-1`, not the bare one."""
+    root = _journal_project(project, monkeypatch)
+    d = root / "record" / "devlog.d" / "2026" / "09" / "02"
+    d.mkdir(parents=True, exist_ok=True)
+    (d / "120000.md").write_text(
+        "---\ncreated: '2026-09-02 12:00:00'\ntitle: 'An entry'\n---\n\nBody.\n")
+    config.reset()
+    j = config.current().journals["devlog"]
+    key, filed = next(iter(journal.books(j).items()))
+    book = journal.render_book(j, key, filed)
+    assert "](#an-entry)" in book and "](#an-entry-1)" in book

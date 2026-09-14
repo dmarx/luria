@@ -1,0 +1,140 @@
+---
+status: Proposed
+title: "A generated link uses the anchor the page offers, and luria owns the slug"
+version: 1
+tags:
+- mechanism
+- record
+date: '2026-09-14'
+summary: >-
+  A journal entry had two addresses: luria's durable `<a id="{timestamp}">`,
+  which its contents list linked, and the heading's own slug, which is what
+  the published page puts on the ¶ anchor and in Quartz's sidebar. Both
+  resolve; only one is what a reader copies. The generated links switch to
+  the heading, which means luria now has to compute `github-slugger`'s slug
+  itself — validated against 288 headings the site actually published, and
+  guarded by a check that every generated fragment resolves. Rejected:
+  putting the timestamp on the heading, which breaks Quartz's sidebar
+  entirely.
+---
+
+# ADR-tmp29lk4: A generated link uses the anchor the page offers, and luria owns the slug
+
+<!-- inactive-ok-file: ADR-099, ADR-094 — both Proposed. Named as the decisions
+     this one continues and corrects; the citations are to their reasoning,
+     not a claim either is settled. -->
+
+## Context
+
+ADR-099 made luria's anchors reachable — `id` rather than `name`, so a
+single-page router can find them. Every fragment link in the record resolves
+now. What it did not notice is that each entry ended up with **two**
+addresses:
+
+    <p><a id="20260903035841"></a></p>
+    <h2 id="three-lint-passes-compile-into-one-contract-per-scheme">…
+
+Luria writes the first and links it from the book's contents list. The
+publisher writes the second, puts the ¶ anchor on it, and builds its own
+sidebar Table of Contents out of it. So the address a reader copies off the
+page is not the address the page's own contents list uses. Nothing is
+broken, and it looks broken — which is how this was reported: as a bug, by
+someone reading the two and concluding the first could not work.
+
+That is a real defect even though every link resolves. A record whose pages
+disagree with themselves about how to name a thing is a record you have to
+test rather than read.
+
+## Decision
+
+**A generated link uses the anchor the page offers.** The contents list in a
+journal book, and the entry list on a journal's index, link the heading's
+slug — the same thing Quartz's ¶ anchor and sidebar link. One address per
+entry, and it is the one visible on the page.
+
+**The durable anchor stays, unlinked.** `<a id="20260903035841">` is keyed to
+the timestamp, which never moves, where a slug moves with the wording. It is
+no longer what luria's own views link, but it remains what a citation
+written by hand can point at without rotting. It costs one line and buys an
+address that survives an edit.
+
+**Luria owns a slug function.** It has to: to link a heading it must produce
+the id the publisher will assign, and that is `github-slugger` — the same
+implementation behind `rehype-slug` on the site and behind GitHub's own
+rendering. `luria/slugs.py` is the one copy.
+
+Owning a fourth copy of somebody else's algorithm is a thing to do carefully
+or not at all ([DP-4](../principles.d/DP-004.md)). Two things make it safe, and neither is care:
+
+- **It was validated against the publisher's output, not against a
+  specification I chose.** 288 headings across five pages the site had
+  actually published. The first implementation matched 283 of them, and the
+  five it missed were both of its bugs: `_` is a word character, so
+  `fail_on` stays `fail_on`; and removal happens before spaces become
+  hyphens, each space separately, so an em-dash between two spaces leaves a
+  double hyphen. Neither was going to be found by thinking harder.
+- **The check beside it verifies the generator.** Luria renders the page it
+  links into, so `anchors` can ask whether every generated fragment resolves
+  against the very text the generator produced. A drift between this
+  function and the publisher's becomes a lint failure rather than a link
+  that quietly goes nowhere.
+
+**The anchor check widens from "reachable only by `name`" to "reaches
+nothing".** [ADR-099](ADR-099.md) rejected this, and was right to at the time: *"a
+fragment naming a heading is resolved by a slug each renderer computes
+slightly differently, so the check would have to model several slugifiers to
+avoid reporting links that work."* The objection dissolved the moment luria
+had to model one anyway. The two findings keep their separate remedies —
+`name`-only is `luria link --fix`, and reaching nothing is a person's to
+resolve.
+
+**`cite = "page"` in a record that does not publish those pages is a
+warning.** This is the same conflict one level up. A citation's durable
+address is either an anchor or a page, and `cite` chooses; choosing the page
+and then withholding it through `site.exclude` leaves every citation of that
+scheme's codes pointing out of the site. [ADR-094](ADR-094.md) measured that shape when
+`publishable()` still withheld those pages by derivation — links leaving the
+site went from 10 to 195 — and fixed the derivation without anything
+stopping a project from doing it on purpose. A warning rather than an error:
+a record may publish a subset deliberately and this cannot tell which, but
+it can say the two settings disagree ([ADR-035](ADR-035.md)).
+
+## Alternatives considered
+
+- **Put the timestamp on the heading.** One address, and the durable one —
+  which is what I recommended before checking. It is not available.
+  `rehype-slug` assigns an id only `if (headingRank(node) && !node.properties.id)`,
+  so a heading carrying the timestamp never gets the slug; and Quartz's
+  sidebar TOC is a *markdown* plugin that computes its links from the heading
+  TEXT with its own slugger, ignoring ids entirely. Every sidebar link on
+  every book and on the principles document would point at an id that no
+  longer exists. Buying one address by breaking the publisher's own
+  navigation is not a trade.
+- **Keep the contents list on the timestamp and accept two addresses.** What
+  was there. Defensible — everything resolves — and it is the version that
+  got reported as a bug by someone reading the page carefully. "It works,
+  you are holding it wrong" is not an answer a record gets to give.
+- **Disable Quartz's sidebar TOC and take the timestamp everywhere.** Makes
+  the first alternative available, at the price of the only table of contents
+  on ADR pages and prose docs, which have no generated one of their own. A
+  site-wide loss to fix a journal's wart.
+- **Do not own a slugger; write the slug into each entry's frontmatter.**
+  Moves the problem onto the author, who now has to compute the same thing by
+  hand and keep it in step with a title they may reword — which is the
+  coupling this change exists to remove.
+
+## Consequences
+
+Every generated contents list changes, in every record, on the next build.
+No published address stops working: the timestamp anchors stay in the page,
+so a link anybody had already written still resolves.
+
+The generated links are now wording-dependent, which is a real loss and the
+reason the check widened in the same change. Reword a heading and the
+contents list is regenerated with it — but a *hand-written* link into that
+heading now reports, where before nothing would have said so.
+
+Luria carries one more piece of somebody else's behaviour, pinned to
+`github-slugger` by way of the Quartz version the site action already pins.
+If either moves, the check says so in the first build after, against real
+output, which is the arrangement that makes the copy affordable.
