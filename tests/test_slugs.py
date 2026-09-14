@@ -8,10 +8,10 @@ by the same `github-slugger` on GitHub.
 
 So these tests are not about a specification I chose. Every case here was
 taken from what Quartz actually published for this record, and two of them
-are cases my first implementation got wrong (ADR-tmp29lk4).
+are cases my first implementation got wrong (ADR-100).
 """
 
-# inactive-ok-file: ADR-tmp29lk4 — Proposed. Every mention names it as
+# inactive-ok-file: ADR-100 — Proposed. Every mention names it as
 # the decision this file implements or is written against; the citation
 # is to the reasoning, not a claim the decision is settled.
 

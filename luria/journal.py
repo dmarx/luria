@@ -40,7 +40,7 @@ buy — a listing of what happened, in the file where it happened, that cannot g
 stale.
 """
 
-# inactive-ok-file: ADR-tmp29lk4 — Proposed. Every mention names it as
+# inactive-ok-file: ADR-100 — Proposed. Every mention names it as
 # the decision this file implements or is written against; the citation
 # is to the reasoning, not a claim the decision is settled.
 
@@ -182,7 +182,7 @@ def _sections(journal: Journal, filed: list[Entry]) -> list[str]:
 
     Split out because the contents list has to link headings that this text
     defines — and a heading's anchor depends on every heading before it, the
-    entry bodies' own included (ADR-tmp29lk4)."""
+    entry bodies' own included (ADR-100)."""
     out = []
     for entry in filed:
         # The `id` is luria's own durable address for the entry: keyed to the

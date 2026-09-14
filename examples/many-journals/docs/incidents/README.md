@@ -6,7 +6,7 @@ What broke, what we thought was breaking, and what actually was.
 
 ## Currently — [2026](2026.md)
 
-- [11 Mar 23:15 — Queue backlog during the migration window](2026.md#20260311231500)
+- [11 Mar 23:15 — Queue backlog during the migration window](2026.md#queue-backlog-during-the-migration-window)
 
 ## All books
 

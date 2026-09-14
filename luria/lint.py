@@ -51,7 +51,7 @@ one so only the unconsidered ones stay listed — acknowledged rows never fail.
 Exit 0 when clean; exit 1 with one line per violation.
 """
 
-# inactive-ok-file: ADR-tmp29lk4 — Proposed. Every mention names it as
+# inactive-ok-file: ADR-100 — Proposed. Every mention names it as
 # the decision this file implements or is written against; the citation
 # is to the reasoning, not a claim the decision is settled.
 
@@ -472,7 +472,7 @@ def check_anchors(errors: list[str]) -> None:
     it (ADR-099). Nothing at all is the plainer case, and it became
     checkable only once luria owned a slugger of its own: a heading's anchor
     is the publisher's, and a check that guessed at it would report links
-    that work (ADR-tmp29lk4).
+    that work (ADR-100).
 
     Read against the RENDER, not the committed tree — see
     `anchors.documents`."""

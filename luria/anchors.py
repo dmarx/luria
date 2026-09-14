@@ -26,7 +26,7 @@ the TARGET — the link is spelled correctly and the thing it names cannot be
 found.
 """
 
-# inactive-ok-file: ADR-tmp29lk4 — Proposed. Every mention names it as
+# inactive-ok-file: ADR-100 — Proposed. Every mention names it as
 # the decision this file implements or is written against; the citation
 # is to the reasoning, not a claim the decision is settled.
 
@@ -57,7 +57,7 @@ def addressable(text: str) -> set[str]:
     The heading half is `slugs`, which is the same function the generator
     uses to WRITE these links — deliberately, because a check computing the
     anchor a second way would agree with the generator and not with the
-    publisher, which is the failure it exists to catch (ADR-tmp29lk4)."""
+    publisher, which is the failure it exists to catch (ADR-100)."""
     return set(ID_RE.findall(text)) | set(slugs.anchors_for(text).values())
 
 

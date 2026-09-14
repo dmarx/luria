@@ -6,8 +6,8 @@ What happened in a conversation, written by the participant with the worse memor
 
 ## Currently — [September 2026](2026-09.md)
 
-- [5 Sep 04:15 — Writing the record that describes the thing writing it](2026-09.md#20260905041500)
-- [5 Sep 02:30 — Adding the source, and finding eight rules nobody had written down](2026-09.md#20260905023006)
+- [5 Sep 04:15 — Writing the record that describes the thing writing it](2026-09.md#writing-the-record-that-describes-the-thing-writing-it)
+- [5 Sep 02:30 — Adding the source, and finding eight rules nobody had written down](2026-09.md#adding-the-source-and-finding-eight-rules-nobody-had-written-down)
 
 ## All books
 

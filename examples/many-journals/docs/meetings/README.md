@@ -4,7 +4,7 @@
 
 ## Currently — [12 March 2026](2026-03-12.md)
 
-- [12 Mar 14:00 — Platform sync](2026-03-12.md#20260312140000)
+- [12 Mar 14:00 — Platform sync](2026-03-12.md#platform-sync)
 
 ## All books
 

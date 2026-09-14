@@ -9,7 +9,7 @@ Every reference in the record is a claim — "this is why things are the way the
 
 Only an `Active` document is in force. `Proposed` and `Deferred` mean *not in force yet* — an open question, being cited as if it were settled — while `Superseded` and `Rejected` mean *no longer in force*, which is often a perfectly good thing to cite: history, or a rejection worth pointing at. Either way the citation should be deliberate, and this section lists the ones nobody has vouched for yet.
 
-**1 document cited without acknowledgement.** Not listed: 133 citations someone has already vouched for with an `inactive-ok:` comment at the citing site.
+**1 document cited without acknowledgement.** Not listed: 153 citations someone has already vouched for with an `inactive-ok:` comment at the citing site.
 
 To vouch for one, put the reason where the citation is — `inactive-ok:` covers its own line and the line below it, `inactive-ok-block:` its paragraph, `inactive-ok-file:` the whole page:
 
@@ -17,20 +17,19 @@ To vouch for one, put the reason where the citation is — `inactive-ok:` covers
 <!-- inactive-ok: ADR-012 — why this citation is right -->
 ```
 
-### [ADR-099](../../record/decisions.d/ADR-099.md) — Proposed
+### [ADR-100](../../record/decisions.d/ADR-100.md) — Proposed
 
-An anchor is an id, and a fragment link is checked against one
+A generated link uses the anchor the page offers, and luria owns the slug
 
-2 citations in 2 files await a look; 13 other citations of it are acknowledged.
+1 citation in 1 file awaits a look; 10 other citations of it are acknowledged.
 
-- [`record/decisions.d/ADR-014.md:44`](../../record/decisions.d/ADR-014.md)
-- [`record/decisions.d/ADR-015.md:130`](../../record/decisions.d/ADR-015.md)
+- [`luria/adr_index.py:326`](../../luria/adr_index.py)
 
 ## Codes that resolve to no document
 
 A reference the reader cannot follow: the code names no document in this record. A typo, a number carried in from another project, and an illustrative code in an example all look identical from here — telling them apart takes a human, so this is a report, not an error.
 
-**7 codes unaccounted for.** Not listed: 74 mentions marked deliberate with an `unresolved-ok:` comment (same syntax and scopes as `inactive-ok:` above).
+**3 codes unaccounted for.** Not listed: 78 mentions marked deliberate with an `unresolved-ok:` comment (same syntax and scopes as `inactive-ok:` above).
 
 
 ### ADR-919 — resolves to nothing (3 unmarked sites · 4 other mentions marked deliberate)
@@ -38,11 +37,6 @@ A reference the reader cannot follow: the code names no document in this record.
 - [`luria/doc_refs.py:418`](../../luria/doc_refs.py)
 - [`luria/doc_refs.py:961`](../../luria/doc_refs.py)
 - [`luria/doc_refs.py:963`](../../luria/doc_refs.py)
-
-### ADR-123 — resolves to nothing (2 unmarked sites · 3 other mentions marked deliberate)
-
-- [`record/decisions.d/ADR-014.md:51`](../../record/decisions.d/ADR-014.md)
-- [`record/decisions.d/ADR-014.md:53`](../../record/decisions.d/ADR-014.md)
 
 ### ADR-000 — resolves to nothing (1 unmarked site · 2 other mentions marked deliberate)
 
@@ -52,18 +46,6 @@ A reference the reader cannot follow: the code names no document in this record.
 
 - [`luria/doc_refs.py:353`](../../luria/doc_refs.py)
 
-### ADR-158 — resolves to nothing (1 unmarked site · 1 other mention marked deliberate)
-
-- [`record/decisions.d/ADR-014.md:51`](../../record/decisions.d/ADR-014.md)
-
-### ADR-187 — resolves to nothing (1 unmarked site)
-
-- [`record/decisions.d/ADR-014.md:51`](../../record/decisions.d/ADR-014.md)
-
-### ADR-188 — resolves to nothing (1 unmarked site · 1 other mention marked deliberate)
-
-- [`record/decisions.d/ADR-014.md:51`](../../record/decisions.d/ADR-014.md)
-
 ## Files that opt out of reference checking
 
 `unlinted-file:` exempts a whole document from the reference machinery — the blunt tool for a fixture-heavy or vendored page. It is counted here rather than hidden, the same bargain as an acknowledgement: the report stays a complete account of what nobody is checking.
@@ -72,8 +54,7 @@ None. Every scanned file is checked. ✅
 
 ## Directives that no longer apply
 
+- luria/adr_index.py:324: annotation names ADR-100, which does resolve here
 - luria/doc_refs.py:42: annotation names DP-017, which does resolve here
 - luria/migrate.py:58: annotation names DP-017, which does resolve here
-- record/decisions.d/ADR-014.md:27: annotation names ADR-099, which does resolve here
-- record/decisions.d/ADR-015.md:30: annotation names ADR-099, which does resolve here
 - record/decisions.d/ADR-046.md:51: annotation names DP-017, which does resolve here

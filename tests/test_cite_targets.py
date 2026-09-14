@@ -11,10 +11,10 @@ sends the reader to the repository. ADR-094 measured that when
 to 195.
 
 `publishable()` no longer withholds them by derivation, so this is reachable
-only on purpose now — which is exactly when it needs saying (ADR-tmp29lk4).
+only on purpose now — which is exactly when it needs saying (ADR-100).
 """
 
-# inactive-ok-file: ADR-tmp29lk4 — Proposed. Every mention names it as
+# inactive-ok-file: ADR-100 — Proposed. Every mention names it as
 # the decision this file implements or is written against; the citation
 # is to the reasoning, not a claim the decision is settled.
 

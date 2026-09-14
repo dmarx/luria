@@ -4,7 +4,7 @@
 
 **The record** — what the four layers hold, and the rules between them.
 
-48 of 99 decisions. Back to the [full index](../README.md).
+49 of 100 decisions. Back to the [full index](../README.md).
 
 | # | Title | Summary | Status |
 |---|---|---|---|
@@ -56,3 +56,4 @@
 | [ADR-095](../../../record/decisions.d/ADR-095.md) | An acknowledgement can carry its own deadline | A directive may be written `until <YYYY-MM-DD>`; after that date `find` stops returning it, so every check behaves as if it were never written, and `luria lint` reports what expired. Rejected: a relative duration, which needs an anchor the file does not carry; and a version milestone, which needs a project-version concept luria does not have. | Proposed |
 | [ADR-098](../../../record/decisions.d/ADR-098.md) | One config file, one format, vocabularies declared once | Config was TOML, vocabularies were YAML files beside each scheme's records, and the lockfile was JSON — three formats for one system, with no reason any of them could state. Worse, a vocabulary two schemes share had to be two files: in the corpus that motivated this, ten of thirteen entries had silently drifted. Moves to one `luria.yaml` with a central `vocabularies:` table, omegaconf underneath the existing validation rather than in place of it. Rejects keeping vocabularies local, and rejects letting structured configs replace the semantic checks. | Proposed |
 | [ADR-099](../../../record/decisions.d/ADR-099.md) | An anchor is an id, and a fragment link is checked against one | The generator anchored assembled documents and journal entries with `<a name="x">`. That is reachable on a real navigation and nowhere else, so every one of those links worked in the repository and on GitHub and landed at the top of the page on the published site — 89 of the 100 fragment links in this repository. Emits `id` instead, and adds a check with a `--fix`, so the next hand-written anchor cannot put it back. Corrects ADR-094, whose measurement was right and whose stated cause was not. | Proposed |
+| [ADR-100](../../../record/decisions.d/ADR-100.md) | A generated link uses the anchor the page offers, and luria owns the slug | A journal entry had two addresses: luria's durable `<a id="{timestamp}">`, which its contents list linked, and the heading's own slug, which is what the published page puts on the ¶ anchor and in Quartz's sidebar. Both resolve; only one is what a reader copies. The generated links switch to the heading, which means luria now has to compute `github-slugger`'s slug itself — validated against 288 headings the site actually published, and guarded by a check that every generated fragment resolves. Rejected: putting the timestamp on the heading, which breaks Quartz's sidebar entirely. | Proposed |

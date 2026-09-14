@@ -21,10 +21,10 @@ What makes owning it safe is not care, it is the check beside it: luria
 renders the page it links into, so `anchors` can verify every generated
 fragment resolves against the very text the generator produced. A drift
 between this and the publisher's slugger becomes a lint failure rather than
-a link that quietly goes nowhere (ADR-tmp29lk4).
+a link that quietly goes nowhere (ADR-100).
 """
 
-# inactive-ok-file: ADR-tmp29lk4 — Proposed. Every mention names it as
+# inactive-ok-file: ADR-100 — Proposed. Every mention names it as
 # the decision this file implements or is written against; the citation
 # is to the reasoning, not a claim the decision is settled.
 
@@ -103,7 +103,7 @@ def headings(text: str) -> list[str]:
     document is `notes-1`, and a heading inside a shell example that got
     counted would shift every suffix after it. One implementation, because
     the generator and the check have to agree about what a heading is or the
-    check is checking something else (ADR-tmp29lk4)."""
+    check is checking something else (ADR-100)."""
     out: list[str] = []
     fence: str | None = None
     for line in text.splitlines():

@@ -18,7 +18,7 @@ would look for the bug.
 keeps a hand-written anchor from reintroducing it (ADR-099).
 """
 
-# inactive-ok-file: ADR-tmp29lk4 — Proposed. Every mention names it as
+# inactive-ok-file: ADR-100 — Proposed. Every mention names it as
 # the decision this file implements or is written against; the citation
 # is to the reasoning, not a claim the decision is settled.
 
@@ -191,7 +191,7 @@ def _linked_pair(root: Path, monkeypatch, anchor: str, frag: str = "here") -> Pa
     return root
 
 
-# --- a fragment that reaches nothing (ADR-tmp29lk4) ------------------------
+# --- a fragment that reaches nothing (ADR-100) ------------------------
 #
 # Checkable only since luria owns a slugger: a heading's anchor is assigned
 # by the publisher, and a check that guessed at it would report links that
@@ -239,7 +239,7 @@ def test_a_link_into_a_file_this_record_does_not_own_is_not_a_finding(
     assert errors == [], errors
 
 
-# --- the contents list links what the page offers (ADR-tmp29lk4) -----------
+# --- the contents list links what the page offers (ADR-100) -----------
 
 def test_a_books_contents_links_the_heading_not_the_timestamp(
         project, monkeypatch):

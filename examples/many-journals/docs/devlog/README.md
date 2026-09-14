@@ -4,7 +4,7 @@
 
 ## Currently — [March 2026](2026-03.md)
 
-- [9 Mar 09:45 — Chasing a flaky import](2026-03.md#20260309094500)
+- [9 Mar 09:45 — Chasing a flaky import](2026-03.md#chasing-a-flaky-import)
 
 ## All books
 

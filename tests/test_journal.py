@@ -7,7 +7,7 @@ each of those is checked against a tree built to say something specific rather
 than against whatever this repo happens to have filed.
 """
 
-# inactive-ok-file: ADR-tmp29lk4 — Proposed. Every mention names it as
+# inactive-ok-file: ADR-100 — Proposed. Every mention names it as
 # the decision this file implements or is written against; the citation
 # is to the reasoning, not a claim the decision is settled.
 
@@ -137,7 +137,7 @@ def test_book_lists_its_contents(tmp_path):
     # The contents list links the HEADING, which is the address the
     # published page itself offers — its ¶ anchor and the publisher's own
     # sidebar both use it, and a contents list pointing elsewhere is two
-    # addresses for one entry (ADR-tmp29lk4).
+    # addresses for one entry (ADR-100).
     assert "- [3 Aug 21:19 — The first thing](#the-first-thing)" in book
     assert "- [4 Aug 03:27 — The second thing](#the-second-thing)" in book
     for anchor in ("20260803211926", "20260804032711"):
