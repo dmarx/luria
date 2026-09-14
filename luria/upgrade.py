@@ -31,7 +31,7 @@ import yaml
 from dataclasses import dataclass
 from pathlib import Path
 
-from . import toml_comments, yaml_edit
+from . import comment_carry, yaml_edit
 from .config import CONFIG_NAME, find_root
 from .statuses import DEFAULT_STATUSES
 
@@ -152,6 +152,21 @@ def _declared(text: str, prefixes: list[str], values: dict) -> str:
 TOML_NAME = "luria.toml"
 
 
+def _prose(text: str, name: str,
+           into: list[tuple[tuple[str, ...], str]]) -> str:
+    """Take a vocabulary file's comments off it, recording where each goes.
+
+    Returns the text with nothing but values left, so what ruamel loads has
+    no comment carrying a column from a file it is no longer in."""
+    header, per_key = comment_carry.yaml_blocks(text)
+    if header:
+        into.append((("vocabularies", name), header))
+    for key, block in per_key:
+        into.append((("vocabularies", name, key), block))
+    return "\n".join(l for l in text.splitlines()
+                     if not l.lstrip().startswith("#")) + "\n"
+
+
 # Where a comment's key went. `tags`, `statuses` and `tag_groups` do not exist
 # on the far side of the boundary: each splits into a vocabulary (named once,
 # centrally) and a field that names it. Prose written about the old key was
@@ -173,6 +188,7 @@ def _carry(doc, blocks: list[tuple[tuple[str, ...], str]]) -> list[str]:
     """Write each block above the key it documented. Returns the prose that
     had nowhere to land, so the caller can print it rather than eat it."""
     stranded: list[str] = []
+    carried: dict[tuple[int, str], list[str]] = {}
     for path, text in blocks:
         if not path:
             doc.yaml_set_start_comment(text)
@@ -187,8 +203,14 @@ def _carry(doc, blocks: list[tuple[tuple[str, ...], str]]) -> list[str]:
         if parent is None or where[-1] not in parent:
             stranded.append(f"{'.'.join(path)}\n{text}")
             continue
+        # Two blocks can name one key — prose above it and prose inside its
+        # multi-line value. ruamel's setter replaces, so joining here is what
+        # keeps the second from silently erasing the first.
+        seen = carried.setdefault((id(parent), where[-1]), [])
+        seen.append(text)
         parent.yaml_set_comment_before_after_key(
-            where[-1], before=text, indent=2 * (len(where) - 1))
+            where[-1], before="\n\n".join(seen),
+            indent=2 * (len(where) - 1))
     return stranded
 
 
@@ -208,13 +230,14 @@ def convert_config(root: Path) -> tuple[str, list[str], list[Path]]:
 
     **Comments are carried, because they are not values.** The re-encoding
     argument above is about escaping, and a comment has none: it is prose
-    attached to a place, and `toml_comments` recovers the place. What a
+    attached to a place, and `comment_carry` recovers the place. What a
     project wrote to explain its own config is the part of the config a
     reader needs most, and the first version of this dropped all of it."""
     raw = (root / TOML_NAME).read_text(encoding="utf-8")
     cfg = tomllib.loads(raw)
     cfg = cfg.get("luria", cfg)
     vocabs: dict[str, dict] = {}
+    headers: list[tuple[tuple[str, ...], str]] = []
     by_text: dict[str, str] = {}
     notes: list[str] = []
     orphans: list[Path] = []
@@ -231,7 +254,7 @@ def convert_config(root: Path) -> tuple[str, list[str], list[Path]]:
                              f"(the same words {by_text[text]} already holds)")
                 continue
             name = f"{prefix.lower()}-{kind}"
-            vocabs[name] = yaml_edit.load(text)
+            vocabs[name] = yaml_edit.load(_prose(text, name, headers))
             by_text[text] = name
             spec[kind] = name
             notes.append(f"{prefix}.{kind} -> {name}")
@@ -244,8 +267,8 @@ def convert_config(root: Path) -> tuple[str, list[str], list[Path]]:
             elif named and named not in vocabs:
                 f = root / str(spec.get("dir", "")) / f"{named}.yaml"
                 if f.exists():
-                    vocabs[named] = yaml_edit.load(
-                        f.read_text(encoding="utf-8"))
+                    vocabs[named] = yaml_edit.load(_prose(
+                        f.read_text(encoding="utf-8"), named, headers))
                     orphans.append(f)
                     notes.append(f"{prefix}.fields vocabulary {named} -> {named}")
         # `status` and `tags` are fields, so their vocabularies are named in
@@ -290,8 +313,8 @@ def convert_config(root: Path) -> tuple[str, list[str], list[Path]]:
     # comment. Loading what we just dumped is what turns them into the
     # structures ruamel can annotate.
     doc = yaml_edit.load(yaml_edit.dump(out))
-    stranded = _carry(doc, toml_comments.blocks(raw))
-    return (toml_comments.rejoin(yaml_edit.dump(doc)), notes, orphans,
+    stranded = _carry(doc, headers + comment_carry.blocks(raw))
+    return (comment_carry.rejoin(yaml_edit.dump(doc)), notes, orphans,
             stranded)
 
 

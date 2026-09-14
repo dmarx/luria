@@ -316,3 +316,98 @@ def test_a_paragraph_break_stays_inside_the_block(tmp_path):
     start = next(i for i, l in enumerate(lines) if "First paragraph" in l)
     end = next(i for i, l in enumerate(lines) if "Second paragraph" in l)
     assert all(l.lstrip().startswith("#") for l in lines[start:end])
+
+
+def test_a_vocabulary_file_header_lands_at_the_vocabulary_s_indent(tmp_path):
+    """A vocabulary file's prose is written at column 0 because the file is
+    its own document. Inlined under `vocabularies:` it is two levels in, and
+    ruamel emits a carried comment at the column it was stored with — so the
+    header ends up flush left inside an indented block, which is legal YAML
+    and reads as though it belongs to nothing."""
+    _commented(tmp_path)
+    upgrade.run("yaml", root=str(tmp_path))
+    lines = (tmp_path / "luria.yaml").read_text().splitlines()
+    at = next(i for i, l in enumerate(lines)
+              if "The five words a status may take" in l)
+    assert lines[at].startswith("  #"), lines[at]
+    # and it sits above the vocabulary it documents, not inside it
+    key = next(l for l in lines[at:] if not l.lstrip().startswith("#"))
+    assert key.strip().endswith("statuses:"), key
+
+
+def test_prose_inside_a_vocabulary_lands_above_its_entry(tmp_path):
+    """The per-entry comments are the high-value ones — which decision added
+    this topic, and why. At column 0 inside an indented mapping they document
+    nothing a reader can see."""
+    _commented(tmp_path)
+    (tmp_path / "record" / "decisions.d" / "statuses.yaml").write_text(
+        COMMENTED_WORDS + "\n# Added late, and only for the attic.\n"
+        "Rejected:\n  blurb: no successor\n")
+    upgrade.run("yaml", root=str(tmp_path))
+    lines = (tmp_path / "luria.yaml").read_text().splitlines()
+    at = next(i for i, l in enumerate(lines) if "Added late" in l)
+    assert lines[at].startswith("    #"), lines[at]
+    key = next(l for l in lines[at:] if not l.lstrip().startswith("#"))
+    assert key.strip() == "Rejected:", key
+
+
+# ── the property, rather than another example ─────────────────────────────
+
+EVERY_SHAPE = '''# The file's own header.
+[luria]
+issue_url = "https://example.test/{n}"
+
+# Prose about a table.
+[luria.remotes.ARXIV]
+url = "https://arxiv.org/abs/{1}"
+# Prose about a key.
+uid = "(\\\\d{4})"
+# Prose about a dotted key.
+uris.title = "https://example.test/t/{1}"
+# A trailing comment on the table it sits inside.
+
+[luria.schemes.ADR]
+dir = "record/decisions.d"
+output = "docs/decisions"
+requires = ["a",
+            # Prose inside a multi-line value.
+            "b"]
+'''
+
+SHAPED_WORDS = """# A vocabulary's header.
+Active:
+  blurb: in force
+# Prose about one word.
+Superseded:
+  blurb: replaced
+
+# Trailing prose about the vocabulary.
+"""
+
+
+def _comment_lines(text: str) -> list[str]:
+    out = []
+    for line in text.splitlines():
+        s = line.strip()
+        if s.startswith("#"):
+            body = re.sub(r"^#\s?", "", s).strip()
+            if body:
+                out.append(body)
+    return out
+
+
+def test_every_comment_line_survives_the_crossing(tmp_path, capsys):
+    """The property the examples above are instances of. Run against the real
+    477-line config this carries 369 of 369 lines; here it holds over every
+    shape a TOML config and a vocabulary file can put a comment in."""
+    (tmp_path / "record" / "decisions.d").mkdir(parents=True)
+    (tmp_path / "luria.toml").write_text(EVERY_SHAPE)
+    (tmp_path / "record" / "decisions.d" / "statuses.yaml").write_text(
+        SHAPED_WORDS)
+    upgrade.run("yaml", root=str(tmp_path))
+    said = capsys.readouterr().out
+    out = (tmp_path / "luria.yaml").read_text()
+    want = _comment_lines(EVERY_SHAPE) + _comment_lines(SHAPED_WORDS)
+    landed = set(_comment_lines(out))
+    missing = [w for w in want if w not in landed and w not in said]
+    assert not missing, missing
