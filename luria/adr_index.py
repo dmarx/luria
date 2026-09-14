@@ -321,9 +321,9 @@ class Adr:
         return [str(x).strip() for x in raw]
 
     def row(self, prefix: str = "") -> str:
-        # unresolved-ok-block: ADR-100 — a stand-in number in the example below
+        # unresolved-ok-block: ADR-919 — a stand-in number in the example below
         # Every rendered field is rebased, not just the ADR's own link: a
-        # "Superseded — by [ADR-100](…)" note is prose too, and its link was
+        # "Superseded — by [ADR-919](…)" note is prose too, and its link was
         # silently broken on the tag pages (four of them) until this existed.
         #
         # The version is shown only when it isn't 1. A column of 1s teaches
