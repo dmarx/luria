@@ -114,6 +114,8 @@ def test_a_field_in_both_tables_is_one_obligation(tmp_path, monkeypatch):
             """
             schemes:
               SOTA:
+                requires:
+                - source
                 references:
                   source:
                     scheme: LIT
