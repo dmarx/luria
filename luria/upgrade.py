@@ -100,9 +100,41 @@ def _plan(root: Path) -> tuple[list[tuple[Path, str]], list[str], list[str]]:
             continue
         # The vocabulary lives in the config under a name every scheme can
         # point at, rather than a statuses.yaml beside each one (ADR-tmp8hp25).
-        lines += [f"schemes.{prefix}.statuses: record-statuses",
-                  f"schemes.{prefix}.fields.status.vocabulary: record-statuses"]
+        lines.append(prefix)
     return writes, lines, notes
+
+
+def _declared(text: str, prefixes: list[str], values: dict) -> str:
+    """`text` with `status` wired up for each scheme, and the vocabulary it
+    names declared once.
+
+    Written INTO each scheme's block rather than appended: YAML nests by
+    indentation, so `schemes.VP.statuses: x` at the end of the document is a
+    key literally called "schemes.VP.statuses", and an indented block there
+    attaches to whatever the last top-level key happens to be. Editing the
+    text rather than round-tripping the document is what keeps the comments a
+    project wrote in its own config."""
+    lines = text.splitlines(keepends=True)
+    for prefix in reversed(prefixes):
+        for i, line in enumerate(lines):
+            if line.rstrip("\n") != f"  {prefix}:":
+                continue
+            end = next((j for j in range(i + 1, len(lines))
+                        if lines[j].strip() and not lines[j].startswith("    ")),
+                       len(lines))
+            lines.insert(end, "    statuses: record-statuses\n"
+                              "    fields:\n"
+                              "      status:\n"
+                              "        vocabulary: record-statuses\n")
+            break
+    out = "".join(lines)
+    if "\nvocabularies:" not in out and not out.startswith("vocabularies:"):
+        out = ("vocabularies:\n"
+               + "  record-statuses:\n"
+               + "".join(f"    {w}:\n      blurb: {b}\n"
+                         for w, b in values.items())
+               + out)
+    return out
 
 
 def run(name: str = "", *, dry_run: bool = False, root: str = "") -> None:
@@ -131,7 +163,7 @@ def run(name: str = "", *, dry_run: bool = False, root: str = "") -> None:
         for path, _ in writes:
             print(f"  would write {path.relative_to(where)}")
         if lines:
-            print(f"  would append {len(lines) // 3} declaration(s) to "
+            print(f"  would declare `status` for {len(lines)} scheme(s) in "
                   f"{CONFIG_NAME}")
         return
     for path, text in writes:
@@ -140,12 +172,11 @@ def run(name: str = "", *, dry_run: bool = False, root: str = "") -> None:
         print(f"  wrote {path.relative_to(where)}")
     if lines:
         config = where / CONFIG_NAME
-        body = config.read_text(encoding="utf-8").rstrip("\n")
         config.write_text(
-            body + "\n\n# `status:` declared as the controlled vocabulary it "
-            "is (#181),\n# written by `luria upgrade statuses`.\n"
-            + "\n".join(lines).rstrip("\n") + "\n", encoding="utf-8")
-        print(f"  declared `status` for {len(lines) // 3} scheme(s) "
+            _declared(config.read_text(encoding="utf-8"), lines,
+                      {w: _BLURBS[w] for w in DEFAULT_STATUSES}),
+            encoding="utf-8")
+        print(f"  declared `status` for {len(lines)} scheme(s) "
               f"in {CONFIG_NAME}")
 
 

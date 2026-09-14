@@ -782,20 +782,17 @@ def test_the_upgrade_does_not_load_the_config_it_repairs(tmp_path, monkeypatch):
     is unrunnable in exactly the situation it exists for."""
     from luria import upgrade
     _project(tmp_path, monkeypatch)
-    (tmp_path / "luria.yaml").write_text(
-        (tmp_path / "luria.yaml").read_text()
-        + """
-          schemes:
-            VP:
-              fields:
-                bogus:
-                  vocabulary: nothing
-          """)
+    path = tmp_path / "luria.yaml"
+    path.write_text(merged(path.read_text(), {
+        "schemes": {"VP": {"fields": {"bogus": {"vocabulary": "nothing"}}}}}))
     config.reset()
     with pytest.raises(ValueError):
         config.current()
     upgrade.run("statuses", root=str(tmp_path))     # must not raise
-    assert (tmp_path / "record" / "values.d" / "statuses.yaml").exists()
+    # The vocabulary lands in the config now, not beside the records.
+    written = (tmp_path / "luria.yaml").read_text()
+    assert "record-statuses:" in written
+    assert "vocabulary: record-statuses" in written
 
 
 def test_a_spent_upgrade_says_it_can_be_deleted(tmp_path, monkeypatch):
