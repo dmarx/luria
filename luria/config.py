@@ -56,13 +56,23 @@ from __future__ import annotations
 
 import os
 import re
-import tomllib
 from contextlib import contextmanager
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field as dcfield
+import yaml
 from functools import lru_cache
+from typing import cast
+
+from omegaconf import OmegaConf
 from pathlib import Path
 
-CONFIG_NAME = "luria.toml"
+CONFIG_NAME = "luria.yaml"
+
+# The record already speaks YAML — every document's frontmatter is YAML, and
+# so was every vocabulary file before they moved into the config. The config
+# spoke TOML, and the lockfile JSON, for no reason either of them could state
+# (ADR-tmp8hp25). One format is one set of quoting rules to know, and one
+# parser to reason about when a regex in a `uid` does not mean what it looks
+# like.
 
 DEFAULTS: dict = {
     "issue_url": "",
@@ -182,13 +192,15 @@ def find_root(start: Path | None = None) -> Path:
 
 
 def _merge(base: dict, override: dict) -> dict:
-    out = dict(base)
-    for key, value in override.items():
-        if isinstance(value, dict) and isinstance(out.get(key), dict):
-            out[key] = _merge(out[key], value)
-        else:
-            out[key] = value
-    return out
+    """`base` with `override` folded into it, nested tables merging.
+
+    `OmegaConf.merge` is the function, and the reason to route through it
+    rather than hand-roll the recursion is that the schema below then applies
+    to the result: a key the schema types as a string and the config gives a
+    list is a load-time error naming the key, instead of a `TypeError` three
+    modules away in whatever first reads it (ADR-tmp8hp25)."""
+    merged = OmegaConf.merge(OmegaConf.create(base), OmegaConf.create(override))
+    return cast(dict, OmegaConf.to_container(merged, resolve=True))
 
 
 # unresolved-ok-block: ADR-tmp47fje — ADR-049's example of the shape, not a document
@@ -357,6 +369,12 @@ class Reference:
     required: bool = True
     many: bool = False
     converse: str = ""
+    # What a relation IS, as data rather than as a TOML comment nothing could
+    # render, quote or scaffold from (#254). The same two keys a vocabulary
+    # value carries, for the same reason: `label` is what a view calls it,
+    # `blurb` is what it means.
+    label: str = ""
+    blurb: str = ""
     # When the requirement applies, if not always (see `RequiredWhen`).
     required_when: RequiredWhen | None = None
 
@@ -382,7 +400,9 @@ class Vocabulary:
     # Usually the same word; `world:` backed by `worlds.yaml` is the other.
     field: str
     name: str
-    file: Path
+    # The values, resolved from the central `vocabularies:` table at load.
+    # Was a Path to `<name>.yaml` beside the records (ADR-tmp8hp25).
+    values_by_name: dict[str, dict] = dcfield(default_factory=dict)
     many: bool = False
     required: bool = False
     # Normalised to a tuple of values whatever the shape declared; None when
@@ -533,7 +553,14 @@ class Scheme:
     # `tags.yaml` beside the sources, which is where it has always been. Set,
     # two schemes can name ONE file and share a vocabulary instead of keeping
     # a copy each (ADR-060).
-    tags_file: Path | None = None
+    # The NAME of the vocabulary backing this scheme's `tags:` and `status:`,
+    # looked up in `Config.vocabularies`. Two schemes naming one vocabulary is
+    # the point; it was previously unsayable.
+    tags_vocab: str = ""
+    statuses_vocab: str = ""
+    # The central table, threaded in so a scheme can answer for its own words
+    # without every caller reaching back through `current()`.
+    vocab_values: dict[str, dict] = dcfield(default_factory=dict)
     # Several fields of which an entry must carry some (see `FieldGroup`):
     # `[luria.schemes.X.field_groups.NAME]`. What `requires` cannot say —
     # that any of these satisfies the need, and the need has a name.
@@ -604,14 +631,14 @@ class Scheme:
         return self.dir / "README.stub"
 
     @property
-    def tags_yaml(self) -> Path:
-        return self.tags_file or self.dir / "tags.yaml"
+    def tags(self) -> dict[str, dict]:
+        """This scheme's tag vocabulary, by value."""
+        return dict(self.vocab_values.get(self.tags_vocab) or {})
 
     @property
-    def statuses_yaml(self) -> Path:
-        """What this scheme's statuses mean. Optional; absent leaves the
-        closed vocabulary open to all five and renders no legend."""
-        return self.dir / "statuses.yaml"
+    def statuses(self) -> dict[str, dict]:
+        """This scheme's status vocabulary, by value."""
+        return dict(self.vocab_values.get(self.statuses_vocab) or {})
 
     @property
     def pattern(self):
@@ -733,7 +760,7 @@ def _fold_uris(spec: dict, where: str) -> dict[str, str]:
             continue
         if declared.get(uri_name, value) != value:
             raise ValueError(
-                f"luria.toml: {where} sets both `{sugar}` and "
+                f"luria.yaml: {where} sets both `{sugar}` and "
                 f"`uris.{uri_name}` — they are one setting; keep either")
         declared[uri_name] = value
     return declared
@@ -775,7 +802,7 @@ class RemoteScheme:
     # Named URI templates for this code family — `[….schemes.Y.uris]`. The
     # general form of `url` and `pin_url`, which are its `read` and `bytes`
     # entries; populated at load with the sugar folded in (`_fold_uris`).
-    uris: dict[str, str] = field(default_factory=dict)
+    uris: dict[str, str] = dcfield(default_factory=dict)
 
     def anchor_for(self, number: int) -> str:
         template = self.anchor or f"{self.prefix.lower()}-{{number}}"
@@ -879,8 +906,8 @@ class Remote:
     # of URIs through one template vocabulary, and this table is where a
     # relation beyond the shipped two gets its name; `url` and `pin_url` are
     # sugar for its `read` and `bytes` entries, folded in at load.
-    uris: dict[str, str] = field(default_factory=dict)
-    schemes: dict[str, RemoteScheme] = field(default_factory=dict)
+    uris: dict[str, str] = dcfield(default_factory=dict)
+    schemes: dict[str, RemoteScheme] = dcfield(default_factory=dict)
 
     @property
     def label(self) -> str:
@@ -1038,7 +1065,7 @@ class Fragment:
     style: str = "append"
 
 
-def primary_tags(prefix: str, tags_path: Path) -> frozenset[str]:
+def primary_tags(prefix: str, values: dict) -> frozenset[str]:
     """Terms this scheme may carry as a primary, from the vocabulary itself.
 
     A tag says which schemes it is a primary for, where the tag is defined:
@@ -1052,15 +1079,8 @@ def primary_tags(prefix: str, tags_path: Path) -> frozenset[str]:
     and the copies drift, because nothing relates them. Measured on the record
     that motivated this: seven terms across four places, and the blurbs for
     the same tag already disagreed between two of them (ADR-060)."""
-    if not tags_path.exists():
-        return frozenset()
-    try:
-        import yaml
-        declared = yaml.safe_load(tags_path.read_text(encoding="utf-8")) or {}
-    except Exception:
-        return frozenset()
     found = set()
-    for tag, meta in declared.items():
+    for tag, meta in (values or {}).items():
         for named in (meta or {}).get("primary_for", ()) or ():
             if str(named).upper() == prefix.upper():
                 found.add(str(tag))
@@ -1068,7 +1088,7 @@ def primary_tags(prefix: str, tags_path: Path) -> frozenset[str]:
 
 
 def _tag_groups(prefix: str, raw: dict,
-                tags_path: Path | None = None) -> tuple[TagGroup, ...]:
+                tag_values: dict | None = None) -> tuple[TagGroup, ...]:
     """Read a scheme's `[luria.schemes.X.tag_groups]` tables.
 
     Validated here rather than at lint time: a misspelled rule is a config
@@ -1084,21 +1104,18 @@ def _tag_groups(prefix: str, raw: dict,
         rule = str(spec.get("require", "any"))
         if rule not in REQUIRE_RULES:
             raise ValueError(
-                f"luria.toml: schemes.{prefix}.tag_groups.{name} has "
+                f"luria.yaml: schemes.{prefix}.tag_groups.{name} has "
                 f"require = {rule!r}; expected one of {list(REQUIRE_RULES)}")
         tags = frozenset(str(x) for x in spec.get("tags", ()))
         derived = False
-        if not tags and tags_path is not None:
-            tags = primary_tags(prefix, tags_path)
+        if not tags and tag_values:
+            tags = primary_tags(prefix, tag_values)
             derived = bool(tags)
         if not tags:
             raise ValueError(
-                f"luria.toml: schemes.{prefix}.tag_groups.{name} lists no "
-                f"tags and no tag in {tags_path} names {prefix} in its "
-                f"`primary_for`, so it constrains nothing"
-                if tags_path is not None else
-                f"luria.toml: schemes.{prefix}.tag_groups.{name} lists no "
-                f"tags, so it constrains nothing")
+                f"luria.yaml: schemes.{prefix}.tag_groups.{name} lists no "
+                f"tags and no tag in this scheme's vocabulary names "
+                f"{prefix} in its `primary_for`, so it constrains nothing")
         groups.append(TagGroup(
             name=name, tags=tags, require=rule, derived=derived,
             excluded_by=frozenset(str(x) for x in spec.get("excluded_by", ()))))
@@ -1114,12 +1131,12 @@ def _field_groups(prefix: str, raw: dict) -> tuple[FieldGroup, ...]:
         rule = str(spec.get("require", "at-least-one"))
         if rule not in FIELD_RULES:
             raise ValueError(
-                f"luria.toml: schemes.{prefix}.field_groups.{name} has "
+                f"luria.yaml: schemes.{prefix}.field_groups.{name} has "
                 f"require = {rule!r}; expected one of {list(FIELD_RULES)}")
         fields = tuple(str(f) for f in spec.get("fields", ()))
         if not fields:
             raise ValueError(
-                f"luria.toml: schemes.{prefix}.field_groups.{name} lists no "
+                f"luria.yaml: schemes.{prefix}.field_groups.{name} lists no "
                 f"fields, so it constrains nothing")
         groups.append(FieldGroup(name=str(name), fields=fields, require=rule))
     return tuple(groups)
@@ -1140,7 +1157,7 @@ def _checked_converses(prefix: str, refs: tuple) -> tuple:
     for ref in refs:
         if not ref.converse:
             continue
-        where = f"luria.toml: schemes.{prefix}.references.{ref.field}.converse"
+        where = f"luria.yaml: schemes.{prefix}.references.{ref.field}.converse"
         other = by_name.get(ref.converse)
         if other is None:
             raise ValueError(
@@ -1188,12 +1205,12 @@ def _cite(prefix: str, spec: dict) -> str:
     value = str(spec.get("cite") or ("view" if render == "document" else "page"))
     if value not in CITE_TARGETS:
         raise ValueError(
-            f'luria.toml: schemes.{prefix}.cite = "{value}" is not a target — '
+            f'luria.yaml: schemes.{prefix}.cite = "{value}" is not a target — '
             f'use "page" (the cited document\'s own file) or "view" '
             f'(an anchor in the document it assembles into)')
     if value == "view" and render != "document":
         raise ValueError(
-            f'luria.toml: schemes.{prefix} sets cite = "view" but is not '
+            f'luria.yaml: schemes.{prefix} sets cite = "view" but is not '
             f'render = "document", so it assembles no view to anchor into — '
             f'drop the key, or set render = "document"')
     return value
@@ -1205,15 +1222,17 @@ def _references(prefix: str, raw: dict) -> tuple[Reference, ...]:
     for field, spec in raw.items():
         if not isinstance(spec, dict) or not spec.get("scheme"):
             raise ValueError(
-                f"luria.toml: schemes.{prefix}.references.{field} needs a "
+                f"luria.yaml: schemes.{prefix}.references.{field} needs a "
                 f"`scheme` — it names which scheme's codes the field holds")
-        where = f"luria.toml: schemes.{prefix}.references.{field}"
+        where = f"luria.yaml: schemes.{prefix}.references.{field}"
         required = bool(spec.get("required", True))
         found.append(Reference(field=str(field),
                                scheme=str(spec["scheme"]).upper(),
                                required=required,
                                many=bool(spec.get("many", False)),
                                converse=str(spec.get("converse", "")),
+                               label=str(spec.get("label", "")),
+                               blurb=str(spec.get("blurb", "")),
                                required_when=_required_when(where, spec,
                                                             required)))
     return tuple(_checked_converses(prefix, tuple(found)))
@@ -1250,7 +1269,8 @@ def _required_when(where: str, spec: dict, required: bool) -> RequiredWhen | Non
 
 
 def _fields(prefix: str, raw: dict, scheme_dir: Path, root: Path,
-            references: tuple, scaffolding: bool = False) -> tuple:
+            references: tuple, scaffolding: bool = False,
+            vocabularies: dict | None = None) -> tuple:
     """Read a scheme's `[luria.schemes.X.fields]` tables, as
     `(vocabularies, plain fields, derivations)`.
 
@@ -1270,13 +1290,13 @@ def _fields(prefix: str, raw: dict, scheme_dir: Path, root: Path,
     with no values, or a default no value matches, would surface as "no
     violations", which is the quiet failure a declaration exists to remove."""
     from .derive import parse as parse_derivation
-    from .vocabularies import declared
+    vocabularies = vocabularies or {}
     found = []
     plain: list[PlainField] = []
     rules = []
     taken = {r.field for r in references}
     for field, spec in raw.items():
-        where = f"luria.toml: schemes.{prefix}.fields.{field}"
+        where = f"luria.yaml: schemes.{prefix}.fields.{field}"
         if field in BUILT_IN_AXES:
             raise ValueError(f"{where}: `{field}` is built in — `tags` is "
                              f"open, and a vocabulary is closed")
@@ -1326,15 +1346,20 @@ def _fields(prefix: str, raw: dict, scheme_dir: Path, root: Path,
                                     required_when=when))
             continue
         name = str(name)
-        file = scheme_dir / f"{name}.yaml"
-        values = declared(file)
-        if not values and not (scaffolding and not file.exists()):
+        if name not in vocabularies and not scaffolding:
+            raise ValueError(
+                f"{where}: no vocabulary named {name!r} — a field's values are "
+                f"declared once under `vocabularies:` and referenced by name, "
+                f"so that two schemes can share one "
+                f"(declared: {', '.join(sorted(vocabularies)) or 'none'})")
+        values = dict(vocabularies.get(name) or {})
+        if not values and not scaffolding:
             # Absent is not the same as empty when a scaffold is being
             # planned: `luria init` reads the config to decide what to
-            # write, and the vocabulary file is one of the things it is
-            # about to write. Every other caller keeps ADR-076's eager rule.
+            # write, and the vocabulary is one of the things it is about to
+            # write. Every other caller keeps ADR-076's eager rule.
             raise ValueError(
-                f"{where}: {file.relative_to(root)} declares no values, so "
+                f"{where}: vocabulary {name!r} declares no values, so "
                 f"the field constrains nothing")
         many = bool(spec.get("many", False))
         required = bool(spec.get("required", False))
@@ -1356,9 +1381,10 @@ def _fields(prefix: str, raw: dict, scheme_dir: Path, root: Path,
                              (default if isinstance(default, list) else [default]))
             if bad := [d for d in defaults if d not in values]:
                 raise ValueError(
-                    f"{where}: default {', '.join(bad)} is not in "
-                    f"{file.relative_to(root)} (values: {', '.join(values)})")
-        found.append(Vocabulary(field=str(field), name=name, file=file,
+                    f"{where}: default {', '.join(bad)} is not in vocabulary "
+                    f"{name!r} (values: {', '.join(values)})")
+        found.append(Vocabulary(field=str(field), name=name,
+                                values_by_name=values,
                                 many=many, required=required,
                                 default=defaults,
                                 required_when=_required_when(where, spec,
@@ -1513,12 +1539,18 @@ class Site:
     icon: Path | None = None
     logo: Path | None = None
     logo_dark: Path | None = None
-    theme: dict = field(default_factory=dict)
+    theme: dict = dcfield(default_factory=dict)
 
 
 @dataclass(frozen=True)
 class Config:
     root: Path
+    # Every named vocabulary, defined once and referenced by name. Was a
+    # `tags.yaml`/`statuses.yaml` beside each scheme's records, which meant a
+    # vocabulary two schemes share had to be two files — and in the corpus
+    # that motivated this, ten of thirteen entries had silently drifted apart
+    # (ADR-tmp8hp25).
+    vocabularies: dict[str, dict]
     issue_url: str
     docs: Path
     decisions: Path
@@ -1559,7 +1591,7 @@ class Config:
     # awkwardness — a distinction the layout had stopped expressing.
     include_records: tuple[str, ...] = ()
     site: Site = None  # type: ignore[assignment]
-    _raw: dict = field(default_factory=dict, repr=False)
+    _raw: dict = dcfield(default_factory=dict, repr=False)
 
     def nested_records(self) -> list[Path]:
         """Directories matched by `include_records` that are really records.
@@ -1605,9 +1637,10 @@ class Config:
         return s.stub if s else self.decisions / "README.stub"
 
     @property
-    def tags_yaml(self) -> Path:
+    def tags(self) -> dict[str, dict]:
+        """The index scheme's tag vocabulary."""
         s = self._index_scheme()
-        return s.tags_yaml if s else self.decisions / "tags.yaml"
+        return s.tags if s else {}
 
     @property
     def tag_dir(self) -> Path:
@@ -1791,7 +1824,7 @@ def load(root: Path | None = None, text: str | None = None,
     if text is None and config_file.exists():
         text = config_file.read_text(encoding="utf-8")
     if text is not None:
-        parsed = tomllib.loads(text)
+        parsed = yaml.safe_load(text) or {}
         parsed = parsed.get("luria", parsed)
         raw = _merge(DEFAULTS, parsed)
         # A declared family replaces the default one rather than merging into
@@ -1802,8 +1835,11 @@ def load(root: Path | None = None, text: str | None = None,
                 raw[family] = parsed[family]
 
     paths = raw["paths"]
+    vocabularies = {str(name): dict(values or {})
+                    for name, values in (raw.get("vocabularies") or {}).items()}
     return Config(
         root=root,
+        vocabularies=vocabularies,
         issue_url=raw.get("issue_url", ""),
         docs=root / paths["docs"],
         decisions=root / paths["decisions"],
@@ -1812,7 +1848,8 @@ def load(root: Path | None = None, text: str | None = None,
         fragments={k: _fragment(v) for k, v in raw["fragments"].items()},
         code_globs=tuple(raw["code"]["globs"]),
         historical=frozenset(root / p for p in raw["code"]["historical"]),
-        schemes=(schemes := _schemes(raw["schemes"], root, scaffolding)),
+        schemes=(schemes := _schemes(raw["schemes"], root, scaffolding,
+                                     vocabularies)),
         remotes={
             prefix.upper(): Remote(
                 prefix.upper(),
@@ -1878,7 +1915,7 @@ def _chains(raw: dict, schemes: dict, root: Path) -> dict[str, Chain]:
     one (DP-15)."""
     out = {}
     for name, spec in raw.items():
-        where = f"luria.toml: chains.{name}"
+        where = f"luria.yaml: chains.{name}"
         prefix = str(spec.get("scheme", "")).upper()
         if prefix not in schemes:
             raise ValueError(f"{where}: scheme {prefix!r} is not declared "
@@ -1965,7 +2002,7 @@ def _check_conditions(prefix: str, scheme) -> None:
     vocab_of = {v.field: v for v in scheme.vocabularies}
 
     for field, when in _conditions(scheme):
-        where = f"luria.toml: schemes.{prefix}.fields.{field}.required_when"
+        where = f"luria.yaml: schemes.{prefix}.fields.{field}.required_when"
         if when.on not in nameable:
             raise ValueError(
                 f"{where}: `{when.on}` is not a field {prefix} declares, so "
@@ -1975,7 +2012,7 @@ def _check_conditions(prefix: str, scheme) -> None:
         if when.on == "status":
             allowed = status_words(scheme)
         elif when.on in vocab_of:
-            allowed = tuple(declared_values(vocab_of[when.on].file))
+            allowed = tuple(declared_values(vocab_of[when.on].values_by_name))
         if allowed is None:
             continue
         if bad := [v for v in when.values if v not in allowed]:
@@ -2008,7 +2045,7 @@ def _check_derivations(prefix: str, scheme, schemes=None) -> None:
                 *(f.field for f in scheme.plain_fields)}
     references = {r.field: r for r in scheme.references}
     for rule in scheme.derived:
-        where = f"luria.toml: schemes.{prefix}.fields.{rule.field}.derive"
+        where = f"luria.yaml: schemes.{prefix}.fields.{rule.field}.derive"
         if rule.follow is not None:
             # The names in the template belong to the *target* scheme, and
             # which scheme that is comes from the reference being followed.
@@ -2094,7 +2131,7 @@ def _alias_template(prefix: str, raw) -> str:
     template = str(raw or "").strip()
     if not template:
         return ""
-    where = f"luria.toml: schemes.{prefix}.alias"
+    where = f"luria.yaml: schemes.{prefix}.alias"
     try:
         template.format_map(_Probe())
     except (ValueError, IndexError) as exc:
@@ -2135,17 +2172,29 @@ def _conditions(scheme):
                 yield entry.field, entry.required_when
 
 
-def _schemes(raw: dict, root: Path,
-             scaffolding: bool = False) -> dict[str, Scheme]:
+def _schemes(raw: dict, root: Path, scaffolding: bool = False,
+             vocabularies: dict | None = None) -> dict[str, Scheme]:
     """Every declared scheme, with the cross-scheme checks that need them all.
 
     A reference naming a scheme that does not exist is a config error, and it
     can only be caught once the whole family is known — so it happens here
     rather than in `_references`, which sees one table at a time."""
     schemes = {}
+    vocabularies = vocabularies or {}
     for prefix, spec in raw.items():
-        tags_file = root / spec["tags"] if spec.get("tags") else None
-        tags_path = tags_file or root / spec["dir"] / "tags.yaml"
+        # `tags:` and `statuses:` name a vocabulary. Defaulting to the
+        # scheme's own prefix-free names keeps a one-scheme project from
+        # having to say anything, while two schemes sharing a vocabulary is
+        # now one word on each (ADR-tmp8hp25).
+        tags_vocab = str(spec.get("tags", "tags"))
+        statuses_vocab = str(spec.get("statuses", "statuses"))
+        for key, named in (("tags", tags_vocab), ("statuses", statuses_vocab)):
+            if named and named not in vocabularies and spec.get(key) \
+                    and not scaffolding:
+                raise ValueError(
+                    f"luria.yaml: schemes.{prefix}.{key} names vocabulary "
+                    f"{named!r}, which is not declared under `vocabularies:` "
+                    f"(declared: {', '.join(sorted(vocabularies)) or 'none'})")
         schemes[prefix] = Scheme(
             prefix=prefix,
             dir=root / spec["dir"],
@@ -2160,13 +2209,15 @@ def _schemes(raw: dict, root: Path,
             titles_generalize=bool(spec.get("titles_generalize", False)),
             requires=tuple(spec.get("requires", ())),
             tag_groups=_tag_groups(prefix, spec.get("tag_groups", {}),
-                                   tags_path),
-            tags_file=tags_file,
+                                   dict(vocabularies.get(tags_vocab) or {})),
+            tags_vocab=tags_vocab,
+            statuses_vocab=statuses_vocab,
+            vocab_values=vocabularies,
             references=(refs := _references(prefix, spec.get("references", {}))),
             **dict(zip(("vocabularies", "plain_fields", "derived"),
                        _fields(prefix, spec.get("fields", {}),
                                root / spec["dir"], root, refs,
-                               scaffolding))),
+                               scaffolding, vocabularies))),
             field_groups=_field_groups(prefix, spec.get("field_groups", {})),
             uniform_ok=(spec.get("uniform_ok") or None),
             uniform_share=float(spec.get("uniform_share", 1.0)),
@@ -2177,7 +2228,7 @@ def _schemes(raw: dict, root: Path,
         for ref in scheme.references:
             if ref.scheme not in schemes:
                 raise ValueError(
-                    f"luria.toml: schemes.{prefix}.references.{ref.field} "
+                    f"luria.yaml: schemes.{prefix}.references.{ref.field} "
                     f"names scheme {ref.scheme!r}, which is not declared "
                     f"(have: {', '.join(sorted(schemes))})")
     return schemes

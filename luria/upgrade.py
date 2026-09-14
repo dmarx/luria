@@ -20,7 +20,7 @@ would be unrunnable in exactly the situation it exists for.
 
 from __future__ import annotations
 
-import tomllib
+import yaml
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -85,8 +85,8 @@ def _plan(root: Path) -> tuple[list[tuple[Path, str]], list[str], list[str]]:
     config = root / CONFIG_NAME
     if not config.exists():
         return [], [], [f"no {CONFIG_NAME} at {root} — nothing to upgrade"]
-    raw = tomllib.loads(config.read_text(encoding="utf-8"))
-    schemes = _schemes(raw)
+    raw = yaml.safe_load(config.read_text(encoding="utf-8")) or {}
+    schemes = _schemes(raw.get("luria", raw))
     if not schemes:
         return [], [], [
             f"{CONFIG_NAME} declares no schemes, so this record runs on the "

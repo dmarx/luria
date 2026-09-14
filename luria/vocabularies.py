@@ -38,18 +38,31 @@ from pathlib import Path
 import yaml
 
 
-def declared(path: Path) -> dict[str, dict]:
-    """`{value: {label, blurb}}` in file order, or `{}` when there is no file."""
-    if not path.exists():
+def declared(values: dict | None) -> dict[str, dict]:
+    """`{value: {label, blurb}}` in declaration order, or `{}` when a scheme
+    names no vocabulary.
+
+    Takes the values rather than a path since ADR-tmp8hp25: a vocabulary is
+    declared once under `vocabularies:` and referenced by name, so there is no
+    longer a file per scheme to read — which is what let two schemes sharing
+    one vocabulary drift apart in ten of thirteen entries."""
+    if not isinstance(values, dict):
         return {}
-    loaded = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
-    if not isinstance(loaded, dict):
-        return {}
-    return {str(k): (v or {}) for k, v in loaded.items()}
+    return {str(k): (v or {}) for k, v in values.items()}
+
+
+def label_of(meta: dict | None, value: str) -> str:
+    """What a view calls this value: its `label`, else the value itself.
+
+    One fallback, because there were three — `tag.title()` in the tag pages,
+    `""` in the status legend, and the raw value here — so a scheme declaring
+    no `label` rendered an empty legend column but a title-cased tag heading
+    (ADR-tmp8hp25)."""
+    return str((meta or {}).get("label") or value)
 
 
 def _label(meta: dict, value: str) -> str:
-    return str(meta.get("label") or value)
+    return label_of(meta, value)
 
 
 def _listing(scheme, docs) -> list[tuple[object, object, dict[str, list]]]:
@@ -77,7 +90,7 @@ def index_blocks(scheme, docs) -> str:
     (ADR-056): declaring the vocabulary is enough to make it visible."""
     blocks = []
     for vocab, field, under in _listing(scheme, docs):
-        meta = declared(vocab.file)
+        meta = declared(vocab.values_by_name)
         axis = vocab.field.replace("_", " ")
         chips = []
         for value in field.values:
@@ -95,7 +108,7 @@ def pages(scheme, docs) -> dict[Path, str]:
     out: dict[Path, str] = {}
     noun = "decisions" if scheme.prefix == "ADR" else f"{scheme.prefix} documents"
     for vocab, field, under in _listing(scheme, docs):
-        meta = declared(vocab.file)
+        meta = declared(vocab.values_by_name)
         where = scheme.vocab_dir(vocab.name)
         prefix = prefix_for(scheme, where)
         for value in field.values:

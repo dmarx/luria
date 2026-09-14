@@ -137,13 +137,15 @@ def test_a_field_entry_declares_its_type(tmp_path, monkeypatch):
     """`fields` is the table a field's shape and type live in; `vocabulary`
     is the one type it takes today, and an entry naming none is an error
     rather than a field that constrains nothing."""
-    write(tmp_path, "luria.toml", """
-[luria]
-issue_url = "https://example.test/issues/{n}"
-[luria.schemes.SCENE]
-dir = "record/scenes.d"
-[luria.schemes.SCENE.fields.worlds]
-many = true
+    write(tmp_path, "luria.yaml", """
+luria:
+  issue_url: https://example.test/issues/{n}
+  schemes:
+    SCENE:
+      dir: record/scenes.d
+      fields:
+        worlds:
+          many: true
 """)
     write(tmp_path, "record/scenes.d/worlds.yaml", WORLDS)
     monkeypatch.setenv("LURIA_ROOT", str(tmp_path))
@@ -374,15 +376,17 @@ def test_a_status_backed_by_a_vocabulary_is_named_once(tmp_path, monkeypatch):
     which is the only path that can say `Superseded — by X`, and again
     through the generic vocabulary loop that now sees it like any other.
     One field, one bit."""
-    write(tmp_path, "luria.toml", """
-[luria]
-issue_url = "https://example.test/issues/{n}"
-[luria.schemes.ADR]
-dir = "record/decisions.d"
-output = "docs/decisions"
-render = "index"
-[luria.schemes.ADR.fields.status]
-vocabulary = "statuses"
+    write(tmp_path, "luria.yaml", """
+luria:
+  issue_url: https://example.test/issues/{n}
+  schemes:
+    ADR:
+      dir: record/decisions.d
+      output: docs/decisions
+      render: index
+      fields:
+        status:
+          vocabulary: statuses
 """)
     write(tmp_path, "record/decisions.d/statuses.yaml",
           "Active:\n  label: In force\nSuperseded:\n  label: Replaced\n")
@@ -397,15 +401,17 @@ def test_a_superseded_status_still_reads_its_successor(tmp_path, monkeypatch):
     """The reason the dedicated path wins over the generic one: the generic
     loop renders the bare word, and only `statuses.display` composes the
     successor the status note carries."""
-    write(tmp_path, "luria.toml", """
-[luria]
-issue_url = "https://example.test/issues/{n}"
-[luria.schemes.ADR]
-dir = "record/decisions.d"
-output = "docs/decisions"
-render = "index"
-[luria.schemes.ADR.fields.status]
-vocabulary = "statuses"
+    write(tmp_path, "luria.yaml", """
+luria:
+  issue_url: https://example.test/issues/{n}
+  schemes:
+    ADR:
+      dir: record/decisions.d
+      output: docs/decisions
+      render: index
+      fields:
+        status:
+          vocabulary: statuses
 """)
     write(tmp_path, "record/decisions.d/statuses.yaml",
           "Active:\n  label: In force\nSuperseded:\n  label: Replaced\n")

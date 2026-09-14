@@ -267,11 +267,8 @@ def declared(scheme) -> dict[str, dict]:
     every check below inert — an unconfigured project must not be told it has a
     problem, and must not be told it is clean either.
     """
-    path = scheme.statuses_yaml
-    if not path.exists():
-        return {}
-    loaded = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
-    return {k: (v or {}) for k, v in loaded.items()}
+    from . import vocabularies
+    return vocabularies.declared(scheme.statuses)
 
 
 def vocabulary(scheme) -> tuple[str, ...]:
@@ -297,9 +294,9 @@ def problems(scheme) -> list[str]:
     words = vocabulary(scheme)
     if scheme.active in words:
         return []
-    where = (current().rel(scheme.statuses_yaml) if declared(scheme)
+    where = (f"vocabulary {scheme.statuses_vocab!r}" if declared(scheme)
              else "the default vocabulary")
-    return [f"luria.toml: schemes.{scheme.prefix}.active is "
+    return [f"luria.yaml: schemes.{scheme.prefix}.active is "
             f"{scheme.active!r}, which {where} does not contain — the "
             f"vocabulary has to hold the word that means in force, or no "
             f"document ever is (have: {', '.join(words)})"]
@@ -328,12 +325,13 @@ def legend(scheme) -> str:
     nobody added a placeholder for is a legend nobody reads, which is the
     failure this exists to fix.
     """
+    from . import vocabularies
     vocab = declared(scheme)
     if not vocab:
         return ""
     rows = []
     for status, meta in vocab.items():
-        label = meta.get("label", "")
+        label = vocabularies.label_of(meta, status)
         blurb = meta.get("blurb", "")
         # Sentence-case the first letter only; `str.capitalize()` lowercases
         # everything after it and mangles anything capitalised in the blurb.

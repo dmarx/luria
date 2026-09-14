@@ -21,37 +21,35 @@ def unusual(tmp_path, monkeypatch):
     (tmp_path / "notes.d").mkdir()
     (tmp_path / "incidents.d").mkdir()
     (tmp_path / "news.d").mkdir()
-    (tmp_path / "luria.toml").write_text("""
-[luria]
-issue_url = "https://example.test/issues/{n}"
-stale_days = 14
-
-[luria.paths]
-docs = "documentation"
-
-[luria.schemes.RFC]
-dir = "spec.d"
-output = "documentation/specs"
-active = "Ratified"
-
-[luria.fragments."news.d"]
-file = "NEWS.md"
-
-[luria.journals.notes]
-dir = "notes.d"
-output = "documentation/notes"
-granularity = "year"
-title = "Field notes"
-
-[luria.journals.incidents]
-dir = "incidents.d"
-output = "documentation/incidents"
-title = "Incidents"
-
-[luria.remotes.LU]
-name = "luria"
-repo = "dmarx/luria"
-dir = "record/decisions.d"
+    (tmp_path / "luria.yaml").write_text("""
+luria:
+  issue_url: https://example.test/issues/{n}
+  stale_days: 14
+  paths:
+    docs: documentation
+  schemes:
+    RFC:
+      dir: spec.d
+      output: documentation/specs
+      active: Ratified
+  fragments:
+    news.d:
+      file: NEWS.md
+  journals:
+    notes:
+      dir: notes.d
+      output: documentation/notes
+      granularity: year
+      title: Field notes
+    incidents:
+      dir: incidents.d
+      output: documentation/incidents
+      title: Incidents
+  remotes:
+    LU:
+      name: luria
+      repo: dmarx/luria
+      dir: record/decisions.d
 """)
     monkeypatch.setenv("LURIA_ROOT", str(tmp_path))
     config.reset()

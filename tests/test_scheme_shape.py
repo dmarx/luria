@@ -135,15 +135,18 @@ def test_an_inline_list_still_wins(tmp_path, monkeypatch):
     """Derivation is the fallback, not a replacement: a group that lists tags
     means those tags, whatever the vocabulary says."""
     write(tmp_path, "record/topics.yaml", VOCAB)
-    write(tmp_path, "luria.toml", """
-[luria]
-issue_url = "https://example.test/issues/{n}"
-[luria.schemes.SOTA]
-dir  = "record/practices.d"
-tags = "record/topics.yaml"
-[luria.schemes.SOTA.tag_groups.primary_topic]
-require = "exactly-one"
-tags = ["stability"]
+    write(tmp_path, "luria.yaml", """
+luria:
+  issue_url: https://example.test/issues/{n}
+  schemes:
+    SOTA:
+      dir: record/practices.d
+      tags: record/topics.yaml
+      tag_groups:
+        primary_topic:
+          require: exactly-one
+          tags:
+          - stability
 """)
     monkeypatch.setenv("LURIA_ROOT", str(tmp_path))
     config.reset()
@@ -156,14 +159,16 @@ def test_a_group_that_derives_nothing_is_a_config_error(tmp_path, monkeypatch):
     """The eager-validation promise: a group constraining nothing must not
     surface as "no violations"."""
     write(tmp_path, "record/topics.yaml", "optimization:\n  label: O\n")
-    write(tmp_path, "luria.toml", """
-[luria]
-issue_url = "https://example.test/issues/{n}"
-[luria.schemes.SOTA]
-dir  = "record/practices.d"
-tags = "record/topics.yaml"
-[luria.schemes.SOTA.tag_groups.primary_topic]
-require = "exactly-one"
+    write(tmp_path, "luria.yaml", """
+luria:
+  issue_url: https://example.test/issues/{n}
+  schemes:
+    SOTA:
+      dir: record/practices.d
+      tags: record/topics.yaml
+      tag_groups:
+        primary_topic:
+          require: exactly-one
 """)
     monkeypatch.setenv("LURIA_ROOT", str(tmp_path))
     config.reset()

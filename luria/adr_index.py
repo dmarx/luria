@@ -48,7 +48,7 @@ from pathlib import Path
 
 import yaml
 
-from . import derive, referents
+from . import derive, referents, vocabularies
 from .config import current
 
 # unresolved-ok: ADR-tmp47fje — ADR-049's example of the shape, not a document
@@ -288,9 +288,7 @@ def tag_order(adrs: list[Adr], scheme=None) -> list[tuple[str, dict]]:
     """Declared tags first, in tags.yaml order; then any undeclared tag an ADR
     actually uses, alphabetically. Using a new tag must never require a code
     change — that's the whole point of pushing categories down onto the ADRs."""
-    tags_file = scheme.tags_yaml if scheme else current().tags_yaml
-    declared = yaml.safe_load(tags_file.read_text(encoding="utf-8")) if tags_file.exists() else {}
-    declared = declared or {}
+    declared = (scheme or current().schemes["ADR"]).tags
     used = {t for a in adrs for t in a.tags}
     ordered = [(t, declared[t] or {}) for t in declared if t in used]
     ordered += [(t, {}) for t in sorted(used - set(declared))]
@@ -302,7 +300,7 @@ def render_categories(adrs: list[Adr], tags: list[tuple[str, dict]],
     blocks = []
     for tag, meta in tags:
         listed = [a for a in adrs if tag in a.tags]
-        label = meta.get("label", tag.title())
+        label = vocabularies.label_of(meta, tag)
         blurb = f" — {meta['blurb']}" if meta.get("blurb") else ""
         # A temporary document (ADR-049) has no number to abbreviate to, so
         # its category chip is the tail — still short, still a link.
@@ -344,7 +342,7 @@ def render_tag_page(tag: str, meta: dict, adrs: list[Adr],
                     scheme=None) -> str:
     scheme = scheme or current().schemes["ADR"]
     prefix = prefix_for(scheme, scheme.tag_dir)
-    label = meta.get("label", tag.title())
+    label = vocabularies.label_of(meta, tag)
     listed = [a for a in adrs if tag in a.tags]
     # Sentence-case the first letter only. `str.capitalize()` lowercases
     # everything after it, which silently destroys a blurb that runs to more

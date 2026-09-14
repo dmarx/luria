@@ -114,15 +114,17 @@ def test_influenced_by_is_an_edge(project):
 
 
 def two_schemes(tmp_path, monkeypatch) -> Path:
-    write(tmp_path, "luria.toml", """
-[luria]
-issue_url = "https://example.test/issues/{n}"
-[luria.schemes.LIT]
-dir = "record/literature.d"
-[luria.schemes.SOTA]
-dir = "record/practices.d"
-[luria.schemes.SOTA.references]
-source = { scheme = "LIT" }
+    write(tmp_path, "luria.yaml", """
+luria:
+  issue_url: https://example.test/issues/{n}
+  schemes:
+    LIT:
+      dir: record/literature.d
+    SOTA:
+      dir: record/practices.d
+      references:
+        source:
+          scheme: LIT
 """)
     monkeypatch.setenv("LURIA_ROOT", str(tmp_path))
     config.reset()
@@ -258,17 +260,25 @@ def test_a_list_in_a_scalar_reference_yields_no_edge(tmp_path, monkeypatch):
 def converse_schemes(tmp_path, monkeypatch) -> Path:
     """Two schemes where the practice line declares its converse, which is
     what puts the same fact in both documents' frontmatter."""
-    write(tmp_path, "luria.toml", """
-[luria]
-issue_url = "https://example.test/issues/{n}"
-[luria.schemes.LIT]
-dir = "record/literature.d"
-[luria.schemes.SOTA]
-dir = "record/practices.d"
-[luria.schemes.SOTA.references]
-source      = { scheme = "LIT" }
-extends     = { scheme = "SOTA", many = true, converse = "extended_by" }
-extended_by = { scheme = "SOTA", many = true, converse = "extends" }
+    write(tmp_path, "luria.yaml", """
+luria:
+  issue_url: https://example.test/issues/{n}
+  schemes:
+    LIT:
+      dir: record/literature.d
+    SOTA:
+      dir: record/practices.d
+      references:
+        source:
+          scheme: LIT
+        extends:
+          scheme: SOTA
+          many: true
+          converse: extended_by
+        extended_by:
+          scheme: SOTA
+          many: true
+          converse: extends
 """)
     monkeypatch.setenv("LURIA_ROOT", str(tmp_path))
     config.reset()

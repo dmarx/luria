@@ -344,13 +344,15 @@ def _from_names(names: list[str]) -> dict[str, str]:
 
 
 def _upstream_dir(text: str, fallback: str) -> str:
-    """The remote's own `luria.toml` is the authority on where its documents
+    """The remote's own `luria.yaml` is the authority on where its documents
     live. Reading it rather than guessing is the whole point of a config file
     existing — and when there isn't one, the configured value stands."""
     try:
-        import tomllib
-        raw = tomllib.loads(text)
-    except ValueError:
+        import yaml
+        raw = yaml.safe_load(text) or {}
+    except yaml.YAMLError:
+        return fallback
+    if not isinstance(raw, dict):
         return fallback
     luria = raw.get("luria", raw)
     schemes = luria.get("schemes") or {}

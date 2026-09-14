@@ -191,7 +191,7 @@ def for_scheme(scheme) -> Contract:
     where = f"luria.toml: schemes.{scheme.prefix}"
     vocabulary = ""
     if any(g.derived for g in scheme.tag_groups):
-        vocabulary = str(current().rel(scheme.tags_yaml))
+        vocabulary = f"vocabulary {scheme.tags_vocab!r}"
     fields: dict[str, Field] = {}
     for name in scheme.requires:
         fields[name] = Field(name, because=(f"{where}.requires",))
@@ -209,14 +209,14 @@ def for_scheme(scheme) -> Contract:
     for vocab in scheme.vocabularies:
         prior = fields.get(vocab.field)
         because = (f"{where}.fields.{vocab.field}",
-                   f"{current().rel(vocab.file)}: values")
+                   f"vocabulary {vocab.name!r}: values")
         if prior is not None:
             because = prior.because + because
         fields[vocab.field] = Field(
             vocab.field,
             required=vocab.required or (prior is not None and prior.required),
             many=vocab.many, vocabulary=vocab.name,
-            values=tuple(declared(vocab.file)), default=vocab.default,
+            values=tuple(declared(vocab.values_by_name)), default=vocab.default,
             required_when=vocab.required_when, because=because)
     for plain in scheme.plain_fields:
         prior = fields.get(plain.field)
