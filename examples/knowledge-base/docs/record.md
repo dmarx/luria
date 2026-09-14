@@ -26,13 +26,15 @@ Every entry carries `title`, `tags` and `date`, and one standard field is condit
 **`LIT`**
 
 - `status` — optional, one of `Active`, `Rejected`, `Superseded` (luria.yaml: schemes.LIT.fields.status; vocabulary 'lit-statuses': values)
+- `tags` — required, one or more of `optimization`, `stability`, `systems` (luria.yaml: schemes.LIT.fields.tags; vocabulary 'lit-tags': values)
 - `source` — at least one of `arxiv`, `doi`, `url` (luria.yaml: schemes.LIT.field_groups.source)
 
 **`SOTA`**
 
 - `source` — required, a `LIT` code (luria.yaml: schemes.SOTA.references.source)
 - `status` — optional, one of `Active`, `Deferred`, `Superseded` (luria.yaml: schemes.SOTA.fields.status; vocabulary 'sota-statuses': values)
-- `primary_topic` — exactly one of `optimization`, `stability`, `systems` (luria.yaml: schemes.SOTA.tag_groups.primary_topic)
+- `tags` — required, one or more of `optimization`, `stability`, `systems` (luria.yaml: schemes.SOTA.fields.tags; vocabulary 'lit-tags': values)
+- `primary_topic` — exactly one of `optimization`, `stability`, `systems` (luria.yaml: schemes.SOTA.fields.tags.groups.primary_topic)
 
 ## Journals
 

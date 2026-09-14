@@ -7,7 +7,7 @@ said "exactly one strength tag" and whose fourth argument shipped with none,
 four documents before anyone counted.
 """
 
-# inactive-ok-file: ADR-tmp8hp25 — Proposed. Every mention names it as the
+# inactive-ok-file: ADR-098 — Proposed. Every mention names it as the
 # decision this file implements or is written against; the citation is to the
 # reasoning, not a claim the decision is settled.
 from _config import merged
@@ -105,7 +105,7 @@ def test_a_scheme_with_no_groups_is_unconstrained(tmp_path, monkeypatch):
 
     The whole field goes, not just its `groups`: a scheme that says nothing
     about its tags declares no tags field, and then has no axis either
-    (ADR-tmp8hp25)."""
+    (ADR-098)."""
     import yaml as _yaml
     raw = _yaml.safe_load(CONFIG)
     raw["schemes"]["ARG"].pop("axis")

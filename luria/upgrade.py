@@ -19,7 +19,7 @@ the config the new version refuses to load, so a command that needed it
 would be unrunnable in exactly the situation it exists for.
 """
 
-# inactive-ok-file: ADR-tmp8hp25 — Proposed. Every mention names it as the decision
+# inactive-ok-file: ADR-098 — Proposed. Every mention names it as the decision
 # this module implements; the citation is to the reasoning, not a claim the
 # decision is settled.
 
@@ -61,7 +61,7 @@ SUNSET = {
         summary="convert `luria.toml` and the per-scheme vocabulary files "
                 "into one `luria.yaml`",
         sunset="1.0.0, or when no record on TOML remains. This is the only "
-               "way across the boundary ADR-tmp8hp25 drew — the new version "
+               "way across the boundary ADR-098 drew — the new version "
                "does not read TOML at all — so it has to outlive every "
                "record that has not crossed it.",
     ),
@@ -115,7 +115,7 @@ def _plan(root: Path) -> tuple[list[tuple[Path, str]], list[str], list[str]]:
             notes.append(f"{prefix}: already declares `status` — left alone")
             continue
         # The vocabulary lives in the config under a name every scheme can
-        # point at, rather than a statuses.yaml beside each one (ADR-tmp8hp25).
+        # point at, rather than a statuses.yaml beside each one (ADR-098).
         lines.append(prefix)
     return writes, lines, notes
 
@@ -129,7 +129,7 @@ def _declared(text: str, prefixes: list[str], values: dict) -> str:
     called "schemes.VP.statuses", and an appended indented block joins
     whichever top-level key happens to be last — both of them silent. The
     round trip is ruamel's, so the comments a project wrote in its own
-    config come through it (ADR-tmp8hp25)."""
+    config come through it (ADR-098)."""
     data = yaml_edit.load(text)
     base = ("luria",) if isinstance(data.get("luria"), dict) else ()
     for prefix in prefixes:
@@ -163,7 +163,7 @@ def convert_config(root: Path) -> tuple[str, list[str], list[Path]]:
     the reason a regex in a `uid` is the thing to check afterwards.
 
     A vocabulary two schemes hold identical copies of becomes ONE entry they
-    both name, which is the whole point of the boundary (ADR-tmp8hp25)."""
+    both name, which is the whole point of the boundary (ADR-098)."""
     cfg = tomllib.loads((root / TOML_NAME).read_text(encoding="utf-8"))
     cfg = cfg.get("luria", cfg)
     vocabs: dict[str, dict] = {}

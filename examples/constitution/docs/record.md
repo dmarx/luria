@@ -27,18 +27,21 @@ Every entry carries `title`, `tags` and `date`, and one standard field is condit
 **`VALUE`**
 
 - `status` — optional, one of `Active`, `Proposed`, `Deferred`, `Superseded`, `Rejected` (luria.yaml: schemes.VALUE.fields.status; vocabulary 'value-statuses': values)
+- `tags` — required (luria.yaml: schemes.VALUE.fields.tags)
 
 **`PRACTICE`**
 
 - `grounds` — required, one or more `VALUE` codes (luria.yaml: schemes.PRACTICE.references.grounds)
 - `surface` — one or more of `conversation`, `harness`, `repository`, `record`; absent means `conversation` (luria.yaml: schemes.PRACTICE.fields.surface; vocabulary 'surfaces': values)
 - `status` — optional, one of `Active`, `Proposed`, `Deferred`, `Superseded`, `Rejected` (luria.yaml: schemes.PRACTICE.fields.status; vocabulary 'value-statuses': values)
+- `tags` — required, one or more of `scope`, `verification`, `attribution`, `refusal`, `economy`, `authority` (luria.yaml: schemes.PRACTICE.fields.tags; vocabulary 'practice-tags': values)
 
 **`BOUNDARY`**
 
 - `overrides` — optional, one or more `PRACTICE` codes when present (luria.yaml: schemes.BOUNDARY.references.overrides)
 - `grounds` — required, one or more `VALUE` codes (luria.yaml: schemes.BOUNDARY.references.grounds)
 - `status` — optional, one of `Active`, `Proposed`, `Deferred`, `Superseded`, `Rejected` (luria.yaml: schemes.BOUNDARY.fields.status; vocabulary 'value-statuses': values)
+- `tags` — required, one or more of `refusal`, `attribution`, `identity` (luria.yaml: schemes.BOUNDARY.fields.tags; vocabulary 'boundary-tags': values)
 
 ## Journals
 

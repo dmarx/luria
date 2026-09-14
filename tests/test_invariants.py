@@ -6,7 +6,7 @@ names that something, the record made the claim and never said what it meant
 was wrong.
 """
 
-# inactive-ok-file: ADR-tmp8hp25 — Proposed. Every mention names it as the
+# inactive-ok-file: ADR-098 — Proposed. Every mention names it as the
 # decision this file implements or is written against; the citation is to the
 # reasoning, not a claim the decision is settled.
 
@@ -32,7 +32,7 @@ schemes:
     axis: tags
     fields:
       # A chain may only assert an invariant on a field the scheme declares,
-      # and since ADR-tmp8hp25 `tags` is one of those rather than an axis the
+      # and since ADR-098 `tags` is one of those rather than an axis the
       # code assumes.
       tags:
         many: true

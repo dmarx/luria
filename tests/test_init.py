@@ -1,6 +1,6 @@
 """`luria init` never overwrites, and says something useful when it skips
 the one file an agent reads first (ADR-037)."""
-# inactive-ok-file: ADR-tmp8hp25 — Proposed. Named as the decision these
+# inactive-ok-file: ADR-098 — Proposed. Named as the decision these
 # fixtures are shaped by; the citation is to the reasoning, not a claim
 # the decision is settled.
 
@@ -172,7 +172,7 @@ def test_init_writes_the_status_vocabulary(tmp_path, monkeypatch):
         if scheme.render != "index":
             continue
         # The words are in the config now, named once and shared, rather
-        # than a statuses.yaml per scheme (ADR-tmp8hp25).
+        # than a statuses.yaml per scheme (ADR-098).
         assert scheme.statuses_vocab, scheme.prefix
         assert tuple(statuses.declared(scheme)) == statuses.DEFAULT_STATUSES
 

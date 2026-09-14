@@ -25,6 +25,7 @@ Every entry carries `title`, `tags` and `date`, and one standard field is condit
 **`NOTE`**
 
 - `status` — optional, one of `Active`, `Proposed`, `Deferred`, `Superseded`, `Rejected` (luria.yaml: schemes.NOTE.fields.status; vocabulary 'note-statuses': values)
+- `tags` — required (luria.yaml: schemes.NOTE.fields.tags)
 
 ## Journals
 

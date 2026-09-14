@@ -24,7 +24,7 @@ today's config cannot bind it to two schemes. When a second source of
 obligations exists, a contradiction is a configuration error, never a winner.
 """
 
-# inactive-ok-file: ADR-tmp8hp25 — Proposed. Every mention names it as the
+# inactive-ok-file: ADR-098 — Proposed. Every mention names it as the
 # decision this file implements or is written against; the citation is to the
 # reasoning, not a claim the decision is settled.
 
@@ -62,7 +62,7 @@ class Field:
     default: tuple[str, ...] | None = None
     # Whether a value outside `values` is a finding. False is what `tags`
     # needed: the declaration supplies order, label and blurb, and using a
-    # new value stays an edit to a document (ADR-tmp8hp25).
+    # new value stays an edit to a document (ADR-098).
     closed: bool = True
     # Standard for every scheme rather than declared by one — `superseded_by`
     # (ADR-071). Checked like any other; not a declaration, so it stays
@@ -559,7 +559,7 @@ def violations(contract: Contract, rel: str, meta: dict,
     for group in contract.groups:
         # The group's own field, not a key called `tags`: a group constrains
         # a subset of one field's vocabulary and now says which
-        # (ADR-tmp8hp25).
+        # (ADR-098).
         tags = {str(t) for t in (meta.get(group.field) or [])}
         present = sorted(tags & group.tags)
         shown = ", ".join(sorted(group.tags))
@@ -595,7 +595,7 @@ def _vocabulary_violations(contract: Contract, field: Field, rel: str,
     if not field.closed:
         # An open vocabulary declares what it has an opinion about and
         # accepts the rest. Checking it would forbid the one case the flag
-        # exists for (ADR-tmp8hp25).
+        # exists for (ADR-098).
         return []
     file = next((b.split(": ", 1)[0] for b in field.because
                  if b.endswith(": values")), "")

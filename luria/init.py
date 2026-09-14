@@ -35,7 +35,7 @@ one config's shape while a different config governs the record would build
 directories the project's own machinery doesn't know about.
 """
 
-# inactive-ok-file: ADR-tmp8hp25 — Proposed. Every mention names it as the decision
+# inactive-ok-file: ADR-098 — Proposed. Every mention names it as the decision
 # this module implements; the citation is to the reasoning, not a claim the
 # decision is settled.
 
@@ -261,7 +261,7 @@ def _scheme_entry(prefix: str, render: str) -> tuple[dict, str]:
         "render": render,
         # Every scheme names the same vocabulary rather than getting a copy
         # of it, which is the whole point of the table being central
-        # (ADR-tmp8hp25) — and it names it where every other controlled
+        # (ADR-098) — and it names it where every other controlled
         # field does, because `status` is not a special one.
         "fields": {
             "status": {"vocabulary": "statuses"},
@@ -271,7 +271,7 @@ def _scheme_entry(prefix: str, render: str) -> tuple[dict, str]:
             "tags": {"many": True, "required": True},
         },
         # WHICH field heads this scheme's index. Named rather than assumed —
-        # a world-bible's axis is `worlds` (ADR-tmp8hp25).
+        # a world-bible's axis is `worlds` (ADR-098).
         "axis": "tags",
     }, ("\n%s — %s.\n"
         "The paths follow the prefix; rename them if this family is better\n"
@@ -302,7 +302,7 @@ def shorthand_tables(text: str, schemes: str, journals: str) -> str:
     Added to the document rather than to the end of the text: YAML nests by
     indentation, so an indented block appended to a file joins whichever
     top-level key happens to be last — silently, and wrongly. The round trip
-    is ruamel's, so the template's comments survive it (ADR-tmp8hp25)."""
+    is ruamel's, so the template's comments survive it (ADR-098)."""
     data = yaml_edit.load(text)
     base = ("luria",) if isinstance(data.get("luria"), dict) else ()
     indent = 2 * (len(base) + 1)

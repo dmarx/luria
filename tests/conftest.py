@@ -6,7 +6,7 @@ check that passes on a synthetic fixture and fails on a real corpus has told you
 nothing. Tests that need a controlled tree build one and repoint the config at
 it via `LURIA_ROOT`.
 """
-# inactive-ok-file: ADR-tmp8hp25 — Proposed. Named as the decision these
+# inactive-ok-file: ADR-098 — Proposed. Named as the decision these
 # fixtures are shaped by; the citation is to the reasoning, not a claim
 # the decision is settled.
 
@@ -37,7 +37,7 @@ def project(tmp_path, monkeypatch):
     (tmp_path / "docs" / "decisions").mkdir(parents=True)
     # `status:` is a field a scheme declares (#181), so a record that wants
     # its words checked says which vocabulary backs them — and since
-    # ADR-tmp8hp25 the words themselves live in the config, named once, so
+    # ADR-098 the words themselves live in the config, named once, so
     # that two schemes can share them.
     (tmp_path / "record" / "decisions.d").mkdir(parents=True, exist_ok=True)
     (tmp_path / "luria.yaml").write_text(
@@ -62,7 +62,7 @@ def project(tmp_path, monkeypatch):
                 vocabulary: statuses
               # Open, many, and named as the axis — which is all `tags` ever
               # was, said in the config instead of assumed by the code
-              # (ADR-tmp8hp25).
+              # (ADR-098).
               tags:
                 many: true
         """

@@ -12,13 +12,13 @@ and wrong for editing one on disk. Line surgery keeps the comments and gets
 the structure wrong: YAML nests by indentation, so an indented block appended
 to a document attaches to whatever the last top-level key happens to be, and a
 bare `FXL:` occurs under `schemes:` and under every `remotes.<R>.schemes:`.
-Both failures are silent (ADR-tmp8hp25).
+Both failures are silent (ADR-098).
 
 `ruamel.yaml` in round-trip mode does both, so these are the four operations
 the commands need and the only place that knows how a config is edited.
 """
 
-# inactive-ok-file: ADR-tmp8hp25 — Proposed. Named as the decision this module
+# inactive-ok-file: ADR-098 — Proposed. Named as the decision this module
 # implements; the citation is to the reasoning, not a claim it is settled.
 
 from __future__ import annotations

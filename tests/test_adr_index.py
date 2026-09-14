@@ -11,7 +11,7 @@ arrives from a different direction: the fragments live one directory *below*
 the page they assemble into.
 """
 
-# inactive-ok-file: ADR-tmp8hp25 — Proposed. Every mention names it as the
+# inactive-ok-file: ADR-098 — Proposed. Every mention names it as the
 # decision this file is written against; the citation is to the reasoning,
 # not a claim the decision is settled.
 import re
@@ -487,7 +487,7 @@ def test_an_axis_page_names_its_own_scheme_not_decisions(tmp_path, monkeypatch):
     """A project's RFC tag page should not be titled after this package's
     decisions — the same rule DEFAULT_STUB already states for the index.
 
-    Rendered by `vocabularies.pages` since ADR-tmp8hp25: the axis's pages go
+    Rendered by `vocabularies.pages` since ADR-098: the axis's pages go
     through the same template as every other field's, into the same kind of
     directory, and `render_tag_page` was the second copy of it."""
     scheme = _rfc_project(tmp_path, monkeypatch)

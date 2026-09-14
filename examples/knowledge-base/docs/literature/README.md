@@ -5,6 +5,8 @@
 **[Optimization](tags/optimization.md)** (2) — optimizers, schedules, batch size:
 [001](../../record/literature.d/LIT-001.md) · [002](../../record/literature.d/LIT-002.md)
 
+**[Stability](tags/stability.md)** (0) — normalization, initialization, gradient handling.
+
 **[Systems](tags/systems.md)** (1) — hardware, kernels, memory:
 [003](../../record/literature.d/LIT-003.md)
 

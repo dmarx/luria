@@ -107,8 +107,8 @@ carries its prefix, so a second scheme is an entry here (ADR-006).
 | `titles_generalize` | `bool` | `False` |
 | `requires` | `tuple[str, ...]` | *unset* |
 | `tag_groups` | `tuple[TagGroup, ...]` | *unset* |
-| `tags_vocab` | `str` | *unset* |
 | `statuses_vocab` | `str` | *unset* |
+| `axis` | `str` | *unset* |
 | `vocab_values` | `dict[str, dict]` | *unset* |
 | `field_groups` | `tuple[FieldGroup, ...]` | *unset* |
 | `references` | `tuple[Reference, ...]` | *unset* |

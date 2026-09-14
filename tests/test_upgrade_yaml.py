@@ -93,7 +93,7 @@ def test_two_schemes_holding_the_same_words_end_up_naming_one_vocabulary(
     had to be two files, and in the corpus that prompted this, ten of thirteen
     entries had drifted apart.
 
-    inactive-ok: ADR-tmp8hp25 — Proposed, named as the decision this upgrade
+    inactive-ok: ADR-098 — Proposed, named as the decision this upgrade
     carries a record across."""
     _record(tmp_path, shared=True)
     upgrade.run("yaml", root=str(tmp_path))

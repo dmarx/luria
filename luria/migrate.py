@@ -58,7 +58,7 @@ it is the one artifact whose job is to remember them.
 # unresolved-ok-file: DP-017 — a demonstration code in the comments below,
 # standing in for a moved document's old address
 
-# inactive-ok-file: ADR-tmp8hp25 — Proposed. Every mention names it as the decision
+# inactive-ok-file: ADR-098 — Proposed. Every mention names it as the decision
 # this module implements; the citation is to the reasoning, not a claim the
 # decision is settled.
 
@@ -141,7 +141,7 @@ class Plan:
     # not: `FXL:` appears under `schemes:` and again under every
     # `remotes.<R>.schemes:`, and renaming this project's scheme must leave
     # another project's mirror alone — so the path comes with the key
-    # (ADR-tmp8hp25).
+    # (ADR-098).
     section_renames: list[tuple[Path, tuple[str, ...], str, str]] = \
         field(default_factory=list)
     # Config files that get the section-aware path pass instead of the
@@ -499,7 +499,7 @@ def rename_key_at(text: str, path: tuple[str, ...], old: str, new: str) -> str:
     the same six characters in the text and two different places in the
     document, and only a parser tells them apart. The round trip is
     ruamel's, so the comments a person wrote in their config survive a
-    migration that was asked to rename a key (ADR-tmp8hp25)."""
+    migration that was asked to rename a key (ADR-098)."""
     data = yaml_edit.load(text)
     node = yaml_edit.at(data, path)
     # A family's table, not a setting that happens to share its name: the
@@ -520,7 +520,7 @@ def config_paths_pass(text: str, plan: Plan) -> str:
     indentation, because the enclosing mapping is what decides whose path a
     line spells and the parser is the thing that knows it. The rewrite is
     still textual: a rename reaches into comments and into the middle of
-    string values, and neither is a node to reassign (ADR-tmp8hp25)."""
+    string values, and neither is a node to reassign (ADR-098)."""
     lines = text.splitlines(keepends=True)
     data = yaml_edit.load(text)
     frozen: set[int] = set()

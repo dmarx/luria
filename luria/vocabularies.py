@@ -19,7 +19,7 @@ A scheme directory used to hold two of these as hand-built special cases —
 `tags:` (open, many). A downstream record's `worlds: [A, C]` on 37 of 75
 entries, from a closed six-value set, was the third and showed the pattern
 (ADR-076). `status` came in under it at #181; `tags` came in last
-(ADR-tmp8hp25), once a vocabulary could be OPEN and a group could name the
+(ADR-098), once a vocabulary could be OPEN and a group could name the
 field it constrains.
 
 The vocabulary is the values; the `fields` table is the wiring, and the
@@ -44,7 +44,7 @@ The contract compiles the field (`contract.for_scheme`) and the lint checks
 it; the config validates the declaration at load, eagerly, like a group.
 """
 
-# inactive-ok-file: ADR-tmp8hp25 — Proposed. Every mention names it as the decision
+# inactive-ok-file: ADR-098 — Proposed. Every mention names it as the decision
 # this module implements; the citation is to the reasoning, not a claim the
 # decision is settled.
 
@@ -59,7 +59,7 @@ def declared(values: dict | None) -> dict[str, dict]:
     """`{value: {label, blurb}}` in declaration order, or `{}` when a scheme
     names no vocabulary.
 
-    Takes the values rather than a path since ADR-tmp8hp25: a vocabulary is
+    Takes the values rather than a path since ADR-098: a vocabulary is
     declared once under `vocabularies:` and referenced by name, so there is no
     longer a file per scheme to read — which is what let two schemes sharing
     one vocabulary drift apart in ten of thirteen entries."""
@@ -74,7 +74,7 @@ def label_of(meta: dict | None, value: str) -> str:
     One fallback, because there were three — `tag.title()` in the tag pages,
     `""` in the status legend, and the raw value here — so a scheme declaring
     no `label` rendered an empty legend column but a title-cased tag heading
-    (ADR-tmp8hp25)."""
+    (ADR-098)."""
     return str((meta or {}).get("label") or value)
 
 
@@ -87,7 +87,7 @@ def _fields(scheme):
     vocabularies, and its axis even when the axis declares no vocabulary.
 
     `Scheme.grouped_fields` is the one answer — the same one the generator
-    uses to decide which directories it owns (ADR-tmp8hp25)."""
+    uses to decide which directories it owns (ADR-098)."""
     from .contract import for_scheme
     compiled = {f.name: f for f in for_scheme(scheme).fields}
     named = {v.field: v for v in scheme.vocabularies}
@@ -143,7 +143,7 @@ def index_blocks(scheme, docs) -> str:
     than the code knowing which field is special. The axis is the browsing
     surface, so its values list the documents under them; every other field
     is a row of chips with counts, because the value's own page already
-    holds the table (ADR-tmp8hp25). One walk, one label rule, one blurb
+    holds the table (ADR-098). One walk, one label rule, one blurb
     rule, one ordering rule — where there were two of each, and they had
     drifted."""
     from .adr_index import prefix_for
@@ -187,7 +187,7 @@ def pages(scheme, docs) -> dict[Path, str]:
     They were two templates: the axis's said "ADRs tagged `x`" and
     sentence-cased the blurb, every other field's named the field and
     rendered `**Label** — blurb`. Same directory, same table, same footer,
-    two spellings of the heading and two of the blurb (ADR-tmp8hp25)."""
+    two spellings of the heading and two of the blurb (ADR-098)."""
     from .adr_index import TABLE_HEAD, prefix_for
     out: dict[Path, str] = {}
     noun = _noun(scheme)

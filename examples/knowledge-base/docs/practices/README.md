@@ -5,6 +5,10 @@
 **[Optimization](tags/optimization.md)** (2) — optimizers, schedules, batch size:
 [001](../../record/practices.d/SOTA-001.md) · [002](../../record/practices.d/SOTA-002.md)
 
+**[Stability](tags/stability.md)** (0) — normalization, initialization, gradient handling.
+
+**[Systems](tags/systems.md)** (0) — hardware, kernels, memory.
+
 **By status:** [Current practice](status/Active.md) (1) · [Not yet judged](status/Deferred.md) (1) · [Replaced](status/Superseded.md) (0)
 
 What the status column means in this scheme — the words are luria's, the meanings are this project's.

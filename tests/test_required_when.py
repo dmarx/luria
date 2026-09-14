@@ -13,7 +13,7 @@ field on the document rather than a paragraph nothing points at. One field,
 one set of literal values; deliberately not an expression language.
 """
 
-# inactive-ok-file: ADR-tmp8hp25 — Proposed. Every mention names it as the
+# inactive-ok-file: ADR-098 — Proposed. Every mention names it as the
 # decision this file implements or is written against; the citation is to the
 # reasoning, not a claim the decision is settled.
 
@@ -312,7 +312,7 @@ def test_a_status_outside_what_the_scheme_declares_is_refused(
 
 def test_a_condition_on_tags_is_accepted(tmp_path, monkeypatch):
     """`tags` is nameable because the scheme declares it — which is the whole
-    of what `tags` being an axis means since ADR-tmp8hp25."""
+    of what `tags` being an axis means since ADR-098."""
     project(tmp_path, monkeypatch,
             """
             schemes:

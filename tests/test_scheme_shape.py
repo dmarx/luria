@@ -7,7 +7,7 @@ restated by hand — four copies of one vocabulary, and a citation rule that
 turned out to check only that a field was not blank.
 """
 
-# inactive-ok-file: ADR-tmp8hp25 — Proposed. Named as the decision these
+# inactive-ok-file: ADR-098 — Proposed. Named as the decision these
 # fixtures are shaped by; the citation is to the reasoning, not a claim
 # the decision is settled.
 
@@ -60,7 +60,7 @@ def two_schemes(tmp_path, monkeypatch):
     def build(toml_extra: str = ""):
         # The case this fixture is about: one vocabulary, two schemes.
         # It used to be a shared FILE PATH, which is the half-measure the
-        # central table replaced (ADR-tmp8hp25).
+        # central table replaced (ADR-098).
         write(tmp_path, "luria.yaml", merged("""
                                       issue_url: https://example.test/issues/{n}
                                       schemes:
@@ -112,7 +112,7 @@ def test_two_schemes_can_share_one_vocabulary(two_schemes):
     """The duplication this removes: the shared terms were previously written
     once per scheme in tags.yaml and again per scheme in the config — and a
     shared FILE was the half-measure, since two schemes could point at one and
-    simply did not (ADR-tmp8hp25)."""
+    simply did not (ADR-098)."""
     two_schemes()
     cfg = config.current()
     assert cfg.schemes["LIT"].tags_vocab == "topics"

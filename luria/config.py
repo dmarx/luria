@@ -22,7 +22,7 @@ particular project. It reads `luria.yaml` from the project root:
       globs: ["src/**/*.py", "*.md"]
 
     vocabularies:                   # declared once, named by every scheme
-      statuses:                     # that uses it (ADR-tmp8hp25)
+      statuses:                     # that uses it (ADR-098)
         Active: {blurb: in force}
 
     schemes:
@@ -59,7 +59,7 @@ which files they cover — the exact class of bug ADR-002 exists to prevent. One
 config object, resolved once from disk.
 """
 
-# inactive-ok-file: ADR-tmp8hp25 — Proposed. Every mention names it as the decision
+# inactive-ok-file: ADR-098 — Proposed. Every mention names it as the decision
 # this module implements; the citation is to the reasoning, not a claim the
 # decision is settled.
 
@@ -81,7 +81,7 @@ CONFIG_NAME = "luria.yaml"
 # The record already speaks YAML — every document's frontmatter is YAML, and
 # so was every vocabulary file before they moved into the config. The config
 # spoke TOML, and the lockfile JSON, for no reason either of them could state
-# (ADR-tmp8hp25). One format is one set of quoting rules to know, and one
+# (ADR-098). One format is one set of quoting rules to know, and one
 # parser to reason about when a regex in a `uid` does not mean what it looks
 # like.
 
@@ -209,7 +209,7 @@ def _merge(base: dict, override: dict) -> dict:
     rather than hand-roll the recursion is that the schema below then applies
     to the result: a key the schema types as a string and the config gives a
     list is a load-time error naming the key, instead of a `TypeError` three
-    modules away in whatever first reads it (ADR-tmp8hp25)."""
+    modules away in whatever first reads it (ADR-098)."""
     merged = OmegaConf.merge(OmegaConf.create(base), OmegaConf.create(override))
     return cast(dict, OmegaConf.to_container(merged, resolve=True))
 
@@ -268,7 +268,7 @@ class TagGroup:
     tags: frozenset[str]
     # The frontmatter field whose values these are. A group constrains a
     # subset of ONE field's vocabulary, so it is declared under that field
-    # and carries its name (ADR-tmp8hp25); it was `schemes.X.tag_groups`,
+    # and carries its name (ADR-098); it was `schemes.X.tag_groups`,
     # which could only ever mean `tags`.
     field: str = "tags"
     # "any" (the default — the group is a label, not an axis), "at-most-one",
@@ -429,7 +429,7 @@ class Vocabulary:
     field: str
     name: str
     # The values, resolved from the central `vocabularies:` table at load.
-    # Was a Path to `<name>.yaml` beside the records (ADR-tmp8hp25).
+    # Was a Path to `<name>.yaml` beside the records (ADR-098).
     values_by_name: dict[str, dict] = dcfield(default_factory=dict)
     many: bool = False
     required: bool = False
@@ -578,7 +578,7 @@ class Scheme:
     # The NAME of the vocabulary behind `status` — DERIVED from
     # `fields.status.vocabulary` rather than declared beside it, because
     # `status` is a field like any other and a second key could disagree with
-    # the field (ADR-tmp8hp25). `tags_vocab` is the same, off `axis`.
+    # the field (ADR-098). `tags_vocab` is the same, off `axis`.
     statuses_vocab: str = ""
     # Which of this scheme's fields is its primary taxonomy: the field whose
     # values head the index under `{categories}` and get a page each. A
@@ -652,7 +652,7 @@ class Scheme:
         is the ordinary starting point and what `luria init` scaffolds. One
         definition, because three places need the same answer: which
         directories the generator owns, which are exempt from the docs
-        index, and which paths are generated (ADR-tmp8hp25)."""
+        index, and which paths are generated (ADR-098)."""
         # Axis first wherever it is declared, because it heads the index:
         # the `fields:` table is written in whatever order reads best, and
         # that is not an answer about which taxonomy comes first.
@@ -667,12 +667,12 @@ class Scheme:
 
     def vocab_dir(self, field: str) -> Path:
         """Where a grouped field's per-value pages render — the axis's among
-        them, since it is a declared field like any other (ADR-tmp8hp25).
+        them, since it is a declared field like any other (ADR-098).
 
         Keyed on the FIELD, not on the vocabulary's name: a name is a config
         detail and a published path is not, so sharing a vocabulary between
         two schemes — or renaming one — must not move anybody's pages
-        (ADR-tmp8hp25). Two schemes naming one vocabulary still render their
+        (ADR-098). Two schemes naming one vocabulary still render their
         own pages, under their own views.
         """
         return self.view / field
@@ -1416,7 +1416,7 @@ def _fields(prefix: str, raw: dict, scheme_dir: Path, root: Path,
             # `many` types a field too: it says the field holds a list, which
             # is what makes it nameable in a derivation or a chain and gives
             # the record page something to print. That is exactly what being
-            # built in used to say about `tags` (ADR-tmp8hp25).
+            # built in used to say about `tags` (ADR-098).
             if (when is None and not required and rule is None
                     and not declares_groups and not many):
                 raise ValueError(f"{where}: declares no type — `vocabulary = "
@@ -1480,7 +1480,7 @@ def _fields(prefix: str, raw: dict, scheme_dir: Path, root: Path,
                                                              required)))
         # A group constrains a subset of THIS field's values, so it is read
         # here with the field rather than from a scheme-level table that
-        # could only ever have meant `tags` (ADR-tmp8hp25).
+        # could only ever have meant `tags` (ADR-098).
         groups.extend(_tag_groups(prefix, str(field),
                                   spec.get("groups", {}) or {}, values))
     return tuple(found), tuple(plain), tuple(rules), tuple(groups)
@@ -1643,7 +1643,7 @@ class Config:
     # `tags.yaml`/`statuses.yaml` beside each scheme's records, which meant a
     # vocabulary two schemes share had to be two files — and in the corpus
     # that motivated this, ten of thirteen entries had silently drifted apart
-    # (ADR-tmp8hp25).
+    # (ADR-098).
     vocabularies: dict[str, dict]
     issue_url: str
     docs: Path
@@ -1815,7 +1815,7 @@ class Config:
         for s in self.schemes.values():
             # The index, and a page per value of every field it groups by —
             # the axis's among them, on the same template and in the same
-            # kind of directory (ADR-tmp8hp25).
+            # kind of directory (ADR-098).
             #
             # The non-axis half of this was missing for as long as
             # vocabularies existed, and invisible until a *retired* document
@@ -2021,7 +2021,7 @@ def _chains(raw: dict, schemes: dict, root: Path) -> dict[str, Chain]:
         facet_by = tuple(str(f) for f in (
             [raw_facets] if isinstance(raw_facets, str) else raw_facets))
         # Every axis is a declared field now — `status` and `tags` both
-        # arrive through `vocabularies` like any other (ADR-tmp8hp25).
+        # arrive through `vocabularies` like any other (ADR-098).
         # `status` stays nameable undeclared because it has a default
         # vocabulary; nothing else does.
         known = ({v.field for v in schemes[prefix].vocabularies}
@@ -2072,7 +2072,7 @@ def _chains(raw: dict, schemes: dict, root: Path) -> dict[str, Chain]:
 # `status` alone, and only because it has a vocabulary a scheme need not
 # declare: `statuses.vocabulary` falls back to the default five, and
 # `superseded_by` is a rule `contract.built_in` writes for every scheme. Any
-# other field — `tags` included since ADR-tmp8hp25 — is nameable exactly when
+# other field — `tags` included since ADR-098 — is nameable exactly when
 # the scheme declares it.
 BUILT_IN_CONDITION_FIELDS = ("status",)
 
@@ -2287,7 +2287,7 @@ def _schemes(raw: dict, root: Path, scaffolding: bool = False,
         # primary taxonomy — the one whose values head the index and get a
         # page each — and that is a rendering choice about this scheme, not
         # a property of the field: a world-bible's axis is `worlds`
-        # (ADR-tmp8hp25). A scheme naming none has no taxonomy, and renders
+        # (ADR-098). A scheme naming none has no taxonomy, and renders
         # none.
         for gone, goes in (("tags", "fields.tags.vocabulary"),
                            ("tag_groups", "fields.<field>.groups")):

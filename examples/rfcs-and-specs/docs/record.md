@@ -26,10 +26,12 @@ Every entry carries `title`, `tags` and `date`, and one standard field is condit
 **`RFC`**
 
 - `status` — optional, one of `Active`, `Proposed`, `Deferred`, `Superseded`, `Rejected` (luria.yaml: schemes.RFC.fields.status; vocabulary 'rfc-statuses': values)
+- `tags` — required (luria.yaml: schemes.RFC.fields.tags)
 
 **`SPEC`**
 
 - `status` — optional, one of `Active`, `Proposed`, `Deferred`, `Superseded`, `Rejected` (luria.yaml: schemes.SPEC.fields.status; vocabulary 'rfc-statuses': values)
+- `tags` — required (luria.yaml: schemes.SPEC.fields.tags)
 
 ## Journals
 

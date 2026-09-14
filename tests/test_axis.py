@@ -2,7 +2,7 @@
 """`tags` is a field a scheme declares, not an axis the code assumes.
 
 `status` stopped being special in #181 and finished stopping in
-ADR-tmp8hp25. `tags` was the last one, and it held out for two stated
+ADR-098. `tags` was the last one, and it held out for two stated
 reasons: a vocabulary is closed by construction and `tags` is open, and
 `tag_groups` constrain a subset of a field's values, which a vocabulary
 cannot express. Both are now things a declaration says — `closed: false`
@@ -13,7 +13,7 @@ These are tests for that: what the declaration can now say, and what the
 code no longer assumes.
 """
 
-# inactive-ok-file: ADR-tmp8hp25 — Proposed. Every mention names it as the
+# inactive-ok-file: ADR-098 — Proposed. Every mention names it as the
 # decision this file implements or is written against; the citation is to the
 # reasoning, not a claim the decision is settled.
 

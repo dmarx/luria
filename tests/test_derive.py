@@ -5,7 +5,7 @@ the derivation resolves everywhere a field is read, writing it down is a
 finding, and a declaration that could never resolve is refused at load.
 """
 
-# inactive-ok-file: ADR-tmp8hp25 — Proposed. Every mention names it as the
+# inactive-ok-file: ADR-098 — Proposed. Every mention names it as the
 # decision this file implements or is written against; the citation is to the
 # reasoning, not a claim the decision is settled.
 
@@ -38,7 +38,7 @@ encoding:
   label: Encoding
 """
 
-# `tags` is a declared field since ADR-tmp8hp25 — open, so a secondary tag
+# `tags` is a declared field since ADR-098 — open, so a secondary tag
 # outside the vocabulary is fine, which is what these tests turn on — and
 # `primary_topic` derives the first of its values.
 DERIVED = """

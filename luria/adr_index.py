@@ -37,7 +37,7 @@ the same problem for a brainstorming repo: prose lives in a `.stub`, the
 generator substitutes `{placeholders}`, and tags get their own generated pages.
 """
 
-# inactive-ok-file: ADR-tmp8hp25 — Proposed. Every mention names it as the
+# inactive-ok-file: ADR-098 — Proposed. Every mention names it as the
 # decision this file implements or is written against; the citation is to the
 # reasoning, not a claim the decision is settled.
 
@@ -273,14 +273,14 @@ class Adr:
     @property
     def tags(self) -> list[str]:
         """This document's values on its scheme's axis, or none when the
-        scheme declares no axis (ADR-tmp8hp25)."""
+        scheme declares no axis (ADR-098)."""
         axis = getattr(self.scheme, "axis", "") or ""
         if not axis:
             return []
         # Not lower-cased. That was a `tags` convention the code applied to
         # every value, and it disagreed with the vocabulary check beside it,
         # which has always compared the value as written. An axis of `worlds`
-        # whose values are `A` and `B` is the case it breaks (ADR-tmp8hp25).
+        # whose values are `A` and `B` is the case it breaks (ADR-098).
         return [str(t).strip() for t in (self.meta.get(axis) or [])]
 
     def cell(self, prefix: str = "") -> str:
@@ -366,7 +366,7 @@ def render_index(adrs: list[Adr], scheme=None) -> str:
                  if scheme.prefix == "ADR" else f"{scheme.prefix} documents"))
     # Every grouped field, the axis first, from the one renderer that knows
     # how a vocabulary looks — automatic for the same reason the status
-    # legend is (ADR-tmp8hp25).
+    # legend is (ADR-098).
     from . import vocabularies
     return (prose.replace("{categories}", vocabularies.index_blocks(scheme, adrs))
                  .replace("{table}", table))
@@ -504,7 +504,7 @@ def _render_scheme(scheme) -> dict[Path, str]:
     from . import vocabularies
     out = {scheme.index_path: render_index(docs, scheme)}
     # The axis's pages come through here with every other field's: same
-    # directory, same table, one template (ADR-tmp8hp25).
+    # directory, same table, one template (ADR-098).
     out.update(vocabularies.pages(scheme, docs))
     return out
 

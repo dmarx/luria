@@ -13,7 +13,7 @@ Checks (each one fails the build):
    heading (ADR-013). "At least one `tags:` entry" (ADR-003) is checked in
    2b now, as `required: true` on whichever field the scheme names as its
    axis — a scheme that declares no taxonomy is not told it is missing one
-   (ADR-tmp8hp25).
+   (ADR-098).
 2b. **Contracts** — what a scheme declares beyond the standard set, compiled
    once per scheme (`luria/contract.py`, #141): fields it `requires`
    (ADR-040), what its `references` hold (ADR-060), and which of its values may
@@ -47,7 +47,7 @@ one so only the unconsidered ones stay listed — acknowledged rows never fail.
 Exit 0 when clean; exit 1 with one line per violation.
 """
 
-# inactive-ok-file: ADR-tmp8hp25 — Proposed. Every mention names it as the
+# inactive-ok-file: ADR-098 — Proposed. Every mention names it as the
 # decision this file implements or is written against; the citation is to the
 # reasoning, not a claim the decision is settled.
 
@@ -146,7 +146,7 @@ def check_frontmatter(errors: list[str]) -> None:
             # a field the code assumed. It is `required: true` on the axis
             # field now, checked in `check_contracts` with every other
             # obligation — one implementation, and a scheme with no axis is
-            # not told it is missing one (ADR-tmp8hp25).
+            # not told it is missing one (ADR-098).
 
 
 

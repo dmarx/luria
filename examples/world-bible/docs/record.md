@@ -27,6 +27,7 @@ Every entry carries `title`, `tags` and `date`, and one standard field is condit
 - `follows` — optional, one or more `SCENE` codes when present (luria.yaml: schemes.SCENE.references.follows)
 - `worlds` — one or more of `A`, `B`, `C`; absent means `B` (luria.yaml: schemes.SCENE.fields.worlds; vocabulary 'worlds': values)
 - `status` — optional, one of `Active`, `Proposed`, `Deferred`, `Superseded`, `Rejected` (luria.yaml: schemes.SCENE.fields.status; vocabulary 'scene-statuses': values)
+- `tags` — required, one or more of `court`, `road` (luria.yaml: schemes.SCENE.fields.tags; vocabulary 'scene-tags': values)
 
 ## Journals
 

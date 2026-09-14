@@ -15,7 +15,7 @@ borrows a live sequence's prefix is the hazard that rule exists for.
 """
 
 
-# inactive-ok-file: ADR-tmp8hp25 — Proposed. Named as the decision these
+# inactive-ok-file: ADR-098 — Proposed. Named as the decision these
 # fixtures are shaped by; the citation is to the reasoning, not a claim
 # the decision is settled.
 
@@ -69,7 +69,7 @@ def _wire(root: Path, values: dict | None = None) -> None:
     """Point `status:` at the named vocabulary, and declare it.
 
     The values used to be a `statuses.yaml` beside the records; since
-    ADR-tmp8hp25 they are in the config under a name, so wiring the field and
+    ADR-098 they are in the config under a name, so wiring the field and
     declaring the words are one edit rather than two files."""
     path = root / "luria.yaml"
     wiring: dict = {"schemes": {"VP": {

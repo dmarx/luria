@@ -11,7 +11,7 @@ headline read `pending()`, never the rendered file, and these tests pin that
 the counts they publish do not move.
 """
 
-# inactive-ok-file: ADR-tmp8hp25 — Proposed. Named as the decision these
+# inactive-ok-file: ADR-098 — Proposed. Named as the decision these
 # fixtures are shaped by; the citation is to the reasoning, not a claim
 # the decision is settled.
 
@@ -58,7 +58,7 @@ def project(tmp_path, monkeypatch, schemes=("RFC", "SPEC")) -> Path:
                               "output": f"docs/{p.lower()}"}
                           for p in schemes}}
     # One vocabulary, named by every scheme that uses it — which is what
-    # replaced a statuses.yaml beside each scheme's records (ADR-tmp8hp25).
+    # replaced a statuses.yaml beside each scheme's records (ADR-098).
     tables["vocabularies"] = {"statuses": yaml.safe_load(STATUSES)}
     for p in schemes:
         tables["schemes"][p]["fields"] = {"status": {"vocabulary": "statuses"}}

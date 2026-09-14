@@ -8,7 +8,7 @@ reference, not a tag, not a status. Declared explicitly, closed, with a
 default that is an effective value and never a rewrite.
 """
 
-# inactive-ok-file: ADR-tmp8hp25 — Proposed. Every mention names it as the
+# inactive-ok-file: ADR-098 — Proposed. Every mention names it as the
 # decision this file implements or is written against; the citation is to the
 # reasoning, not a claim the decision is settled.
 
@@ -60,7 +60,7 @@ def world(tmp_path, monkeypatch, table: dict | None = None,
     field = field or name
     table = {"many": True, "default": ["B"]} if table is None else table
     fields: dict = {field: {"vocabulary": name, **table}}
-    # `tags` is a declared field since ADR-tmp8hp25, so a scheme that wants
+    # `tags` is a declared field since ADR-098, so a scheme that wants
     # a tag axis says so — which these tests need, since they assert the
     # vocabulary's pages render *beside* the tag pages.
     fields.setdefault("tags", {"many": True, "closed": False})
@@ -142,7 +142,7 @@ def test_the_axis_is_a_declared_field_like_any_other(tmp_path, monkeypatch):
     """`tags` used to be refused here — it was an axis the code assumed, and
     the mechanism carved it out (ADR-054's deferred `closed` flag was the
     reason). It is a field now: backed by a vocabulary, OPEN, and named by
-    the scheme as its axis (ADR-tmp8hp25)."""
+    the scheme as its axis (ADR-098)."""
     world(tmp_path, monkeypatch, name="tags",
           vocab="a:\n  label: A\n", table={"many": True, "closed": False})
     scheme = current().schemes["SCENE"]
@@ -193,7 +193,7 @@ def test_the_field_and_its_vocabulary_may_be_named_differently(tmp_path, monkeyp
     config detail into a published path — so sharing a vocabulary between two
     schemes, or renaming one, moved pages and orphaned the old directory.
 
-    inactive-ok: ADR-tmp8hp25 — Proposed, named as the decision that moved
+    inactive-ok: ADR-098 — Proposed, named as the decision that moved
     this path; the citation is to the reasoning."""
     root = world(tmp_path, monkeypatch, field="world", table={})
     scene(root, 1, "world: C")

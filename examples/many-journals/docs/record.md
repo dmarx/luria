@@ -25,6 +25,7 @@ Every entry carries `title`, `tags` and `date`, and one standard field is condit
 **`ADR`**
 
 - `status` — optional, one of `Active`, `Proposed`, `Deferred`, `Superseded`, `Rejected` (luria.yaml: schemes.ADR.fields.status; vocabulary 'adr-statuses': values)
+- `tags` — required (luria.yaml: schemes.ADR.fields.tags)
 
 ## Journals
 

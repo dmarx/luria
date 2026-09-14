@@ -5,13 +5,13 @@ Config was TOML, and TOML tables concatenate: a fixture built its document by
 gluing a base and an extra table together with an f-string. YAML mappings do
 not concatenate — two fragments both declaring `schemes:` is a duplicate key,
 not a merge — so composition became structural instead of textual when the
-config moved (ADR-tmp8hp25).
+config moved (ADR-098).
 
 That is the better shape anyway: a test that says which keys it is adding is
 saying something a reader can check, where `BASE + extra` said only that some
 text arrived.
 """
-# inactive-ok-file: ADR-tmp8hp25 — Proposed. Every mention names it as the decision
+# inactive-ok-file: ADR-098 — Proposed. Every mention names it as the decision
 # this module implements; the citation is to the reasoning, not a claim the
 # decision is settled.
 

@@ -11,6 +11,8 @@
 **[Attribution](tags/attribution.md)** (1) — saying where something came from:
 [004](../../record/practices.d/PRACTICE-004.md)
 
+**[Refusal](tags/refusal.md)** (0) — declining, and how.
+
 **[Economy](tags/economy.md)** (3) — what a reply costs the person who has to read it:
 [005](../../record/practices.d/PRACTICE-005.md) · [006](../../record/practices.d/PRACTICE-006.md) · [007](../../record/practices.d/PRACTICE-007.md)
 

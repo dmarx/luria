@@ -8,7 +8,7 @@ same; what changes is that there is one place to ask "what does this scheme
 demand, and why?"
 """
 
-# inactive-ok-file: ADR-tmp8hp25 — Proposed. Every mention names it as the
+# inactive-ok-file: ADR-098 — Proposed. Every mention names it as the
 # decision this file implements or is written against; the citation is to the
 # reasoning, not a claim the decision is settled.
 
@@ -152,7 +152,7 @@ def test_every_obligation_says_where_it_was_declared(tmp_path, monkeypatch):
             """)
     c = sota()
     # `tags` is in the contract now: it is a declared field like any
-    # other since ADR-tmp8hp25, rather than an axis the code assumed.
+    # other since ADR-098, rather than an axis the code assumed.
     assert {f.name for f in declared(c)} == {"arxiv", "source", "tags"}
     for field in declared(c):
         assert field.because and all("luria.yaml" in b for b in field.because)
@@ -235,7 +235,7 @@ def test_the_shipped_record_is_clean_through_the_contract():
 
     `empty` stopped being true here when `status:` became a field a scheme
     declares rather than one the code assumes, and again when `tags:` did
-    (ADR-tmp8hp25). That is the change working twice: the record page lists
+    (ADR-098). That is the change working twice: the record page lists
     both vocabularies and cites where each is declared, where before it said
     "nothing beyond the standard fields" and neither was readable from the
     record at all."""
@@ -355,7 +355,7 @@ def test_describe_is_one_renderer_for_the_whole_contract(tmp_path, monkeypatch):
                  "schemes.SOTA.fields.tags.groups.axis"):
         assert key in text, key
     # arxiv, source, cites, tags, and the group on tags: the axis field is
-    # one of the contract's own lines now (ADR-tmp8hp25).
+    # one of the contract's own lines now (ADR-098).
     assert "`tags`" in text
     assert len(lines) == 5
 
