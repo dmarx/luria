@@ -32,5 +32,11 @@ def merged(*parts: str | dict) -> str:
         if not part:
             continue
         loaded = yaml.safe_load(part) if isinstance(part, str) else part
-        _deep(out, loaded or {})
+        if loaded is None:
+            continue
+        if not isinstance(loaded, dict):
+            raise TypeError(
+                f"a config fragment has to be a mapping, not "
+                f"{type(loaded).__name__}: {part!r}")
+        _deep(out, loaded)
     return yaml.dump(out, sort_keys=False, allow_unicode=True, width=200)

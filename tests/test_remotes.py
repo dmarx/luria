@@ -6,6 +6,7 @@ read the tail out of the middle and quietly say something about the wrong
 project: the reference finder, the fixer, the citation scan, and the annotation
 validator. One test per mouth.
 """
+from _config import merged
 import json
 import sys
 from pathlib import Path
@@ -21,7 +22,7 @@ from luria import config, doc_refs, ref_status, remotes
 # the fixture number started resolving.
 REPO = Path(__file__).resolve().parents[1]
 
-REMOTE_TOML = (
+REMOTE_BASE = (
     """
 issue_url: https://example.test/issues/{n}
 remotes:
@@ -32,8 +33,8 @@ remotes:
 )
 
 
-def with_remote(project, extra: str = "") -> Path:
-    (project / "luria.yaml").write_text(REMOTE_TOML + extra)
+def with_remote(project, extra: str | dict = "") -> Path:
+    (project / "luria.yaml").write_text(merged(REMOTE_BASE, extra))
     config.reset()
     return project
 
@@ -80,7 +81,7 @@ def test_no_lockfile_means_fall_back_rather_than_refuse(project):
 
 
 def test_an_explicit_template_overrides_everything(project):
-    with_remote(project, 'url = "https://x.test/{code}"\n')
+    with_remote(project, {"remotes": {"UP": {"url": "https://x.test/{code}"}}})
     lockfile(project, {"ADR-032": "ignored.md"})
     assert remotes.resolve("UP", "ADR-032") == "https://x.test/ADR-032"
 
@@ -513,13 +514,9 @@ def test_agreeing_spellings_are_allowed(project):
 def test_conflicting_spellings_are_a_config_error(project):
     """`url` IS `uris.read` — two values for one setting must fail loudly,
     not crown a silent winner."""
-    (project / "luria.yaml").write_text(
-        REMOTE_TOML + """
-                      remotes:
-                        UP:
-                          uris:
-                            read: https://b.test/{code}
-                      """)
+    (project / "luria.yaml").write_text(merged(REMOTE_BASE, {
+        "remotes": {"UP": {"url": "https://a.test/{code}",
+                           "uris": {"read": "https://b.test/{code}"}}}}))
     config.reset()
     with pytest.raises(ValueError, match="one setting"):
         config.current()
@@ -580,18 +577,19 @@ def test_a_read_template_implies_no_bytes(project):
     its bytes live, and a guessed raw URL would be a claim nobody made."""
     from luria import pins
     with_remote(project,
-                'url = "https://github.com/o/r/blob/main/elsewhere/{code}.md"\n')
+                {"remotes": {"UP": {
+                    "url": "https://github.com/o/r/blob/main/elsewhere/{code}.md"}}})
     assert pins.stable_url(config.current().remotes["UP"], "ADR-032") == ""
 
 
 def test_uid_remotes_render_named_uris_through_their_groups(project):
-    with_remote(project, ARXIV +
+    with_remote(project, merged(ARXIV,
                 """
                 remotes:
                   ARXIV:
                     uris:
                       pdf: https://arxiv.org/pdf/{1}.{2}
-                """)
+                """))
     remote = config.current().remotes["ARXIV"]
     assert remotes.construct(remote, "2403.05530", "pdf") == (
         "https://arxiv.org/pdf/2403.05530")
@@ -629,7 +627,8 @@ def test_an_explicit_issue_url_wins(project):
     """A forge that is not GitHub is a line of config, not a subsystem —
     the same bargain the `uris` table already makes for documents."""
     with_remote(project,
-                'issue_url = "https://gitlab.test/o/r/-/issues/{n}"\n')
+                {"remotes": {"UP": {
+                    "issue_url": "https://gitlab.test/o/r/-/issues/{n}"}}})
     assert remotes.issue_link("UP", 7) == "https://gitlab.test/o/r/-/issues/7"
 
 
