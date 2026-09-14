@@ -188,7 +188,7 @@ def _carry(doc, blocks: list[tuple[tuple[str, ...], str]]) -> list[str]:
     """Write each block above the key it documented. Returns the prose that
     had nowhere to land, so the caller can print it rather than eat it."""
     stranded: list[str] = []
-    carried: dict[tuple[int, str], list[str]] = {}
+    carried: dict[tuple[int, str], bool] = {}
     for path, text in blocks:
         if not path:
             doc.yaml_set_start_comment(text)
@@ -204,13 +204,15 @@ def _carry(doc, blocks: list[tuple[tuple[str, ...], str]]) -> list[str]:
             stranded.append(f"{'.'.join(path)}\n{text}")
             continue
         # Two blocks can name one key — prose above it and prose inside its
-        # multi-line value. ruamel's setter replaces, so joining here is what
-        # keeps the second from silently erasing the first.
-        seen = carried.setdefault((id(parent), where[-1]), [])
-        seen.append(text)
+        # multi-line value. `yaml_set_comment_before_after_key` APPENDS to
+        # whatever the key already carries rather than replacing it, so each
+        # block is written on its own and the second lands under the first.
+        # Joining them here instead wrote the first one twice.
+        first = carried.setdefault((id(parent), where[-1]), True)
         parent.yaml_set_comment_before_after_key(
-            where[-1], before="\n\n".join(seen),
+            where[-1], before=text if first is True else "\n" + text,
             indent=2 * (len(where) - 1))
+        carried[(id(parent), where[-1])] = False
     return stranded
 
 
