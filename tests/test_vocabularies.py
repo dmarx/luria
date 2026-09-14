@@ -84,14 +84,14 @@ def test_a_declared_vocabulary_is_read_with_its_values(tmp_path, monkeypatch):
     v, = current().schemes["SCENE"].vocabularies
     assert (v.field, v.name, v.many, v.required, v.default) == \
         ("worlds", "worlds", True, False, ("B",))
-    assert v.file == tmp_path / "record/scenes.d/worlds.yaml"
+    assert v.name == "worlds" and set(v.values_by_name) == {"A", "B", "C"}
     f = field()
     assert f.vocabulary == "worlds" and f.values == ("A", "B", "C")
     assert f.many and not f.required and f.default == ("B",)
 
 
 def test_the_defaults_are_one_optional_value_and_no_default(tmp_path, monkeypatch):
-    world(tmp_path, monkeypatch, table="")
+    world(tmp_path, monkeypatch, table={})
     v, = current().schemes["SCENE"].vocabularies
     assert (v.many, v.required, v.default) == (False, False, None)
 
@@ -100,22 +100,22 @@ def test_a_vocabulary_with_no_file_is_a_config_error(tmp_path, monkeypatch):
     """Eager, like a tag group that constrains nothing: a declared axis with
     no values would surface as 'no violations', which is the quiet failure."""
     world(tmp_path, monkeypatch, vocab=None)
-    with pytest.raises(ValueError, match="no values"):
+    with pytest.raises(ValueError, match="no vocabulary named"):
         current()
 
 
 def test_a_default_outside_the_vocabulary_is_a_config_error(tmp_path, monkeypatch):
-    world(tmp_path, monkeypatch, table='many = true\ndefault = ["Z"]')
+    world(tmp_path, monkeypatch, table={"many": True, "default": ["Z"]})
     with pytest.raises(ValueError, match="not in"):
         current()
 
 
 def test_a_default_takes_the_fields_shape(tmp_path, monkeypatch):
-    world(tmp_path, monkeypatch, table='default = ["B"]')
+    world(tmp_path, monkeypatch, table={"default": ["B"]})
     with pytest.raises(ValueError, match="one value"):
         current()
     config.reset()
-    world(tmp_path, monkeypatch, table='many = true\ndefault = "B"')
+    world(tmp_path, monkeypatch, table={"many": True, "default": "B"})
     with pytest.raises(ValueError, match="a list"):
         current()
 
@@ -123,7 +123,7 @@ def test_a_default_takes_the_fields_shape(tmp_path, monkeypatch):
 def test_required_and_default_together_is_a_config_error(tmp_path, monkeypatch):
     """A field with a default is never absent, so `required` says nothing —
     and a key that says nothing reads as though it did."""
-    world(tmp_path, monkeypatch, table='required = true\ndefault = "B"')
+    world(tmp_path, monkeypatch, table={"required": True, "default": "B"})
     with pytest.raises(ValueError, match="never absent"):
         current()
 
@@ -171,7 +171,7 @@ def test_the_field_and_its_vocabulary_may_be_named_differently(tmp_path, monkeyp
     """`world:` in the frontmatter, drawn from `worlds.yaml`: the field is
     the author's word, the vocabulary is the file's. Pages render under the
     vocabulary's name; the finding and the record line use the field's."""
-    root = world(tmp_path, monkeypatch, field="world", table="")
+    root = world(tmp_path, monkeypatch, field="world", table={})
     scene(root, 1, "world: C")
     scene(root, 2, "world: Z")
     e, = findings()
@@ -190,7 +190,7 @@ def test_describe_names_the_values_the_default_and_both_files(tmp_path, monkeypa
     assert "`worlds`" in line and "one or more of `A`, `B`, `C`" in line
     assert "absent means `B`" in line
     assert "schemes.SCENE.fields.worlds" in line
-    assert "record/scenes.d/worlds.yaml" in line
+    assert "vocabulary 'worlds'" in line
 
 
 def findings() -> list[str]:
@@ -204,11 +204,11 @@ def test_a_value_outside_the_vocabulary_is_a_finding(tmp_path, monkeypatch):
     scene(root, 1, "worlds:\n- A\n- Z")
     e, = findings()
     assert "`worlds: Z` is not in the `worlds` vocabulary" in e
-    assert "record/scenes.d/worlds.yaml" in e
+    assert "vocabulary 'worlds'" in e
 
 
 def test_a_list_where_one_value_was_declared_is_a_finding(tmp_path, monkeypatch):
-    root = world(tmp_path, monkeypatch, table="")
+    root = world(tmp_path, monkeypatch, table={})
     scene(root, 1, "worlds:\n- A\n- B")
     e, = findings()
     assert "holds 2 values" in e and "one `worlds` value" in e
@@ -221,7 +221,7 @@ def test_an_absent_field_with_a_default_is_not_a_finding(tmp_path, monkeypatch):
 
 
 def test_a_required_vocabulary_field_may_not_be_absent(tmp_path, monkeypatch):
-    root = world(tmp_path, monkeypatch, table="many = true\nrequired = true")
+    root = world(tmp_path, monkeypatch, table={"many": True, "required": True})
     scene(root, 1)
     e, = findings()
     assert "no `worlds:`" in e and "schemes.SCENE.fields.worlds" in e
@@ -388,12 +388,17 @@ luria:
       dir: record/decisions.d
       output: docs/decisions
       render: index
+      statuses: adr-statuses
       fields:
         status:
-          vocabulary: scene-statuses
+          vocabulary: adr-statuses
+  vocabularies:
+    adr-statuses:
+      Active:
+        label: In force
+      Superseded:
+        label: Replaced
 """)
-    write(tmp_path, "record/decisions.d/statuses.yaml",
-          "Active:\n  label: In force\nSuperseded:\n  label: Replaced\n")
     monkeypatch.setenv("LURIA_ROOT", str(tmp_path))
     config.reset()
     where = current().schemes["ADR"].dir / "ADR-001.md"
@@ -413,12 +418,17 @@ luria:
       dir: record/decisions.d
       output: docs/decisions
       render: index
+      statuses: adr-statuses
       fields:
         status:
-          vocabulary: scene-statuses
+          vocabulary: adr-statuses
+  vocabularies:
+    adr-statuses:
+      Active:
+        label: In force
+      Superseded:
+        label: Replaced
 """)
-    write(tmp_path, "record/decisions.d/statuses.yaml",
-          "Active:\n  label: In force\nSuperseded:\n  label: Replaced\n")
     monkeypatch.setenv("LURIA_ROOT", str(tmp_path))
     config.reset()
     where = current().schemes["ADR"].dir / "ADR-001.md"
