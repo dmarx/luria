@@ -27,7 +27,7 @@ Three formats for one system:
     luria.toml            TOML   the config
     tags.yaml             YAML   per scheme, beside the records
     statuses.yaml         YAML   per scheme, beside the records
-    <vocabulary>.yaml     YAML   per scheme, declared by name (ADR-076)
+    <vocabulary>.yaml     YAML   per scheme, declared by name ([ADR-076](ADR-076.md))
     remotes.lock.json     JSON   generated, committed
 
 Every document's frontmatter is already YAML. The config was TOML for no
@@ -42,7 +42,7 @@ writing:
 
 - **Four byte-identical copies** of one `statuses.yaml` — `ADR` and `DP` in
   this repository, and the same pair again in `anthology-of-the-sota`.
-- That record's ADR-026 **decided** its practice registry and reading list
+- That record's [ADR-026](ADR-026.md) **decided** its practice registry and reading list
   share one topic vocabulary, and says so in its CLAUDE.md. On disk it was two
   files with the same thirteen keys and **ten of thirteen blurbs different**.
   Two edits to one vocabulary, months apart, that nothing could reconcile
@@ -50,8 +50,8 @@ writing:
 
 This project already knew. `primary_tags`' own docstring records the identical
 failure from the other direction: *"seven terms across four places, and the
-blurbs for the same tag already disagreed between two of them (ADR-060)"*.
-ADR-060 fixed the copies *within* a scheme. The copies *between* schemes were
+blurbs for the same tag already disagreed between two of them ([ADR-060](ADR-060.md))"*.
+[ADR-060](ADR-060.md) fixed the copies *within* a scheme. The copies *between* schemes were
 unreachable, because the config had no way to say "these are the same words".
 
 ## Decision
@@ -89,7 +89,7 @@ validates the shape of a value, not a relationship between two.
 declaring no `label` rendered a title-cased tag heading and an empty legend
 cell. `vocabularies.label_of` is the one answer.
 
-**`Reference` gains `label` and `blurb`** (#254), the two keys a vocabulary
+**`Reference` gains `label` and `blurb`** ([#254](https://github.com/dmarx/luria/issues/254)), the two keys a vocabulary
 value already carried. A relation's meaning lived in a TOML comment, which
 nothing could render, quote in a finding, or scaffold from — which is how a
 record ended up with fourteen practices citing adoption as evidence while
