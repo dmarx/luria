@@ -415,8 +415,8 @@ def workflow_project(project, text: str, fail_on: str = "") -> None:
     wf.parent.mkdir(parents=True)
     wf.write_text(text)
     (project / "luria.yaml").write_text(
-        '[luria]\nissue_url = "https://example.test/issues/{n}"\n'
-        f'[luria.lint]\nfail_on = [{fail_on}]\n')
+        merged("issue_url: https://example.test/issues/{n}\n",
+               {"lint": {"fail_on": _listed(fail_on)}}))
     from luria import config
     config.reset()
 
