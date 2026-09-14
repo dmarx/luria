@@ -122,15 +122,15 @@ def _declared(text: str, prefixes: list[str], values: dict) -> str:
             end = next((j for j in range(i + 1, len(lines))
                         if lines[j].strip() and not lines[j].startswith("    ")),
                        len(lines))
-            lines.insert(end, "    statuses: record-statuses\n"
+            lines.insert(end, "    statuses: statuses\n"
                               "    fields:\n"
                               "      status:\n"
-                              "        vocabulary: record-statuses\n")
+                              "        vocabulary: statuses\n")
             break
     out = "".join(lines)
     if "\nvocabularies:" not in out and not out.startswith("vocabularies:"):
         out = ("vocabularies:\n"
-               + "  record-statuses:\n"
+               + "  statuses:\n"
                + "".join(f"    {w}:\n      blurb: {b}\n"
                          for w, b in values.items())
                + out)

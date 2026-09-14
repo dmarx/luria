@@ -260,7 +260,7 @@ def _scheme_table(prefix: str, render: str) -> str:
         # Every scheme names the same vocabulary rather than getting a copy
         # of it, which is the whole point of the table being central
         # (ADR-tmp8hp25).
-        "    statuses: record-statuses\n"
+        "    statuses: statuses\n"
         % (prefix, reading, prefix, slug, output, render))
 
 

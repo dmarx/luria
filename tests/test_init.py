@@ -31,12 +31,12 @@ schemes:
   RFC:
     dir: record/rfcs.d
     output: docs/rfcs
-    statuses: record-statuses
+    statuses: statuses
     fields:
       status:
-        vocabulary: record-statuses
+        vocabulary: statuses
 vocabularies:
-  record-statuses:
+  statuses:
     Active: {blurb: in force}
     Proposed: {blurb: not yet}
     Deferred: {blurb: parked}
@@ -182,7 +182,7 @@ def test_the_written_vocabulary_is_the_one_in_force(tmp_path, monkeypatch):
     path = tmp_path / "luria.yaml"
     import yaml as _yaml
     raw = _yaml.safe_load(path.read_text()) or {}
-    raw["vocabularies"]["record-statuses"] = {
+    raw["vocabularies"]["statuses"] = {
         "Active": {"blurb": "in force"},
         "Withdrawn": {"blurb": "taken back"}}
     path.write_text(_yaml.dump(raw, sort_keys=False))

@@ -55,9 +55,9 @@ def project(tmp_path, monkeypatch, schemes=("RFC", "SPEC")) -> Path:
                           for p in schemes}}
     # One vocabulary, named by every scheme that uses it — which is what
     # replaced a statuses.yaml beside each scheme's records (ADR-tmp8hp25).
-    tables["vocabularies"] = {"record-statuses": yaml.safe_load(STATUSES)}
+    tables["vocabularies"] = {"statuses": yaml.safe_load(STATUSES)}
     for p in schemes:
-        tables["schemes"][p]["statuses"] = "record-statuses"
+        tables["schemes"][p]["statuses"] = "statuses"
     write(tmp_path, "luria.yaml", merged("""
 issue_url: https://example.test/issues/{n}
 """, tables))

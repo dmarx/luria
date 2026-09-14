@@ -9,7 +9,7 @@ vocabularies:
   #
   # Named once and referenced by every scheme that uses it, so two
   # schemes sharing a vocabulary cannot drift apart (ADR-tmp8hp25).
-  record-statuses:
+  statuses:
     Active:
       blurb: in force — the current answer, and what a citation should normally point at
     Proposed:
@@ -58,9 +58,9 @@ schemes:
     retires_on: Superseded
     fields:
       status:
-        vocabulary: record-statuses
+        vocabulary: statuses
     tags: adr-tags
-    statuses: record-statuses
+    statuses: statuses
   DP:
     dir: record/principles.d
     active: Active
@@ -68,10 +68,10 @@ schemes:
     output: docs/design-principles.md
     successor: superseded_by
     retires_on: Superseded
-    statuses: record-statuses
+    statuses: statuses
     fields:
       status:
-        vocabulary: record-statuses
+        vocabulary: statuses
 remotes:
   LU:
     name: luria

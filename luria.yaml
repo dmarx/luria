@@ -9,7 +9,7 @@ vocabularies:
     process:
       label: Process
       blurb: how the machinery is adopted, run, and reported on
-  record-statuses:
+  statuses:
     Active:
       blurb: in force — the current answer, and what a citation should normally point at
     Proposed:
@@ -90,9 +90,9 @@ schemes:
     allocate: merge
     fields:
       status:
-        vocabulary: record-statuses
+        vocabulary: statuses
     tags: decision-tags
-    statuses: record-statuses
+    statuses: statuses
   DP:
     cite: page
     dir: record/principles.d
@@ -102,8 +102,8 @@ schemes:
     allocate: merge
     fields:
       status:
-        vocabulary: record-statuses
-    statuses: record-statuses
+        vocabulary: statuses
+    statuses: statuses
 remotes:
   SG:
     name: strata-g

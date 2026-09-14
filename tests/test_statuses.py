@@ -791,8 +791,8 @@ def test_the_upgrade_does_not_load_the_config_it_repairs(tmp_path, monkeypatch):
     upgrade.run("statuses", root=str(tmp_path))     # must not raise
     # The vocabulary lands in the config now, not beside the records.
     written = (tmp_path / "luria.yaml").read_text()
-    assert "record-statuses:" in written
-    assert "vocabulary: record-statuses" in written
+    assert "statuses:" in written
+    assert "vocabulary: statuses" in written
 
 
 def test_a_spent_upgrade_says_it_can_be_deleted(tmp_path, monkeypatch):

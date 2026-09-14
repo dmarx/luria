@@ -40,7 +40,7 @@ def project(tmp_path, monkeypatch):
         """
         issue_url: https://example.test/issues/{n}
         vocabularies:
-          record-statuses:
+          statuses:
             Active: {blurb: in force}
             Proposed: {blurb: not yet}
             Deferred: {blurb: parked}
@@ -52,10 +52,10 @@ def project(tmp_path, monkeypatch):
             output: docs/decisions
             active: Active
             render: index
-            statuses: record-statuses
+            statuses: statuses
             fields:
               status:
-                vocabulary: record-statuses
+                vocabulary: statuses
         """
     )
     (tmp_path / "docs" / "design-principles.md").write_text(

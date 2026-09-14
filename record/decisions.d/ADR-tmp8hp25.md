@@ -62,14 +62,20 @@ alternatives.
 **A central `vocabularies:` table**, referenced by name:
 
     vocabularies:
-      record-statuses:
+      statuses:
         Active: {label: Current, blurb: in force}
 
     schemes:
       ADR:
-        statuses: record-statuses
+        statuses: statuses
       DP:
-        statuses: record-statuses          # the same words, said once
+        statuses: statuses          # the same words, said once
+
+A vocabulary's per-value pages render at `<view>/<name>/`, so its **name is
+part of a published path**. Luria's own shared vocabulary is called
+`statuses` rather than something more descriptive for exactly that reason:
+renaming it would move `docs/decisions/statuses/` and leave the old
+directory behind as an orphan no generator claims.
 
 `Scheme.tags_yaml` and `Scheme.statuses_yaml` — paths — become `Scheme.tags`
 and `Scheme.statuses`, which return values. `Vocabulary.file` becomes
