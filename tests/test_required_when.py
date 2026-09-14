@@ -288,16 +288,19 @@ def test_a_status_outside_what_the_scheme_declares_is_refused(
     condition on `status` can name too."""
     root = project(tmp_path, monkeypatch,
                    """
+                   vocabularies:
+                     sota-statuses:
+                       Active: {label: In force}
+                       Proposed: {label: Not yet}
                    schemes:
                      SOTA:
+                       statuses: sota-statuses
                        fields:
                          promote_when:
                            required_when:
                              status:
                              - Deferred
                    """)
-    write(root, "record/practices.d/statuses.yaml",
-          "Active:\n  label: In force\nProposed:\n  label: Not yet\n")
     config.reset()
     with pytest.raises(ValueError, match="Deferred"):
         config.current()
@@ -343,6 +346,8 @@ def test_a_condition_on_a_free_text_field_leaves_its_values_alone(
             """
             schemes:
               SOTA:
+                requires:
+                - stage
                 fields:
                   promote_when:
                     required_when:
@@ -355,6 +360,10 @@ def test_a_condition_on_a_free_text_field_leaves_its_values_alone(
 def test_a_value_outside_a_vocabulary_field_is_refused(tmp_path, monkeypatch):
     root = project(tmp_path, monkeypatch,
                    """
+                   vocabularies:
+                     worlds:
+                       A: {label: A}
+                       B: {label: B}
                    schemes:
                      SOTA:
                        fields:
@@ -365,7 +374,6 @@ def test_a_value_outside_a_vocabulary_field_is_refused(tmp_path, monkeypatch):
                              worlds:
                              - C
                    """)
-    write(root, "record/practices.d/worlds.yaml", "A:\n  label: A\nB:\n  label: B\n")
     config.reset()
     with pytest.raises(ValueError, match="C"):
         config.current()
@@ -374,6 +382,12 @@ def test_a_value_outside_a_vocabulary_field_is_refused(tmp_path, monkeypatch):
 def test_a_value_inside_a_vocabulary_field_is_accepted(tmp_path, monkeypatch):
     root = project(tmp_path, monkeypatch,
                    """
+                   vocabularies:
+                     worlds:
+                       A:
+                         label: A
+                       B:
+                         label: B
                    schemes:
                      SOTA:
                        fields:
@@ -384,7 +398,6 @@ def test_a_value_inside_a_vocabulary_field_is_accepted(tmp_path, monkeypatch):
                              worlds:
                              - B
                    """)
-    write(root, "record/practices.d/worlds.yaml", "A:\n  label: A\nB:\n  label: B\n")
     config.reset()
     assert config.current().schemes["SOTA"]
 
@@ -397,6 +410,12 @@ def test_a_vocabulary_default_makes_the_condition_hold(tmp_path, monkeypatch):
     was written about."""
     root = project(tmp_path, monkeypatch,
                    """
+                   vocabularies:
+                     worlds:
+                       A:
+                         label: A
+                       B:
+                         label: B
                    schemes:
                      SOTA:
                        fields:
@@ -408,7 +427,6 @@ def test_a_vocabulary_default_makes_the_condition_hold(tmp_path, monkeypatch):
                              worlds:
                              - B
                    """)
-    write(root, "record/practices.d/worlds.yaml", "A:\n  label: A\nB:\n  label: B\n")
     config.reset()
     scheme = config.current().schemes["SOTA"]
     meta = {"status": "Active", "title": "A practice", "tags": ["record"]}
@@ -445,6 +463,8 @@ def test_a_missing_condition_field_does_not_hold(tmp_path, monkeypatch):
             """
             schemes:
               SOTA:
+                requires:
+                - stage
                 fields:
                   promote_when:
                     required_when:
