@@ -6,6 +6,7 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 
 ## Currently — [September 2026](2026-09.md)
 
+- [14 Sep 20:02 — Three comment-carry bugs the examples passed and the property caught](2026-09.md#three-comment-carry-bugs-the-examples-passed-and-the-property-caught)
 - [14 Sep 18:35 — Quartz 5 builds, and the popover bug was already fixed there](2026-09.md#quartz-5-builds-and-the-popover-bug-was-already-fixed-there)
 - [14 Sep 17:17 — Owning somebody else's algorithm, checked against their output](2026-09.md#owning-somebody-elses-algorithm-checked-against-their-output)
 - [14 Sep 15:15 — Every fragment link in the record worked everywhere except where it is read](2026-09.md#every-fragment-link-in-the-record-worked-everywhere-except-where-it-is-read)
@@ -67,9 +68,9 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 
 ## All books
 
-104 entries across 2 books, newest first.
+105 entries across 2 books, newest first.
 
 | Book | Entries | First | Last |
 |---|--:|---|---|
-| [2026-09](2026-09.md) | 58 | 2026-09-03 | 2026-09-14 |
+| [2026-09](2026-09.md) | 59 | 2026-09-03 | 2026-09-14 |
 | [2026-08](2026-08.md) | 46 | 2026-08-03 | 2026-08-28 |
