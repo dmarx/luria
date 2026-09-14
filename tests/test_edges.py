@@ -9,6 +9,8 @@ something does.
 
 from __future__ import annotations
 
+from _config import merged
+
 from pathlib import Path
 
 from luria import config, edges, site
@@ -93,15 +95,10 @@ def test_a_code_in_any_other_status_note_is_not_an_edge(project):
 def test_a_foreign_successor_is_not_an_edge(project):
     """A remote's namespace is theirs (ADR-016); the graph has no node for
     it, so there is nothing for the edge to land on."""
-    (project / "luria.yaml").write_text(
-        (project / "luria.yaml").read_text()
-        + """
-          remotes:
-            LU:
-              name: luria
-              repo: dmarx/luria
-              dir: record/decisions.d
-          """)
+    path_ = project / "luria.yaml"
+    path_.write_text(merged(path_.read_text(), {
+        "remotes": {"LU": {"name": "luria", "repo": "dmarx/luria",
+                           "dir": "record/decisions.d"}}}))
     config.reset()
     path = decision(project, 1, "Superseded", superseded_by=["LU-ADR-013"])
     assert edges.outbound(adr(path)) == []
@@ -227,14 +224,11 @@ def test_a_staged_page_carries_its_inbound_edges(project):
 # --- one edge per code in a plural reference ------------------------------
 
 def scenes(tmp_path, monkeypatch, many: bool = True) -> Path:
-    write(tmp_path, "luria.yaml", f"""
-[luria]
-issue_url = "https://example.test/issues/{{n}}"
-[luria.schemes.SCENE]
-dir = "record/scenes.d"
-[luria.schemes.SCENE.references]
-follows = {{ scheme = "SCENE", many = {str(many).lower()} }}
-""")
+    write(tmp_path, "luria.yaml", merged(
+        {"issue_url": "https://example.test/issues/{n}",
+         "schemes": {"SCENE": {"dir": "record/scenes.d",
+                               "references": {"follows": {"scheme": "SCENE",
+                                                          "many": many}}}}}))
     monkeypatch.setenv("LURIA_ROOT", str(tmp_path))
     config.reset()
     for n in (1, 2):
