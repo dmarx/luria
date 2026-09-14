@@ -11,7 +11,7 @@ unprefixed code, because it would mean both "our thirteenth decision" and
 "theirs". The prefix makes the namespace explicit at the point of use, and one
 config entry teaches Luria how to turn it into a URL (ADR-016):
 
-    [luria.remotes.LU]
+    `remotes.LU`
     repo = "dmarx/luria"
 
 From there `LU-ADR-013` is a first-class reference — `luria link --fix` writes
@@ -534,7 +534,7 @@ def run(refresh: bool = False, check: bool = False,
     if not cfg.remotes and not pins.url_state():
         # No silent refusal: say what would make this command do something.
         print("luria remotes: none configured. Add one to luria.yaml:\n\n"
-              "  [luria.remotes.LU]\n  repo = \"owner/name\"\n\n"
+              "  `remotes.LU`\n  repo = \"owner/name\"\n\n"
               "then cite it as `LU-ADR-013`.", file=sys.stderr)
         return
 

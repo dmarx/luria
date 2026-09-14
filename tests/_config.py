@@ -11,6 +11,10 @@ That is the better shape anyway: a test that says which keys it is adding is
 saying something a reader can check, where `BASE + extra` said only that some
 text arrived.
 """
+# inactive-ok-file: ADR-tmp8hp25 — Proposed. Every mention names it as the decision
+# this module implements; the citation is to the reasoning, not a claim the
+# decision is settled.
+
 from __future__ import annotations
 
 import yaml

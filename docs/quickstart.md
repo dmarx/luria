@@ -10,7 +10,7 @@ $ pip install luria
 $ cd yourproject
 $ luria init --issue-url https://github.com/you/yourproject/issues
 luria init → /home/you/yourproject
-  write  luria.toml
+  write  luria.yaml
   write  record/decisions.d/_template.md
   write  record/decisions.d/README.stub
   write  record/decisions.d/tags.yaml
@@ -36,7 +36,7 @@ session is a reader worth writing for, and it is safe to delete or rename.
 `init` never overwrites: a file that already exists is skipped and
 reported, so re-running it on a grown project is safe. It scaffolds the
 default record — decisions (`ADR`), design principles (`DP`), a changelog
-fragment directory, a devlog — plus a `luria.toml` where all of that can be
+fragment directory, a devlog — plus a `luria.yaml` where all of that can be
 renamed, replaced, or extended. Every key has a default, so the file starts
 nearly empty.
 
@@ -57,11 +57,11 @@ shorthand does not cover — a directory name, a status vocabulary, a tag group
 
 ```console
 $ luria config --schemes "RFC,SPEC:document"
-$ $EDITOR luria.toml
+$ $EDITOR luria.yaml
 $ luria init
 ```
  Each entry is `NAME` or
-`NAME:kind`, and the tables land in `luria.toml` as ordinary commented TOML —
+`NAME:kind`, and the tables land in `luria.yaml` as ordinary commented TOML —
 nothing here is a format you have to keep.
 [Designing a record](modeling.md) is how to decide what you need; this is how
 to type it once you have.
@@ -138,7 +138,7 @@ files, every code linked, every wikilink expanded, every docs page listed
 in the docs index. It also *reports* (without failing) the judgement-call
 findings — retired documents still cited, codes that resolve to nothing —
 which land in `docs/reports/` and can be promoted to failures per class
-with `[luria.lint] fail_on`.
+with `lint.fail_on`.
 
 ## 5. Break it on purpose
 

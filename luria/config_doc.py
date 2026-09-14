@@ -80,8 +80,8 @@ repository.
 
 The tables below are the whole schema. Four of them — `schemes`, `fragments`,
 `journals` and `remotes` — are *families*: you name the entries, and the name
-you choose becomes part of the vocabulary. `[luria.schemes.RFC]` is how a
-project gets RFCs; `[luria.journals.incidents]` is how it gets a second
+you choose becomes part of the vocabulary. `schemes.RFC` is how a
+project gets RFCs; `journals.incidents` is how it gets a second
 journal. No code path spells `ADR`.
 
 That is worth stating plainly, because this package ships one instantiation of
@@ -93,7 +93,7 @@ tables.
 Two merge rules follow from that split (ADR-047). A *settings* table —
 `paths`, `code`, `lint`, `site` — merges per key: setting `docs` does not
 clear `reports`. A *family* table is **replaced whole the moment you declare
-it**: a project that writes `[luria.schemes.RFC]` and nothing else has
+it**: a project that writes `schemes.RFC` and nothing else has
 exactly one scheme, and the shipped `ADR` is simply absent. Declare a family
 and it is yours entirely; leave it undeclared and the default stands. This is
 also what makes omission meaningful inside a declared family — an `output`
@@ -102,15 +102,15 @@ it to inherit from.
 
 | table | what it configures | families |
 |---|---|---|
-| `[luria]` | issue links, staleness horizon | — |
-| `[luria.paths]` | where the read and write surfaces live | — |
-| `[luria.schemes.X]` | a referable document family: `ADR`, `RFC`, `SPEC` | yes, keyed by prefix |
-| `[luria.fragments."dir"]` | many small files assembled into one document | yes, keyed by directory |
-| `[luria.journals.X]` | dated entries that persist, rendered into books | yes, keyed by name |
-| `[luria.remotes.X]` | another project's codes, cited from this one | yes, keyed by prefix |
-| `[luria.code]` | which source files are scanned for stale references | — |
-| `[luria.lint]` | which warning classes fail the build | — |
-| `[luria.site]` | publishing the record as a browsable site | — |
+| `luria` | issue links, staleness horizon | — |
+| `paths` | where the read and write surfaces live | — |
+| `schemes.X` | a referable document family: `ADR`, `RFC`, `SPEC` | yes, keyed by prefix |
+| `fragments.<dir>` | many small files assembled into one document | yes, keyed by directory |
+| `journals.X` | dated entries that persist, rendered into books | yes, keyed by name |
+| `remotes.X` | another project's codes, cited from this one | yes, keyed by prefix |
+| `code` | which source files are scanned for stale references | — |
+| `lint` | which warning classes fail the build | — |
+| `site` | publishing the record as a browsable site | — |
 """
 
 FOOTER = """
@@ -140,13 +140,13 @@ everything is one:
 
 - **The lint checks themselves.** They are functions, not a registry — a
   project cannot add a check or switch one off. What it *can* do is promote
-  warning classes to failures with `[luria.lint] fail_on`, and acknowledge
+  warning classes to failures with `lint.fail_on`, and acknowledge
   individual findings with the comment directives. A check earns its place by
   being always wrong and mechanically fixable; anything else is a report.
 - **The frontmatter vocabulary.** `status:`, `title:`, `tags:`, `date:`,
   `version:`, `history:` are fixed field names. Which *statuses* count as in
   force is per-scheme (`active`), but the field they live in is not.
-- **Renaming a scheme in place.** Adding `[luria.schemes.RFC]` costs one
+- **Renaming a scheme in place.** Adding `schemes.RFC` costs one
   table; renaming an existing scheme, or moving its documents, is currently a
   manual pass — there is no migration command. The decision that would give
   it one is still Proposed.
@@ -162,32 +162,32 @@ runs.
 # The families, in the order the reference reads them: the two that define a
 # project's own documents first, then the ones that connect and publish it.
 SECTIONS: list[tuple[str, type, str]] = [
-    ("Schemes — `[luria.schemes.X]`", Scheme,
+    ("Schemes — `schemes.X`", Scheme,
      "One entry per referable document family. The key is the prefix codes "
-     "carry, so `[luria.schemes.RFC]` makes `RFC-7` a first-class reference: "
+     "carry, so `schemes.RFC` makes `RFC-7` a first-class reference: "
      "`luria link --fix` writes its link, `luria lint` demands one, and "
      "`luria new rfc` scaffolds the next free number — none of which needs "
      "anything beyond the table."),
-    ("Fragment directories — `[luria.fragments.\"dir\"]`", Fragment,
+    ("Fragment directories — `fragments.<dir>`", Fragment,
      "One entry per directory whose files are assembled into a single "
      "document and then consumed. The changelog is the shipped instance; the "
      "mechanism is not changelog-shaped."),
-    ("Journals — `[luria.journals.X]`", Journal,
+    ("Journals — `journals.X`", Journal,
      "One entry per stream of dated entries that persist. This is a family "
      "like any other — a project can run a devlog, a meeting log and an "
      "incident log side by side, each with its own granularity and output."),
-    ("Remotes — `[luria.remotes.X]`", Remote,
+    ("Remotes — `remotes.X`", Remote,
      "One entry per foreign project whose codes this record cites. The `uid` "
      "key is the general case: with a regex and a URL template, a remote need "
      "not hold a Luria-shaped record — or any record — at all, which is how "
      "arXiv identifiers, ticket keys and CVE numbers become linted "
      "references."),
-    ("Per-scheme remote construction — `[luria.remotes.X.schemes.Y]`",
+    ("Per-scheme remote construction — `remotes.X.schemes.Y`",
      RemoteScheme,
      "Optional, and only for a remote whose code families do not all "
      "construct the same way — a file per code in one, sections of a single "
      "page in another."),
-    ("The site — `[luria.site]`", Site,
+    ("The site — `site`", Site,
      "Publishing the record as a browsable vault. Every key derives from "
      "`issue_url` for a GitHub project, so the conventional case needs no "
      "table at all."),
@@ -198,26 +198,26 @@ SECTIONS: list[tuple[str, type, str]] = [
 # rows) and each row is (key, prose) — the *default* is never written here, it
 # is read from `config.DEFAULTS`. An empty subtree name means the top level.
 PLAIN: list[tuple[str, str, str, list[tuple[str, str]]]] = [
-    ("Top level — `[luria]`", "", "", [
+    ("Top level — `luria`", "", "", [
         ("issue_url", "A template for issue links, with `{n}` for the number. "
                       "Writing it also tells Luria which GitHub repository "
-                      "this is, which is where every `[luria.site]` default "
+                      "this is, which is where every `site` default "
                       "comes from. Unset, issue numbers stay bare rather than "
                       "linking somewhere wrong."),
         ("stale_days", "How long a document may sit undecided before the "
                        "pending-decisions report calls it out."),
     ]),
-    ("Paths — `[luria.paths]`", "paths", "The read/write boundary: `docs/` is where a "
+    ("Paths — `paths`", "paths", "The read/write boundary: `docs/` is where a "
      "reader browses, `record/` is where a contributor files.", [
         ("docs", "The read surface — prose plus every generated view."),
         ("decisions", "The default scheme's source directory. Kept as its own "
-                      "key for projects that predate `[luria.schemes.X]`."),
+                      "key for projects that predate `schemes.X`."),
         ("design_principles", "Where the principles document renders."),
         ("reports", "Where the status reports land. Committed views rather "
                     "than build artifacts, so a README badge has a real page "
                     "to point at."),
     ]),
-    ("Code scanning — `[luria.code]`", "code", "Which files outside the record are "
+    ("Code scanning — `code`", "code", "Which files outside the record are "
      "checked for references to retired documents. A decision number in a "
      "code comment is the strongest form of the claim being checked — it is "
      "the stated reason the code is shaped that way.", [
@@ -227,7 +227,7 @@ PLAIN: list[tuple[str, str, str, list[tuple[str, str]]]] = [
                        "unactionable noise. Journals are covered "
                        "automatically."),
     ]),
-    ("Enforcement — `[luria.lint]`", "lint", "The dial between reported and enforced. "
+    ("Enforcement — `lint`", "lint", "The dial between reported and enforced. "
      "Status findings are warnings by default; a class named here fails "
      "`luria lint` instead. Acknowledgement directives keep working under "
      "enforcement, because only unacknowledged rows ever reach a class.", [
@@ -259,8 +259,8 @@ def fence(text: str, lang: str = "toml") -> str:
 # still gets a row; it is merely labelled `*required*` until someone
 # classifies it, which is the safe direction to be wrong in.
 FROM_TABLE_NAME: dict[type, set[str]] = {
-    Scheme: {"prefix"},          # `[luria.schemes.ADR]` → prefix "ADR"
-    Journal: {"name"},           # `[luria.journals.devlog]` → name "devlog"
+    Scheme: {"prefix"},          # `schemes.ADR` → prefix "ADR"
+    Journal: {"name"},           # `journals.devlog` → name "devlog"
     Remote: {"prefix"},          # …but `Remote.name` IS a key, deliberately
     RemoteScheme: {"prefix"},
 }

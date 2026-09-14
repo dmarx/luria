@@ -356,7 +356,7 @@ class Report:
 
 
 def colors(site: Site) -> str:
-    """Quartz's `colors:` block, with `[luria.site.theme]` merged over the
+    """Quartz's `colors:` block, with `site.theme` merged over the
     generator's defaults.
 
     An unknown colour name is refused by name rather than dropped: a palette
@@ -368,7 +368,7 @@ def colors(site: Site) -> str:
         unknown = sorted(set(override) - set(THEME_DEFAULTS[mode]))
         if unknown:
             raise SystemExit(
-                f"luria site: [luria.site.theme.{mode}] has no colour named "
+                f"luria site: site.theme.{mode} has no colour named "
                 f"{', '.join(unknown)} — Quartz knows "
                 f"{', '.join(THEME_DEFAULTS[mode])}")
         merged = {**THEME_DEFAULTS[mode], **override}
@@ -890,7 +890,7 @@ def brand(out: Path, cfg, report: Report) -> str:
     for label, source in (("icon", site.icon), ("logo", site.logo),
                           ("logo_dark", site.logo_dark)):
         if source is not None and not source.exists():
-            report.unplaced.append(f"[luria.site] {label} → {cfg.rel(source)} "
+            report.unplaced.append(f"`site` {label} → {cfg.rel(source)} "
                                    f"(no such file)")
 
     if site.icon is not None and site.icon.exists():

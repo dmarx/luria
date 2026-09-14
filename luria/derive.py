@@ -1,7 +1,7 @@
 # luria/derive.py
 """A field computed from another field, declared rather than written (#216).
 
-    [luria.schemes.SOTA.fields.primary_topic]
+    `schemes.SOTA.fields.primary_topic`
     derive     = "first:tags"
     vocabulary = "tags"
 
@@ -34,8 +34,11 @@ everywhere else.
 **Across a reference (#233).** A second declaration says which document to
 render against:
 
-    [luria.schemes.SOTA.fields.published]
-    derive = "{published}"
+    schemes:
+      SOTA:
+        fields:
+          published:
+            derive: '{published}'
     from   = "source[0]"
 
 The template is unchanged — `{published}` still means what it means

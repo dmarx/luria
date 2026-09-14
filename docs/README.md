@@ -34,11 +34,11 @@ listed here, so the map cannot silently rot.)
 
 Built by `luria index` — read them, don't edit them.
 
-- [Configuration](configuration.md) — the full `luria.toml` schema,
+- [Configuration](configuration.md) — the full `luria.yaml` schema,
   generated from the dataclasses that parse it: every key, type, and
   default.
 - [The record](record.md) — the shape *this* project gave the machinery,
-  generated from its `luria.toml`: what families exist, where entries are
+  generated from its `luria.yaml`: what families exist, where entries are
   filed, and what to type to add one.
 
 ## This project's record

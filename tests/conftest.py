@@ -6,6 +6,10 @@ check that passes on a synthetic fixture and fails on a real corpus has told you
 nothing. Tests that need a controlled tree build one and repoint the config at
 it via `LURIA_ROOT`.
 """
+# inactive-ok-file: ADR-tmp8hp25 — Proposed. Named as the decision these
+# fixtures are shaped by; the citation is to the reasoning, not a claim
+# the decision is settled.
+
 import os
 import sys
 from pathlib import Path

@@ -14,7 +14,7 @@ upstream.
 
 The load-bearing property is the same one `config_doc` has, pointed the other
 way: **the tables come from the loaded `Config`, not from a list kept here.**
-Declare `[luria.schemes.RFC]` and RFCs appear in the tables, in the filing
+Declare `schemes.RFC` and RFCs appear in the tables, in the filing
 commands and in the citation examples on the next `luria index`. Nothing has
 to be remembered, which is the only version of this page that stays true —
 a hand-written "how our record works" is precisely the projection DP-3 says

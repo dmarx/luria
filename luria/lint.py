@@ -35,7 +35,7 @@ relative link targets that resolve to nothing from where the prose renders,
 directives that no longer apply, and a count of undecided decisions. Citing a
 `Rejected` decision — or leaving one `Proposed`, or naming another project's
 LU-ADR-013 — is often right, so none is an error unless the project says so:
-a class named in `[luria.lint] fail_on` is promoted to a failure. Either way
+a class named in `lint.fail_on` is promoted to a failure. Either way
 `luria reports` writes the full detail as markdown, and an `inactive-ok:` /
 `unresolved-ok:` / `url-ok:` / `target-ok:` comment acknowledges a deliberate
 one so only the unconsidered ones stay listed — acknowledged rows never fail.
@@ -459,7 +459,7 @@ def check_bare_refs(errors: list[str]) -> None:
 
 
 # The enforcement dial's vocabulary (ADR-035): a class named in
-# `[luria.lint] fail_on` fails the build instead of printing. Only
+# `lint.fail_on` fails the build instead of printing. Only
 # UNACKNOWLEDGED rows ever reach a class, so the directives stay the escape
 # hatch under enforcement — the dial changes the consequence, not the
 # accounting.
@@ -472,7 +472,7 @@ FAILABLE = ("retired-citations", "unresolved-codes", "hand-written-urls",
             "pending-documents", "unlinted-files", "workflow-temp-codes",
             "unlinked-site")
 
-# Classes `[luria.lint] mute` may suppress: every failable class, plus
+# Classes `lint.mute` may suppress: every failable class, plus
 # `acknowledged-uniformity` — which is not failable (a project cannot promote
 # its own acknowledgement to a failure) and is exactly the kind of standing
 # note a project may reasonably not want repeated on every run.
@@ -499,7 +499,7 @@ def unlinked_site() -> list[str]:
     included: the finding is "your front page does not point at the site you
     publish", not "you must use our marker".
 
-    Scoped by `[luria.site] publish`, which defaults true: `base_url` derives
+    Scoped by `site.publish`, which defaults true: `base_url` derives
     for every GitHub project whether or not one is deployed, so a record that
     lives only in its repository says `publish = false` and the guard goes
     quiet — a guard opts out rather than being argued with (DP-10)."""
@@ -799,7 +799,7 @@ def report_warnings(errors: list[str]) -> None:
     Citing a retired document is often correct — a `Rejected` decision exists
     to be pointed at — so by default every class here is reported and none
     fails the build. A project that wants a class *enforced* names it in
-    `[luria.lint] fail_on`, and its unacknowledged rows become violations;
+    `lint.fail_on`, and its unacknowledged rows become violations;
     the acknowledgement directives keep working either way."""
     fail = set(current().fail_on)
     # `network = "require"` is a statement about what a green build means:

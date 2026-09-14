@@ -18,6 +18,10 @@ the config the new version refuses to load, so a command that needed it
 would be unrunnable in exactly the situation it exists for.
 """
 
+# inactive-ok-file: ADR-tmp8hp25 — Proposed. Every mention names it as the decision
+# this module implements; the citation is to the reasoning, not a claim the
+# decision is settled.
+
 from __future__ import annotations
 
 import yaml

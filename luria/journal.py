@@ -282,7 +282,7 @@ def run(journal: str = None) -> None:
     if not cfg.journals:
         # No silent refusal: say what would make this command do something.
         print("luria journal: none configured. Add one to luria.yaml:\n\n"
-              "  [luria.journals.devlog]\n  dir = \"devlog.d\"\n"
+              "  `journals.devlog`\n  dir = \"devlog.d\"\n"
               "  output = \"docs/devlog\"\n", file=sys.stderr)
         return
 

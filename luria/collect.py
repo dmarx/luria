@@ -9,7 +9,7 @@ is structural — each contribution owns a fragment nobody else writes, and the
 shared file becomes a VIEW assembled on a cadence.
 
 A fragment directory assembles in one of two shapes (ADR-028), declared in
-`[luria.fragments]`:
+`fragments`:
 
 - **append** (the default) — the narrative shape: bodies oldest-first,
   inserted before the marker, so the marker stays at the end and the log reads

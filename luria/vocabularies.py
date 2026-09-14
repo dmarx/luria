@@ -1,9 +1,12 @@
 # luria/vocabularies.py
 """A frontmatter field backed by a scheme-local controlled vocabulary.
 
-    [luria.schemes.SCENE.fields.worlds]
-    vocabulary = "worlds"
-    many       = true
+    schemes:
+      SCENE:
+        fields:
+          worlds:
+            vocabulary: worlds
+            many: true
     default    = ["B"]
 
 with `worlds.yaml` beside the records, shaped like `tags.yaml`:
@@ -30,6 +33,10 @@ index and a page per value beside the tag pages. The contract compiles the
 field (`contract.for_scheme`) and the lint checks it; the config validates
 the declaration at load, eagerly, like a tag group.
 """
+
+# inactive-ok-file: ADR-tmp8hp25 — Proposed. Every mention names it as the decision
+# this module implements; the citation is to the reasoning, not a claim the
+# decision is settled.
 
 from __future__ import annotations
 

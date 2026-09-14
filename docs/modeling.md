@@ -109,10 +109,12 @@ If they always agree, you have one scheme and a tag.
 
 The split pays for itself through the cross-reference. Make it mandatory:
 
-```toml
-[luria.schemes.SOTA]
-dir      = "record/practices.d"
-requires = ["source"]     # a practice with no paper behind it is an opinion
+```yaml
+schemes:
+  SOTA:
+    dir: record/practices.d
+    requires:
+    - source
 ```
 
 ## Statuses in two schemes
@@ -162,12 +164,20 @@ whether the config can state it instead:
 | a principle should not name one subsystem | `titles_generalize` + `narrow_terms` | `narrow-titles` |
 | citing something not in force should be deliberate | (always on) | `retired-citations` |
 
-```toml
-[luria.schemes.SOTA.tag_groups.primary_topic]
-require = "exactly-one"
-tags = ["training-optimization", "systems-optimization", "model-stability",
-        "distributed-optimization", "data-pipeline", "attention-techniques",
-        "model-architecture"]
+```yaml
+schemes:
+  SOTA:
+    tag_groups:
+      primary_topic:
+        require: exactly-one
+        tags:
+        - training-optimization
+        - systems-optimization
+        - model-stability
+        - distributed-optimization
+        - data-pipeline
+        - attention-techniques
+        - model-architecture
 ```
 
 Those eight lines replaced a specification that had sat in a template for two
@@ -185,23 +195,28 @@ Five shapes, all of them the same engine with different tables.
 
 **Project memory.** The default, and what the scaffold writes.
 
-```toml
-[luria.schemes.ADR]   # decisions, browsed as an index
-[luria.schemes.DP]    # principles, read as one document
-[luria.journals.devlog]
-[luria.fragments."record/changelog.d"]
+```yaml
+schemes:
+  ADR: {}
+  DP: {}
+journals:
+  devlog: {}
+fragments:
+  record/changelog.d: {}
 ```
 
 **A research anthology.** Domain content, not project meta-documentation. Two
 content schemes that cite each other, and an external identifier namespace
 made citable.
 
-```toml
-[luria.schemes.LIT]    # one note per paper; Rejected means "the attic"
-[luria.schemes.SOTA]   # one document per recommendation; requires = ["source"]
-[luria.remotes.ARXIV]
-uid = "(\\d{4})[.:](\\d{4,5})(v\\d+)?"
-url = "https://arxiv.org/abs/{1}.{2}"
+```yaml
+schemes:
+  LIT: {}
+  SOTA: {}
+remotes:
+  ARXIV:
+    uid: (\d{4})[.:](\d{4,5})(v\d+)?
+    url: https://arxiv.org/abs/{1}.{2}
 ```
 
 Now `ARXIV-1412.6980` written anywhere in the record is a resolvable,
@@ -211,26 +226,32 @@ the practice list can disagree about the same paper.
 **A standards or interface registry** — proposals browsed one at a time, the
 interfaces they define read as one page.
 
-```toml
-[luria.schemes.RFC]    # render = "index"
-[luria.schemes.SPEC]   # render = "document"
+```yaml
+schemes:
+  RFC: {}
+  SPEC: {}
 ```
 
 **An operations record** — incidents are dated and never revised; runbooks are
 cited by name and go stale.
 
-```toml
-[luria.journals.incidents]   # granularity = "day"
-[luria.schemes.RUN]          # requires = ["owner"]
-[luria.remotes.JIRA]         # uid, so ticket keys link and are checked
+```yaml
+journals:
+  incidents: {}
+schemes:
+  RUN: {}
+remotes:
+  JIRA: {}
 ```
 
 **A compliance record** — controls are claims with standing; evidence is dated
 observation. The relationship between them is the audit.
 
-```toml
-[luria.schemes.CTRL]         # requires = ["evidence"]
-[luria.journals.evidence]
+```yaml
+schemes:
+  CTRL: {}
+journals:
+  evidence: {}
 ```
 
 None of these needed a plugin, and none of them is a special case in the code.

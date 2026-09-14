@@ -35,6 +35,10 @@ one config's shape while a different config governs the record would build
 directories the project's own machinery doesn't know about.
 """
 
+# inactive-ok-file: ADR-tmp8hp25 — Proposed. Every mention names it as the decision
+# this module implements; the citation is to the reasoning, not a claim the
+# decision is settled.
+
 from __future__ import annotations
 
 import re
@@ -131,7 +135,7 @@ GENERIC_STUB_DOCUMENT = """\
 #
 # `issue_url` is the one key a conventional project still has to supply, and
 # for a repository with an origin remote it is already written down. Deriving
-# it also cascades: `[luria.site]` takes its title, its Pages URL and its
+# it also cascades: `site` takes its title, its Pages URL and its
 # source base from this one value, so a project that never opens luria.yaml
 # gets four correct settings from having a remote.
 #
@@ -312,7 +316,7 @@ def _insert_under(text: str, first_key: str, first_blocks: list,
                   second_key: str, second_blocks: list) -> str:
     """Append blocks INSIDE a top-level mapping rather than after it.
 
-    TOML tables concatenate: a new `[luria.schemes.RFC]` at the end of the file
+    TOML tables concatenate: a new `schemes.RFC` at the end of the file
     belonged to `schemes` wherever it landed. YAML nests by indentation, so an
     indented block at the end of the document attaches to whatever the last
     top-level key happens to be — which is silent, and wrong."""

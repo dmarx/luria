@@ -58,6 +58,10 @@ it is the one artifact whose job is to remember them.
 # unresolved-ok-file: DP-017 — a demonstration code in the comments below,
 # standing in for a moved document's old address
 
+# inactive-ok-file: ADR-tmp8hp25 — Proposed. Every mention names it as the decision
+# this module implements; the citation is to the reasoning, not a claim the
+# decision is settled.
+
 from __future__ import annotations
 
 import re
@@ -521,7 +525,7 @@ def config_paths_pass(text: str, plan: Plan) -> str:
     """Path pairs in a config file, section-aware: a remote's `document =`
     line spells *that project's* path, which only moves if the spec claimed
     the remote via `remotes = [...]`. Everything outside unclaimed remote
-    sections — the scheme's `output`, the `[luria.paths]` values, comments —
+    sections — the scheme's `output`, the `paths` values, comments —
     follows the rename."""
     out: list[str] = []
     stack: list[tuple[int, str]] = []

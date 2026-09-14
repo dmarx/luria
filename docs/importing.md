@@ -132,7 +132,7 @@ collide with anything.
 ## Afterwards
 
 Expect the first `luria lint` to be noisy, and read the noise as the point.
-Leave `[luria.lint] fail_on` empty while you work through it: acknowledge the
+Leave `lint.fail_on` empty while you work through it: acknowledge the
 citations that are deliberate, fix the ones that are defects, and file
 decisions for the ones that are neither. Promote a class into `fail_on` once
 its report is clean and you want it to stay that way.

@@ -3,27 +3,33 @@
 Everything else in Luria is generic; this module is the one place that knows a
 particular project. It reads `luria.yaml` from the project root:
 
-    [luria]
-    issue_url = "https://github.com/owner/repo/issues/{n}"
+    issue_url: https://github.com/owner/repo/issues/{n}
 
-    [luria.paths]
-    docs = "docs"
-    decisions = "record/decisions.d"
-    design_principles = "docs/design-principles.md"
+    paths:
+      docs: docs
+      decisions: record/decisions.d
+      design_principles: docs/design-principles.md
 
-    [luria.fragments]
-    "record/changelog.d" = "CHANGELOG.md"   # collected into…
+    fragments:
+      record/changelog.d: CHANGELOG.md   # collected into…
 
-    [luria.journals.devlog]
-    dir = "record/devlog.d"             # …whereas a journal's entries persist
-    output = "docs/devlog"
+    journals:
+      devlog:
+        dir: record/devlog.d        # …whereas a journal's entries persist
+        output: docs/devlog
 
-    [luria.code]
-    globs = ["src/**/*.py", "*.md"]
+    code:
+      globs: ["src/**/*.py", "*.md"]
 
-    [luria.schemes.ADR]
-    dir = "record/decisions.d"          # ground truth, filed by hand
-    output = "docs/decisions"           # the browsable view, generated
+    vocabularies:                   # declared once, named by every scheme
+      statuses:                     # that uses it (ADR-tmp8hp25)
+        Active: {blurb: in force}
+
+    schemes:
+      ADR:
+        dir: record/decisions.d     # ground truth, filed by hand
+        output: docs/decisions      # the browsable view, generated
+        statuses: statuses
 
 The layout this describes is the read/write boundary (ADR-021): everything a
 contributor *files* lives under `record/`, every view a reader *browses* lives
@@ -51,6 +57,10 @@ until the second caller forgets one and the linter and the fixer disagree about
 which files they cover — the exact class of bug ADR-002 exists to prevent. One
 config object, resolved once from disk.
 """
+
+# inactive-ok-file: ADR-tmp8hp25 — Proposed. Every mention names it as the decision
+# this module implements; the citation is to the reasoning, not a claim the
+# decision is settled.
 
 from __future__ import annotations
 
@@ -147,7 +157,7 @@ DEFAULTS: dict = {
     # ordinary project, which contains no others.
     "include_records": [],
     # The published site (ADR-042). Every key is derivable from `issue_url`
-    # for a GitHub project, so the conventional case needs no `[luria.site]`
+    # for a GitHub project, so the conventional case needs no `site`
     # table at all — a default nobody has to read the docs to get.
     "site": {
         # Whether this record is published on the web at all. True because
@@ -275,7 +285,10 @@ REQUIRE_RULES = ("any", "at-most-one", "exactly-one")
 class RequiredWhen:
     """A field demanded only while another field says one of these things:
 
-        [luria.schemes.SOTA.fields.promote_when]
+        schemes:
+          SOTA:
+            fields:
+              promote_when: {}
         required_when = { status = ["Proposed", "Deferred"] }
 
     `requires` says a field must always be there, which is right for identity
@@ -316,7 +329,10 @@ class FieldGroup:
     """Several fields of which an entry must carry some — a requirement that
     is satisfied by any of them, named for what they have in common:
 
-        [luria.schemes.LIT.field_groups.source]
+        schemes:
+          LIT:
+            field_groups:
+              source: {}
         fields  = ["arxiv", "doi", "url"]
         require = "at-least-one"          # or "exactly-one", "at-most-one"
 
@@ -337,9 +353,12 @@ FIELD_RULES = ("at-least-one", "exactly-one", "at-most-one")
 class Reference:
     """A frontmatter field that holds a code from a named scheme.
 
-        [luria.schemes.SOTA.references]
-        source = { scheme = "LIT", required = true }
-
+        schemes:
+          SOTA:
+            references:
+              source:
+                scheme: LIT
+                required: true
     `requires = ["source"]` already says the field must be there. What it
     cannot say is what the field MEANS, and the gap is wider than it looks: a
     required field is satisfied by any truthy value, so a practice citing a
@@ -384,9 +403,12 @@ class Vocabulary:
     """A frontmatter field backed by a scheme-local controlled vocabulary
     (ADR-076):
 
-        [luria.schemes.SCENE.fields.worlds]
-        vocabulary = "worlds"     # the values: worlds.yaml beside the records
-        many       = true         # a list of values; default false, one value
+        schemes:
+          SCENE:
+            fields:
+              worlds:
+                vocabulary: worlds
+                many: true
         default    = ["B"]        # the effective value when the field is absent
 
     `fields` is the table a field's shape and type are declared in; today
@@ -533,7 +555,7 @@ class Scheme:
     # numbers in merge order and records each temporary code as a permanent
     # `aka:` alias.
     allocate: str = "filing"
-    # Whether a title in this scheme must avoid `[luria.lint] narrow_terms`.
+    # Whether a title in this scheme must avoid `lint.narrow_terms`.
     # False everywhere by default, including for the shipped ADR scheme: a
     # decision is *about* something specific and naming it is correct. A
     # scheme whose documents claim to transfer — principles, values — is where
@@ -546,7 +568,7 @@ class Scheme:
     # relocates a document; only a person can vouch that it belongs.
     requires: tuple[str, ...] = ()
     # Which of this scheme's tags may appear together (see `TagGroup`). Empty
-    # for every scheme that does not declare `[luria.schemes.X.tag_groups]`,
+    # for every scheme that does not declare `schemes.X.tag_groups`,
     # which is the unconstrained behaviour every project has today.
     tag_groups: tuple[TagGroup, ...] = ()
     # Where this scheme's tag vocabulary lives. Unset means the collocated
@@ -562,7 +584,7 @@ class Scheme:
     # without every caller reaching back through `current()`.
     vocab_values: dict[str, dict] = dcfield(default_factory=dict)
     # Several fields of which an entry must carry some (see `FieldGroup`):
-    # `[luria.schemes.X.field_groups.NAME]`. What `requires` cannot say —
+    # `schemes.X.field_groups.NAME`. What `requires` cannot say —
     # that any of these satisfies the need, and the need has a name.
     field_groups: tuple[FieldGroup, ...] = ()
     # Frontmatter fields that hold a code from another scheme, by field name:
@@ -571,7 +593,7 @@ class Scheme:
     # one code or a list of them.
     references: tuple[Reference, ...] = ()
     # Frontmatter fields backed by a controlled vocabulary (see
-    # `Vocabulary`): `[luria.schemes.X.fields.NAME]` with `vocabulary =
+    # `Vocabulary`): `schemes.X.fields.NAME` with `vocabulary =
     # "V"`, values in `V.yaml` beside the records. The third instance of
     # what `statuses.yaml` and `tags.yaml` already are.
     vocabularies: tuple[Vocabulary, ...] = ()
@@ -773,10 +795,10 @@ class RemoteScheme:
     A remote is not one directory of files — it is a project, and different
     schemes in it have different shapes. Each entry names one construction:
 
-        [luria.remotes.SG.schemes.ADR]
+        `remotes.SG.schemes.ADR`
         dir = "docs/decisions"                 # file per code
 
-        [luria.remotes.SG.schemes.DP]
+        `remotes.SG.schemes.DP`
         document = "docs/design-principles.md" # sections of one file…
         anchor = "dp-{number}"                 # …at Luria's stable anchors
 
@@ -817,7 +839,7 @@ class Remote:
     own code — `LU-ADR-013` — so the namespace is explicit at the point of use
     and nothing has to guess which project an unprefixed code meant (ADR-016).
 
-        [luria.remotes.LU]
+        `remotes.LU`
         name = "luria"
         repo = "dmarx/luria"             # GitHub owner/name
         ref  = "main"                    # branch or tag the links point at
@@ -835,7 +857,7 @@ class Remote:
     through the `url` template, which can index the uid's capture groups by
     position:
 
-        [luria.remotes.ARXIV]
+        `remotes.ARXIV`
         uid = "(\\d{4})[.:](\\d{4,5})"
         url = "https://arxiv.org/abs/{1}.{2}"   # {0} or {uid} is the whole tail
 
@@ -853,7 +875,7 @@ class Remote:
     `uris.read`, `pin_url` is `uris.bytes`, and a relation Luria does not
     ship yet is one more name:
 
-        [luria.remotes.LU.uris]
+        `remotes.LU.uris`
         bytes   = "https://gitlab.example/{repo}/-/raw/{ref}/{dir}/{filename}"
         history = "https://github.com/{repo}/commits/{ref}/{dir}/{filename}"
 
@@ -902,7 +924,7 @@ class Remote:
     # as a body of knowledge, and one `luria remotes --pin` keeps the hashes
     # current while `luria lint` reports what is cited but not yet endorsed.
     pin: bool = False
-    # Named URI templates — `[luria.remotes.X.uris]`. A code relates to a SET
+    # Named URI templates — `remotes.X.uris`. A code relates to a SET
     # of URIs through one template vocabulary, and this table is where a
     # relation beyond the shipped two gets its name; `url` and `pin_url` are
     # sugar for its `read` and `bytes` entries, folded in at load.
@@ -1048,11 +1070,11 @@ class Remote:
 class Fragment:
     """One fragment directory: where its pieces assemble to, and in what shape.
 
-        [luria.fragments]
-        "record/changelog.d" = "CHANGELOG.md"       # the append style
-        [luria.fragments."record/changelog.d"]      # or, spelled as a table:
-        file  = "CHANGELOG.md"
-        style = "changelog"
+        fragments:
+          record/changelog.d: CHANGELOG.md         # the append style
+          record/changelog.d:                      # or, spelled as a mapping:
+            file: CHANGELOG.md
+            style: changelog
 
     `append` is the narrative shape: bodies oldest-first, inserted before the
     marker, so the marker stays at the end and the log reads top-down.
@@ -1089,7 +1111,7 @@ def primary_tags(prefix: str, values: dict) -> frozenset[str]:
 
 def _tag_groups(prefix: str, raw: dict,
                 tag_values: dict | None = None) -> tuple[TagGroup, ...]:
-    """Read a scheme's `[luria.schemes.X.tag_groups]` tables.
+    """Read a scheme's `schemes.X.tag_groups` tables.
 
     Validated here rather than at lint time: a misspelled rule is a config
     error, and a config error that surfaces as "no violations" is the quiet
@@ -1123,7 +1145,7 @@ def _tag_groups(prefix: str, raw: dict,
 
 
 def _field_groups(prefix: str, raw: dict) -> tuple[FieldGroup, ...]:
-    """Read a scheme's `[luria.schemes.X.field_groups]` tables. Validated at
+    """Read a scheme's `schemes.X.field_groups` tables. Validated at
     load like a tag group: a group naming no fields, or a rule that is not
     one, would surface as "no violations"."""
     groups = []
@@ -1198,7 +1220,7 @@ CITE_TARGETS = ("page", "view")
 
 
 def _cite(prefix: str, spec: dict) -> str:
-    """Read and check `[luria.schemes.X] cite`.
+    """Read and check `schemes.X.cite`.
 
     Unset resolves to what the scheme already does, so the key is inert until
     a project sets it.
@@ -1226,7 +1248,7 @@ def _cite(prefix: str, spec: dict) -> str:
 
 
 def _references(prefix: str, raw: dict) -> tuple[Reference, ...]:
-    """Read a scheme's `[luria.schemes.X.references]` table."""
+    """Read a scheme's `schemes.X.references` table."""
     found = []
     for field, spec in raw.items():
         if not isinstance(spec, dict) or not spec.get("scheme"):
@@ -1280,7 +1302,7 @@ def _required_when(where: str, spec: dict, required: bool) -> RequiredWhen | Non
 def _fields(prefix: str, raw: dict, scheme_dir: Path, root: Path,
             references: tuple, scaffolding: bool = False,
             vocabularies: dict | None = None) -> tuple:
-    """Read a scheme's `[luria.schemes.X.fields]` tables, as
+    """Read a scheme's `schemes.X.fields` tables, as
     `(vocabularies, plain fields, derivations)`.
 
     One table for a field's shape and type. `vocabulary` is the one *type* it
@@ -1412,13 +1434,13 @@ def _fragment(spec) -> Fragment:
 class Chain:
     """A relation walked transitively and rendered as sequences (#171).
 
-        [luria.chains.lineage]
-        scheme   = "LIT"                    # whose documents are the nodes
-        relation = "extends"                # the spine: A extends B, B first
-        sibling  = "compared_against"        # optional: rivals off the spine
-        output   = "docs/lineage.md"         # one page, a section per line
-        title    = "Lines of work"
-
+        chains:
+          lineage:
+            scheme: LIT
+            relation: extends
+            sibling: compared_against
+            output: docs/lineage.md
+            title: Lines of work
     `relation` takes one field or several — `["extends", "corrects"]` — and
     several are walked as one spine (#211). That is not a convenience: a
     record can carry succession with a sign, where "builds on the parent" and
@@ -1480,7 +1502,7 @@ class Chain:
 class Journal:
     """Dated entries that persist, rendered into books (ADR-020).
 
-        [luria.journals.devlog]
+        `journals.devlog`
         dir         = "devlog.d"        # entries, partitioned yyyy/mm/dd/
         output      = "docs/devlog"     # a directory of books plus an index
         granularity = "month"           # year | month | day
@@ -1510,7 +1532,7 @@ class Journal:
 class Site:
     """How the record publishes as a browsable site (ADR-042).
 
-        [luria.site]
+        `site`
         title      = "Luria"
         base_url   = "dmarx.github.io/luria"
         source_url = "https://github.com/dmarx/luria/blob/HEAD"
@@ -1530,7 +1552,7 @@ class Site:
         logo      = "assets/brand/lockup.svg"  # shown in place of the title
         logo_dark = "assets/brand/lockup-inverted.svg"   # optional
 
-        [luria.site.theme.light]
+        `site.theme.light`
         light = "#f4f1e8"                      # any of Quartz's colour names
 
     `logo_dark` is only needed when the artwork can't invert itself. A logo
@@ -1592,7 +1614,7 @@ class Config:
     # Whole records nested inside this one — directory globs, each match
     # holding its own `luria.yaml` (ADR-077, relocated by ADR-078).
     #
-    # This lived under `[luria.site]` for as long as publishing was the only
+    # This lived under `site` for as long as publishing was the only
     # thing that needed it. It isn't a site fact: it says this project contains
     # other projects, which is what `luria index` needs in order to regenerate
     # their views and what `--check` needs in order to notice a stale one. A
@@ -1769,7 +1791,7 @@ class Config:
         updated to stay true. Scanning one for stale references produces
         permanent, unactionable rows, so the status report skips it.
 
-        Three shapes qualify: a file listed in `[luria.code] historical`, an
+        Three shapes qualify: a file listed in `code.historical`, an
         uncollected fragment (it is about to *become* one), and anything in a
         journal — its entries and the books they render into alike. The last
         one is why this is a method rather than the set-membership test it used

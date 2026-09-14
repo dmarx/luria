@@ -512,7 +512,7 @@ def ignored(paths: list[Path]) -> set[Path]:
     """The subset of `paths` that git is configured to ignore.
 
     A generated view the project has gitignored is one it has decided not to
-    keep — `[luria.paths] reports = "build/doc-reports"` behind a CI artifact
+    keep — `paths.reports = "build/doc-reports"` behind a CI artifact
     upload is the shape that exists in the wild. The staleness check has
     nothing to compare against there: a fresh clone never has the file, so
     *missing* reads as *stale*, and the remedy the failure prints — regenerate

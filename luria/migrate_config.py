@@ -13,7 +13,7 @@ import yaml
 from pathlib import Path
 
 def convert(root: Path) -> str:
-    cfg_path = root / "luria.toml"
+    cfg_path = root / "luria.yaml"
     cfg = tomllib.loads(cfg_path.read_text(encoding="utf-8"))
     cfg = cfg.get("luria", cfg)
     vocabs, by_text, notes = {}, {}, []

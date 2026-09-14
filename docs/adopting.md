@@ -56,7 +56,7 @@ $ luria init --issue-url https://github.com/you/yourproject/issues
 init infers it, and with it the site's title, Pages URL and source base.
 
 `init` writes only what is missing — an existing `docs/README.md`,
-`CLAUDE.md`, or `luria.toml` is skipped and reported, never overwritten —
+`CLAUDE.md`, or `luria.yaml` is skipped and reported, never overwritten —
 so it composes with whatever documentation you already have. If you keep
 your own `CLAUDE.md`, borrow the scaffolded shape: a short map pointing at
 the record's docs, plus an invitation to run `luria --help`, beats a copy
@@ -76,7 +76,7 @@ describe, and let CI do the rest.
 ## Shape the record to the project
 
 The scaffold ships decisions, principles, a changelog, and a devlog.
-None of that is fixed — the families in `luria.toml` are yours to name
+None of that is fixed — the families in `luria.yaml` are yours to name
 (see [project memory](project-memory.md) and the
 [configuration reference](configuration.md)). The `examples/` directory in
 the Luria repository holds small, CI-tested configurations worth stealing
@@ -101,11 +101,11 @@ transform.
 
 Two settings earn attention early:
 
-- `[luria.code] globs` — which *source files* are scanned for references.
+- `code.globs` — which *source files* are scanned for references.
   A decision code in a code comment is the strongest form of the record's
   claim (it is the stated reason the code is shaped that way), and scanning
   makes it a checked claim.
-- `[luria.lint] fail_on` — which warning classes fail the build. Start
+- `lint.fail_on` — which warning classes fail the build. Start
   empty; promote a class once the report for it is clean and you want it
   to stay that way.
 
@@ -156,7 +156,7 @@ create or update anything under `.github/workflows/` — there is no
 cited from a workflow comment is one the job can never number: `luria
 concretize` rewrites it with everything else, and the push is refused
 whole. The lint reports that as `workflow-temp-codes`, and the scaffold's
-`luria.toml` names it in `fail_on`; cite the number once the decision has
+`luria.yaml` names it in `fail_on`; cite the number once the decision has
 one, or say it in prose. A job that checks out with a personal access
 token carrying the `workflow` scope, or a GitHub App token with workflow
 write (`token:` on `actions/checkout`), can push those files — and its
@@ -233,10 +233,10 @@ resolving with no second link-resolution system:
   of each document's neighbourhood — a record this cross-cited is a graph,
   and the site shows it.
 
-Branding and colours come from `[luria.site]`: an icon, a logo (with an
+Branding and colours come from `site`: an icon, a logo (with an
 optional dark variant, or a single SVG re-inked per theme), and a
 light/dark palette. Every key defaults from `issue_url` for a GitHub
-project, so the conventional case needs no `[luria.site]` table at all.
+project, so the conventional case needs no `site` table at all.
 
 ## Adopting into an agent workflow
 

@@ -50,8 +50,8 @@ worth citing, statuses that mean something, and views generated so they cannot
 drift from their sources.
 
 <!-- luria:badges -->
-[![needs decision: 5](https://img.shields.io/badge/needs%20decision-5-orange)](docs/reports/pending-decisions.md)
-[![cited, not in force: 0](https://img.shields.io/badge/cited,%20not%20in%20force-0-brightgreen)](docs/reports/reference-status.md)
+[![needs decision: 6](https://img.shields.io/badge/needs%20decision-6-orange)](docs/reports/pending-decisions.md)
+[![cited, not in force: 1](https://img.shields.io/badge/cited,%20not%20in%20force-1-orange)](docs/reports/reference-status.md)
 <!-- /luria:badges -->
 
 <!-- luria:site -->
@@ -137,7 +137,7 @@ and generated views are claims about a record, not about a file format.
 ## The shape of it
 
 ```
-luria.toml            what this record is made of (all keys have defaults)
+luria.yaml            what this record is made of (all keys have defaults)
 record/               sources — one small file per entry, written by people
   decisions.d/        ADR-001.md, ADR-002.md, …   (a "scheme")
   principles.d/       DP-001.md, …                (another scheme)
@@ -152,7 +152,7 @@ CHANGELOG.md          assembled from fragments by `luria collect`
 ```
 
 None of the names above are hard-coded. Schemes, journals, fragment
-directories and remote projects are *families* declared in `luria.toml` —
+directories and remote projects are *families* declared in `luria.yaml` —
 a record made of RFCs, specs, and an incident log is the same engine with
 different tables. See [project memory](docs/project-memory.md) and the generated
 [configuration reference](docs/configuration.md).

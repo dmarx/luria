@@ -8,10 +8,10 @@ quiet — the principle stays true, keeps rendering, keeps passing every other
 check, and simply never gets cited, because it reads as a rule about a subsystem
 the next reader isn't in.
 
-    [luria.lint]
+    `lint`
     narrow_terms = ["node", "canvas", "toolbar"]
 
-    [luria.schemes.DP]
+    `schemes.DP`
     titles_generalize = true
 
 **Luria ships no vocabulary.** The words are the project's own concrete nouns,

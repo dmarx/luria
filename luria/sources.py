@@ -21,7 +21,7 @@ it found into `remotes.lock.json`, and the lint compares against the committed
 file, so CI, a train and a laptop answer the question identically and the
 answer is reviewable in a diff.
 
-`[luria.lint] network` decides whether the lint may ask about what the
+`lint.network` decides whether the lint may ask about what the
 lockfile does not already know: `"auto"` (the default) asks, `"never"` answers
 only from the file, `"require"` makes not being able to ask a finding. So the
 lint DOES open sockets by default, for the citation a contribution just added
@@ -38,18 +38,18 @@ is: only the project can vouch that a URL serves what it looks like, and a
 guess that silently stops matching when a provider changes its response is
 worse than no check. The two recipes anyone needs:
 
-    [luria.remotes.ARXIV]
+    `remotes.ARXIV`
     uris.title = "https://export.arxiv.org/api/query?id_list={1}.{2}"
     title_re   = "<entry>.*?<title>(.*?)</title>"
 
-    [luria.remotes.DOI]
+    `remotes.DOI`
     uris.title = "https://api.crossref.org/works/{uid}"
     title_re   = '"title":\\s*\\[\\s*"(.*?)"'
 
 Which fields hold identifiers
 -----------------------------
 A frontmatter key equal to a remote's prefix, lowercased: `arxiv:` belongs to
-`[luria.remotes.ARXIV]`. No new configuration — a project that has declared
+`remotes.ARXIV`. No new configuration — a project that has declared
 the remote has already said what the identifier is.
 
 Why the comparison is dumb on purpose
@@ -387,7 +387,7 @@ def mismatch_lines() -> tuple[list[str], list[str], list[str]]:
     in the minutes after it is typed, and the first version of this check
     passed exactly then, because nothing had resolved it yet.
 
-    So under `[luria.lint] network = "auto"` the lint asks about what it does
+    So under `lint.network = "auto"` the lint asks about what it does
     not already know — normally the one citation a contribution added — and
     falls back to reporting it unchecked when it cannot. "never" answers only
     from the lockfile, for a hermetic build. "require" makes not being able to
