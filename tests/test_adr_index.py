@@ -10,6 +10,10 @@ The second half covers `render = "document"` (ADR-012), where the same trap
 arrives from a different direction: the fragments live one directory *below*
 the page they assemble into.
 """
+
+# inactive-ok-file: ADR-tmp8hp25 — Proposed. Every mention names it as the
+# decision this file is written against; the citation is to the reasoning,
+# not a claim the decision is settled.
 import re
 import sys
 from pathlib import Path
@@ -188,11 +192,17 @@ def test_outputs_covers_every_scheme(project, monkeypatch):
     from tests import _scheme
     _scheme.decision(project, 1, "Active")
     value(project, 1, "A value")
-    (project / "luria.toml").write_text(
-        '[luria]\nissue_url = "https://example.test/issues/{n}"\n'
-        '[luria.schemes.ADR]\ndir = "docs/decisions"\n'
-        '[luria.schemes.VP]\ndir = "docs/values"\n'
-        'render = "document"\noutput = "docs/values.md"\n')
+    (project / "luria.yaml").write_text(
+        """
+        issue_url: https://example.test/issues/{n}
+        schemes:
+          ADR:
+            dir: docs/decisions
+          VP:
+            dir: docs/values
+            render: document
+            output: docs/values.md
+        """)
     from luria import config
     config.reset()
 
@@ -266,10 +276,18 @@ def test_split_scheme_rows_link_into_the_source_tree(project, monkeypatch):
     prefix — the row's own link, the summary's links and the status note all
     take the same one."""
     from luria import config
-    (project / "luria.toml").write_text(
-        '[luria]\nissue_url = "https://example.test/issues/{n}"\n'
-        '[luria.schemes.ADR]\ndir = "record/decisions.d"\n'
-        'output = "docs/decisions"\n')
+    (project / "luria.yaml").write_text(
+        """
+        issue_url: https://example.test/issues/{n}
+        schemes:
+          ADR:
+            dir: record/decisions.d
+            output: docs/decisions
+            axis: tags
+            fields:
+              tags:
+                many: true
+        """)
     config.reset()
     from tests import _scheme
     _scheme.decision(project, 1, "Active", summary="see [ADR-002](ADR-002.md)")
@@ -287,10 +305,14 @@ def test_stub_lives_with_the_sources_and_renders_in_the_view(project):
     """The stub is authored, so it sits on the write side; the view directory
     holds only what the generator wrote (ADR-021)."""
     from luria import config
-    (project / "luria.toml").write_text(
-        '[luria]\nissue_url = "https://example.test/issues/{n}"\n'
-        '[luria.schemes.ADR]\ndir = "record/decisions.d"\n'
-        'output = "docs/decisions"\n')
+    (project / "luria.yaml").write_text(
+        """
+        issue_url: https://example.test/issues/{n}
+        schemes:
+          ADR:
+            dir: record/decisions.d
+            output: docs/decisions
+        """)
     config.reset()
     from tests import _scheme
     _scheme.decision(project, 1, "Active")
@@ -303,12 +325,18 @@ def test_stub_lives_with_the_sources_and_renders_in_the_view(project):
 
 def test_orphans_reports_strays_in_every_view_dir(project):
     from luria import config
-    (project / "luria.toml").write_text(
-        '[luria]\nissue_url = "https://example.test/issues/{n}"\n'
-        '[luria.schemes.ADR]\ndir = "record/decisions.d"\n'
-        'output = "docs/decisions"\n'
-        '[luria.journals.devlog]\ndir = "record/devlog.d"\n'
-        'output = "docs/devlog"\n')
+    (project / "luria.yaml").write_text(
+        """
+        issue_url: https://example.test/issues/{n}
+        schemes:
+          ADR:
+            dir: record/decisions.d
+            output: docs/decisions
+        journals:
+          devlog:
+            dir: record/devlog.d
+            output: docs/devlog
+        """)
     config.reset()
     from tests import _scheme
     _scheme.decision(project, 1, "Active")
@@ -327,9 +355,13 @@ def test_a_collocated_view_dir_is_not_policed(project):
     """With no separate `output` the scheme's directory holds the sources —
     calling every ADR an orphan would fail the entire pre-record layout."""
     from luria import config
-    (project / "luria.toml").write_text(
-        '[luria]\nissue_url = "https://example.test/issues/{n}"\n'
-        '[luria.schemes.ADR]\ndir = "docs/decisions"\n')
+    (project / "luria.yaml").write_text(
+        """
+        issue_url: https://example.test/issues/{n}
+        schemes:
+          ADR:
+            dir: docs/decisions
+        """)
     config.reset()
     from tests import _scheme
     _scheme.decision(project, 1, "Active")
@@ -414,43 +446,65 @@ def _rfc_project(tmp_path, monkeypatch):
     """A project whose only index scheme is RFC, so the tag page has to name
     something other than this package's own vocabulary."""
     from luria import config
-    (tmp_path / "luria.toml").write_text(
-        '[luria]\nissue_url = "https://example.test/{n}"\n'
-        '[luria.schemes.RFC]\ndir = "record/rfcs.d"\noutput = "docs/rfcs"\n'
-        'active = "Active"\nrender = "index"\n')
+    (tmp_path / "luria.yaml").write_text(
+        """
+        issue_url: https://example.test/{n}
+        vocabularies:
+          rfc-tags:
+            network:
+              label: Network
+              blurb: routing and transport. HTTP and gRPC both live here
+        schemes:
+          RFC:
+            dir: record/rfcs.d
+            output: docs/rfcs
+            active: Active
+            render: index
+            axis: tags
+            fields:
+              tags:
+                vocabulary: rfc-tags
+                many: true
+                closed: false
+        """)
     d = tmp_path / "record" / "rfcs.d"
     d.mkdir(parents=True)
     (d / "RFC-001.md").write_text(
         "---\nstatus: Active\ntitle: 'A proposal'\nversion: 1\n"
         "tags:\n- network\ndate: '2026-01-01'\n---\n\n# RFC-001: A proposal\n")
-    (d / "tags.yaml").write_text(
-        "network:\n  label: Network\n"
-        "  blurb: routing and transport. HTTP and gRPC both live here\n")
     monkeypatch.setenv("LURIA_ROOT", str(tmp_path))
     config.reset()
     return config.current().schemes["RFC"]
 
 
-def test_tag_page_names_its_own_scheme_not_decisions(tmp_path, monkeypatch):
-    """A project's RFC tag page should not be titled after this package's
-    decisions — the same rule DEFAULT_STUB already states for the index."""
-    scheme = _rfc_project(tmp_path, monkeypatch)
+def _axis_page(root, scheme, value: str = "network") -> str:
+    from luria import vocabularies
     docs = builder.load_scheme(scheme)
-    page = builder.render_tag_page(
-        "network", {"label": "Network"}, docs, scheme)
-    assert "# RFCs tagged `network`" in page
-    assert "ADRs tagged" not in page
+    return vocabularies.pages(scheme, docs)[scheme.tag_dir / f"{value}.md"]
+
+
+def test_an_axis_page_names_its_own_scheme_not_decisions(tmp_path, monkeypatch):
+    """A project's RFC tag page should not be titled after this package's
+    decisions — the same rule DEFAULT_STUB already states for the index.
+
+    Rendered by `vocabularies.pages` since ADR-tmp8hp25: the axis's pages go
+    through the same template as every other field's, into the same kind of
+    directory, and `render_tag_page` was the second copy of it."""
+    scheme = _rfc_project(tmp_path, monkeypatch)
+    page = _axis_page(tmp_path, scheme)
+    assert "# RFCs with `tags` `network`" in page
+    assert "ADRs" not in page
     assert "1 of 1 RFC documents." in page
     assert "decisions." not in page
 
 
-def test_tag_page_blurb_keeps_its_casing(tmp_path, monkeypatch):
-    """`str.capitalize()` lowercases everything after the first character, so
-    a blurb running to more than one sentence loses its capitals silently."""
+def test_an_axis_page_blurb_keeps_its_casing(tmp_path, monkeypatch):
+    """The old renderer sentence-cased the blurb with a hand-rolled
+    `raw[:1].upper()`, because `str.capitalize()` lowercases everything
+    after the first character and silently destroyed a blurb running to
+    more than one sentence. The one template prints it as written."""
     scheme = _rfc_project(tmp_path, monkeypatch)
-    docs = builder.load_scheme(scheme)
-    meta = {"label": "Network",
-            "blurb": "routing and transport. HTTP and gRPC both live here"}
-    page = builder.render_tag_page("network", meta, docs, scheme)
-    assert "Routing and transport. HTTP and gRPC both live here." in page
+    page = _axis_page(tmp_path, scheme)
+    assert ("**Network** — routing and transport. HTTP and gRPC both live "
+            "here." in page)
     assert "http and grpc" not in page

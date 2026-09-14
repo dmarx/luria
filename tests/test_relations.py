@@ -15,6 +15,8 @@ So a relation may declare its converse, and only then is anything completed.
 
 from __future__ import annotations
 
+from _config import merged
+
 from pathlib import Path
 
 import pytest
@@ -32,29 +34,49 @@ def write(root: Path, rel: str, text: str) -> Path:
 
 
 PAIRED = """
-[luria.schemes.LIT.references]
-extends = { scheme = "LIT", required = false, many = true, converse = "extended_by" }
-extended_by = { scheme = "LIT", required = false, many = true, converse = "extends" }
-compared_against = { scheme = "LIT", required = false, many = true, converse = "compared_against" }
+schemes:
+  LIT:
+    references:
+      extends:
+        scheme: LIT
+        required: false
+        many: true
+        converse: extended_by
+      extended_by:
+        scheme: LIT
+        required: false
+        many: true
+        converse: extends
+      compared_against:
+        scheme: LIT
+        required: false
+        many: true
+        converse: compared_against
 """
 
 UNPAIRED = """
-[luria.schemes.LIT.references]
-extends = { scheme = "LIT", required = false, many = true }
-compared_against = { scheme = "LIT", required = false, many = true }
+schemes:
+  LIT:
+    references:
+      extends:
+        scheme: LIT
+        required: false
+        many: true
+      compared_against:
+        scheme: LIT
+        required: false
+        many: true
 """
 
 
 def project(tmp_path, monkeypatch, extra: str = PAIRED) -> Path:
-    write(tmp_path, "luria.toml", f"""
-[luria]
-issue_url = "https://example.test/issues/{{n}}"
-
-[luria.schemes.LIT]
-dir = "record/literature.d"
-output = "docs/literature"
-{extra}
-""")
+    write(tmp_path, "luria.yaml", merged("""
+                                  issue_url: https://example.test/issues/{n}
+                                  schemes:
+                                    LIT:
+                                      dir: record/literature.d
+                                      output: docs/literature
+                                  """, extra))
     monkeypatch.setenv("LURIA_ROOT", str(tmp_path))
     config.reset()
     return tmp_path
@@ -77,9 +99,14 @@ def note(root: Path, number: int, title: str = "A note", **fields) -> Path:
 def test_a_converse_must_name_a_declared_reference(tmp_path, monkeypatch):
     with pytest.raises(ValueError, match="extended_by"):
         project(tmp_path, monkeypatch, """
-[luria.schemes.LIT.references]
-extends = { scheme = "LIT", many = true, converse = "extended_by" }
-""")
+                                       schemes:
+                                         LIT:
+                                           references:
+                                             extends:
+                                               scheme: LIT
+                                               many: true
+                                               converse: extended_by
+                                       """)
         config.current()
 
 
@@ -88,20 +115,35 @@ def test_a_converse_must_be_mutual(tmp_path, monkeypatch):
     leaves one direction completing and the other not."""
     with pytest.raises(ValueError, match="mutual|converse"):
         project(tmp_path, monkeypatch, """
-[luria.schemes.LIT.references]
-extends = { scheme = "LIT", many = true, converse = "extended_by" }
-extended_by = { scheme = "LIT", many = true }
-""")
+                                       schemes:
+                                         LIT:
+                                           references:
+                                             extends:
+                                               scheme: LIT
+                                               many: true
+                                               converse: extended_by
+                                             extended_by:
+                                               scheme: LIT
+                                               many: true
+                                       """)
         config.current()
 
 
 def test_a_converse_must_point_at_the_same_scheme(tmp_path, monkeypatch):
     with pytest.raises(ValueError, match="scheme"):
         project(tmp_path, monkeypatch, """
-[luria.schemes.LIT.references]
-extends = { scheme = "LIT", many = true, converse = "extended_by" }
-extended_by = { scheme = "ADR", many = true, converse = "extends" }
-""")
+                                       schemes:
+                                         LIT:
+                                           references:
+                                             extends:
+                                               scheme: LIT
+                                               many: true
+                                               converse: extended_by
+                                             extended_by:
+                                               scheme: ADR
+                                               many: true
+                                               converse: extends
+                                       """)
         config.current()
 
 
@@ -109,10 +151,17 @@ def test_both_sides_of_a_pair_hold_a_list(tmp_path, monkeypatch):
     """Completion writes into either side, and N documents can extend one."""
     with pytest.raises(ValueError, match="many|list"):
         project(tmp_path, monkeypatch, """
-[luria.schemes.LIT.references]
-extends = { scheme = "LIT", many = true, converse = "extended_by" }
-extended_by = { scheme = "LIT", converse = "extends" }
-""")
+                                       schemes:
+                                         LIT:
+                                           references:
+                                             extends:
+                                               scheme: LIT
+                                               many: true
+                                               converse: extended_by
+                                             extended_by:
+                                               scheme: LIT
+                                               converse: extends
+                                       """)
         config.current()
 
 
@@ -487,28 +536,58 @@ def test_a_converse_field_is_not_a_citation_site(tmp_path, monkeypatch):
 # applied. Running `--fix` never makes `luria lint` worse.
 
 GROUPED = PAIRED + """
-[luria.schemes.LIT.references]
-note = { scheme = "LIT", required = false, many = true }
-
-[luria.schemes.LIT.field_groups.provenance]
-fields  = ["extended_by", "note"]
-require = "at-most-one"
-"""
+                   schemes:
+                     LIT:
+                       references:
+                         note:
+                           scheme: LIT
+                           required: false
+                           many: true
+                       field_groups:
+                         provenance:
+                           fields:
+                           - extended_by
+                           - note
+                           require: at-most-one
+                   """
 
 
 def grouped(tmp_path, monkeypatch) -> Path:
-    body = PAIRED.replace("[luria.schemes.LIT.references]\n", "") + ""
+    body = PAIRED.replace("""
+                          schemes:
+                            LIT:
+                              references: {}
+                          """, "") + ""
     return project(tmp_path, monkeypatch, """
-[luria.schemes.LIT.references]
-extends = { scheme = "LIT", required = false, many = true, converse = "extended_by" }
-extended_by = { scheme = "LIT", required = false, many = true, converse = "extends" }
-compared_against = { scheme = "LIT", required = false, many = true, converse = "compared_against" }
-note = { scheme = "LIT", required = false, many = true }
-
-[luria.schemes.LIT.field_groups.provenance]
-fields  = ["extended_by", "note"]
-require = "at-most-one"
-""")
+                                          schemes:
+                                            LIT:
+                                              references:
+                                                extends:
+                                                  scheme: LIT
+                                                  required: false
+                                                  many: true
+                                                  converse: extended_by
+                                                extended_by:
+                                                  scheme: LIT
+                                                  required: false
+                                                  many: true
+                                                  converse: extends
+                                                compared_against:
+                                                  scheme: LIT
+                                                  required: false
+                                                  many: true
+                                                  converse: compared_against
+                                                note:
+                                                  scheme: LIT
+                                                  required: false
+                                                  many: true
+                                              field_groups:
+                                                provenance:
+                                                  fields:
+                                                  - extended_by
+                                                  - note
+                                                  require: at-most-one
+                                          """)
 
 
 def test_a_repair_that_would_break_a_document_is_not_applied(

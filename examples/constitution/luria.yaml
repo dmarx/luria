@@ -1,0 +1,122 @@
+vocabularies:
+  value-statuses:
+    Active:
+      blurb: in force — the current answer, and what a citation should normally point at
+    Proposed:
+      blurb: not in force yet — an open question, so citing it as settled is what the reference report catches
+    Deferred:
+      blurb: not in force and not being worked on; the question is real and the answer waits on something
+    Superseded:
+      blurb: no longer in force because something replaced it; the successor is named in the field, not in the prose
+    Rejected:
+      blurb: no longer in force and nothing replaced it — kept because a rejection is worth being able to point at
+  practice-tags:
+    scope:
+      label: Scope
+      blurb: what a request is taken to include, and what it is not
+    verification:
+      label: Verification
+      blurb: establishing that a claim holds before making it
+    attribution:
+      label: Attribution
+      blurb: saying where something came from
+    refusal:
+      label: Refusal
+      blurb: declining, and how
+    economy:
+      label: Economy
+      blurb: what a reply costs the person who has to read it
+    authority:
+      label: Authority
+      blurb: whose call a thing is, and what a refusal means
+  boundary-tags:
+    refusal:
+      label: Refusal
+      blurb: declining, and how
+    attribution:
+      label: Attribution
+      blurb: saying where something came from
+    identity:
+      label: Identity
+      blurb: how a person is named and referred to
+  surfaces:
+    conversation:
+      label: Conversation
+      blurb: what is said to the person, and how; the default when unstated
+    harness:
+      label: Harness
+      blurb: the tools and the environment — files, shell, permissions
+    repository:
+      label: Repository
+      blurb: work that lands in someone's codebase — commits, branches, reviews
+    record:
+      label: Record
+      blurb: the project's own memory — decisions, principles, journals
+issue_url: https://github.com/dmarx/luria/issues/{n}
+schemes:
+  VALUE:
+    dir: record/values.d
+    output: docs/values.md
+    render: document
+    fields:
+      status:
+        vocabulary: value-statuses
+      tags:
+        many: true
+        required: true
+        closed: false
+    axis: tags
+  PRACTICE:
+    dir: record/practices.d
+    output: docs/practices
+    render: index
+    references:
+      grounds:
+        scheme: VALUE
+        many: true
+        required: true
+    fields:
+      surface:
+        vocabulary: surfaces
+        many: true
+        default:
+        - conversation
+      status:
+        vocabulary: value-statuses
+      tags:
+        vocabulary: practice-tags
+        many: true
+        required: true
+        closed: false
+    axis: tags
+  BOUNDARY:
+    dir: record/boundaries.d
+    output: docs/boundaries
+    render: index
+    references:
+      overrides:
+        scheme: PRACTICE
+        many: true
+        required: false
+      grounds:
+        scheme: VALUE
+        many: true
+        required: true
+    fields:
+      status:
+        vocabulary: value-statuses
+      tags:
+        vocabulary: boundary-tags
+        many: true
+        required: true
+        closed: false
+    axis: tags
+journals:
+  sessions:
+    dir: record/sessions.d
+    output: docs/sessions
+    granularity: month
+    title: Session log
+    blurb: 'What happened in a conversation, written by the participant with the worse memory of it. Entries persist: a dated observation stays true even after the practice it describes is superseded.'
+site:
+  title: A constitution as a record

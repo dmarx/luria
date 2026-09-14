@@ -8,7 +8,7 @@ being read backwards. If A `extends` B then B is `extended_by` A. If A is
 is what makes it symmetric. So symmetry is not a separate kind of thing; it
 is the case where a relation's converse is itself.
 
-    [luria.schemes.LIT.references]
+    `schemes.LIT.references`
     extends          = { scheme = "LIT", many = true, converse = "extended_by" }
     extended_by      = { scheme = "LIT", many = true, converse = "extends" }
     compared_against = { scheme = "LIT", many = true, converse = "compared_against" }

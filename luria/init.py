@@ -7,7 +7,7 @@
 
 The scaffold is planned from configuration, not copied from a fixed tree
 (ADR-048). Three sources, in order: a file named with `--config`; a
-`luria.toml` the project already has at its root; and the shipped template's
+`luria.yaml` the project already has at its root; and the shipped template's
 config, which is what a bare `luria init` has always meant. Whichever wins,
 the plan is the same function of it: a directory and a `_template.md` for
 every scheme, journal and fragment directory the config declares, a stub for
@@ -30,10 +30,14 @@ this on a project that already has half the record adds only the missing half �
 and running it twice is a no-op. A scaffolder that clobbers is a scaffolder
 nobody dares re-run, which means the one thing it is good at (filling in what a
 project grew past) never gets used. The one hard refusal: `--config` against a
-project that already has a `luria.toml` is an error, not a skip — scaffolding
+project that already has a `luria.yaml` is an error, not a skip — scaffolding
 one config's shape while a different config governs the record would build
 directories the project's own machinery doesn't know about.
 """
+
+# inactive-ok-file: ADR-tmp8hp25 — Proposed. Every mention names it as the decision
+# this module implements; the citation is to the reasoning, not a claim the
+# decision is settled.
 
 from __future__ import annotations
 
@@ -41,6 +45,7 @@ import re
 import os
 from pathlib import Path
 
+from . import yaml_edit
 from .config import CONFIG_NAME, Config, Scheme, find_root, load
 
 
@@ -74,7 +79,7 @@ GENERIC_TEMPLATE = """\
 # Active | Proposed | Deferred | Superseded | Rejected. A qualifying note goes
 # in `status_note:` — prose, like `summary:`.
 # `luria lint` enforces the vocabulary; which one counts as "in force" for
-# this scheme is the `active` key in luria.toml.
+# this scheme is the `active` key in luria.yaml.
 status: Proposed
 
 title: Stated as the thing it establishes
@@ -131,8 +136,8 @@ GENERIC_STUB_DOCUMENT = """\
 #
 # `issue_url` is the one key a conventional project still has to supply, and
 # for a repository with an origin remote it is already written down. Deriving
-# it also cascades: `[luria.site]` takes its title, its Pages URL and its
-# source base from this one value, so a project that never opens luria.toml
+# it also cascades: `site` takes its title, its Pages URL and its
+# source base from this one value, so a project that never opens luria.yaml
 # gets four correct settings from having a remote.
 #
 # Only hosts whose issue path is known. A wrong issue URL is worse than an
@@ -200,7 +205,7 @@ def infer_issue_url(into: Path) -> str:
 #     luria init --schemes "RFC,SPEC:document" --journals "incidents:day"
 #
 # The shorthand is an ARGUMENT, never a stored format. What lands in
-# `luria.toml` is the ordinary explicit table, commented like the rest of the
+# `luria.yaml` is the ordinary explicit table, commented like the rest of the
 # template — a config a reader cannot read is a worse trade than the typing it
 # saved, and every other part of this package reads that file rather than a
 # second grammar. ADR-048 plans the scaffold from configuration; this only
@@ -243,62 +248,84 @@ def _spec(item: str, kinds: tuple, default: str, what: str) -> tuple:
     return name, kind
 
 
-def _scheme_table(prefix: str, render: str) -> str:
+def _scheme_entry(prefix: str, render: str) -> tuple[dict, str]:
+    """One scheme's table and the comment that introduces it."""
     slug = _slug(prefix)
     output = "docs/%s.md" % slug if render == "document" else "docs/%s" % slug
     reading = ("read as a whole, so its entries concatenate into one page"
                if render == "document" else
                "browsed one at a time, so its view is an index plus tag pages")
-    return (
-        "\n# %s — %s.\n"
-        "# The paths follow the prefix; rename them if this family is better\n"
-        "# called something other than what its codes spell.\n"
-        "[luria.schemes.%s]\n"
-        'dir    = "record/%s.d"\n'
-        'output = "%s"\n'
-        'render = "%s"\n' % (prefix, reading, prefix, slug, output, render))
+    return {
+        "dir": "record/%s.d" % slug,
+        "output": output,
+        "render": render,
+        # Every scheme names the same vocabulary rather than getting a copy
+        # of it, which is the whole point of the table being central
+        # (ADR-tmp8hp25) — and it names it where every other controlled
+        # field does, because `status` is not a special one.
+        "fields": {
+            "status": {"vocabulary": "statuses"},
+            # Open and undeclared: the scaffold does not invent a taxonomy
+            # for a family it has only just been told the name of. Declare
+            # `vocabulary:` when you have one, and the values get pages.
+            "tags": {"many": True, "required": True},
+        },
+        # WHICH field heads this scheme's index. Named rather than assumed —
+        # a world-bible's axis is `worlds` (ADR-tmp8hp25).
+        "axis": "tags",
+    }, ("\n%s — %s.\n"
+        "The paths follow the prefix; rename them if this family is better\n"
+        "called something other than what its codes spell." % (prefix, reading))
 
 
-def _journal_table(name: str, granularity: str) -> str:
+def _journal_entry(name: str, granularity: str) -> tuple[dict, str]:
+    """One journal's table and the comment that introduces it."""
     title = name.replace("-", " ").replace("_", " ").capitalize()
-    return (
-        "\n# %s — dated entries that persist and are never revised, collected\n"
-        "# into one book per %s.\n"
-        "[luria.journals.%s]\n"
-        'dir         = "record/%s.d"\n'
-        'output      = "docs/%s"\n'
-        'granularity = "%s"\n'
-        'title       = "%s"\n'
-        % (name, granularity, name, name, name, granularity, title))
+    return {
+        "dir": "record/%s.d" % name,
+        "output": "docs/%s" % name,
+        "granularity": granularity,
+        "title": title,
+    }, ("\n%s — dated entries that persist and are never revised, collected\n"
+        "into one book per %s." % (name, granularity))
 
 
 def shorthand_tables(text: str, schemes: str, journals: str) -> str:
     """The template's config, plus one table per shorthand entry.
 
-    Additive by design. The template already declares ADR and DP, so appending
-    a third scheme keeps all three — which is what "mostly the defaults" has to
-    mean, given that a declared family replaces the shipped one whole
-    (ADR-047). Removing a default is deleting its table, which is an edit to a
-    file the user can now see."""
-    added = []
-    for item in (s for s in schemes.split(",") if s.strip()):
-        prefix, render = _spec(item, RENDERS, "index", "scheme")
-        prefix = prefix.upper()
-        if "[luria.schemes.%s]" % prefix in text:
-            raise SystemExit(
-                "luria init: the template already declares %s; drop it from "
-                "--schemes and edit the table it writes" % prefix)
-        added.append(_scheme_table(prefix, render))
-    for item in (s for s in journals.split(",") if s.strip()):
-        name, granularity = _spec(item, GRANULARITIES, "month", "journal")
-        if "[luria.journals.%s]" % name in text:
-            raise SystemExit(
-                "luria init: the template already declares the %s journal; "
-                "drop it from --journals and edit its table" % name)
-        added.append(_journal_table(name, granularity))
-    if not added:
-        return text
-    return text.rstrip("\n") + "\n" + "".join(added)
+    Additive by design. The template already declares ADR and DP, so adding
+    a third scheme keeps all three — which is what "mostly the defaults" has
+    to mean, given that a declared family replaces the shipped one whole
+    (ADR-047). Removing a default is deleting its table, which is an edit to
+    a file the user can now see.
+
+    Added to the document rather than to the end of the text: YAML nests by
+    indentation, so an indented block appended to a file joins whichever
+    top-level key happens to be last — silently, and wrongly. The round trip
+    is ruamel's, so the template's comments survive it (ADR-tmp8hp25)."""
+    data = yaml_edit.load(text)
+    base = ("luria",) if isinstance(data.get("luria"), dict) else ()
+    indent = 2 * (len(base) + 1)
+    added = 0
+    for family, split, kinds, default, entry, what in (
+            ("schemes", schemes, RENDERS, "index", _scheme_entry, "scheme"),
+            ("journals", journals, GRANULARITIES, "month", _journal_entry,
+             "journal")):
+        for item in (s for s in split.split(",") if s.strip()):
+            name, kind = _spec(item, kinds, default, what)
+            if what == "scheme":
+                name = name.upper()
+            into = yaml_edit.ensure(data, base + (family,))
+            if name in into:
+                raise SystemExit(
+                    "luria init: the template already declares %s; drop it "
+                    "from --%ss and edit the table it writes" % (name, what))
+            body, note = entry(name, kind)
+            yaml_edit.set_block(into, name, body, before=note, indent=indent)
+            added += 1
+    # Unchanged means unchanged: a no-op must not rewrite the file it was
+    # handed just because it parsed it.
+    return yaml_edit.dump(data) if added else text
 
 
 def _read(rel: str) -> str:
@@ -343,10 +370,11 @@ def template_config(into: Path, issue_url: str = "", schemes: str = "",
     # with an origin remote has already written it down somewhere else.
     issue_url = issue_url or infer_issue_url(into)
     if issue_url:
-        text = text.replace(
-            'issue_url = ""',
-            f'issue_url = "{issue_url.rstrip("/")}/{{n}}"'
-            if "{n}" not in issue_url else f'issue_url = "{issue_url}"')
+        filled = (f"{issue_url.rstrip('/')}/{{n}}"
+                  if "{n}" not in issue_url else issue_url)
+        # Quoted, because a value with a `{` is a YAML flow mapping unless it
+        # is a string — the kind of thing TOML's always-quoted values hid.
+        text = text.replace("issue_url: ''", f"issue_url: '{filled}'")
     return shorthand_tables(text, schemes, journals)
 
 
@@ -361,13 +389,11 @@ def _scheme_files(scheme: Scheme) -> dict[Path, str]:
         return {
             scheme.dir / "_template.md": _read("record/decisions.d/_template.md"),
             scheme.stub: _read("record/decisions.d/README.stub"),
-            scheme.tags_yaml: _read("record/decisions.d/tags.yaml"),
-            scheme.statuses_yaml: _statuses_yaml(scheme),
         }
     if scheme.prefix == "DP" and scheme.render == "document":
         return {scheme.dir / src.name: src.read_text(encoding="utf-8")
                 for src in sorted((TEMPLATE / "record/principles.d").glob("*"))
-                if src.is_file()} | {scheme.statuses_yaml: _statuses_yaml(scheme)}
+                if src.is_file()}
     stub = (GENERIC_STUB_DOCUMENT if scheme.render == "document"
             else GENERIC_STUB_INDEX)
     subs = {"{PREFIX}": scheme.prefix, "{prefix}": scheme.prefix.lower()}
@@ -375,8 +401,7 @@ def _scheme_files(scheme: Scheme) -> dict[Path, str]:
     for key, value in subs.items():
         template = template.replace(key, value)
     return {scheme.dir / "_template.md": template,
-            scheme.stub: stub.replace("{PREFIX}", scheme.prefix),
-            scheme.statuses_yaml: _statuses_yaml(scheme)}
+            scheme.stub: stub.replace("{PREFIX}", scheme.prefix)}
 
 
 # What each status means, written into the scaffold rather than inherited
@@ -409,11 +434,11 @@ def _statuses_yaml(scheme) -> str:
         "#",
         "# A DEFAULT, not a law: rename these, drop the ones you do not want,",
         "# add your own. Every check reads this file. The one rule is that the",
-        "# scheme's `active` word (luria.toml) has to appear here — it is how",
+        "# scheme's `active` word (luria.yaml) has to appear here — it is how",
         "# everything decides what is in force, so a vocabulary without it",
         "# means no document ever is.",
         "#",
-        "# `superseded_by:` is named by `successor` in luria.toml, and the",
+        "# `superseded_by:` is named by `successor` in luria.yaml, and the",
         "# status demanding it by `retires_on`. Rename the word here and",
         "# those two together and the record speaks your language throughout.",
         "",
@@ -451,7 +476,7 @@ def _views(cfg: Config) -> str:
                      f"narrative, one book per {j.granularity}.")
     lines.append("- [The record](record.md) — what this project's record is "
                  "made of and where each kind of entry is filed, generated "
-                 "from `luria.toml`. Read it before assuming this record can "
+                 "from `luria.yaml`. Read it before assuming this record can "
                  "only hold decisions: schemes, journals, fragment "
                  "directories and remotes are families *this* project "
                  "names.")
@@ -508,7 +533,7 @@ def write(into: Path, issue_url: str = "", dry_run: bool = False,
 
 def config_run(into: str = None, issue_url: str = "", schemes: str = "",
                journals: str = "", stdout: bool = False) -> None:
-    """Write a starting `luria.toml` from the shorthand, and stop there.
+    """Write a starting `luria.yaml` from the shorthand, and stop there.
 
     The same file `luria init` would have written, without the scaffold. It
     exists because the shorthand covers the two things projects usually vary
@@ -518,7 +543,7 @@ def config_run(into: str = None, issue_url: str = "", schemes: str = "",
     already created.
 
         luria config --schemes "RFC,SPEC:document"   # write it
-        $EDITOR luria.toml                           # change what you like
+        $EDITOR luria.yaml                           # change what you like
         luria init                                   # scaffold that shape
 
     Refuses to overwrite, like everything else here. `--stdout` prints instead
@@ -542,13 +567,13 @@ def run(into: str = None, issue_url: str = "", dry_run: bool = False,
         config: str = None, schemes: str = "", journals: str = "") -> None:
     """Scaffold the record a config declares (default: the detected root's
     own config, or the shipped template's). Never overwrites; --config PATH
-    installs that file as luria.toml and scaffolds its shape; --dry-run lists
+    installs that file as luria.yaml and scaffolds its shape; --dry-run lists
     what would be written; --issue-url makes issue numbers linkable.
 
     --schemes and --journals extend the shipped template for a project that
     wants the defaults plus a little: `--schemes "RFC,SPEC:document"`,
     `--journals "incidents:day"`. Each entry becomes an ordinary commented
-    table in the luria.toml this writes, so the shorthand is something you
+    table in the luria.yaml this writes, so the shorthand is something you
     type once rather than a format anything reads back."""
     into = (Path(into) if into else find_root()).resolve()
     print(f"luria init → {into}")

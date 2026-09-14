@@ -11,7 +11,7 @@ unprefixed code, because it would mean both "our thirteenth decision" and
 "theirs". The prefix makes the namespace explicit at the point of use, and one
 config entry teaches Luria how to turn it into a URL (ADR-016):
 
-    [luria.remotes.LU]
+    `remotes.LU`
     repo = "dmarx/luria"
 
 From there `LU-ADR-013` is a first-class reference — `luria link --fix` writes
@@ -30,7 +30,7 @@ code-only convention (ADR-013), which needs no lockfile at all and is the
 default because it is Luria's own.
 
 **Discovery reads a public repository over HTTPS**, and reads that repository's
-own `luria.toml` when it has one, so `dir` comes from the authority rather than
+own `luria.yaml` when it has one, so `dir` comes from the authority rather than
 from a guess. A remote Luria cannot read is told so and left on rung three or
 one — the fix is a `url` template, not a workaround.
 
@@ -344,13 +344,15 @@ def _from_names(names: list[str]) -> dict[str, str]:
 
 
 def _upstream_dir(text: str, fallback: str) -> str:
-    """The remote's own `luria.toml` is the authority on where its documents
+    """The remote's own `luria.yaml` is the authority on where its documents
     live. Reading it rather than guessing is the whole point of a config file
     existing — and when there isn't one, the configured value stands."""
     try:
-        import tomllib
-        raw = tomllib.loads(text)
-    except ValueError:
+        import yaml
+        raw = yaml.safe_load(text) or {}
+    except yaml.YAMLError:
+        return fallback
+    if not isinstance(raw, dict):
         return fallback
     luria = raw.get("luria", raw)
     schemes = luria.get("schemes") or {}
@@ -398,7 +400,7 @@ def discover(remote: Remote) -> tuple[dict[str, str] | None, str]:
     if not remote.repo:
         return None, "no `repo` configured"
     raw = f"https://raw.githubusercontent.com/{remote.repo}/{remote.ref}"
-    config, _ = _fetch(f"{raw}/luria.toml")
+    config, _ = _fetch(f"{raw}/luria.yaml")
     directory = _upstream_dir(config, remote.dir) if config else remote.dir
     body, why = _fetch(f"https://api.github.com/repos/{remote.repo}/contents/"
                        f"{directory}?ref={remote.ref}")
@@ -408,7 +410,7 @@ def discover(remote: Remote) -> tuple[dict[str, str] | None, str]:
         entries = json.loads(body)
     except ValueError:
         return None, "GitHub API returned something that isn't JSON"
-    how = f"GitHub API, {directory}/" + (" (from its luria.toml)" if config else "")
+    how = f"GitHub API, {directory}/" + (" (from its luria.yaml)" if config else "")
     return _from_names([e["name"] for e in entries
                         if e.get("type") == "file"]), how
 
@@ -531,8 +533,8 @@ def run(refresh: bool = False, check: bool = False,
 
     if not cfg.remotes and not pins.url_state():
         # No silent refusal: say what would make this command do something.
-        print("luria remotes: none configured. Add one to luria.toml:\n\n"
-              "  [luria.remotes.LU]\n  repo = \"owner/name\"\n\n"
+        print("luria remotes: none configured. Add one to luria.yaml:\n\n"
+              "  `remotes.LU`\n  repo = \"owner/name\"\n\n"
               "then cite it as `LU-ADR-013`.", file=sys.stderr)
         return
 

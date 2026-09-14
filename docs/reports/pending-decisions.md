@@ -5,7 +5,7 @@
 
 `Proposed` and `Deferred` both describe an open question. Neither says *since when*, and that is the signal: a decision proposed last week is pending; the same one a year later was either overdue or settled in code and never written back.
 
-**5 document(s) awaiting a decision.**
+**6 document(s) awaiting a decision.**
 
 | Open since | Status | Code | Cited | Unack. | Title |
 |---|---|---|--:|--:|---|
@@ -13,6 +13,7 @@
 | 2026-09-10 | Proposed | [ADR-092](../../record/decisions.d/ADR-092.md) | 0 | 0 | A derivation may follow a reference: one hop, against written frontmatter |
 | 2026-09-12 | Proposed | [ADR-094](../../record/decisions.d/ADR-094.md) | 0 | 0 | A cited document gets a page, and where a citation points is configurable |
 | 2026-09-12 | Proposed | [ADR-095](../../record/decisions.d/ADR-095.md) | 0 | 0 | An acknowledgement can carry its own deadline |
+| 2026-09-13 | Proposed | [ADR-tmp8hp25](../../record/decisions.d/ADR-tmp8hp25.md) | 23 | 1 | One config file, one format, vocabularies declared once |
 | 2026-09-13 | Proposed | [ADR-096](../../record/decisions.d/ADR-096.md) | 0 | 0 | A rate limit is an answer, not a reason to ask again |
 
 The citation count is the second axis, and it flips the priority: an old proposal nothing references is a stalled idea worth closing, while an old proposal many files cite is a decision the codebase has already made and hasn't written down.

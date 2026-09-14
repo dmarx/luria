@@ -333,10 +333,14 @@ def test_fixer_links_a_uid_remote_reference(tmp_path, monkeypatch):
     the reference machinery is shape-agnostic end to end (ADR-024)."""
     from luria import config
     (tmp_path / "docs").mkdir(parents=True)
-    (tmp_path / "luria.toml").write_text(
-        '[luria]\nissue_url = ""\n'
-        '[luria.remotes.ARXIV]\nuid = "\\\\d{4}[.]\\\\d{4,5}"\n'
-        'url = "https://arxiv.org/abs/{uid}"\n')
+    (tmp_path / "luria.yaml").write_text(
+        """
+        issue_url: ''
+        remotes:
+          ARXIV:
+            uid: \d{4}[.]\d{4,5}
+            url: https://arxiv.org/abs/{uid}
+        """)
     monkeypatch.setenv("LURIA_ROOT", str(tmp_path))
     config.reset()
     out, n = doc_refs.linkify("see ARXIV-2403.05530 for the details",

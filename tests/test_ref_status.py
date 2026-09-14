@@ -235,10 +235,15 @@ def test_a_second_scheme_needs_no_code_change(project):
     (project / "docs" / "rfcs").mkdir(parents=True)
     (project / "docs" / "rfcs" / "rfc-007-example.md").write_text(
         "---\nstatus: Rejected\ntags:\n- record\n---\n\n# RFC-007: A thing\n")
-    (project / "luria.toml").write_text(
-        '[luria]\nissue_url = ""\n'
-        '[luria.schemes.ADR]\ndir = "docs/decisions"\n'
-        '[luria.schemes.RFC]\ndir = "docs/rfcs"\n')
+    (project / "luria.yaml").write_text(
+        """
+        issue_url: ''
+        schemes:
+          ADR:
+            dir: docs/decisions
+          RFC:
+            dir: docs/rfcs
+        """)
     config.reset()
     docs = ref_status.load_docs()
     assert "RFC-007" in docs and not docs["RFC-007"].active

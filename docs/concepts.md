@@ -95,7 +95,7 @@ A finding is what propagation produces. Five matter most:
 | `inert-status` | a whole scheme at one status, so the field says nothing. |
 | `narrow-titles` | a title that claims to generalise while naming one subsystem. |
 
-Reported by default. Naming one in `[luria.lint] fail_on` promotes it to a
+Reported by default. Naming one in `lint.fail_on` promotes it to a
 build failure, per class, so a project can enforce what it cares about while
 it works through the rest.
 
@@ -114,7 +114,7 @@ reading: a guard nobody can answer is one people learn to skip.
 
 ## The four families
 
-Four kinds of table in `luria.toml`, and none of their names is in the code:
+Four kinds of table in `luria.yaml`, and none of their names is in the code:
 
 - **Schemes** — families of entries with codes (`ADR-012`, `RFC-7`). Either
   browsed one at a time through a generated index, or concatenated into a

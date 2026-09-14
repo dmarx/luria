@@ -162,7 +162,9 @@ def test_the_report_names_the_file_the_directive_and_the_date(tmp_path, monkeypa
     from luria import config, lint
     (tmp_path / "record" / "decisions.d").mkdir(parents=True)
     (tmp_path / "docs").mkdir()
-    (tmp_path / "luria.toml").write_text('[luria]\n')
+    (tmp_path / "luria.yaml").write_text("""
+                                         {}
+                                         """)
     (tmp_path / "docs" / "guide.md").write_text(
         "<!-- inactive-ok: ADR-012 until 2026-01-01 — circle back after the release -->\n"
         "as ADR-012 says\n")
@@ -183,7 +185,9 @@ def test_the_report_names_the_file_the_directive_and_the_date(tmp_path, monkeypa
 def test_a_live_directive_is_not_reported(tmp_path, monkeypatch):
     from luria import config, lint
     (tmp_path / "docs").mkdir(parents=True)
-    (tmp_path / "luria.toml").write_text('[luria]\n')
+    (tmp_path / "luria.yaml").write_text("""
+                                         {}
+                                         """)
     (tmp_path / "docs" / "guide.md").write_text(
         "<!-- inactive-ok: ADR-012 until 2026-10-01 — soon -->\nas ADR-012 says\n")
     monkeypatch.setenv("LURIA_ROOT", str(tmp_path))

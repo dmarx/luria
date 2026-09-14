@@ -9,6 +9,8 @@ something does.
 
 from __future__ import annotations
 
+from _config import merged
+
 from pathlib import Path
 
 from luria import config, edges, site
@@ -93,10 +95,10 @@ def test_a_code_in_any_other_status_note_is_not_an_edge(project):
 def test_a_foreign_successor_is_not_an_edge(project):
     """A remote's namespace is theirs (ADR-016); the graph has no node for
     it, so there is nothing for the edge to land on."""
-    (project / "luria.toml").write_text(
-        (project / "luria.toml").read_text()
-        + '[luria.remotes.LU]\nname = "luria"\nrepo = "dmarx/luria"\n'
-          'dir = "record/decisions.d"\n')
+    path_ = project / "luria.yaml"
+    path_.write_text(merged(path_.read_text(), {
+        "remotes": {"LU": {"name": "luria", "repo": "dmarx/luria",
+                           "dir": "record/decisions.d"}}}))
     config.reset()
     path = decision(project, 1, "Superseded", superseded_by=["LU-ADR-013"])
     assert edges.outbound(adr(path)) == []
@@ -114,15 +116,17 @@ def test_influenced_by_is_an_edge(project):
 
 
 def two_schemes(tmp_path, monkeypatch) -> Path:
-    write(tmp_path, "luria.toml", """
-[luria]
-issue_url = "https://example.test/issues/{n}"
-[luria.schemes.LIT]
-dir = "record/literature.d"
-[luria.schemes.SOTA]
-dir = "record/practices.d"
-[luria.schemes.SOTA.references]
-source = { scheme = "LIT" }
+    write(tmp_path, "luria.yaml", """
+luria:
+  issue_url: https://example.test/issues/{n}
+  schemes:
+    LIT:
+      dir: record/literature.d
+    SOTA:
+      dir: record/practices.d
+      references:
+        source:
+          scheme: LIT
 """)
     monkeypatch.setenv("LURIA_ROOT", str(tmp_path))
     config.reset()
@@ -220,14 +224,11 @@ def test_a_staged_page_carries_its_inbound_edges(project):
 # --- one edge per code in a plural reference ------------------------------
 
 def scenes(tmp_path, monkeypatch, many: bool = True) -> Path:
-    write(tmp_path, "luria.toml", f"""
-[luria]
-issue_url = "https://example.test/issues/{{n}}"
-[luria.schemes.SCENE]
-dir = "record/scenes.d"
-[luria.schemes.SCENE.references]
-follows = {{ scheme = "SCENE", many = {str(many).lower()} }}
-""")
+    write(tmp_path, "luria.yaml", merged(
+        {"issue_url": "https://example.test/issues/{n}",
+         "schemes": {"SCENE": {"dir": "record/scenes.d",
+                               "references": {"follows": {"scheme": "SCENE",
+                                                          "many": many}}}}}))
     monkeypatch.setenv("LURIA_ROOT", str(tmp_path))
     config.reset()
     for n in (1, 2):
@@ -258,17 +259,25 @@ def test_a_list_in_a_scalar_reference_yields_no_edge(tmp_path, monkeypatch):
 def converse_schemes(tmp_path, monkeypatch) -> Path:
     """Two schemes where the practice line declares its converse, which is
     what puts the same fact in both documents' frontmatter."""
-    write(tmp_path, "luria.toml", """
-[luria]
-issue_url = "https://example.test/issues/{n}"
-[luria.schemes.LIT]
-dir = "record/literature.d"
-[luria.schemes.SOTA]
-dir = "record/practices.d"
-[luria.schemes.SOTA.references]
-source      = { scheme = "LIT" }
-extends     = { scheme = "SOTA", many = true, converse = "extended_by" }
-extended_by = { scheme = "SOTA", many = true, converse = "extends" }
+    write(tmp_path, "luria.yaml", """
+luria:
+  issue_url: https://example.test/issues/{n}
+  schemes:
+    LIT:
+      dir: record/literature.d
+    SOTA:
+      dir: record/practices.d
+      references:
+        source:
+          scheme: LIT
+        extends:
+          scheme: SOTA
+          many: true
+          converse: extended_by
+        extended_by:
+          scheme: SOTA
+          many: true
+          converse: extends
 """)
     monkeypatch.setenv("LURIA_ROOT", str(tmp_path))
     config.reset()

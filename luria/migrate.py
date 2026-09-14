@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """`luria migrate` — execute a migration spec (ADR-040).
 
-    luria migrate 0001                  # run record/migrations.d/0001-*.toml
+    luria migrate 0001                  # run record/migrations.d/0001-*.yaml
     luria migrate 0001 --dry-run        # print the plan: mapping, moves, files
     luria migrate 0001 --commit         # run, commit, append blame-ignore
 
 A migration renames a scheme, or moves documents between schemes, without
-losing the record's memory. The spec is a TOML file in `record/migrations.d/`
+losing the record's memory. The spec is a YAML file in `record/migrations.d/`
 (`luria new migration` scaffolds one) — the executable plan and the audit
 trail in one artifact:
 
@@ -19,7 +19,7 @@ trail in one artifact:
     to = "NEW"
     output = "docs/guiding-principles.md"   # optional: the view moves too
     remotes = ["LU"]                        # remotes that mirror THIS project
-    configs = ["template/luria.toml"]       # extra config files to edit
+    configs = ["template/luria.yaml"]       # extra config files to edit
 
     [[operations]]
     op = "move_doc"
@@ -58,17 +58,22 @@ it is the one artifact whose job is to remember them.
 # unresolved-ok-file: DP-017 — a demonstration code in the comments below,
 # standing in for a moved document's old address
 
+# inactive-ok-file: ADR-tmp8hp25 — Proposed. Every mention names it as the decision
+# this module implements; the citation is to the reasoning, not a claim the
+# decision is settled.
+
 from __future__ import annotations
 
 import re
 import subprocess
 import sys
-import tomllib
+import yaml
 from dataclasses import dataclass, field
 from pathlib import Path
 
 from . import aliases as aliases_mod
 from . import doc_refs, new as new_mod, remotes
+from . import yaml_edit
 from .config import current, is_temp_tail
 
 MIGRATIONS_DIR = "record/migrations.d"
@@ -131,7 +136,14 @@ class Plan:
     # renamed, it is re-derived.
     removals: list[Path] = field(default_factory=list)
     # (file, old section header, new section header)
-    section_renames: list[tuple[Path, str, str]] = field(default_factory=list)
+    # (file, parent path, old key, new key). A TOML section header was
+    # fully qualified, so renaming one was a string replacement. A YAML key is
+    # not: `FXL:` appears under `schemes:` and again under every
+    # `remotes.<R>.schemes:`, and renaming this project's scheme must leave
+    # another project's mirror alone — so the path comes with the key
+    # (ADR-tmp8hp25).
+    section_renames: list[tuple[Path, tuple[str, ...], str, str]] = \
+        field(default_factory=list)
     # Config files that get the section-aware path pass instead of the
     # blanket path sweep — a remote's `document =` line spells *its* path.
     config_files: list[Path] = field(default_factory=list)
@@ -175,13 +187,13 @@ def _spec_path(ref: str) -> Path:
     if direct.exists():
         return direct.resolve()
     mig_dir = cfg.root / MIGRATIONS_DIR
-    for candidate in (mig_dir / ref, mig_dir / f"{ref}.toml"):
+    for candidate in (mig_dir / ref, mig_dir / f"{ref}.yaml"):
         if candidate.exists():
             return candidate
-    matches = sorted(mig_dir.glob(f"{ref}*.toml")) if mig_dir.exists() else []
+    matches = sorted(mig_dir.glob(f"{ref}*.yaml")) if mig_dir.exists() else []
     if len(matches) == 1:
         return matches[0]
-    have = ", ".join(p.name for p in sorted(mig_dir.glob("*.toml"))) \
+    have = ", ".join(p.name for p in sorted(mig_dir.glob("*.yaml"))) \
         if mig_dir.exists() else "none"
     raise SystemExit(f"luria migrate: no spec matches {ref!r} in "
                      f"{MIGRATIONS_DIR}/ (have: {have})")
@@ -202,7 +214,7 @@ def _plan_rename(plan: Plan, op: dict) -> None:
         if target is None:
             raise SystemExit("luria migrate: strategy=\"supersede\" copies "
                              f"into an existing scheme — add {new_prefix!r} "
-                             "to luria.toml first")
+                             "to luria.yaml first")
         for number, path in docs.items():
             new_code, old_code = target.code(number), scheme.code(number)
             plan.copies.append((path, target.dir / target.filename(number),
@@ -225,7 +237,7 @@ def _plan_rename(plan: Plan, op: dict) -> None:
             plan.pin_moves.append(
                 (remote_prefix.upper(), old_code, new_code))
 
-    configs = [cfg.root / "luria.toml"] + \
+    configs = [cfg.root / "luria.yaml"] + \
         [cfg.root / c for c in op.get("configs", [])]
     plan.claimed_remotes += [r.upper() for r in op.get("remotes", [])]
     for config_file in configs:
@@ -233,13 +245,11 @@ def _plan_rename(plan: Plan, op: dict) -> None:
             raise SystemExit(f"luria migrate: {config_file} not found")
         plan.config_files.append(config_file)
         plan.section_renames.append(
-            (config_file, f"[luria.schemes.{old_prefix}]",
-             f"[luria.schemes.{new_prefix}]"))
+            (config_file, ("schemes",), old_prefix, new_prefix))
         for remote_prefix in op.get("remotes", []):
             plan.section_renames.append(
-                (config_file,
-                 f"[luria.remotes.{remote_prefix}.schemes.{old_prefix}]",
-                 f"[luria.remotes.{remote_prefix}.schemes.{new_prefix}]"))
+                (config_file, ("remotes", remote_prefix, "schemes"),
+                 old_prefix, new_prefix))
 
     if op.get("output") and scheme.output:
         old_rel = cfg.rel(scheme.output)
@@ -481,24 +491,50 @@ def sweep_text(text: str, plan: Plan, paths: bool = True,
     return text, count
 
 
-SECTION_RE = re.compile(r"^\s*\[([^\]]+)\]\s*(?:#.*)?$")
+
+def rename_key_at(text: str, path: tuple[str, ...], old: str, new: str) -> str:
+    """Rename one mapping key, and only where it sits under `path`.
+
+    Round-tripped rather than swept: `remotes.ARXIV` and `schemes.ARXIV` are
+    the same six characters in the text and two different places in the
+    document, and only a parser tells them apart. The round trip is
+    ruamel's, so the comments a person wrote in their config survive a
+    migration that was asked to rename a key (ADR-tmp8hp25)."""
+    data = yaml_edit.load(text)
+    node = yaml_edit.at(data, path)
+    # A family's table, not a setting that happens to share its name: the
+    # value is the block the rename is about, or nothing yet.
+    if node is None or not isinstance(node.get(old, False), (dict, type(None))):
+        return text
+    return yaml_edit.dump(data) if yaml_edit.rename_key(data, path, old, new) else text
 
 
 def config_paths_pass(text: str, plan: Plan) -> str:
-    """Path pairs in a config file, section-aware: a remote's `document =`
+    """Path pairs in a config file, section-aware: a remote's `document:`
     line spells *that project's* path, which only moves if the spec claimed
     the remote via `remotes = [...]`. Everything outside unclaimed remote
-    sections — the scheme's `output`, the `[luria.paths]` values, comments —
-    follows the rename."""
+    sections — the scheme's `output`, the `paths` values, comments —
+    follows the rename.
+
+    Which lines are whose comes from the parser rather than from counting
+    indentation, because the enclosing mapping is what decides whose path a
+    line spells and the parser is the thing that knows it. The rewrite is
+    still textual: a rename reaches into comments and into the middle of
+    string values, and neither is a node to reassign (ADR-tmp8hp25)."""
+    lines = text.splitlines(keepends=True)
+    data = yaml_edit.load(text)
+    frozen: set[int] = set()
+    for at in (("remotes",), ("luria", "remotes")):
+        for name in yaml_edit.at(data, at) or {}:
+            if str(name).upper() in plan.claimed_remotes:
+                continue
+            where = yaml_edit.span(data, at + (str(name),))
+            if where:
+                start, stop = where
+                frozen.update(range(start, len(lines) if stop is None else stop))
     out = []
-    section = ""
-    for line in text.splitlines(keepends=True):
-        if m := SECTION_RE.match(line):
-            section = m.group(1)
-        frozen = False
-        if m2 := re.match(r"(?:luria\.)?remotes\.([A-Za-z0-9]+)", section):
-            frozen = m2.group(1).upper() not in plan.claimed_remotes
-        if not frozen:
+    for i, line in enumerate(lines):
+        if i not in frozen:
             for old, new in plan.path_pairs:
                 line = line.replace(old, new)
         out.append(line)
@@ -551,10 +587,11 @@ def apply(plan: Plan) -> tuple[int, int]:
         source.write_text(
             statuses.set_status(text, "Superseded", superseded_by=[new_code]),
             encoding="utf-8")
-    for config_file, old_header, new_header in plan.section_renames:
+    for config_file, path, old_key, new_key in plan.section_renames:
         text = config_file.read_text(encoding="utf-8")
-        if old_header in text:
-            config_file.write_text(text.replace(old_header, new_header), encoding="utf-8")
+        renamed = rename_key_at(text, path, old_key, new_key)
+        if renamed != text:
+            config_file.write_text(renamed, encoding="utf-8")
     for config_file in plan.config_files:
         config_file.write_text(
             config_paths_pass(config_file.read_text(encoding="utf-8"), plan), encoding="utf-8")
@@ -659,7 +696,9 @@ def describe(plan: Plan) -> list[str]:
         lines.append(f"  copy {current().rel(source)} -> "
                      f"{current().rel(new_path)}  ({old_code} superseded "
                      f"by {new_code})")
-    for config_file, old_header, new_header in plan.section_renames:
+    for config_file, path, old_key, new_key in plan.section_renames:
+        old_header = ".".join((*path, old_key))
+        new_header = ".".join((*path, new_key))
         lines.append(f"  {current().rel(config_file)}: {old_header} -> "
                      f"{new_header}")
     return lines
@@ -677,7 +716,7 @@ def run(spec: str, dry_run: bool = False, commit: bool = False) -> None:
     path, filename or leading number). --dry-run prints the plan; --commit
     commits the result and appends it to .git-blame-ignore-revs."""
     spec_path = _spec_path(str(spec))
-    parsed = tomllib.loads(spec_path.read_text(encoding="utf-8"))
+    parsed = yaml.safe_load(spec_path.read_text(encoding="utf-8")) or {}
     title = parsed.get("title") or spec_path.stem
     plan = build_plan(parsed, title)
 

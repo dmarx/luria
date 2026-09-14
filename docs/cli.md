@@ -7,7 +7,7 @@ One binary, `luria`, dispatching to plain functions. Every command takes
 | command | one line |
 |---|---|
 | [`luria init`](#luria-init) | scaffold a record into a repository |
-| [`luria config`](#luria-config) | write a starting `luria.toml`, without scaffolding |
+| [`luria config`](#luria-config) | write a starting `luria.yaml`, without scaffolding |
 | [`luria new`](#luria-new) | file a new entry of any configured kind |
 | [`luria repair`](#luria-repair) | write every mechanical source repair |
 | [`luria index`](#luria-index) | render every generated view |
@@ -29,15 +29,15 @@ luria init [INTO] [--issue-url URL] [--schemes S] [--journals J]
 
 Scaffolds the default record — templates, stubs, tag vocabulary, principle
 seeds, a docs index, a `CLAUDE.md`, and CI workflows — into `INTO`
-(default: the project root, found via `luria.toml`, then `.git`).
+(default: the project root, found via `luria.yaml`, then `.git`).
 
 - Existing files are **always skipped**, never overwritten; each is
   reported. Re-running on a grown project is safe.
-- `--issue-url` seeds `issue_url` in the scaffolded `luria.toml`; append
+- `--issue-url` seeds `issue_url` in the scaffolded `luria.yaml`; append
   `{n}` yourself or let init place it. **Left out, it is inferred from the
   `origin` remote** — `git@github.com:acme/widgets.git` becomes
   `https://github.com/acme/widgets/issues/{n}`, and init says so as it goes.
-  That one value also gives `[luria.site]` its title, its Pages URL and the
+  That one value also gives `site` its title, its Pages URL and the
   base a link falls back to, so a repository with a remote needs no
   configuration at all. GitHub and GitLab are recognised; any other host
   infers nothing, because a wrong issue URL renders a broken link on every
@@ -60,9 +60,9 @@ seeds, a docs index, a `CLAUDE.md`, and CI workflows — into `INTO`
   like every other project's. It is additive — the template's own ADR and DP
   tables stay, which is what keeps them alive given that a declared family
   replaces the shipped one whole. Removing a default means deleting a table.
-- `--config FILE` scaffolds from your own `luria.toml` instead of the
+- `--config FILE` scaffolds from your own `luria.yaml` instead of the
   shipped one — this is how you init a record with no ADR scheme at all,
-  rather than one with an extra family. Refused if a `luria.toml` already
+  rather than one with an extra family. Refused if a `luria.yaml` already
   exists (merge by hand instead), as are `--schemes`/`--journals`: where a
   config exists the shape is declared, and a flag should not edit it.
 - `--dry-run` prints the plan and writes nothing.
@@ -73,7 +73,7 @@ seeds, a docs index, a `CLAUDE.md`, and CI workflows — into `INTO`
 luria config [INTO] [--schemes S] [--journals J] [--issue-url URL] [--stdout]
 ```
 
-Writes the `luria.toml` that `luria init` would have written, and stops.
+Writes the `luria.yaml` that `luria init` would have written, and stops.
 
 The shorthand covers the two things projects usually vary. A project that also
 wants a different directory, a narrowed status vocabulary or a tag group has to
@@ -82,10 +82,10 @@ the first run already created. This is the order that avoids that:
 
 ```console
 $ luria config --schemes "RFC,SPEC:document"
-luria.toml
+luria.yaml
 
 Edit it, then `luria init` to scaffold the shape it declares.
-$ $EDITOR luria.toml
+$ $EDITOR luria.yaml
 $ luria init
 ```
 
@@ -102,7 +102,7 @@ luria new [KIND] [--title T] [--status S] [--summary S] [--tags a,b] [--name N]
 ```
 
 Files one new entry and prints its path. `KIND` is any name the project's
-`luria.toml` gives the machinery, lower-cased:
+`luria.yaml` gives the machinery, lower-cased:
 
 - a **scheme** prefix (`adr`, `rfc`, …) — scaffolds the next document from
   the scheme's `_template.md`, with the number allocated (or a temporary
@@ -182,11 +182,22 @@ frontmatter (except designated prose fields) are left alone.
 **Back-references.** A reference field may declare its `converse` — the
 field holding the same relation read backwards:
 
-```toml
-[luria.schemes.LIT.references]
-extends          = { scheme = "LIT", many = true, converse = "extended_by" }
-extended_by      = { scheme = "LIT", many = true, converse = "extends" }
-compared_against = { scheme = "LIT", many = true, converse = "compared_against" }
+```yaml
+schemes:
+  LIT:
+    references:
+      extends:
+        scheme: LIT
+        many: true
+        converse: extended_by
+      extended_by:
+        scheme: LIT
+        many: true
+        converse: extends
+      compared_against:
+        scheme: LIT
+        many: true
+        converse: compared_against
 ```
 
 A relation naming *itself* is what symmetry is, so there is one rule and
@@ -277,7 +288,7 @@ full in the [reports](reports/reference-status.md):
 `narrow-titles` · `stale-directives` · `pending-documents` ·
 `unlinted-files` · `workflow-temp-codes`
 
-Any of those class names listed in `[luria.lint] fail_on` fails the build
+Any of those class names listed in `lint.fail_on` fails the build
 instead. Only unacknowledged findings ever reach a class, so
 acknowledgements keep working under enforcement.
 
@@ -369,7 +380,7 @@ prefers (`AdamW: Decoupled Weight Decay Regularization`), a subtitle
 trimmed, a v1 title that changed between versions.
 
 The lockfile is a cache with an endorsement in it, not the boundary of what
-may be known, and `[luria.lint] network` says how far the lint may go:
+may be known, and `lint.network` says how far the lint may go:
 
 | | |
 |---|---|
@@ -390,14 +401,16 @@ A remote declares how to ask, for the same reason `pin_url` is declared
 rather than derived — only the project can vouch that a URL serves metadata
 worth trusting:
 
-```toml
-[luria.remotes.ARXIV]
-uris.title = "https://export.arxiv.org/api/query?id_list={1}.{2}"
-title_re   = "<entry>.*?<title>(.*?)</title>"
-
-[luria.remotes.DOI]
-uris.title = "https://api.crossref.org/works/{uid}"
-title_re   = '"title":\s*\[\s*"(.*?)"'
+```yaml
+remotes:
+  ARXIV:
+    uris:
+      title: https://export.arxiv.org/api/query?id_list={1}.{2}
+    title_re: <entry>.*?<title>(.*?)</title>
+  DOI:
+    uris:
+      title: https://api.crossref.org/works/{uid}
+    title_re: '"title":\s*\[\s*"(.*?)"'
 ```
 
 `title_re`'s first capture group is the title, matched with `re.DOTALL`. A
@@ -413,7 +426,7 @@ identical content, and a hash of it would cry wolf. Without either, the
 command says so rather than storing a hash that would drift on its own.
 Under the hood these are two entries in one table: a code relates to a
 set of *named URIs* (`read`, `bytes`, and any name a project declares in
-`[luria.remotes.X.uris]`), each a template over one vocabulary — see the
+`remotes.X.uris`), each a template over one vocabulary — see the
 [configuration reference](configuration.md).
 
 An arbitrary URL — a spec, a dataset card, a post the design leans on —
@@ -457,7 +470,7 @@ working), a `record line` (status · version · filed · issue · influenced
 by · the typed edges in and out of it) injected under each document's
 title, codes registered as aliases,
 README as the landing page, links to unpublished files redirected to the
-repository, and the theme/branding from `[luria.site]` rendered into
+repository, and the theme/branding from `site` rendered into
 Quartz config. The published site gets search, backlinks, and a local
 graph per page. The `actions/site` composite action builds the staged
 vault with a pinned Quartz for GitHub Pages — see [adopting](adopting.md).

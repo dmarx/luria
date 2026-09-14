@@ -8,7 +8,13 @@ same; what changes is that there is one place to ask "what does this scheme
 demand, and why?"
 """
 
+# inactive-ok-file: ADR-tmp8hp25 — Proposed. Every mention names it as the
+# decision this file implements or is written against; the citation is to the
+# reasoning, not a claim the decision is settled.
+
 from __future__ import annotations
+
+from _config import merged
 
 from pathlib import Path
 
@@ -35,18 +41,15 @@ def doc(root: Path, rel: str, *, code: str, tags: list[str],
     return write(root, rel, "\n".join(front) + "\n")
 
 
-def project(tmp_path, monkeypatch, sota_extra: str = "") -> Path:
-    write(tmp_path, "luria.toml", f"""
-[luria]
-issue_url = "https://example.test/issues/{{n}}"
-
-[luria.schemes.LIT]
-dir = "record/literature.d"
-
-[luria.schemes.SOTA]
-dir = "record/practices.d"
-{sota_extra}
-""")
+def project(tmp_path, monkeypatch, sota_extra: str | dict = "") -> Path:
+    write(tmp_path, "luria.yaml", merged("""
+                                  issue_url: https://example.test/issues/{n}
+                                  schemes:
+                                    LIT:
+                                      dir: record/literature.d
+                                    SOTA:
+                                      dir: record/practices.d
+                                  """, sota_extra))
     monkeypatch.setenv("LURIA_ROOT", str(tmp_path))
     config.reset()
     return tmp_path
@@ -71,7 +74,8 @@ def test_a_scheme_declaring_nothing_has_an_empty_contract(tmp_path, monkeypatch)
 
 
 def test_requires_compiles_to_a_required_untyped_field(tmp_path, monkeypatch):
-    project(tmp_path, monkeypatch, 'requires = ["arxiv"]')
+    project(tmp_path, monkeypatch,
+            {"schemes": {"SOTA": {"requires": ["arxiv"]}}})
     field, = declared(sota())
     assert field.name == "arxiv"
     assert field.required and field.reference is None
@@ -79,7 +83,13 @@ def test_requires_compiles_to_a_required_untyped_field(tmp_path, monkeypatch):
 
 def test_a_reference_compiles_to_a_typed_field(tmp_path, monkeypatch):
     project(tmp_path, monkeypatch,
-            '[luria.schemes.SOTA.references]\nsource = { scheme = "LIT" }')
+            """
+            schemes:
+              SOTA:
+                references:
+                  source:
+                    scheme: LIT
+            """)
     field, = declared(sota())
     assert field.name == "source"
     assert field.required and field.reference == "LIT"
@@ -87,8 +97,14 @@ def test_a_reference_compiles_to_a_typed_field(tmp_path, monkeypatch):
 
 def test_an_optional_reference_is_typed_but_not_required(tmp_path, monkeypatch):
     project(tmp_path, monkeypatch,
-            '[luria.schemes.SOTA.references]\n'
-            'source = { scheme = "LIT", required = false }')
+            """
+            schemes:
+              SOTA:
+                references:
+                  source:
+                    scheme: LIT
+                    required: false
+            """)
     field, = declared(sota())
     assert not field.required and field.reference == "LIT"
 
@@ -99,8 +115,15 @@ def test_a_field_in_both_tables_is_one_obligation(tmp_path, monkeypatch):
     and required is required, and the reference supplies the type. One
     obligation, carrying both declarations as its provenance."""
     project(tmp_path, monkeypatch,
-            'requires = ["source"]\n'
-            '[luria.schemes.SOTA.references]\nsource = { scheme = "LIT" }')
+            """
+            schemes:
+              SOTA:
+                requires:
+                - source
+                references:
+                  source:
+                    scheme: LIT
+            """)
     field, = declared(sota())
     assert field.required and field.reference == "LIT"
     assert len(field.because) == 2
@@ -108,14 +131,31 @@ def test_a_field_in_both_tables_is_one_obligation(tmp_path, monkeypatch):
 
 def test_every_obligation_says_where_it_was_declared(tmp_path, monkeypatch):
     project(tmp_path, monkeypatch,
-            'requires = ["arxiv"]\n'
-            '[luria.schemes.SOTA.references]\nsource = { scheme = "LIT" }\n'
-            '[luria.schemes.SOTA.tag_groups.axis]\n'
-            'tags = ["a", "b"]\nrequire = "exactly-one"')
+            """
+            schemes:
+              SOTA:
+                requires:
+                - arxiv
+                references:
+                  source:
+                    scheme: LIT
+                axis: tags
+                fields:
+                  tags:
+                    many: true
+                    groups:
+                      axis:
+                        tags:
+                        - a
+                        - b
+                        require: exactly-one
+            """)
     c = sota()
-    assert {f.name for f in declared(c)} == {"arxiv", "source"}
+    # `tags` is in the contract now: it is a declared field like any
+    # other since ADR-tmp8hp25, rather than an axis the code assumed.
+    assert {f.name for f in declared(c)} == {"arxiv", "source", "tags"}
     for field in declared(c):
-        assert field.because and all("luria.toml" in b for b in field.because)
+        assert field.because and all("luria.yaml" in b for b in field.because)
     group, = c.groups
     assert group.name == "axis"
 
@@ -124,11 +164,25 @@ def test_every_obligation_says_where_it_was_declared(tmp_path, monkeypatch):
 
 def test_one_pass_reports_fields_and_groups_together(tmp_path, monkeypatch):
     root = project(tmp_path, monkeypatch,
-                   'requires = ["arxiv"]\n'
-                   '[luria.schemes.SOTA.references]\n'
-                   'source = { scheme = "LIT" }\n'
-                   '[luria.schemes.SOTA.tag_groups.axis]\n'
-                   'tags = ["a", "b"]\nrequire = "exactly-one"')
+                   """
+                   schemes:
+                     SOTA:
+                       requires:
+                       - arxiv
+                       references:
+                         source:
+                           scheme: LIT
+                       axis: tags
+                       fields:
+                         tags:
+                           many: true
+                           groups:
+                             axis:
+                               tags:
+                               - a
+                               - b
+                               require: exactly-one
+                   """)
     doc(root, "record/practices.d/SOTA-001.md", code="SOTA-001",
         tags=["a", "b"], extra="source: ADR-001")
     errors: list[str] = []
@@ -142,9 +196,15 @@ def test_one_pass_reports_fields_and_groups_together(tmp_path, monkeypatch):
 
 def test_a_doubly_declared_missing_field_is_reported_once(tmp_path, monkeypatch):
     root = project(tmp_path, monkeypatch,
-                   'requires = ["source"]\n'
-                   '[luria.schemes.SOTA.references]\n'
-                   'source = { scheme = "LIT" }')
+                   """
+                   schemes:
+                     SOTA:
+                       requires:
+                       - source
+                       references:
+                         source:
+                           scheme: LIT
+                   """)
     doc(root, "record/practices.d/SOTA-001.md", code="SOTA-001", tags=[])
     errors: list[str] = []
     lint.check_contracts(errors)
@@ -154,9 +214,13 @@ def test_a_doubly_declared_missing_field_is_reported_once(tmp_path, monkeypatch)
 
 def test_a_satisfied_contract_is_silent(tmp_path, monkeypatch):
     root = project(tmp_path, monkeypatch,
-                   'requires = ["arxiv"]\n'
-                   '[luria.schemes.SOTA.references]\n'
-                   'source = { scheme = "LIT" }')
+                   """
+                   schemes:
+                     SOTA:
+                       references:
+                         source:
+                           scheme: LIT
+                   """)
     doc(root, "record/literature.d/LIT-001.md", code="LIT-001", tags=[])
     doc(root, "record/practices.d/SOTA-001.md", code="SOTA-001", tags=[],
         extra="source: LIT-001\narxiv: '2301.00001'")
@@ -170,14 +234,17 @@ def test_the_shipped_record_is_clean_through_the_contract():
     and nothing else, so the pass still finds nothing to report on it.
 
     `empty` stopped being true here when `status:` became a field a scheme
-    declares rather than one the code assumes. That is the change working:
-    the record page lists the five words and cites `statuses.yaml`, where
-    before it said "nothing beyond the standard fields" and the words were
-    not readable from the record at all."""
+    declares rather than one the code assumes, and again when `tags:` did
+    (ADR-tmp8hp25). That is the change working twice: the record page lists
+    both vocabularies and cites where each is declared, where before it said
+    "nothing beyond the standard fields" and neither was readable from the
+    record at all."""
     for scheme in config.current().schemes.values():
         declared = [f.name for f in contract.for_scheme(scheme).fields
                     if not f.builtin]
-        assert declared == ["status"], (scheme.prefix, declared)
+        # ADR declares its tag axis; DP renders as one document and has none.
+        assert declared in (["status"], ["status", "tags"]), \
+            (scheme.prefix, declared)
     errors: list[str] = []
     lint.check_contracts(errors)
     assert errors == []
@@ -187,26 +254,38 @@ def test_the_shipped_record_is_clean_through_the_contract():
 
 def test_a_finding_names_the_key_that_declared_the_obligation(tmp_path, monkeypatch):
     """Not just the file: the key. When a second authoring surface exists,
-    "luria.toml" alone would send the reader to the wrong table."""
+    "luria.yaml" alone would send the reader to the wrong table."""
     root = project(tmp_path, monkeypatch,
-                   'requires = ["arxiv"]\n'
-                   '[luria.schemes.SOTA.references]\n'
-                   'source = { scheme = "LIT" }')
+                   """
+                   schemes:
+                     SOTA:
+                       requires:
+                       - arxiv
+                       references:
+                         source:
+                           scheme: LIT
+                   """)
     doc(root, "record/practices.d/SOTA-001.md", code="SOTA-001", tags=[],
         extra="source: ADR-001")
     errors: list[str] = []
     lint.check_contracts(errors)
-    assert any("(luria.toml: schemes.SOTA.requires)" in e for e in errors), errors
+    assert any("(luria.yaml: schemes.SOTA.requires)" in e for e in errors), errors
     assert any("is not a LIT code" in e
-               and "(luria.toml: schemes.SOTA.references.source)" in e
+               and "(luria.yaml: schemes.SOTA.references.source)" in e
                for e in errors), errors
 
 
 def test_a_merged_obligation_names_both_keys(tmp_path, monkeypatch):
     root = project(tmp_path, monkeypatch,
-                   'requires = ["source"]\n'
-                   '[luria.schemes.SOTA.references]\n'
-                   'source = { scheme = "LIT" }')
+                   """
+                   schemes:
+                     SOTA:
+                       requires:
+                       - source
+                       references:
+                         source:
+                           scheme: LIT
+                   """)
     doc(root, "record/practices.d/SOTA-001.md", code="SOTA-001", tags=[])
     errors: list[str] = []
     lint.check_contracts(errors)
@@ -216,25 +295,55 @@ def test_a_merged_obligation_names_both_keys(tmp_path, monkeypatch):
 
 def test_a_group_finding_names_its_key_and_derived_membership(tmp_path, monkeypatch):
     root = project(tmp_path, monkeypatch,
-                   '[luria.schemes.SOTA.tag_groups.axis]\n'
-                   'tags = ["a", "b"]\nrequire = "exactly-one"')
+                   """
+                   schemes:
+                     SOTA:
+                       axis: tags
+                       fields:
+                         tags:
+                           many: true
+                           groups:
+                             axis:
+                               tags:
+                               - a
+                               - b
+                               require: exactly-one
+                   """)
     doc(root, "record/practices.d/SOTA-001.md", code="SOTA-001", tags=[])
     errors: list[str] = []
     lint.check_contracts(errors)
     e, = errors
-    assert "(luria.toml: schemes.SOTA.tag_groups.axis)" in e
+    assert "(luria.yaml: schemes.SOTA.fields.tags.groups.axis)" in e
 
 
 def test_describe_is_one_renderer_for_the_whole_contract(tmp_path, monkeypatch):
     """What the record page prints and what a finding cites are the same
     words from the same place, so they cannot drift apart (DP-4)."""
     project(tmp_path, monkeypatch,
-            'requires = ["arxiv"]\n'
-            '[luria.schemes.SOTA.references]\n'
-            'source = { scheme = "LIT" }\n'
-            'cites = { scheme = "LIT", required = false }\n'
-            '[luria.schemes.SOTA.tag_groups.axis]\n'
-            'tags = ["a", "b"]\nrequire = "exactly-one"\nexcluded_by = ["z"]')
+            """
+            schemes:
+              SOTA:
+                requires:
+                - arxiv
+                references:
+                  source:
+                    scheme: LIT
+                  cites:
+                    scheme: LIT
+                    required: false
+                axis: tags
+                fields:
+                  tags:
+                    many: true
+                    groups:
+                      axis:
+                        tags:
+                        - a
+                        - b
+                        require: exactly-one
+                        excluded_by:
+                        - z
+            """)
     lines = contract.describe(sota())
     text = "\n".join(lines)
     assert "`arxiv`" in text and "required" in text
@@ -242,9 +351,13 @@ def test_describe_is_one_renderer_for_the_whole_contract(tmp_path, monkeypatch):
     assert "`cites`" in text and "optional" in text
     assert "`axis`" in text and "exactly one of `a`, `b`" in text and "`z`" in text
     for key in ("schemes.SOTA.requires", "schemes.SOTA.references.source",
-                "schemes.SOTA.references.cites", "schemes.SOTA.tag_groups.axis"):
+                "schemes.SOTA.references.cites",
+                 "schemes.SOTA.fields.tags.groups.axis"):
         assert key in text, key
-    assert len(lines) == 4
+    # arxiv, source, cites, tags, and the group on tags: the axis field is
+    # one of the contract's own lines now (ADR-tmp8hp25).
+    assert "`tags`" in text
+    assert len(lines) == 5
 
 
 def test_describe_of_an_empty_contract_is_empty(tmp_path, monkeypatch):
@@ -254,15 +367,17 @@ def test_describe_of_an_empty_contract_is_empty(tmp_path, monkeypatch):
 
 # --- one code or many (#141, the world-building record's report) ---------
 
-def scenes(tmp_path, monkeypatch, many: str = "many = true") -> Path:
-    write(tmp_path, "luria.toml", f"""
-[luria]
-issue_url = "https://example.test/issues/{{n}}"
-[luria.schemes.SCENE]
-dir = "record/scenes.d"
-[luria.schemes.SCENE.references]
-follows = {{ scheme = "SCENE", {many} }}
-""")
+def scenes(tmp_path, monkeypatch, many: bool | None = True,
+           required: bool | None = None) -> Path:
+    follows: dict = {"scheme": "SCENE"}
+    if many is not None:
+        follows["many"] = many
+    if required is not None:
+        follows["required"] = required
+    write(tmp_path, "luria.yaml", merged(
+        {"issue_url": "https://example.test/issues/{n}",
+         "schemes": {"SCENE": {"dir": "record/scenes.d",
+                               "references": {"follows": follows}}}}))
     monkeypatch.setenv("LURIA_ROOT", str(tmp_path))
     config.reset()
     for n in (1, 2):
@@ -293,7 +408,7 @@ def test_a_reference_declares_whether_it_holds_one_code_or_many(tmp_path, monkey
 
 
 def test_the_default_is_one(tmp_path, monkeypatch):
-    scenes(tmp_path, monkeypatch, many="required = true")
+    scenes(tmp_path, monkeypatch, many=None, required=True)
     ref, = config.current().schemes["SCENE"].references
     assert not ref.many
 
@@ -302,7 +417,7 @@ def test_a_list_where_one_code_was_declared_is_a_finding(tmp_path, monkeypatch):
     """The reported defect: a list was stringified, its first code checked
     and the rest ignored, silently. Structured input coerced to prose and
     half-read is worse than no support at all."""
-    root = scenes(tmp_path, monkeypatch, many="required = true")
+    root = scenes(tmp_path, monkeypatch, many=None, required=True)
     scene(root, "follows:\n- SCENE-001\n- SCENE-999")
     e, = findings()
     assert "`follows:` holds 2 values" in e and "one SCENE reference" in e
@@ -327,14 +442,14 @@ def test_a_plural_reference_that_resolves_is_silent(tmp_path, monkeypatch):
 
 
 def test_a_required_plural_reference_may_not_be_empty(tmp_path, monkeypatch):
-    root = scenes(tmp_path, monkeypatch, many="many = true, required = true")
+    root = scenes(tmp_path, monkeypatch, many=True, required=True)
     scene(root, "follows: []")
     e, = findings()
     assert "no `follows:`" in e
 
 
 def test_an_optional_plural_reference_may_be_empty_or_absent(tmp_path, monkeypatch):
-    root = scenes(tmp_path, monkeypatch, many="many = true, required = false")
+    root = scenes(tmp_path, monkeypatch, many=True, required=False)
     scene(root, "follows: []")
     assert findings() == []
     scene(root, "")
@@ -358,15 +473,15 @@ def test_describe_says_one_or_many(tmp_path, monkeypatch):
 
 # --- one of several fields (#144 review) ---------------------------------
 
-def papers(tmp_path, monkeypatch, group: str = 'fields = ["arxiv", "doi", "url"]') -> Path:
-    write(tmp_path, "luria.toml", f"""
-[luria]
-issue_url = "https://example.test/issues/{{n}}"
-[luria.schemes.LIT]
-dir = "record/literature.d"
-[luria.schemes.LIT.field_groups.source]
-{group}
-""")
+def papers(tmp_path, monkeypatch, group: dict | None = None) -> Path:
+    group = {"fields": ["arxiv", "doi", "url"]} if group is None else group
+    write(tmp_path, "luria.yaml", merged("""
+                                  issue_url: https://example.test/issues/{n}
+                                  schemes:
+                                    LIT:
+                                      dir: record/literature.d
+                                  """,
+        {"schemes": {"LIT": {"field_groups": {"source": group}}}}))
     monkeypatch.setenv("LURIA_ROOT", str(tmp_path))
     config.reset()
     return tmp_path
@@ -405,7 +520,7 @@ def test_none_of_the_fields_is_a_finding_that_names_them_all(tmp_path, monkeypat
     paper(root)
     e, = lit_findings()
     assert "no `source`" in e and "one of `arxiv:`, `doi:`, `url:`" in e
-    assert "(luria.toml: schemes.LIT.field_groups.source)" in e
+    assert "(luria.yaml: schemes.LIT.field_groups.source)" in e
 
 
 def test_an_empty_field_does_not_count(tmp_path, monkeypatch):
@@ -416,22 +531,22 @@ def test_an_empty_field_does_not_count(tmp_path, monkeypatch):
 
 def test_exactly_one_and_at_most_one_are_rules_too(tmp_path, monkeypatch):
     root = papers(tmp_path, monkeypatch,
-                  'fields = ["arxiv", "doi"]\nrequire = "exactly-one"')
+                  {"fields": ["arxiv", "doi"], "require": "exactly-one"})
     paper(root, "arxiv: '1'\ndoi: '2'")
     e, = lit_findings()
     assert "exactly one of" in e and "has `arxiv:`, `doi:`" in e
     root = papers(tmp_path, monkeypatch,
-                  'fields = ["arxiv", "doi"]\nrequire = "at-most-one"')
+                  {"fields": ["arxiv", "doi"], "require": "at-most-one"})
     paper(root)
     assert lit_findings() == []
 
 
 def test_a_group_with_no_fields_or_a_bad_rule_is_a_config_error(tmp_path, monkeypatch):
-    papers(tmp_path, monkeypatch, "fields = []")
+    papers(tmp_path, monkeypatch, {"fields": []})
     with pytest.raises(ValueError, match="lists no fields"):
         config.current()
     config.reset()
-    papers(tmp_path, monkeypatch, 'fields = ["arxiv"]\nrequire = "one"')
+    papers(tmp_path, monkeypatch, {"fields": ["arxiv"], "require": "one"})
     with pytest.raises(ValueError, match="require = 'one'"):
         config.current()
 
@@ -445,16 +560,16 @@ def test_describe_lists_the_group_with_its_provenance(tmp_path, monkeypatch):
 
 # --- remote codes in reference fields --------------------------------------
 
-REMOTES = '''
-[luria.remotes.ARXIV]
-uid = "(\\\\d{4})[.:](\\\\d{4,5})"
-url = "https://arxiv.org/abs/{1}.{2}"
-
-[luria.remotes.DOI]
-uid = "10\\\\.\\\\d{4,9}/[^\\\\s\\\\]\\\\)>,;]+"
-delim = ":"
-url = "https://doi.org/{uid}"
-'''
+REMOTES = """
+remotes:
+  ARXIV:
+    uid: (\d{4})[.:](\d{4,5})
+    url: https://arxiv.org/abs/{1}.{2}
+  DOI:
+    uid: 10\.\d{4,9}/[^\s\]\)>,;]+
+    delim: ':'
+    url: https://doi.org/{uid}
+"""
 
 
 def test_a_remote_code_is_read_whole(tmp_path, monkeypatch):

@@ -8,13 +8,13 @@ finding about a form nobody filed. `Scheme.is_template` says as much —
 
 The cost of that exemption is that the template became the only file in the
 record which states the schema and is never compared to it. It is also the
-file every document is a copy of, so a drift between `luria.toml` and the
+file every document is a copy of, so a drift between `luria.yaml` and the
 form does not produce one wrong document. It produces every document filed
 afterwards, in the wrong shape, and the lint calls each of them clean —
 because each of them *is* clean. Legal input in the wrong shape.
 
 That is not hypothetical. A project decided its `source:` field could hold
-several codes, changed `luria.toml`, and left the template saying
+several codes, changed `luria.yaml`, and left the template saying
 `source: LIT-000`. Three weeks and 34 documents later, 140 of 144 entries
 were single-sourced, and the four exceptions were the ones a person had
 edited by hand while writing the decision. The capability was live,

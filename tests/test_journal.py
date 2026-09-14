@@ -193,7 +193,9 @@ def test_entries_are_never_consumed():
 def test_an_unused_journal_renders_nothing(tmp_path, monkeypatch):
     """The default config names a devlog. A project that never files an entry
     should not grow an empty `docs/devlog/`."""
-    (tmp_path / "luria.toml").write_text('[luria]\nissue_url = ""\n')
+    (tmp_path / "luria.yaml").write_text("""
+                                         issue_url: ''
+                                         """)
     monkeypatch.setenv("LURIA_ROOT", str(tmp_path))
     from luria import config as config_mod
     config_mod.reset()

@@ -10,6 +10,7 @@ temp docs don't have) that no unit test of the minter would have seen.
 
 # unresolved-ok-file: ADR-000, ADR-tmpab123 — the first is the string `[ADR-0`,
 # which the reference scanner reads as a code; the second is a fixture tail
+from _config import merged
 import re
 import subprocess
 from pathlib import Path
@@ -18,13 +19,13 @@ import pytest
 
 from luria import adr_index, concretize, config, doc_refs, lint, new
 
-TOML = """\
-[luria]
-issue_url = "https://example.test/issues/{n}"
-[luria.schemes.ADR]
-dir = "record/decisions.d"
-output = "docs/decisions"
-allocate = "merge"
+TOML = """
+issue_url: https://example.test/issues/{n}
+schemes:
+  ADR:
+    dir: record/decisions.d
+    output: docs/decisions
+    allocate: merge
 """
 
 
@@ -32,7 +33,7 @@ allocate = "merge"
 def merge_project(tmp_path, monkeypatch):
     """A record whose ADR scheme allocates at merge, with two temporary
     documents that cite each other — one bare, one wikilinked."""
-    (tmp_path / "luria.toml").write_text(TOML)
+    (tmp_path / "luria.yaml").write_text(TOML)
     (tmp_path / "docs").mkdir()
     (tmp_path / "docs" / "README.md").write_text(
         "# Docs\n\n- [Decisions](decisions/README.md)\n")
@@ -162,9 +163,9 @@ def test_concretize_rewrites_history_too(merge_project):
     outside the tree."""
     root, first, _ = merge_project
     a = first.stem
-    (root / "luria.toml").write_text(
-        TOML + '[luria.journals.devlog]\ndir = "record/devlog.d"\n'
-               'output = "docs/devlog"\n')
+    (root / "luria.yaml").write_text(merged(TOML, {
+        "journals": {"devlog": {"dir": "record/devlog.d",
+                                "output": "docs/devlog"}}}))
     config.reset()
     entry = root / "record" / "devlog.d" / "2026" / "01" / "02" / "030405.md"
     entry.parent.mkdir(parents=True)

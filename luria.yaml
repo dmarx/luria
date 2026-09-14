@@ -1,0 +1,134 @@
+vocabularies:
+  decision-tags:
+    record:
+      label: The record
+      blurb: what the four layers hold, and the rules between them
+    mechanism:
+      label: Mechanism
+      blurb: collectors, generators, the lint, the directive vocabulary
+    process:
+      label: Process
+      blurb: how the machinery is adopted, run, and reported on
+  statuses:
+    Active:
+      blurb: in force — the current answer, and what a citation should normally point at
+    Proposed:
+      blurb: not in force yet — an open question, so citing it as settled is what the reference report catches
+    Deferred:
+      blurb: not in force and not being worked on; the question is real and the answer waits on something
+    Superseded:
+      blurb: no longer in force because something replaced it; the successor is named in the field, not in the prose
+    Rejected:
+      blurb: no longer in force and nothing replaced it — kept because a rejection is worth being able to point at
+include_records:
+- examples/*
+issue_url: https://github.com/dmarx/luria/issues/{n}
+paths:
+  docs: docs
+  decisions: record/decisions.d
+  design_principles: docs/design-principles.md
+  reports: docs/reports
+fragments:
+  record/changelog.d:
+    file: CHANGELOG.md
+    style: changelog
+journals:
+  devlog:
+    dir: record/devlog.d
+    output: docs/devlog
+    granularity: month
+    title: Development log
+    blurb: 'The narrative that doesn''t fit a changelog entry: root-cause archaeology, failed approaches, verification details, and the traps the next person would otherwise rediscover. Generated from the entries in `record/devlog.d/` — file one with `luria new`.'
+site:
+  exclude:
+  - template/**
+  icon: assets/branding/luria-brainslug/luria_project_memory_icon.svg
+  logo: assets/branding/luria-brainslug/luria_project_memory_lockup_horizontal.svg
+  theme:
+    light:
+      light: '#f4f1e8'
+      lightgray: '#dcd5c3'
+      gray: '#8f8a7c'
+      darkgray: '#3a3630'
+      dark: '#111111'
+      secondary: '#2e5c62'
+      tertiary: '#7d9e94'
+      highlight: rgba(46, 92, 98, 0.10)
+      textHighlight: '#e8d99a88'
+    dark:
+      light: '#151412'
+      lightgray: '#33302a'
+      gray: '#7a746a'
+      darkgray: '#d8d3c6'
+      dark: '#f4f1e8'
+      secondary: '#9dbfb4'
+      tertiary: '#7d9e94'
+      highlight: rgba(157, 191, 180, 0.14)
+      textHighlight: '#a8912d66'
+code:
+  globs:
+  - luria/*.py
+  - tests/*.py
+  - .github/workflows/*.yml
+  - actions/**/*.yml
+  - template/**/*.yml
+  - template/**/*.md
+  - template/**/*.stub
+  historical:
+  - CHANGELOG.md
+schemes:
+  ADR:
+    dir: record/decisions.d
+    output: docs/decisions
+    active: Active
+    render: index
+    allocate: merge
+    fields:
+      status:
+        vocabulary: statuses
+      tags:
+        vocabulary: decision-tags
+        many: true
+        required: true
+        closed: false
+    axis: tags
+  DP:
+    cite: page
+    dir: record/principles.d
+    active: Active
+    render: document
+    output: docs/design-principles.md
+    allocate: merge
+    fields:
+      status:
+        vocabulary: statuses
+      tags:
+        many: true
+        required: true
+        closed: false
+    axis: tags
+remotes:
+  SG:
+    name: strata-g
+    repo: dmarx/strata-g
+    ref: main
+    dir: docs/decisions
+    schemes:
+      DP:
+        document: docs/design-principles.md
+  LU:
+    name: luria
+    repo: dmarx/luria
+    ref: main
+    dir: record/decisions.d
+    schemes:
+      DP:
+        document: docs/design-principles.md
+      ADR:
+        pin: true
+  FX:
+    name: fixtures
+    url: https://github.com/dmarx/luria/blob/main/docs/directives.md#fixture-codes
+lint:
+  fail_on:
+  - workflow-temp-codes

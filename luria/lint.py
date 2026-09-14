@@ -9,12 +9,16 @@ Checks (each one fails the build):
 1b. **Journals** — every entry's path agrees with its `created:` timestamp and
    carries a `title:` (ADR-020); `version:` agrees with `history:` (ADR-019).
 2. **Frontmatter** — every document in a reference scheme carries a `status:`
-   from the canonical vocabulary, at least one `tags:` entry (ADR-003), and a
-   `title:` that agrees with its body heading (ADR-013).
+   from the canonical vocabulary and a `title:` that agrees with its body
+   heading (ADR-013). "At least one `tags:` entry" (ADR-003) is checked in
+   2b now, as `required: true` on whichever field the scheme names as its
+   axis — a scheme that declares no taxonomy is not told it is missing one
+   (ADR-tmp8hp25).
 2b. **Contracts** — what a scheme declares beyond the standard set, compiled
    once per scheme (`luria/contract.py`, #141): fields it `requires`
-   (ADR-040), what its `references` hold (ADR-060), and which of its tags may
-   combine (`tag_groups`, ADR-054). One pass, each finding saying why.
+   (ADR-040), what its `references` hold (ADR-060), and which of its values may
+   combine (`fields.<field>.groups`, ADR-054). One pass, each finding
+   saying why.
 3. **View directories** — a view directory holds only generated files
    (ADR-021), so a hand-written file inside one is a failure. Whether a
    committed view is *current* is the generation job's question, answered by
@@ -35,13 +39,17 @@ relative link targets that resolve to nothing from where the prose renders,
 directives that no longer apply, and a count of undecided decisions. Citing a
 `Rejected` decision — or leaving one `Proposed`, or naming another project's
 LU-ADR-013 — is often right, so none is an error unless the project says so:
-a class named in `[luria.lint] fail_on` is promoted to a failure. Either way
+a class named in `lint.fail_on` is promoted to a failure. Either way
 `luria reports` writes the full detail as markdown, and an `inactive-ok:` /
 `unresolved-ok:` / `url-ok:` / `target-ok:` comment acknowledges a deliberate
 one so only the unconsidered ones stay listed — acknowledged rows never fail.
 
 Exit 0 when clean; exit 1 with one line per violation.
 """
+
+# inactive-ok-file: ADR-tmp8hp25 — Proposed. Every mention names it as the
+# decision this file implements or is written against; the citation is to the
+# reasoning, not a claim the decision is settled.
 
 from __future__ import annotations
 
@@ -75,9 +83,8 @@ def check_docs_index(errors: list[str]) -> None:
     # links the entrypoint and the rest indexes itself (ADR-021).
     exempt = ({s.dir for s in cfg.schemes.values()}
               | {s.view for s in cfg.schemes.values() if s.render == "index"}
-              | {s.tag_dir for s in cfg.schemes.values() if s.render == "index"}
-              | {s.vocab_dir(v.name) for s in cfg.schemes.values()
-                 if s.render == "index" for v in s.vocabularies}
+              | {s.vocab_dir(f) for s in cfg.schemes.values()
+                 if s.render == "index" for f in s.grouped_fields}
               | {j.dir for j in cfg.journals.values()}
               | {j.output for j in cfg.journals.values()}
               | {cfg.reports})
@@ -135,8 +142,11 @@ def check_frontmatter(errors: list[str]) -> None:
             # It is a `required_when` on the built-in field now, checked with
             # every other obligation in `check_contracts` (ADR-071 stated
             # with the mechanism rather than beside it).
-            if not (meta.get("tags") or []):
-                errors.append(f"{rel}: no `tags:` in frontmatter (see ADR-003)")
+            # "Every entry carries tags" used to be a branch here, naming
+            # a field the code assumed. It is `required: true` on the axis
+            # field now, checked in `check_contracts` with every other
+            # obligation — one implementation, and a scheme with no axis is
+            # not told it is missing one (ADR-tmp8hp25).
 
 
 
@@ -204,14 +214,14 @@ def check_reserved_prefix(errors: list[str]) -> None:
     for prefix in current().schemes:
         if config_mod.in_fixture_namespace(prefix):
             errors.append(
-                f"luria.toml: scheme {prefix} is in the reserved fixture "
+                f"luria.yaml: scheme {prefix} is in the reserved fixture "
                 f"namespace {config_mod.FIXTURE_NAMESPACE}\u2026 — pick another "
                 "prefix, or `rename_scheme` it if it already has documents")
 
 
 def check_contracts(errors: list[str]) -> None:
     """Each scheme's contract, enforced — what it `requires`, what its
-    `references` hold, which of its `tag_groups` combine (ADR-040, ADR-060,
+    `references` hold, which of its grouped values combine (ADR-040, ADR-060,
     ADR-054). Compiled once per scheme and checked in one pass over its
     documents (#141), where there used to be one pass per table.
 
@@ -305,7 +315,7 @@ def check_alias_collisions(errors: list[str]) -> None:
             if len(numbers) > 1:
                 codes = ", ".join(scheme.code(n) for n in sorted(numbers))
                 errors.append(
-                    f"luria.toml: schemes.{scheme.prefix}.alias renders "
+                    f"luria.yaml: schemes.{scheme.prefix}.alias renders "
                     f"`{spelling}` for {codes} — one spelling cannot answer "
                     f"for {len(numbers)} documents; add `{{number}}` to the "
                     f"template, or a field that tells them apart")
@@ -459,7 +469,7 @@ def check_bare_refs(errors: list[str]) -> None:
 
 
 # The enforcement dial's vocabulary (ADR-035): a class named in
-# `[luria.lint] fail_on` fails the build instead of printing. Only
+# `lint.fail_on` fails the build instead of printing. Only
 # UNACKNOWLEDGED rows ever reach a class, so the directives stay the escape
 # hatch under enforcement — the dial changes the consequence, not the
 # accounting.
@@ -472,7 +482,7 @@ FAILABLE = ("retired-citations", "unresolved-codes", "hand-written-urls",
             "pending-documents", "unlinted-files", "workflow-temp-codes",
             "unlinked-site")
 
-# Classes `[luria.lint] mute` may suppress: every failable class, plus
+# Classes `lint.mute` may suppress: every failable class, plus
 # `acknowledged-uniformity` — which is not failable (a project cannot promote
 # its own acknowledgement to a failure) and is exactly the kind of standing
 # note a project may reasonably not want repeated on every run.
@@ -499,7 +509,7 @@ def unlinked_site() -> list[str]:
     included: the finding is "your front page does not point at the site you
     publish", not "you must use our marker".
 
-    Scoped by `[luria.site] publish`, which defaults true: `base_url` derives
+    Scoped by `site.publish`, which defaults true: `base_url` derives
     for every GitHub project whether or not one is deployed, so a record that
     lives only in its repository says `publish = false` and the guard goes
     quiet — a guard opts out rather than being argued with (DP-10)."""
@@ -675,7 +685,7 @@ def status_sections() -> list[tuple[str, str, list[str]]]:
         sections.append((
             "acknowledged-uniformity",
             f"{len(acknowledged)} scheme(s) uniform by declaration "
-            "(`uniform_ok` in luria.toml)", acknowledged))
+            "(`uniform_ok` in luria.yaml)", acknowledged))
 
     # A citation still spelled with a concretized code's old temporary name
     # (ADR-040, ADR-049). The in-tree steady state is zero — the
@@ -799,7 +809,7 @@ def report_warnings(errors: list[str]) -> None:
     Citing a retired document is often correct — a `Rejected` decision exists
     to be pointed at — so by default every class here is reported and none
     fails the build. A project that wants a class *enforced* names it in
-    `[luria.lint] fail_on`, and its unacknowledged rows become violations;
+    `lint.fail_on`, and its unacknowledged rows become violations;
     the acknowledgement directives keep working either way."""
     fail = set(current().fail_on)
     # `network = "require"` is a statement about what a green build means:
@@ -811,7 +821,7 @@ def report_warnings(errors: list[str]) -> None:
     for name in sorted(fail - set(FAILABLE)):
         # A dial set to a notch that doesn't exist must not silently enforce
         # nothing (DP-1).
-        errors.append(f"luria.toml: `fail_on` names {name!r}, which is no "
+        errors.append(f"luria.yaml: `fail_on` names {name!r}, which is no "
                       f"warning class (known: {', '.join(FAILABLE)})")
 
     # A class the project has decided it does not want reported at all.
@@ -824,13 +834,13 @@ def report_warnings(errors: list[str]) -> None:
     for name in sorted(mute - set(MUTABLE)):
         # Same rule as `fail_on`: a dial set to a notch that does not exist
         # must say so rather than silently do nothing (DP-1).
-        errors.append(f"luria.toml: `mute` names {name!r}, which is no "
+        errors.append(f"luria.yaml: `mute` names {name!r}, which is no "
                       f"mutable warning class (known: {', '.join(MUTABLE)})")
     for name in sorted(mute & fail):
         # Not a precedence question. A project cannot both enforce a check
         # and refuse to hear it, and guessing which it meant would make one
         # of the two settings a lie.
-        errors.append(f"luria.toml: {name!r} is named in both `fail_on` and "
+        errors.append(f"luria.yaml: {name!r} is named in both `fail_on` and "
                       "`mute` — a class cannot be both enforced and hidden")
 
     for name, headline, lines in status_sections():
@@ -843,7 +853,7 @@ def report_warnings(errors: list[str]) -> None:
             why = ("`network = \"require\"`"
                    if name == "source-unchecked" and name not in set(current().fail_on)
                    else f"`fail_on` names {name!r}")
-            errors.append(f"{headline} — failing: {why} in luria.toml")
+            errors.append(f"{headline} — failing: {why} in luria.yaml")
             errors.extend(lines)
         else:
             print(f"luria: {headline}", file=sys.stderr)

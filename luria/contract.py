@@ -2,7 +2,8 @@
 """The obligations a scheme places on one of its entries, compiled once.
 
 `requires` says a field must be there. `references` says what it holds.
-`tag_groups` says which tags may combine. Each arrived as its own lint pass
+`fields.<field>.groups` says which of a field's values may combine. Each
+arrived as its own lint pass
 (ADR-040, ADR-054, ADR-060), each re-parsing every document's frontmatter and
 each spelling its own provenance by hand in the message it printed. Three
 passes is three places to ask "what does this scheme demand of an entry?" and
@@ -11,7 +12,7 @@ no place that answers the whole question.
 This module is that place (#141). A scheme's declarations compile into one
 `Contract`: the fields an entry must carry, what each must hold, and which of
 its tags combine — every obligation naming where it was declared. The lint
-runs one pass over it. Nothing is authored here; `luria.toml` is the only
+runs one pass over it. Nothing is authored here; `luria.yaml` is the only
 source, and nothing a project declared before this existed reads differently.
 
 Composition is intersection. `requires = ["source"]` and a `references` entry
@@ -22,6 +23,10 @@ declarations and no need for one yet — a field is one key in one table, so
 today's config cannot bind it to two schemes. When a second source of
 obligations exists, a contradiction is a configuration error, never a winner.
 """
+
+# inactive-ok-file: ADR-tmp8hp25 — Proposed. Every mention names it as the
+# decision this file implements or is written against; the citation is to the
+# reasoning, not a claim the decision is settled.
 
 from __future__ import annotations
 
@@ -55,6 +60,10 @@ class Field:
     vocabulary: str | None = None
     values: tuple[str, ...] = ()
     default: tuple[str, ...] | None = None
+    # Whether a value outside `values` is a finding. False is what `tags`
+    # needed: the declaration supplies order, label and blurb, and using a
+    # new value stays an edit to a document (ADR-tmp8hp25).
+    closed: bool = True
     # Standard for every scheme rather than declared by one — `superseded_by`
     # (ADR-071). Checked like any other; not a declaration, so it stays
     # out of `Contract.empty`.
@@ -79,7 +88,7 @@ class Contract:
     field_groups: tuple[FieldGroup, ...] = ()
     # Where this scheme's table lives, as a finding cites it — the prefix
     # every key path below starts from.
-    where: str = "luria.toml"
+    where: str = "luria.yaml"
     # The vocabulary file a derived tag group reads its members from
     # (`primary_for`, ADR-060), relative to the project; "" when none.
     vocabulary: str = ""
@@ -183,15 +192,15 @@ def built_in(scheme) -> tuple[Field, ...]:
 
 
 def for_scheme(scheme) -> Contract:
-    """Everything `luria.toml` declares this scheme demands of an entry.
+    """Everything `luria.yaml` declares this scheme demands of an entry.
 
     Fields keep declaration order — `requires` first, then the references
     that did not merge into one — so findings read in the order the config
     was written."""
-    where = f"luria.toml: schemes.{scheme.prefix}"
+    where = f"luria.yaml: schemes.{scheme.prefix}"
     vocabulary = ""
     if any(g.derived for g in scheme.tag_groups):
-        vocabulary = str(current().rel(scheme.tags_yaml))
+        vocabulary = f"vocabulary {scheme.tags_vocab!r}"
     fields: dict[str, Field] = {}
     for name in scheme.requires:
         fields[name] = Field(name, because=(f"{where}.requires",))
@@ -209,14 +218,14 @@ def for_scheme(scheme) -> Contract:
     for vocab in scheme.vocabularies:
         prior = fields.get(vocab.field)
         because = (f"{where}.fields.{vocab.field}",
-                   f"{current().rel(vocab.file)}: values")
+                   f"vocabulary {vocab.name!r}: values")
         if prior is not None:
             because = prior.because + because
         fields[vocab.field] = Field(
             vocab.field,
             required=vocab.required or (prior is not None and prior.required),
-            many=vocab.many, vocabulary=vocab.name,
-            values=tuple(declared(vocab.file)), default=vocab.default,
+            many=vocab.many, vocabulary=vocab.name, closed=vocab.closed,
+            values=tuple(declared(vocab.values_by_name)), default=vocab.default,
             required_when=vocab.required_when, because=because)
     for plain in scheme.plain_fields:
         prior = fields.get(plain.field)
@@ -233,12 +242,12 @@ def for_scheme(scheme) -> Contract:
         fields.setdefault(field.name, field)
     return Contract(scheme.prefix, tuple(fields.values()), scheme.tag_groups,
                     field_groups=scheme.field_groups,
-                    where="luria.toml", vocabulary=vocabulary,
+                    where="luria.yaml", vocabulary=vocabulary,
                     derived=scheme.derived)
 
 
 def _cite(because: tuple[str, ...]) -> str:
-    """`(luria.toml: schemes.SOTA.requires, schemes.SOTA.references.source)`
+    """`(luria.yaml: schemes.SOTA.requires, schemes.SOTA.references.source)`
     — every declaration behind an obligation, grouped by the file it is in,
     so a reader is sent to the key and not just the file."""
     by_file: dict[str, list[str]] = {}
@@ -262,7 +271,8 @@ _FIELD_RULE_WORDS = {"at-least-one": "at least one of",
 def group_because(contract: Contract, group: TagGroup) -> str:
     """Where a tag group was declared — and, when its membership is derived,
     where the members come from."""
-    cite = f"{contract.where}: schemes.{contract.scheme}.tag_groups.{group.name}"
+    cite = (f"{contract.where}: schemes.{contract.scheme}.fields."
+            f"{group.field}.groups.{group.name}")
     if group.derived and contract.vocabulary:
         cite += f"; members from `{contract.vocabulary}` `primary_for`"
     return f"({cite})"
@@ -286,7 +296,7 @@ def explain(contract: Contract, field: Field, meta: dict | None = None) -> str:
     plus the key that said so.
 
     The provenance is read out of the obligation rather than spelled here,
-    so the day one comes from somewhere other than `luria.toml` the finding
+    so the day one comes from somewhere other than `luria.yaml` the finding
     says so without this function learning about it."""
     why = _condition(field, meta)
     if field.vocabulary is not None:
@@ -546,8 +556,11 @@ def violations(contract: Contract, rel: str, meta: dict,
         elif group.require == "at-most-one" and len(present) > 1:
             out.append(f"{rel}: `{group.name}` wants at most one of {shown} "
                        f"— has {has} {cite}")
-    tags = {str(t) for t in (meta.get("tags") or [])}
     for group in contract.groups:
+        # The group's own field, not a key called `tags`: a group constrains
+        # a subset of one field's vocabulary and now says which
+        # (ADR-tmp8hp25).
+        tags = {str(t) for t in (meta.get(group.field) or [])}
         present = sorted(tags & group.tags)
         shown = ", ".join(sorted(group.tags))
         cite = group_because(contract, group)
@@ -578,6 +591,11 @@ def _vocabulary_violations(contract: Contract, field: Field, rel: str,
         if contract.demands(field, meta or {}) and field.default is None:
             return [f"{rel}: no `{field.name}:` in frontmatter — "
                     f"{explain(contract, field, meta)}"]
+        return []
+    if not field.closed:
+        # An open vocabulary declares what it has an opinion about and
+        # accepts the rest. Checking it would forbid the one case the flag
+        # exists for (ADR-tmp8hp25).
         return []
     file = next((b.split(": ", 1)[0] for b in field.because
                  if b.endswith(": values")), "")

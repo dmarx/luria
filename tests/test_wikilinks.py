@@ -5,6 +5,7 @@ rules on both sides: no prose heuristics apply inside them (a low `#N` needs no
 cue), and one that resolves to nothing is a lint violation rather than a
 silently-bare code — the request was explicit, so the refusal must be too.
 """
+from _config import merged
 import sys
 from pathlib import Path
 
@@ -18,8 +19,10 @@ from luria import config, doc_refs, lint
 
 
 def project_with(project, extra: str = ""):
-    (project / "luria.toml").write_text(
-        '[luria]\nissue_url = "https://example.test/issues/{n}"\n' + extra)
+    (project / "luria.yaml").write_text(
+        merged("""
+            issue_url: https://example.test/issues/{n}
+            """, extra))
     config.reset()
     return project
 
@@ -47,16 +50,26 @@ def test_document_scheme_code_expands_to_an_anchor(project):
     """`[[VP-3]]` — a shape the prose scanner never takes (it needs a `#`),
     which is half the point of typing the brackets."""
     project_with(project,
-        '[luria.schemes.VP]\ndir = "docs/values"\n'
-        'render = "document"\noutput = "docs/values.md"\n'
-        '[luria.schemes.ADR]\ndir = "docs/decisions"\n')
+        """
+        schemes:
+          VP:
+            dir: docs/values
+            render: document
+            output: docs/values.md
+          ADR:
+            dir: docs/decisions
+        """)
     out, n = expand(project, "per [[VP-3]] this holds")
     assert n == 1
     assert "[VP-3](values.md#vp-3)" in out
 
 
 def test_remote_code_expands_to_a_url(project):
-    project_with(project, '[luria.remotes.UP]\nrepo = "o/r"\n')
+    project_with(project, """
+                          remotes:
+                            UP:
+                              repo: o/r
+                          """)
     out, n = expand(project, "compare [[UP-ADR-032]]")
     assert n == 1
     assert "[UP-ADR-032](https://github.com/o/r/blob/main/" in out
@@ -64,8 +77,12 @@ def test_remote_code_expands_to_a_url(project):
 
 def test_uid_remote_expands_through_its_template(project):
     project_with(project,
-        '[luria.remotes.ARXIV]\nuid = "\\\\d{4}[.]\\\\d{4,5}"\n'
-        'url = "https://arxiv.org/abs/{uid}"\n')
+        """
+        remotes:
+          ARXIV:
+            uid: \d{4}[.]\d{4,5}
+            url: https://arxiv.org/abs/{uid}
+        """)
     out, n = expand(project, "the model card ([[ARXIV-2403.05530]])")
     assert n == 1
     assert "[ARXIV-2403.05530](https://arxiv.org/abs/2403.05530)" in out

@@ -8,7 +8,15 @@ reference, not a tag, not a status. Declared explicitly, closed, with a
 default that is an effective value and never a rewrite.
 """
 
+# inactive-ok-file: ADR-tmp8hp25 — Proposed. Every mention names it as the
+# decision this file implements or is written against; the citation is to the
+# reasoning, not a claim the decision is settled.
+
 from __future__ import annotations
+
+import yaml
+
+from _config import merged
 
 from pathlib import Path
 
@@ -46,23 +54,25 @@ def scene(root: Path, n: int, extra: str = "") -> Path:
     return write(root, f"record/scenes.d/SCENE-{n:03d}.md", "\n".join(front) + "\n")
 
 
-def world(tmp_path, monkeypatch, table: str = 'many = true\ndefault = ["B"]',
-          vocab: str = WORLDS, name: str = "worlds", field: str | None = None,
-          extra: str = "") -> Path:
+def world(tmp_path, monkeypatch, table: dict | None = None,
+          vocab: str | None = WORLDS, name: str = "worlds",
+          field: str | None = None, extra: dict | None = None) -> Path:
     field = field or name
-    write(tmp_path, "luria.toml", f"""
-[luria]
-issue_url = "https://example.test/issues/{{n}}"
-[luria.schemes.SCENE]
-dir = "record/scenes.d"
-output = "docs/scenes"
-{extra}
-[luria.schemes.SCENE.fields.{field}]
-vocabulary = "{name}"
-{table}
-""")
+    table = {"many": True, "default": ["B"]} if table is None else table
+    fields: dict = {field: {"vocabulary": name, **table}}
+    # `tags` is a declared field since ADR-tmp8hp25, so a scheme that wants
+    # a tag axis says so — which these tests need, since they assert the
+    # vocabulary's pages render *beside* the tag pages.
+    fields.setdefault("tags", {"many": True, "closed": False})
+    cfg: dict = {"issue_url": "https://example.test/issues/{n}",
+                 "schemes": {"SCENE": {"dir": "record/scenes.d",
+                                       "output": "docs/scenes",
+                                       "axis": "tags",
+                                       "fields": fields}}}
+    # The values live in the config now, under the name the field asks for.
     if vocab is not None:
-        write(tmp_path, f"record/scenes.d/{name}.yaml", vocab)
+        cfg["vocabularies"] = {name: yaml.safe_load(vocab)}
+    write(tmp_path, "luria.yaml", merged(cfg, extra or {}))
     write(tmp_path, "docs/README.md", "# Docs\n\n- [Scenes](scenes/README.md)\n"
                                       "- [The record](record.md)\n")
     monkeypatch.setenv("LURIA_ROOT", str(tmp_path))
@@ -71,8 +81,9 @@ vocabulary = "{name}"
 
 
 def field():
+    """The vocabulary field under test — not the tag axis beside it."""
     f, = [f for f in contract.for_scheme(current().schemes["SCENE"]).fields
-          if not f.builtin]
+          if not f.builtin and f.name != "tags"]
     return f
 
 
@@ -83,14 +94,14 @@ def test_a_declared_vocabulary_is_read_with_its_values(tmp_path, monkeypatch):
     v, = current().schemes["SCENE"].vocabularies
     assert (v.field, v.name, v.many, v.required, v.default) == \
         ("worlds", "worlds", True, False, ("B",))
-    assert v.file == tmp_path / "record/scenes.d/worlds.yaml"
+    assert v.name == "worlds" and set(v.values_by_name) == {"A", "B", "C"}
     f = field()
     assert f.vocabulary == "worlds" and f.values == ("A", "B", "C")
     assert f.many and not f.required and f.default == ("B",)
 
 
 def test_the_defaults_are_one_optional_value_and_no_default(tmp_path, monkeypatch):
-    world(tmp_path, monkeypatch, table="")
+    world(tmp_path, monkeypatch, table={})
     v, = current().schemes["SCENE"].vocabularies
     assert (v.many, v.required, v.default) == (False, False, None)
 
@@ -99,22 +110,22 @@ def test_a_vocabulary_with_no_file_is_a_config_error(tmp_path, monkeypatch):
     """Eager, like a tag group that constrains nothing: a declared axis with
     no values would surface as 'no violations', which is the quiet failure."""
     world(tmp_path, monkeypatch, vocab=None)
-    with pytest.raises(ValueError, match="no values"):
+    with pytest.raises(ValueError, match="no vocabulary named"):
         current()
 
 
 def test_a_default_outside_the_vocabulary_is_a_config_error(tmp_path, monkeypatch):
-    world(tmp_path, monkeypatch, table='many = true\ndefault = ["Z"]')
+    world(tmp_path, monkeypatch, table={"many": True, "default": ["Z"]})
     with pytest.raises(ValueError, match="not in"):
         current()
 
 
 def test_a_default_takes_the_fields_shape(tmp_path, monkeypatch):
-    world(tmp_path, monkeypatch, table='default = ["B"]')
+    world(tmp_path, monkeypatch, table={"default": ["B"]})
     with pytest.raises(ValueError, match="one value"):
         current()
     config.reset()
-    world(tmp_path, monkeypatch, table='many = true\ndefault = "B"')
+    world(tmp_path, monkeypatch, table={"many": True, "default": "B"})
     with pytest.raises(ValueError, match="a list"):
         current()
 
@@ -122,28 +133,37 @@ def test_a_default_takes_the_fields_shape(tmp_path, monkeypatch):
 def test_required_and_default_together_is_a_config_error(tmp_path, monkeypatch):
     """A field with a default is never absent, so `required` says nothing —
     and a key that says nothing reads as though it did."""
-    world(tmp_path, monkeypatch, table='required = true\ndefault = "B"')
+    world(tmp_path, monkeypatch, table={"required": True, "default": "B"})
     with pytest.raises(ValueError, match="never absent"):
         current()
 
 
-def test_the_built_in_axes_cannot_be_redeclared(tmp_path, monkeypatch):
-    world(tmp_path, monkeypatch, name="tags", vocab="a:\n  label: A\n")
-    with pytest.raises(ValueError, match="built in"):
-        current()
+def test_the_axis_is_a_declared_field_like_any_other(tmp_path, monkeypatch):
+    """`tags` used to be refused here — it was an axis the code assumed, and
+    the mechanism carved it out (ADR-054's deferred `closed` flag was the
+    reason). It is a field now: backed by a vocabulary, OPEN, and named by
+    the scheme as its axis (ADR-tmp8hp25)."""
+    world(tmp_path, monkeypatch, name="tags",
+          vocab="a:\n  label: A\n", table={"many": True, "closed": False})
+    scheme = current().schemes["SCENE"]
+    assert scheme.axis == "tags"
+    assert scheme.tags_vocab == "tags"
+    assert set(scheme.tags) == {"a"}
 
 
 def test_a_field_entry_declares_its_type(tmp_path, monkeypatch):
     """`fields` is the table a field's shape and type live in; `vocabulary`
     is the one type it takes today, and an entry naming none is an error
     rather than a field that constrains nothing."""
-    write(tmp_path, "luria.toml", """
-[luria]
-issue_url = "https://example.test/issues/{n}"
-[luria.schemes.SCENE]
-dir = "record/scenes.d"
-[luria.schemes.SCENE.fields.worlds]
-many = true
+    write(tmp_path, "luria.yaml", """
+luria:
+  issue_url: https://example.test/issues/{n}
+  schemes:
+    SCENE:
+      dir: record/scenes.d
+      fields:
+        worlds:
+          default: [B]
 """)
     write(tmp_path, "record/scenes.d/worlds.yaml", WORLDS)
     monkeypatch.setenv("LURIA_ROOT", str(tmp_path))
@@ -154,25 +174,37 @@ many = true
 
 def test_a_field_has_one_declaration(tmp_path, monkeypatch):
     world(tmp_path, monkeypatch, extra="""
-[luria.schemes.SCENE.references]
-worlds = { scheme = "SCENE" }
-""")
+                                       schemes:
+                                         SCENE:
+                                           references:
+                                             worlds:
+                                               scheme: SCENE
+                                       """)
     with pytest.raises(ValueError, match="one declaration"):
         current()
 
 
 def test_the_field_and_its_vocabulary_may_be_named_differently(tmp_path, monkeypatch):
-    """`world:` in the frontmatter, drawn from `worlds.yaml`: the field is
-    the author's word, the vocabulary is the file's. Pages render under the
-    vocabulary's name; the finding and the record line use the field's."""
-    root = world(tmp_path, monkeypatch, field="world", table="")
+    """`world:` in the frontmatter, drawn from the `worlds` vocabulary: the
+    field is the author's word, the vocabulary is the shared one's.
+
+    **Pages render under the FIELD's name**, and the finding and the record
+    line use it too. They used to render under the vocabulary's, which made a
+    config detail into a published path — so sharing a vocabulary between two
+    schemes, or renaming one, moved pages and orphaned the old directory.
+
+    inactive-ok: ADR-tmp8hp25 — Proposed, named as the decision that moved
+    this path; the citation is to the reasoning."""
+    root = world(tmp_path, monkeypatch, field="world", table={})
     scene(root, 1, "world: C")
     scene(root, 2, "world: Z")
     e, = findings()
     assert "`world: Z` is not in the `worlds` vocabulary" in e
     pages = {p.relative_to(root).as_posix() for p in adr_index.outputs()}
-    assert "docs/scenes/worlds/C.md" in pages
-    line, = contract.describe(contract.for_scheme(current().schemes["SCENE"]))
+    assert "docs/scenes/world/C.md" in pages
+    line = next(l for l in contract.describe(
+        contract.for_scheme(current().schemes["SCENE"]))
+        if not l.startswith("`tags`"))
     assert line.startswith("`world` —") and "schemes.SCENE.fields.world" in line
 
 
@@ -180,11 +212,13 @@ def test_the_field_and_its_vocabulary_may_be_named_differently(tmp_path, monkeyp
 
 def test_describe_names_the_values_the_default_and_both_files(tmp_path, monkeypatch):
     world(tmp_path, monkeypatch)
-    line, = contract.describe(contract.for_scheme(current().schemes["SCENE"]))
+    line = next(l for l in contract.describe(
+        contract.for_scheme(current().schemes["SCENE"]))
+        if not l.startswith("`tags`"))
     assert "`worlds`" in line and "one or more of `A`, `B`, `C`" in line
     assert "absent means `B`" in line
     assert "schemes.SCENE.fields.worlds" in line
-    assert "record/scenes.d/worlds.yaml" in line
+    assert "vocabulary 'worlds'" in line
 
 
 def findings() -> list[str]:
@@ -198,11 +232,11 @@ def test_a_value_outside_the_vocabulary_is_a_finding(tmp_path, monkeypatch):
     scene(root, 1, "worlds:\n- A\n- Z")
     e, = findings()
     assert "`worlds: Z` is not in the `worlds` vocabulary" in e
-    assert "record/scenes.d/worlds.yaml" in e
+    assert "vocabulary 'worlds'" in e
 
 
 def test_a_list_where_one_value_was_declared_is_a_finding(tmp_path, monkeypatch):
-    root = world(tmp_path, monkeypatch, table="")
+    root = world(tmp_path, monkeypatch, table={})
     scene(root, 1, "worlds:\n- A\n- B")
     e, = findings()
     assert "holds 2 values" in e and "one `worlds` value" in e
@@ -215,7 +249,7 @@ def test_an_absent_field_with_a_default_is_not_a_finding(tmp_path, monkeypatch):
 
 
 def test_a_required_vocabulary_field_may_not_be_absent(tmp_path, monkeypatch):
-    root = world(tmp_path, monkeypatch, table="many = true\nrequired = true")
+    root = world(tmp_path, monkeypatch, table={"many": True, "required": True})
     scene(root, 1)
     e, = findings()
     assert "no `worlds:`" in e and "schemes.SCENE.fields.worlds" in e
@@ -374,18 +408,24 @@ def test_a_status_backed_by_a_vocabulary_is_named_once(tmp_path, monkeypatch):
     which is the only path that can say `Superseded — by X`, and again
     through the generic vocabulary loop that now sees it like any other.
     One field, one bit."""
-    write(tmp_path, "luria.toml", """
-[luria]
-issue_url = "https://example.test/issues/{n}"
-[luria.schemes.ADR]
-dir = "record/decisions.d"
-output = "docs/decisions"
-render = "index"
-[luria.schemes.ADR.fields.status]
-vocabulary = "statuses"
+    write(tmp_path, "luria.yaml", """
+luria:
+  issue_url: https://example.test/issues/{n}
+  schemes:
+    ADR:
+      dir: record/decisions.d
+      output: docs/decisions
+      render: index
+      fields:
+        status:
+          vocabulary: adr-statuses
+  vocabularies:
+    adr-statuses:
+      Active:
+        label: In force
+      Superseded:
+        label: Replaced
 """)
-    write(tmp_path, "record/decisions.d/statuses.yaml",
-          "Active:\n  label: In force\nSuperseded:\n  label: Replaced\n")
     monkeypatch.setenv("LURIA_ROOT", str(tmp_path))
     config.reset()
     where = current().schemes["ADR"].dir / "ADR-001.md"
@@ -397,18 +437,24 @@ def test_a_superseded_status_still_reads_its_successor(tmp_path, monkeypatch):
     """The reason the dedicated path wins over the generic one: the generic
     loop renders the bare word, and only `statuses.display` composes the
     successor the status note carries."""
-    write(tmp_path, "luria.toml", """
-[luria]
-issue_url = "https://example.test/issues/{n}"
-[luria.schemes.ADR]
-dir = "record/decisions.d"
-output = "docs/decisions"
-render = "index"
-[luria.schemes.ADR.fields.status]
-vocabulary = "statuses"
+    write(tmp_path, "luria.yaml", """
+luria:
+  issue_url: https://example.test/issues/{n}
+  schemes:
+    ADR:
+      dir: record/decisions.d
+      output: docs/decisions
+      render: index
+      fields:
+        status:
+          vocabulary: adr-statuses
+  vocabularies:
+    adr-statuses:
+      Active:
+        label: In force
+      Superseded:
+        label: Replaced
 """)
-    write(tmp_path, "record/decisions.d/statuses.yaml",
-          "Active:\n  label: In force\nSuperseded:\n  label: Replaced\n")
     monkeypatch.setenv("LURIA_ROOT", str(tmp_path))
     config.reset()
     where = current().schemes["ADR"].dir / "ADR-001.md"

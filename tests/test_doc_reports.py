@@ -49,8 +49,13 @@ def test_reference_report_links_every_site(project):
     decision(project, 12, "Superseded")
     (project / "notes.md").write_text(
         "\n".join(f"line {n} cites ADR-012" for n in range(1, 9)) + "\n")
-    (project / "luria.toml").write_text(
-        '[luria]\nissue_url = ""\n[luria.code]\nglobs = ["notes.md"]\n')
+    (project / "luria.yaml").write_text(
+        """
+        issue_url: ''
+        code:
+          globs:
+          - notes.md
+        """)
     from luria import config
     config.reset()
 
@@ -65,8 +70,13 @@ def test_reference_report_links_every_site(project):
 def test_reference_report_links_the_flagged_document(project):
     decision(project, 12, "Superseded")
     (project / "notes.md").write_text("cites ADR-012\n")
-    (project / "luria.toml").write_text(
-        '[luria]\nissue_url = ""\n[luria.code]\nglobs = ["notes.md"]\n')
+    (project / "luria.yaml").write_text(
+        """
+        issue_url: ''
+        code:
+          globs:
+          - notes.md
+        """)
     from luria import config
     config.reset()
 
@@ -96,8 +106,13 @@ def test_the_report_never_calls_a_proposed_document_retired(project):
     and the section says which side of that a status falls on."""
     decision(project, 12, "Proposed")
     (project / "notes.md").write_text("cites ADR-012\n")
-    (project / "luria.toml").write_text(
-        '[luria]\nissue_url = ""\n[luria.code]\nglobs = ["notes.md"]\n')
+    (project / "luria.yaml").write_text(
+        """
+        issue_url: ''
+        code:
+          globs:
+          - notes.md
+        """)
     from luria import config
     config.reset()
     text = reports.reference_status()
@@ -162,9 +177,12 @@ def test_a_gitignored_report_dir_is_not_stale(tmp_path, monkeypatch):
     job went red on every commit and stayed there.
     """
     (tmp_path / "docs" / "decisions").mkdir(parents=True)
-    (tmp_path / "luria.toml").write_text(
-        '[luria]\nissue_url = "https://example.test/issues/{n}"\n'
-        '[luria.paths]\nreports = "build/doc-reports"\n')
+    (tmp_path / "luria.yaml").write_text(
+        """
+        issue_url: https://example.test/issues/{n}
+        paths:
+          reports: build/doc-reports
+        """)
     (tmp_path / "docs" / "design-principles.md").write_text(
         "# Design principles\n\n## 1. First value\n\nBody.\n")
     (tmp_path / ".gitignore").write_text("build/\n")
@@ -192,9 +210,12 @@ def test_a_tracked_report_dir_still_gates(tmp_path, monkeypatch):
     check off for everybody to unstick one project.
     """
     (tmp_path / "docs" / "decisions").mkdir(parents=True)
-    (tmp_path / "luria.toml").write_text(
-        '[luria]\nissue_url = "https://example.test/issues/{n}"\n'
-        '[luria.paths]\nreports = "docs/reports"\n')
+    (tmp_path / "luria.yaml").write_text(
+        """
+        issue_url: https://example.test/issues/{n}
+        paths:
+          reports: docs/reports
+        """)
     (tmp_path / "docs" / "design-principles.md").write_text(
         "# Design principles\n\n## 1. First value\n\nBody.\n")
     _git(tmp_path, "init", "-q")
@@ -223,9 +244,12 @@ def test_index_check_is_the_one_staleness_verdict(tmp_path, monkeypatch):
     exemption, and that the lint has nothing to say about a stale view.
     """
     (tmp_path / "docs" / "decisions").mkdir(parents=True)
-    (tmp_path / "luria.toml").write_text(
-        '[luria]\nissue_url = "https://example.test/issues/{n}"\n'
-        '[luria.paths]\nreports = "build/doc-reports"\n')
+    (tmp_path / "luria.yaml").write_text(
+        """
+        issue_url: https://example.test/issues/{n}
+        paths:
+          reports: build/doc-reports
+        """)
     (tmp_path / "docs" / "design-principles.md").write_text(
         "# Design principles\n\n## 1. First value\n\nBody.\n")
     (tmp_path / ".gitignore").write_text("build/\n")

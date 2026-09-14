@@ -52,7 +52,9 @@ def test_a_failing_gate_exits_nonzero(tmp_path, monkeypatch):
     """`luria lint` as a CI gate: SystemExit must survive Fire — Fire prints
     return values, so an exit code can never be a return value."""
     monkeypatch.setenv("LURIA_ROOT", str(tmp_path))
-    (tmp_path / "luria.toml").write_text('[luria]\nissue_url = ""\n')
+    (tmp_path / "luria.yaml").write_text("""
+                                         issue_url: ''
+                                         """)
     docs = tmp_path / "docs"
     docs.mkdir()
     (docs / "README.md").write_text("# Docs\n")

@@ -6,6 +6,7 @@ read the tail out of the middle and quietly say something about the wrong
 project: the reference finder, the fixer, the citation scan, and the annotation
 validator. One test per mouth.
 """
+from _config import merged
 import json
 import sys
 from pathlib import Path
@@ -21,14 +22,19 @@ from luria import config, doc_refs, ref_status, remotes
 # the fixture number started resolving.
 REPO = Path(__file__).resolve().parents[1]
 
-REMOTE_TOML = (
-    '[luria]\nissue_url = "https://example.test/issues/{n}"\n'
-    '[luria.remotes.UP]\nname = "upstream"\nrepo = "o/r"\n'
+REMOTE_BASE = (
+    """
+issue_url: https://example.test/issues/{n}
+remotes:
+  UP:
+    name: upstream
+    repo: o/r
+"""
 )
 
 
-def with_remote(project, extra: str = "") -> Path:
-    (project / "luria.toml").write_text(REMOTE_TOML + extra)
+def with_remote(project, extra: str | dict = "") -> Path:
+    (project / "luria.yaml").write_text(merged(REMOTE_BASE, extra))
     config.reset()
     return project
 
@@ -75,7 +81,7 @@ def test_no_lockfile_means_fall_back_rather_than_refuse(project):
 
 
 def test_an_explicit_template_overrides_everything(project):
-    with_remote(project, 'url = "https://x.test/{code}"\n')
+    with_remote(project, {"remotes": {"UP": {"url": "https://x.test/{code}"}}})
     lockfile(project, {"ADR-032": "ignored.md"})
     assert remotes.resolve("UP", "ADR-032") == "https://x.test/ADR-032"
 
@@ -175,11 +181,15 @@ def test_the_remotes_own_config_says_where_its_documents_live():
     """Fetched from the remote and parsed, rather than guessed — which is the
     whole point of a config file existing."""
     assert remotes._upstream_dir(
-        '[luria.schemes.ADR]\ndir = "records"\n', "docs/decisions") == "records"
+        """
+        schemes:
+          ADR:
+            dir: records
+        """, "docs/decisions") == "records"
 
 
 def test_an_unparseable_upstream_config_leaves_the_default_standing():
-    """A remote may have a `luria.toml` this version can't read. Falling back
+    """A remote may have a `luria.yaml` this version can't read. Falling back
     is right; crashing on someone else's file is not."""
     assert remotes._upstream_dir("!! not toml", "docs/decisions") == "docs/decisions"
     assert remotes._upstream_dir("", "docs/decisions") == "docs/decisions"
@@ -189,8 +199,13 @@ def test_discovery_says_why_it_found_nothing(project):
     """A discovery that silently returns nothing is indistinguishable from a
     remote with no documents (DP-1) — and it returns None, not {}, because an
     unreadable remote and an empty directory are different claims."""
-    (project / "luria.toml").write_text(
-        '[luria]\nissue_url = ""\n[luria.remotes.UP]\nname = "upstream"\n')
+    (project / "luria.yaml").write_text(
+        """
+        issue_url: ''
+        remotes:
+          UP:
+            name: upstream
+        """)
     config.reset()
     found, how = remotes.discover(config.current().remotes["UP"])
     assert found is None and "no `repo` configured" in how
@@ -285,8 +300,15 @@ def test_a_quoted_hand_link_is_a_specimen_not_a_citation(project):
 
 
 SCHEMED = (
-    '[luria.remotes.UP.schemes.VP]\ndocument = "docs/values.md"\n'
-    '[luria.remotes.UP.schemes.RFC]\ndir = "docs/rfcs"\n'
+    """
+remotes:
+  UP:
+    schemes:
+      VP:
+        document: docs/values.md
+      RFC:
+        dir: docs/rfcs
+"""
 )
 
 
@@ -308,8 +330,14 @@ def test_anchor_defaults_to_the_stable_anchor_shape(project):
 
 def test_anchor_template_is_configurable(project):
     with_remote(project,
-        '[luria.remotes.UP.schemes.VP]\ndocument = "VALUES.md"\n'
-        'anchor = "value-{number}"\n')
+        """
+        remotes:
+          UP:
+            schemes:
+              VP:
+                document: VALUES.md
+                anchor: value-{number}
+        """)
     assert remotes.resolve("UP", "VP-4").endswith("VALUES.md#value-4")
 
 
@@ -324,8 +352,13 @@ def test_scheme_dir_scopes_the_file_convention(project):
 
 def test_scheme_url_template_wins(project):
     with_remote(project,
-        '[luria.remotes.UP.schemes.VP]\n'
-        'url = "https://up.example/values/{number}"\n')
+        """
+        remotes:
+          UP:
+            schemes:
+              VP:
+                url: https://up.example/values/{number}
+        """)
     assert remotes.resolve("UP", "VP-3") == "https://up.example/values/3"
 
 
@@ -355,9 +388,12 @@ def test_url_ok_retires_when_the_construction_catches_up(project):
 
 
 ARXIV = (
-    '[luria.remotes.ARXIV]\n'
-    'uid = "(\\\\d{4})[.:](\\\\d{4,5})"\n'
-    'url = "https://arxiv.org/abs/{1}.{2}"\n'
+    """
+remotes:
+  ARXIV:
+    uid: (\d{4})[.:](\d{4,5})
+    url: https://arxiv.org/abs/{1}.{2}
+"""
 )
 
 
@@ -384,8 +420,13 @@ def test_uid_is_exact_never_normalised(project):
 
 def test_the_delimiter_is_configurable(project):
     with_remote(project,
-        '[luria.remotes.JIRA]\ndelim = ":"\nuid = "[A-Z]+-\\\\d+"\n'
-        'url = "https://example.atlassian.net/browse/{uid}"\n')
+        """
+        remotes:
+          JIRA:
+            delim: ':'
+            uid: '[A-Z]+-\d+'
+            url: https://example.atlassian.net/browse/{uid}
+        """)
     text = "tracked as JIRA:PROJ-42 upstream"
     refs = remotes.references(text)
     assert [r.composed for r in refs] == ["JIRA:PROJ-42"]
@@ -402,7 +443,11 @@ def test_unconfigured_prefixes_do_not_match(project):
 def test_uid_remote_without_a_template_constructs_nothing(project):
     """One rung only — with no template there is nothing to guess with, and
     "" is what makes ref-status report the citation as dangling (DP-1)."""
-    with_remote(project, '[luria.remotes.ARXIV]\nuid = "\\\\d{4}[.]\\\\d{4,5}"\n')
+    with_remote(project, """
+                         remotes:
+                           ARXIV:
+                             uid: \d{4}[.]\d{4,5}
+                         """)
     assert remotes.resolve("ARXIV", "2403.05530") == ""
 
 
@@ -447,22 +492,31 @@ def test_fixture_prefix_resolves_to_the_convention_note():
 
 def test_uris_read_is_url_by_its_long_name(project):
     with_remote(project,
-                '[luria.remotes.UP.uris]\nread = "https://x.test/{code}"\n')
+                """
+                remotes:
+                  UP:
+                    uris:
+                      read: https://x.test/{code}
+                """)
     assert remotes.resolve("UP", "ADR-032") == "https://x.test/ADR-032"
 
 
 def test_agreeing_spellings_are_allowed(project):
-    with_remote(project, 'url = "https://x.test/{code}"\n'
-                '[luria.remotes.UP.uris]\nread = "https://x.test/{code}"\n')
+    with_remote(project, """
+                         remotes:
+                           UP:
+                             uris:
+                               read: https://x.test/{code}
+                         """)
     assert remotes.resolve("UP", "ADR-032") == "https://x.test/ADR-032"
 
 
 def test_conflicting_spellings_are_a_config_error(project):
     """`url` IS `uris.read` — two values for one setting must fail loudly,
     not crown a silent winner."""
-    (project / "luria.toml").write_text(
-        REMOTE_TOML + 'url = "https://a.test/{code}"\n'
-        '[luria.remotes.UP.uris]\nread = "https://b.test/{code}"\n')
+    (project / "luria.yaml").write_text(merged(REMOTE_BASE, {
+        "remotes": {"UP": {"url": "https://a.test/{code}",
+                           "uris": {"read": "https://b.test/{code}"}}}}))
     config.reset()
     with pytest.raises(ValueError, match="one setting"):
         config.current()
@@ -474,8 +528,12 @@ def test_a_custom_bytes_template_uses_the_discovered_filename(project):
     it: the map's silence vetoes a custom construction exactly as it vetoes
     the shipped one."""
     from luria import pins
-    with_remote(project, '[luria.remotes.UP.uris]\n'
-                'bytes = "https://gitlab.test/o/r/-/raw/{ref}/{dir}/{filename}"\n')
+    with_remote(project, """
+                         remotes:
+                           UP:
+                             uris:
+                               bytes: https://gitlab.test/o/r/-/raw/{ref}/{dir}/{filename}
+                         """)
     lockfile(project, {"ADR-032": "adr-032-a-slug.md"})
     remote = config.current().remotes["UP"]
     assert pins.stable_url(remote, "ADR-032") == (
@@ -486,8 +544,12 @@ def test_a_custom_bytes_template_uses_the_discovered_filename(project):
 def test_any_name_renders_and_an_undeclared_one_is_empty(project):
     """`read` and `bytes` are the shipped names, not the vocabulary's edge —
     a new relation is a template waiting for a consumer, never a subsystem."""
-    with_remote(project, '[luria.remotes.UP.uris]\n'
-                'history = "https://github.com/{repo}/commits/{ref}/{dir}/{filename}"\n')
+    with_remote(project, """
+                         remotes:
+                           UP:
+                             uris:
+                               history: https://github.com/{repo}/commits/{ref}/{dir}/{filename}
+                         """)
     remote = config.current().remotes["UP"]
     assert remotes.construct(remote, "ADR-32", "history") == (
         "https://github.com/o/r/commits/main/record/decisions.d/ADR-032.md")
@@ -499,7 +561,12 @@ def test_an_unfillable_template_renders_nothing_rather_than_guessing(project):
     falling back to the convention — a misspelled variable stays visible as
     a dangling reference rather than hiding behind a working guess (DP-1)."""
     with_remote(project,
-                '[luria.remotes.UP.uris]\nread = "https://x.test/{flename}"\n')
+                """
+                remotes:
+                  UP:
+                    uris:
+                      read: https://x.test/{flename}
+                """)
     assert remotes.resolve("UP", "ADR-032") == ""
 
 
@@ -510,21 +577,33 @@ def test_a_read_template_implies_no_bytes(project):
     its bytes live, and a guessed raw URL would be a claim nobody made."""
     from luria import pins
     with_remote(project,
-                'url = "https://github.com/o/r/blob/main/elsewhere/{code}.md"\n')
+                {"remotes": {"UP": {
+                    "url": "https://github.com/o/r/blob/main/elsewhere/{code}.md"}}})
     assert pins.stable_url(config.current().remotes["UP"], "ADR-032") == ""
 
 
 def test_uid_remotes_render_named_uris_through_their_groups(project):
-    with_remote(project, ARXIV +
-                '[luria.remotes.ARXIV.uris]\npdf = "https://arxiv.org/pdf/{1}.{2}"\n')
+    with_remote(project, merged(ARXIV,
+                """
+                remotes:
+                  ARXIV:
+                    uris:
+                      pdf: https://arxiv.org/pdf/{1}.{2}
+                """))
     remote = config.current().remotes["ARXIV"]
     assert remotes.construct(remote, "2403.05530", "pdf") == (
         "https://arxiv.org/pdf/2403.05530")
 
 
 def test_scheme_level_uris_scope_to_the_family(project):
-    with_remote(project, '[luria.remotes.UP.schemes.VP.uris]\n'
-                'read = "https://up.example/values/{number}"\n')
+    with_remote(project, """
+                         remotes:
+                           UP:
+                             schemes:
+                               VP:
+                                 uris:
+                                   read: https://up.example/values/{number}
+                         """)
     assert remotes.resolve("UP", "VP-18") == "https://up.example/values/18"
     assert remotes.resolve("UP", "ADR-032").endswith(
         "record/decisions.d/ADR-032.md")
@@ -548,7 +627,8 @@ def test_an_explicit_issue_url_wins(project):
     """A forge that is not GitHub is a line of config, not a subsystem —
     the same bargain the `uris` table already makes for documents."""
     with_remote(project,
-                'issue_url = "https://gitlab.test/o/r/-/issues/{n}"\n')
+                {"remotes": {"UP": {
+                    "issue_url": "https://gitlab.test/o/r/-/issues/{n}"}}})
     assert remotes.issue_link("UP", 7) == "https://gitlab.test/o/r/-/issues/7"
 
 
@@ -556,9 +636,12 @@ def test_a_remote_with_no_repo_has_no_tracker(project):
     """`ARXIV-#5` names nothing. A remote reached by a `url` template has no
     issues, and guessing one would be the same silent wrongness in a new
     place — so it resolves to nothing and the caller reports it."""
-    with_remote(project, '[luria.remotes.ARXIV]\n'
-                         'uid = "(\\\\d{4})\\\\.(\\\\d{4,5})"\n'
-                         'url = "https://arxiv.org/abs/{1}.{2}"\n')
+    with_remote(project, """
+                         remotes:
+                           ARXIV:
+                             uid: (\d{4})\.(\d{4,5})
+                             url: https://arxiv.org/abs/{1}.{2}
+                         """)
     assert remotes.issue_link("ARXIV", 5) == ""
 
 

@@ -174,10 +174,11 @@ template (to this section), and reads unambiguously as "an example, not a
 citation". Any project can adopt the same convention with a one-table
 remote:
 
-```toml
-[luria.remotes.FX]
-name = "fixtures"
-url  = "https://github.com/dmarx/luria/blob/main/docs/directives.md#fixture-codes"
+```yaml
+remotes:
+  FX:
+    name: fixtures
+    url: https://github.com/dmarx/luria/blob/main/docs/directives.md#fixture-codes
 ```
 
 That covers a fixture code that should *resolve somewhere harmless*. A test

@@ -5,7 +5,15 @@ the derivation resolves everywhere a field is read, writing it down is a
 finding, and a declaration that could never resolve is refused at load.
 """
 
+# inactive-ok-file: ADR-tmp8hp25 — Proposed. Every mention names it as the
+# decision this file implements or is written against; the citation is to the
+# reasoning, not a claim the decision is settled.
+
 from __future__ import annotations
+
+import yaml
+
+from _config import merged
 
 from pathlib import Path
 
@@ -30,29 +38,48 @@ encoding:
   label: Encoding
 """
 
+# `tags` is a declared field since ADR-tmp8hp25 — open, so a secondary tag
+# outside the vocabulary is fine, which is what these tests turn on — and
+# `primary_topic` derives the first of its values.
 DERIVED = """
-[luria.schemes.LIT.fields.primary_topic]
-derive     = "{tags[0]}"
-vocabulary = "tags"
+schemes:
+  LIT:
+    axis: tags
+    fields:
+      tags:
+        vocabulary: lit-tags
+        many: true
+        closed: false
+      primary_topic:
+        derive: '{tags[0]}'
+        vocabulary: lit-tags
 """
 
 
 def project(tmp_path, monkeypatch, extra: str = DERIVED,
             topics: str = TOPICS) -> Path:
-    write(tmp_path, "luria.toml", f"""
-[luria]
-issue_url = "https://example.test/issues/{{n}}"
-
-[luria.schemes.LIT]
-dir = "record/literature.d"
-output = "docs/literature"
-
-[luria.schemes.LIT.references]
-extends = {{ scheme = "LIT", required = false, many = true, converse = "extended_by" }}
-extended_by = {{ scheme = "LIT", required = false, many = true, converse = "extends" }}
-{extra}
-""")
-    write(tmp_path, "record/literature.d/tags.yaml", topics)
+    write(tmp_path, "luria.yaml", merged("""
+                                  issue_url: https://example.test/issues/{n}
+                                  schemes:
+                                    LIT:
+                                      dir: record/literature.d
+                                      output: docs/literature
+                                      references:
+                                        extends:
+                                          scheme: LIT
+                                          required: false
+                                          many: true
+                                          converse: extended_by
+                                        extended_by:
+                                          scheme: LIT
+                                          required: false
+                                          many: true
+                                          converse: extends
+                                  """, extra))
+    # The values live in the config under the name the field asks for.
+    write(tmp_path, "luria.yaml", merged(
+        (tmp_path / "luria.yaml").read_text(),
+        {"vocabularies": {"lit-tags": yaml.safe_load(topics) or {}}}))
     monkeypatch.setenv("LURIA_ROOT", str(tmp_path))
     config.reset()
     return tmp_path
@@ -103,7 +130,7 @@ def test_order_is_the_whole_statement(tmp_path, monkeypatch):
 
 def test_an_explicit_index_reads_further_in(tmp_path, monkeypatch):
     root = project(tmp_path, monkeypatch,
-                   DERIVED.replace('"{tags[0]}"', '"{tags[1]}"'))
+                   DERIVED.replace("'{tags[0]}'", "'{tags[1]}'"))
     path = note(root, 1, ["stability", "optimizers"])
     assert adr_index.Adr(path, scheme()).meta["primary_topic"] == "optimizers"
 
@@ -164,7 +191,7 @@ def test_the_derived_value_is_checked_against_its_vocabulary(
     path = note(root, 1, ["homemade", "stability"])
     out = findings(root, path)
     assert len(out) == 1
-    assert "`primary_topic: homemade` is not in the `tags` vocabulary" in out[0]
+    assert "`primary_topic: homemade` is not in the `lit-tags` vocabulary" in out[0]
 
 
 def test_a_secondary_tag_outside_the_vocabulary_is_fine(tmp_path, monkeypatch):
@@ -177,25 +204,27 @@ def test_a_secondary_tag_outside_the_vocabulary_is_fine(tmp_path, monkeypatch):
 def test_a_chain_can_assert_the_derived_field(tmp_path, monkeypatch):
     """The point of the exercise: `invariant` reads a derived field like any
     other, so a relation can assert the primary rather than any tag."""
-    root = project(tmp_path, monkeypatch, DERIVED + """
-[luria.chains.lineage]
-scheme    = "LIT"
-relation  = "extends"
-output    = "docs/lineage.md"
-invariant = "primary_topic"
-""")
+    root = project(tmp_path, monkeypatch, merged(DERIVED, """
+                                                    chains:
+                                                      lineage:
+                                                        scheme: LIT
+                                                        relation: extends
+                                                        output: docs/lineage.md
+                                                        invariant: primary_topic
+                                                    """))
     note(root, 1, ["stability", "optimizers"])
     note(root, 2, ["optimizers", "stability"], extends=["LIT-001"])
     chain = config.current().chains["lineage"]
     assert [h.codes for h in invariants.edges(chain)] == [("LIT-001", "LIT-002")]
 
-    root = project(tmp_path, monkeypatch, DERIVED + """
-[luria.chains.lineage]
-scheme    = "LIT"
-relation  = "extends"
-output    = "docs/lineage.md"
-invariant = "primary_topic"
-""")
+    root = project(tmp_path, monkeypatch, merged(DERIVED, """
+                                                    chains:
+                                                      lineage:
+                                                        scheme: LIT
+                                                        relation: extends
+                                                        output: docs/lineage.md
+                                                        invariant: primary_topic
+                                                    """))
     note(root, 1, ["stability", "optimizers"])
     note(root, 2, ["stability"], extends=["LIT-001"])
     assert invariants.edges(config.current().chains["lineage"]) == []
@@ -205,21 +234,22 @@ def test_sharing_a_secondary_binds_tags_but_not_the_primary(
         tmp_path, monkeypatch):
     """The two readings the pair makes available, on one record: `tags` is
     satisfied by any shared value, `primary_topic` only by the first."""
-    both = DERIVED + """
-[luria.chains.lineage]
-scheme    = "LIT"
-relation  = "extends"
-output    = "docs/lineage.md"
-invariant = "tags"
-"""
+    both = merged(DERIVED, """
+                     chains:
+                       lineage:
+                         scheme: LIT
+                         relation: extends
+                         output: docs/lineage.md
+                         invariant: tags
+                     """)
     root = project(tmp_path, monkeypatch, both)
     note(root, 1, ["optimizers", "stability"])
     note(root, 2, ["encoding", "stability"], extends=["LIT-001"])
     assert invariants.edges(config.current().chains["lineage"]) == []
 
     root = project(tmp_path, monkeypatch,
-                   both.replace('invariant = "tags"',
-                                'invariant = "primary_topic"'))
+                   merged(both, {"chains": {"lineage": {
+                       "invariant": "primary_topic"}}}))
     note(root, 1, ["optimizers", "stability"])
     note(root, 2, ["encoding", "stability"], extends=["LIT-001"])
     assert [h.codes for h in
@@ -237,27 +267,28 @@ def test_the_record_page_says_where_the_value_comes_from(tmp_path, monkeypatch):
 # --- refused at load ---------------------------------------------------------
 
 @pytest.mark.parametrize("spec,message", [
-    ('"tags"', "reads no field"),
-    ('"LIT-{tags[0]"', "not a template"),
-    ('"{primary_topic}"', "derives from itself"),
-    ('"{nonexistent}"', "is not a field LIT declares"),
-    ('"{status}"', "renames a field rather than deriving one"),
+    ("'tags'", "reads no field"),
+    ("'LIT-{tags[0]'", "not a template"),
+    ("'{primary_topic}'", "derives from itself"),
+    ("'{nonexistent}'", "is not a field LIT declares"),
+    ("'{status}'", "renames a field rather than deriving one"),
 ])
 def test_a_derivation_that_could_never_resolve_is_refused(
         tmp_path, monkeypatch, spec, message):
-    project(tmp_path, monkeypatch, DERIVED.replace('"{tags[0]}"', spec))
+    project(tmp_path, monkeypatch, DERIVED.replace("'{tags[0]}'", spec))
     with pytest.raises(ValueError, match=message):
         config.current()
 
 
 @pytest.mark.parametrize("extra,message", [
-    ("many = true", "drop `many`"),
-    ("required = true", "require `tags` instead"),
-    ('default = "stability"', "two answers to where the value comes from"),
+    ({"many": True}, "drop `many`"),
+    ({"required": True}, "require `tags` instead"),
+    ({"default": "stability"}, "two answers to where the value comes from"),
 ])
 def test_a_second_answer_about_the_value_is_refused(
         tmp_path, monkeypatch, extra, message):
-    project(tmp_path, monkeypatch, DERIVED + extra + "\n")
+    project(tmp_path, monkeypatch, merged(DERIVED, {
+        "schemes": {"LIT": {"fields": {"primary_topic": extra}}}}))
     with pytest.raises(ValueError, match=message):
         config.current()
 
@@ -266,10 +297,16 @@ def test_a_derivation_needs_no_vocabulary_to_be_a_field(tmp_path, monkeypatch):
     """`derive` types a field on its own. Without this the bare case would be
     resolved onto documents but described nowhere, which is a field the record
     page cannot tell a reader about."""
-    project(tmp_path, monkeypatch, '''
-[luria.schemes.LIT.fields.primary_topic]
-derive = "{tags[0]}"
-''')
+    project(tmp_path, monkeypatch, """
+                                   schemes:
+                                     LIT:
+                                       axis: tags
+                                       fields:
+                                         tags:
+                                           many: true
+                                         primary_topic:
+                                           derive: '{tags[0]}'
+                                   """)
     root = tmp_path
     path = note(root, 1, ["homemade"])
     assert adr_index.Adr(path, scheme()).meta["primary_topic"] == "homemade"
@@ -285,14 +322,16 @@ def test_a_lone_field_keeps_the_value_s_type(tmp_path, monkeypatch):
     """`{versions[0]}` is the number, not "3". What keeps a derived value
     comparable to the vocabulary member a check matches it against, and to
     the value another document's list is intersected with."""
-    root = project(tmp_path, monkeypatch, '''
-[luria.schemes.LIT.fields.era]
-derive = "{versions[0]}"
-
-[luria.schemes.LIT.fields.versions]
-required = true
-many = true
-''')
+    root = project(tmp_path, monkeypatch, """
+                                          schemes:
+                                            LIT:
+                                              fields:
+                                                era:
+                                                  derive: '{versions[0]}'
+                                                versions:
+                                                  required: true
+                                                  many: true
+                                          """)
     path = write(root, "record/literature.d/LIT-001.md",
                  "---\nstatus: Active\ntitle: 'N'\nversions:\n- 3\n- 4\n"
                  "date: '2026-01-01'\n---\n\n# LIT-001: N\n")
@@ -302,14 +341,16 @@ many = true
 def test_a_template_that_builds_something_is_a_string(tmp_path, monkeypatch):
     """The other half of the rule: literal text around a field means the
     author was writing a string, so they get one."""
-    root = project(tmp_path, monkeypatch, '''
-[luria.schemes.LIT.fields.era]
-derive = "v{versions[0]}"
-
-[luria.schemes.LIT.fields.versions]
-required = true
-many = true
-''')
+    root = project(tmp_path, monkeypatch, """
+                                          schemes:
+                                            LIT:
+                                              fields:
+                                                era:
+                                                  derive: v{versions[0]}
+                                                versions:
+                                                  required: true
+                                                  many: true
+                                          """)
     path = write(root, "record/literature.d/LIT-001.md",
                  "---\nstatus: Active\ntitle: 'N'\nversions:\n- 3\n- 4\n"
                  "date: '2026-01-01'\n---\n\n# LIT-001: N\n")
@@ -320,13 +361,15 @@ def test_a_lone_scalar_field_is_still_refused_as_a_rename(tmp_path, monkeypatch)
     """The pre-template rule, narrowed to where it still bites: `{year}`
     under a second name copies a field rather than deriving one. A template
     that *builds* from scalars is fine — this is only the bare case."""
-    project(tmp_path, monkeypatch, '''
-[luria.schemes.LIT.fields.era]
-derive = "{year}"
-
-[luria.schemes.LIT.fields.year]
-required = true
-''')
+    project(tmp_path, monkeypatch, """
+                                   schemes:
+                                     LIT:
+                                       fields:
+                                         era:
+                                           derive: '{year}'
+                                         year:
+                                           required: true
+                                   """)
     with pytest.raises(ValueError, match="renames a field"):
         config.current()
 
@@ -348,6 +391,6 @@ def test_derive_and_alias_render_through_one_vocabulary(tmp_path, monkeypatch):
 def test_a_template_reading_nothing_is_refused(tmp_path, monkeypatch):
     """A constant is a default, not a derivation — and `default` is the
     spelling that already means that."""
-    project(tmp_path, monkeypatch, DERIVED.replace('"{tags[0]}"', '"constant"'))
+    project(tmp_path, monkeypatch, DERIVED.replace("'{tags[0]}'", "constant"))
     with pytest.raises(ValueError, match="reads no field"):
         config.current()

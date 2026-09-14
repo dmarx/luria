@@ -13,7 +13,7 @@ Two kinds, and the difference is the whole of how the fixer behaves:
 - **Also known as** — a spelling derived right now from the document's own
   frontmatter, where the scheme declares a template:
 
-      [luria.schemes.LIT]
+      `schemes.LIT`
       alias = "LIT-{authors[0]}-{year}-{number}"
 
   `LIT-Kingma-2014-041` resolves to `LIT-041`, and the fixer **leaves it

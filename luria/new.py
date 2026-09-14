@@ -14,7 +14,7 @@ driving the CLI can still set fields inline (`--title`, `--status`,
 `--summary`, `--tags`); a human never has to.
 
 **The kinds are the config.** Every journal, scheme and fragment directory in
-`luria.toml` is a kind, so a project that adds a scheme gets its scaffold for
+`luria.yaml` is a kind, so a project that adds a scheme gets its scaffold for
 free — nothing here spells "adr". One kind is built in rather than
 configured: `luria new migration` scaffolds a migration spec (ADR-040),
 because migrations belong to the machinery, not to any one project's layout.
@@ -90,7 +90,7 @@ def _sub_line(text: str, field: str, value, many: bool = False) -> str:
     pattern = re.compile(rf"^{field}:.*(?:\n(?:  |- ).*)*", re.MULTILINE)
     if isinstance(value, (tuple, list)):
         value = ", ".join(str(v) for v in value)
-    if field == "tags" or many:
+    if many:
         items = [v.strip() for v in str(value).split(",") if v.strip()]
         replacement = f"{field}:\n" + "\n".join(f"- {v}" for v in items)
     elif field == "summary":
@@ -300,12 +300,12 @@ def new_migration(fields: dict[str, str], name: str | None) -> Path:
     from .migrate import MIGRATIONS_DIR
     mig_dir = current().root / MIGRATIONS_DIR
     taken = [int(m.group(1)) for p in
-             (mig_dir.glob("*.toml") if mig_dir.exists() else [])
+             (mig_dir.glob("*.yaml") if mig_dir.exists() else [])
              if (m := re.match(r"(\d{4})-", p.name))]
     number = f"{max(taken, default=0) + 1:04d}"
     title = fields.get("title") or "What moves, and why"
     slug = name or re.sub(r"[^a-z0-9]+", "-", title.lower()).strip("-")
-    path = mig_dir / f"{number}-{slug}.toml"
+    path = mig_dir / f"{number}-{slug}.yaml"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(MIGRATION_TEMPLATE.format(number=number, title=title), encoding="utf-8")
     return path
@@ -337,7 +337,7 @@ def run(kind: str = None, title: str = None, status: str = None,
         summary: str = None, tags: str = None, name: str = None,
         **declared) -> None:
     """Scaffold an entry and print its path. KIND defaults to the journal;
-    the other kinds come from luria.toml (scheme prefixes, fragment dirs).
+    the other kinds come from luria.yaml (scheme prefixes, fragment dirs).
     Field flags are optional — content belongs to your editor.
 
     Beyond the four universal flags, a scheme's own declared fields are

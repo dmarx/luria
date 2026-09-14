@@ -29,7 +29,7 @@ the unacknowledged ones, so its total is smaller — the headline names both so
 the two reports visibly reconcile.
 
 Like the non-Active reference report this ships beside, it warns by default
-and fails only when `[luria.lint] fail_on` says so (ADR-035). An ADR can be
+and fails only when `lint.fail_on` says so (ADR-035). An ADR can be
 legitimately open for a long time; only a human can say which of these is
 overdue.
 """

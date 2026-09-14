@@ -170,7 +170,7 @@ def _pending_table(rows, base: Path) -> list[str]:
 
 def _pending_by_scheme(rows) -> list[tuple[str, list]]:
     """`(prefix, rows)` for each scheme that has an undecided document, in the
-    order `luria.toml` declares the schemes (#230).
+    order `luria.yaml` declares the schemes (#230).
 
     Declaration order rather than alphabetical, for the reason `tags.yaml`
     orders topics: which family a reader meets first is the project's

@@ -1,0 +1,41 @@
+vocabularies:
+  note-statuses:
+    Active:
+      blurb: in force — the current answer, and what a citation should normally point at
+    Proposed:
+      blurb: not in force yet — an open question, so citing it as settled is what the reference report catches
+    Deferred:
+      blurb: not in force and not being worked on; the question is real and the answer waits on something
+    Superseded:
+      blurb: no longer in force because something replaced it; the successor is named in the field, not in the prose
+    Rejected:
+      blurb: no longer in force and nothing replaced it — kept because a rejection is worth being able to point at
+issue_url: https://github.com/acme/research/issues/{n}
+schemes:
+  NOTE:
+    dir: record/notes.d
+    output: docs/notes
+    fields:
+      status:
+        vocabulary: note-statuses
+      tags:
+        many: true
+        required: true
+        closed: false
+    axis: tags
+remotes:
+  ARXIV:
+    name: arXiv
+    uid: (\d{4})[.:](\d{4,5})
+    url: https://arxiv.org/abs/{1}.{2}
+  JIRA:
+    name: Jira
+    uid: '[A-Z]+-\d+'
+    delim: ':'
+    url: https://acme.atlassian.net/browse/{uid}
+  CVE:
+    name: CVE
+    uid: \d{4}-\d{4,7}
+    url: https://nvd.nist.gov/vuln/detail/CVE-{uid}
+site:
+  title: External citations

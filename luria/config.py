@@ -1,29 +1,36 @@
 """Where a project keeps its record, and what its references look like.
 
 Everything else in Luria is generic; this module is the one place that knows a
-particular project. It reads `luria.toml` from the project root:
+particular project. It reads `luria.yaml` from the project root:
 
-    [luria]
-    issue_url = "https://github.com/owner/repo/issues/{n}"
+    issue_url: https://github.com/owner/repo/issues/{n}
 
-    [luria.paths]
-    docs = "docs"
-    decisions = "record/decisions.d"
-    design_principles = "docs/design-principles.md"
+    paths:
+      docs: docs
+      decisions: record/decisions.d
+      design_principles: docs/design-principles.md
 
-    [luria.fragments]
-    "record/changelog.d" = "CHANGELOG.md"   # collected into…
+    fragments:
+      record/changelog.d: CHANGELOG.md   # collected into…
 
-    [luria.journals.devlog]
-    dir = "record/devlog.d"             # …whereas a journal's entries persist
-    output = "docs/devlog"
+    journals:
+      devlog:
+        dir: record/devlog.d        # …whereas a journal's entries persist
+        output: docs/devlog
 
-    [luria.code]
-    globs = ["src/**/*.py", "*.md"]
+    code:
+      globs: ["src/**/*.py", "*.md"]
 
-    [luria.schemes.ADR]
-    dir = "record/decisions.d"          # ground truth, filed by hand
-    output = "docs/decisions"           # the browsable view, generated
+    vocabularies:                   # declared once, named by every scheme
+      statuses:                     # that uses it (ADR-tmp8hp25)
+        Active: {blurb: in force}
+
+    schemes:
+      ADR:
+        dir: record/decisions.d     # ground truth, filed by hand
+        output: docs/decisions      # the browsable view, generated
+        fields:
+          status: {vocabulary: statuses}
 
 The layout this describes is the read/write boundary (ADR-021): everything a
 contributor *files* lives under `record/`, every view a reader *browses* lives
@@ -32,7 +39,7 @@ under `docs/`. A scheme whose `output` is unset keeps the old collocated shape
 to move anything.
 
 Every key has a default, so a project with the conventional layout needs a
-`luria.toml` containing only `issue_url` — and Luria still runs without one, on
+`luria.yaml` containing only `issue_url` — and Luria still runs without one, on
 defaults alone, which is what makes `luria init` able to bootstrap.
 
 Two merge rules, split by what a table *is* (ADR-047). A settings table —
@@ -52,17 +59,31 @@ which files they cover — the exact class of bug ADR-002 exists to prevent. One
 config object, resolved once from disk.
 """
 
+# inactive-ok-file: ADR-tmp8hp25 — Proposed. Every mention names it as the decision
+# this module implements; the citation is to the reasoning, not a claim the
+# decision is settled.
+
 from __future__ import annotations
 
 import os
 import re
-import tomllib
 from contextlib import contextmanager
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field as dcfield
+import yaml
 from functools import lru_cache
+from typing import cast
+
+from omegaconf import OmegaConf
 from pathlib import Path
 
-CONFIG_NAME = "luria.toml"
+CONFIG_NAME = "luria.yaml"
+
+# The record already speaks YAML — every document's frontmatter is YAML, and
+# so was every vocabulary file before they moved into the config. The config
+# spoke TOML, and the lockfile JSON, for no reason either of them could state
+# (ADR-tmp8hp25). One format is one set of quoting rules to know, and one
+# parser to reason about when a regex in a `uid` does not mean what it looks
+# like.
 
 DEFAULTS: dict = {
     "issue_url": "",
@@ -137,7 +158,7 @@ DEFAULTS: dict = {
     # ordinary project, which contains no others.
     "include_records": [],
     # The published site (ADR-042). Every key is derivable from `issue_url`
-    # for a GitHub project, so the conventional case needs no `[luria.site]`
+    # for a GitHub project, so the conventional case needs no `site`
     # table at all — a default nobody has to read the docs to get.
     "site": {
         # Whether this record is published on the web at all. True because
@@ -166,7 +187,7 @@ GITHUB_ISSUE_RE = re.compile(
 
 
 def find_root(start: Path | None = None) -> Path:
-    """The project root: nearest ancestor with a `luria.toml`, else with a
+    """The project root: nearest ancestor with a `luria.yaml`, else with a
     `.git`, else the starting directory. Env var `LURIA_ROOT` wins, which is
     what lets the tests run against fixture trees."""
     if env := os.environ.get("LURIA_ROOT"):
@@ -182,13 +203,15 @@ def find_root(start: Path | None = None) -> Path:
 
 
 def _merge(base: dict, override: dict) -> dict:
-    out = dict(base)
-    for key, value in override.items():
-        if isinstance(value, dict) and isinstance(out.get(key), dict):
-            out[key] = _merge(out[key], value)
-        else:
-            out[key] = value
-    return out
+    """`base` with `override` folded into it, nested tables merging.
+
+    `OmegaConf.merge` is the function, and the reason to route through it
+    rather than hand-roll the recursion is that the schema below then applies
+    to the result: a key the schema types as a string and the config gives a
+    list is a load-time error naming the key, instead of a `TypeError` three
+    modules away in whatever first reads it (ADR-tmp8hp25)."""
+    merged = OmegaConf.merge(OmegaConf.create(base), OmegaConf.create(override))
+    return cast(dict, OmegaConf.to_container(merged, resolve=True))
 
 
 # unresolved-ok-block: ADR-tmp47fje — ADR-049's example of the shape, not a document
@@ -243,6 +266,11 @@ class TagGroup:
 
     name: str
     tags: frozenset[str]
+    # The frontmatter field whose values these are. A group constrains a
+    # subset of ONE field's vocabulary, so it is declared under that field
+    # and carries its name (ADR-tmp8hp25); it was `schemes.X.tag_groups`,
+    # which could only ever mean `tags`.
+    field: str = "tags"
     # "any" (the default — the group is a label, not an axis), "at-most-one",
     # or "exactly-one".
     require: str = "any"
@@ -263,7 +291,10 @@ REQUIRE_RULES = ("any", "at-most-one", "exactly-one")
 class RequiredWhen:
     """A field demanded only while another field says one of these things:
 
-        [luria.schemes.SOTA.fields.promote_when]
+        schemes:
+          SOTA:
+            fields:
+              promote_when: {}
         required_when = { status = ["Proposed", "Deferred"] }
 
     `requires` says a field must always be there, which is right for identity
@@ -304,7 +335,10 @@ class FieldGroup:
     """Several fields of which an entry must carry some — a requirement that
     is satisfied by any of them, named for what they have in common:
 
-        [luria.schemes.LIT.field_groups.source]
+        schemes:
+          LIT:
+            field_groups:
+              source: {}
         fields  = ["arxiv", "doi", "url"]
         require = "at-least-one"          # or "exactly-one", "at-most-one"
 
@@ -325,9 +359,12 @@ FIELD_RULES = ("at-least-one", "exactly-one", "at-most-one")
 class Reference:
     """A frontmatter field that holds a code from a named scheme.
 
-        [luria.schemes.SOTA.references]
-        source = { scheme = "LIT", required = true }
-
+        schemes:
+          SOTA:
+            references:
+              source:
+                scheme: LIT
+                required: true
     `requires = ["source"]` already says the field must be there. What it
     cannot say is what the field MEANS, and the gap is wider than it looks: a
     required field is satisfied by any truthy value, so a practice citing a
@@ -357,6 +394,12 @@ class Reference:
     required: bool = True
     many: bool = False
     converse: str = ""
+    # What a relation IS, as data rather than as a TOML comment nothing could
+    # render, quote or scaffold from (#254). The same two keys a vocabulary
+    # value carries, for the same reason: `label` is what a view calls it,
+    # `blurb` is what it means.
+    label: str = ""
+    blurb: str = ""
     # When the requirement applies, if not always (see `RequiredWhen`).
     required_when: RequiredWhen | None = None
 
@@ -366,9 +409,12 @@ class Vocabulary:
     """A frontmatter field backed by a scheme-local controlled vocabulary
     (ADR-076):
 
-        [luria.schemes.SCENE.fields.worlds]
-        vocabulary = "worlds"     # the values: worlds.yaml beside the records
-        many       = true         # a list of values; default false, one value
+        schemes:
+          SCENE:
+            fields:
+              worlds:
+                vocabulary: worlds
+                many: true
         default    = ["B"]        # the effective value when the field is absent
 
     `fields` is the table a field's shape and type are declared in; today
@@ -382,23 +428,22 @@ class Vocabulary:
     # Usually the same word; `world:` backed by `worlds.yaml` is the other.
     field: str
     name: str
-    file: Path
+    # The values, resolved from the central `vocabularies:` table at load.
+    # Was a Path to `<name>.yaml` beside the records (ADR-tmp8hp25).
+    values_by_name: dict[str, dict] = dcfield(default_factory=dict)
     many: bool = False
     required: bool = False
     # Normalised to a tuple of values whatever the shape declared; None when
     # absence is a meaningful state rather than a spelling of the default.
     default: tuple[str, ...] | None = None
+    # Whether a value outside `values_by_name` is a finding. Closed is the
+    # default and the case ADR-076 was built for. OPEN is what `tags` needed
+    # and ADR-054 deferred: the declaration supplies order, label and blurb
+    # for the values a project has an opinion about, and adding a new one
+    # stays an edit to a document rather than to the config.
+    closed: bool = True
     # When the requirement applies, if not always (see `RequiredWhen`).
     required_when: RequiredWhen | None = None
-
-
-# The axes every scheme has, with their own files and their own rules.
-# `tags` stays: it is OPEN, and a vocabulary is closed by
-# construction (ADR-054 deferred even a `closed` flag), and its
-# `tag_groups` constrain a *subset of values*, which a vocabulary
-# cannot express. `status` needed neither — it is the closed,
-# single-valued case the mechanism was built for (#181).
-BUILT_IN_AXES = ("tags",)
 
 
 # Path → ((mtime_ns, size), number). Keyed on the stat rather than reset
@@ -513,7 +558,7 @@ class Scheme:
     # numbers in merge order and records each temporary code as a permanent
     # `aka:` alias.
     allocate: str = "filing"
-    # Whether a title in this scheme must avoid `[luria.lint] narrow_terms`.
+    # Whether a title in this scheme must avoid `lint.narrow_terms`.
     # False everywhere by default, including for the shipped ADR scheme: a
     # decision is *about* something specific and naming it is correct. A
     # scheme whose documents claim to transfer — principles, values — is where
@@ -525,17 +570,27 @@ class Scheme:
     # what the target scheme's template would have prompted for. The machinery
     # relocates a document; only a person can vouch that it belongs.
     requires: tuple[str, ...] = ()
-    # Which of this scheme's tags may appear together (see `TagGroup`). Empty
-    # for every scheme that does not declare `[luria.schemes.X.tag_groups]`,
-    # which is the unconstrained behaviour every project has today.
+    # Which of this scheme's values may appear together (see `TagGroup`),
+    # flattened across every field that declares `groups:`. Empty for every
+    # scheme that declares none, which is the unconstrained behaviour every
+    # project has today.
     tag_groups: tuple[TagGroup, ...] = ()
-    # Where this scheme's tag vocabulary lives. Unset means the collocated
-    # `tags.yaml` beside the sources, which is where it has always been. Set,
-    # two schemes can name ONE file and share a vocabulary instead of keeping
-    # a copy each (ADR-060).
-    tags_file: Path | None = None
+    # The NAME of the vocabulary behind `status` — DERIVED from
+    # `fields.status.vocabulary` rather than declared beside it, because
+    # `status` is a field like any other and a second key could disagree with
+    # the field (ADR-tmp8hp25). `tags_vocab` is the same, off `axis`.
+    statuses_vocab: str = ""
+    # Which of this scheme's fields is its primary taxonomy: the field whose
+    # values head the index under `{categories}` and get a page each. A
+    # rendering choice about the scheme — one project's axis is `tags`,
+    # another's is `worlds` — so it is named here and assumed nowhere. Empty
+    # means the scheme has no taxonomy and renders none.
+    axis: str = ""
+    # The central table, threaded in so a scheme can answer for its own words
+    # without every caller reaching back through `current()`.
+    vocab_values: dict[str, dict] = dcfield(default_factory=dict)
     # Several fields of which an entry must carry some (see `FieldGroup`):
-    # `[luria.schemes.X.field_groups.NAME]`. What `requires` cannot say —
+    # `schemes.X.field_groups.NAME`. What `requires` cannot say —
     # that any of these satisfies the need, and the need has a name.
     field_groups: tuple[FieldGroup, ...] = ()
     # Frontmatter fields that hold a code from another scheme, by field name:
@@ -544,7 +599,7 @@ class Scheme:
     # one code or a list of them.
     references: tuple[Reference, ...] = ()
     # Frontmatter fields backed by a controlled vocabulary (see
-    # `Vocabulary`): `[luria.schemes.X.fields.NAME]` with `vocabulary =
+    # `Vocabulary`): `schemes.X.fields.NAME` with `vocabulary =
     # "V"`, values in `V.yaml` beside the records. The third instance of
     # what `statuses.yaml` and `tags.yaml` already are.
     vocabularies: tuple[Vocabulary, ...] = ()
@@ -589,12 +644,38 @@ class Scheme:
         return self.view / "README.md"
 
     @property
-    def tag_dir(self) -> Path:
-        return self.view / "tags"
+    def grouped_fields(self) -> tuple[str, ...]:
+        """Every field whose values a view groups by, axis first.
 
-    def vocab_dir(self, name: str) -> Path:
-        """Where a vocabulary's per-value pages render, beside the tag pages."""
-        return self.view / name
+        The declared vocabularies, plus the axis when it declares none — a
+        scheme may head its index with a field it has not enumerated, which
+        is the ordinary starting point and what `luria init` scaffolds. One
+        definition, because three places need the same answer: which
+        directories the generator owns, which are exempt from the docs
+        index, and which paths are generated (ADR-tmp8hp25)."""
+        # Axis first wherever it is declared, because it heads the index:
+        # the `fields:` table is written in whatever order reads best, and
+        # that is not an answer about which taxonomy comes first.
+        named = [v.field for v in self.vocabularies if v.field != self.axis]
+        return tuple(([self.axis] if self.axis else []) + named)
+
+    @property
+    def tag_dir(self) -> Path:
+        """Where the axis's per-value pages render. `<view>/<axis>/`, so a
+        scheme whose axis is `tags` keeps the path it has always had."""
+        return self.view / (self.axis or "tags")
+
+    def vocab_dir(self, field: str) -> Path:
+        """Where a grouped field's per-value pages render — the axis's among
+        them, since it is a declared field like any other (ADR-tmp8hp25).
+
+        Keyed on the FIELD, not on the vocabulary's name: a name is a config
+        detail and a published path is not, so sharing a vocabulary between
+        two schemes — or renaming one — must not move anybody's pages
+        (ADR-tmp8hp25). Two schemes naming one vocabulary still render their
+        own pages, under their own views.
+        """
+        return self.view / field
 
     # The stub and the tag metadata are *authored*, so they live with the
     # sources — the view directory holds only what the generator wrote, which
@@ -604,14 +685,27 @@ class Scheme:
         return self.dir / "README.stub"
 
     @property
-    def tags_yaml(self) -> Path:
-        return self.tags_file or self.dir / "tags.yaml"
+    def axis_field(self):
+        """The `Vocabulary` behind `axis`, or None when there is no axis."""
+        return next((v for v in self.vocabularies if v.field == self.axis),
+                    None)
 
     @property
-    def statuses_yaml(self) -> Path:
-        """What this scheme's statuses mean. Optional; absent leaves the
-        closed vocabulary open to all five and renders no legend."""
-        return self.dir / "statuses.yaml"
+    def tags_vocab(self) -> str:
+        """The NAME of the vocabulary behind the axis, for a finding to cite."""
+        v = self.axis_field
+        return v.name if v else ""
+
+    @property
+    def tags(self) -> dict[str, dict]:
+        """This scheme's axis vocabulary, by value."""
+        v = self.axis_field
+        return dict(v.values_by_name) if v else {}
+
+    @property
+    def statuses(self) -> dict[str, dict]:
+        """This scheme's status vocabulary, by value."""
+        return dict(self.vocab_values.get(self.statuses_vocab) or {})
 
     @property
     def pattern(self):
@@ -733,7 +827,7 @@ def _fold_uris(spec: dict, where: str) -> dict[str, str]:
             continue
         if declared.get(uri_name, value) != value:
             raise ValueError(
-                f"luria.toml: {where} sets both `{sugar}` and "
+                f"luria.yaml: {where} sets both `{sugar}` and "
                 f"`uris.{uri_name}` — they are one setting; keep either")
         declared[uri_name] = value
     return declared
@@ -746,10 +840,10 @@ class RemoteScheme:
     A remote is not one directory of files — it is a project, and different
     schemes in it have different shapes. Each entry names one construction:
 
-        [luria.remotes.SG.schemes.ADR]
+        `remotes.SG.schemes.ADR`
         dir = "docs/decisions"                 # file per code
 
-        [luria.remotes.SG.schemes.DP]
+        `remotes.SG.schemes.DP`
         document = "docs/design-principles.md" # sections of one file…
         anchor = "dp-{number}"                 # …at Luria's stable anchors
 
@@ -775,7 +869,7 @@ class RemoteScheme:
     # Named URI templates for this code family — `[….schemes.Y.uris]`. The
     # general form of `url` and `pin_url`, which are its `read` and `bytes`
     # entries; populated at load with the sugar folded in (`_fold_uris`).
-    uris: dict[str, str] = field(default_factory=dict)
+    uris: dict[str, str] = dcfield(default_factory=dict)
 
     def anchor_for(self, number: int) -> str:
         template = self.anchor or f"{self.prefix.lower()}-{{number}}"
@@ -790,7 +884,7 @@ class Remote:
     own code — `LU-ADR-013` — so the namespace is explicit at the point of use
     and nothing has to guess which project an unprefixed code meant (ADR-016).
 
-        [luria.remotes.LU]
+        `remotes.LU`
         name = "luria"
         repo = "dmarx/luria"             # GitHub owner/name
         ref  = "main"                    # branch or tag the links point at
@@ -808,7 +902,7 @@ class Remote:
     through the `url` template, which can index the uid's capture groups by
     position:
 
-        [luria.remotes.ARXIV]
+        `remotes.ARXIV`
         uid = "(\\d{4})[.:](\\d{4,5})"
         url = "https://arxiv.org/abs/{1}.{2}"   # {0} or {uid} is the whole tail
 
@@ -826,7 +920,7 @@ class Remote:
     `uris.read`, `pin_url` is `uris.bytes`, and a relation Luria does not
     ship yet is one more name:
 
-        [luria.remotes.LU.uris]
+        `remotes.LU.uris`
         bytes   = "https://gitlab.example/{repo}/-/raw/{ref}/{dir}/{filename}"
         history = "https://github.com/{repo}/commits/{ref}/{dir}/{filename}"
 
@@ -875,12 +969,12 @@ class Remote:
     # as a body of knowledge, and one `luria remotes --pin` keeps the hashes
     # current while `luria lint` reports what is cited but not yet endorsed.
     pin: bool = False
-    # Named URI templates — `[luria.remotes.X.uris]`. A code relates to a SET
+    # Named URI templates — `remotes.X.uris`. A code relates to a SET
     # of URIs through one template vocabulary, and this table is where a
     # relation beyond the shipped two gets its name; `url` and `pin_url` are
     # sugar for its `read` and `bytes` entries, folded in at load.
-    uris: dict[str, str] = field(default_factory=dict)
-    schemes: dict[str, RemoteScheme] = field(default_factory=dict)
+    uris: dict[str, str] = dcfield(default_factory=dict)
+    schemes: dict[str, RemoteScheme] = dcfield(default_factory=dict)
 
     @property
     def label(self) -> str:
@@ -1021,11 +1115,11 @@ class Remote:
 class Fragment:
     """One fragment directory: where its pieces assemble to, and in what shape.
 
-        [luria.fragments]
-        "record/changelog.d" = "CHANGELOG.md"       # the append style
-        [luria.fragments."record/changelog.d"]      # or, spelled as a table:
-        file  = "CHANGELOG.md"
-        style = "changelog"
+        fragments:
+          record/changelog.d: CHANGELOG.md         # the append style
+          record/changelog.d:                      # or, spelled as a mapping:
+            file: CHANGELOG.md
+            style: changelog
 
     `append` is the narrative shape: bodies oldest-first, inserted before the
     marker, so the marker stays at the end and the log reads top-down.
@@ -1038,7 +1132,7 @@ class Fragment:
     style: str = "append"
 
 
-def primary_tags(prefix: str, tags_path: Path) -> frozenset[str]:
+def primary_tags(prefix: str, values: dict) -> frozenset[str]:
     """Terms this scheme may carry as a primary, from the vocabulary itself.
 
     A tag says which schemes it is a primary for, where the tag is defined:
@@ -1052,24 +1146,17 @@ def primary_tags(prefix: str, tags_path: Path) -> frozenset[str]:
     and the copies drift, because nothing relates them. Measured on the record
     that motivated this: seven terms across four places, and the blurbs for
     the same tag already disagreed between two of them (ADR-060)."""
-    if not tags_path.exists():
-        return frozenset()
-    try:
-        import yaml
-        declared = yaml.safe_load(tags_path.read_text(encoding="utf-8")) or {}
-    except Exception:
-        return frozenset()
     found = set()
-    for tag, meta in declared.items():
+    for tag, meta in (values or {}).items():
         for named in (meta or {}).get("primary_for", ()) or ():
             if str(named).upper() == prefix.upper():
                 found.add(str(tag))
     return frozenset(found)
 
 
-def _tag_groups(prefix: str, raw: dict,
-                tags_path: Path | None = None) -> tuple[TagGroup, ...]:
-    """Read a scheme's `[luria.schemes.X.tag_groups]` tables.
+def _tag_groups(prefix: str, field: str, raw: dict,
+                tag_values: dict | None = None) -> tuple[TagGroup, ...]:
+    """Read one field's `groups:` tables.
 
     Validated here rather than at lint time: a misspelled rule is a config
     error, and a config error that surfaces as "no violations" is the quiet
@@ -1084,29 +1171,28 @@ def _tag_groups(prefix: str, raw: dict,
         rule = str(spec.get("require", "any"))
         if rule not in REQUIRE_RULES:
             raise ValueError(
-                f"luria.toml: schemes.{prefix}.tag_groups.{name} has "
+                f"luria.yaml: schemes.{prefix}.fields.{field}.groups.{name} "
+                f"has "
                 f"require = {rule!r}; expected one of {list(REQUIRE_RULES)}")
         tags = frozenset(str(x) for x in spec.get("tags", ()))
         derived = False
-        if not tags and tags_path is not None:
-            tags = primary_tags(prefix, tags_path)
+        if not tags and tag_values:
+            tags = primary_tags(prefix, tag_values)
             derived = bool(tags)
         if not tags:
             raise ValueError(
-                f"luria.toml: schemes.{prefix}.tag_groups.{name} lists no "
-                f"tags and no tag in {tags_path} names {prefix} in its "
-                f"`primary_for`, so it constrains nothing"
-                if tags_path is not None else
-                f"luria.toml: schemes.{prefix}.tag_groups.{name} lists no "
-                f"tags, so it constrains nothing")
+                f"luria.yaml: schemes.{prefix}.fields.{field}.groups.{name} "
+                f"lists no `tags` and no value in this field's vocabulary "
+                f"names {prefix} in its `primary_for`, so it constrains "
+                f"nothing")
         groups.append(TagGroup(
-            name=name, tags=tags, require=rule, derived=derived,
+            name=name, tags=tags, field=field, require=rule, derived=derived,
             excluded_by=frozenset(str(x) for x in spec.get("excluded_by", ()))))
     return tuple(groups)
 
 
 def _field_groups(prefix: str, raw: dict) -> tuple[FieldGroup, ...]:
-    """Read a scheme's `[luria.schemes.X.field_groups]` tables. Validated at
+    """Read a scheme's `schemes.X.field_groups` tables. Validated at
     load like a tag group: a group naming no fields, or a rule that is not
     one, would surface as "no violations"."""
     groups = []
@@ -1114,12 +1200,12 @@ def _field_groups(prefix: str, raw: dict) -> tuple[FieldGroup, ...]:
         rule = str(spec.get("require", "at-least-one"))
         if rule not in FIELD_RULES:
             raise ValueError(
-                f"luria.toml: schemes.{prefix}.field_groups.{name} has "
+                f"luria.yaml: schemes.{prefix}.field_groups.{name} has "
                 f"require = {rule!r}; expected one of {list(FIELD_RULES)}")
         fields = tuple(str(f) for f in spec.get("fields", ()))
         if not fields:
             raise ValueError(
-                f"luria.toml: schemes.{prefix}.field_groups.{name} lists no "
+                f"luria.yaml: schemes.{prefix}.field_groups.{name} lists no "
                 f"fields, so it constrains nothing")
         groups.append(FieldGroup(name=str(name), fields=fields, require=rule))
     return tuple(groups)
@@ -1146,7 +1232,7 @@ def _checked_converses(prefix: str, refs: tuple, schemes: dict) -> tuple:
     for ref in refs:
         if not ref.converse:
             continue
-        where = f"luria.toml: schemes.{prefix}.references.{ref.field}.converse"
+        where = f"luria.yaml: schemes.{prefix}.references.{ref.field}.converse"
         far = schemes.get(ref.scheme)
         by_name = {r.field: r for r in far.references} if far else {}
         other = by_name.get(ref.converse)
@@ -1181,7 +1267,7 @@ CITE_TARGETS = ("page", "view")
 
 
 def _cite(prefix: str, spec: dict) -> str:
-    """Read and check `[luria.schemes.X] cite`.
+    """Read and check `schemes.X.cite`.
 
     Unset resolves to what the scheme already does, so the key is inert until
     a project sets it.
@@ -1197,32 +1283,34 @@ def _cite(prefix: str, spec: dict) -> str:
     value = str(spec.get("cite") or ("view" if render == "document" else "page"))
     if value not in CITE_TARGETS:
         raise ValueError(
-            f'luria.toml: schemes.{prefix}.cite = "{value}" is not a target — '
+            f'luria.yaml: schemes.{prefix}.cite = "{value}" is not a target — '
             f'use "page" (the cited document\'s own file) or "view" '
             f'(an anchor in the document it assembles into)')
     if value == "view" and render != "document":
         raise ValueError(
-            f'luria.toml: schemes.{prefix} sets cite = "view" but is not '
+            f'luria.yaml: schemes.{prefix} sets cite = "view" but is not '
             f'render = "document", so it assembles no view to anchor into — '
             f'drop the key, or set render = "document"')
     return value
 
 
 def _references(prefix: str, raw: dict) -> tuple[Reference, ...]:
-    """Read a scheme's `[luria.schemes.X.references]` table."""
+    """Read a scheme's `schemes.X.references` table."""
     found = []
     for field, spec in raw.items():
         if not isinstance(spec, dict) or not spec.get("scheme"):
             raise ValueError(
-                f"luria.toml: schemes.{prefix}.references.{field} needs a "
+                f"luria.yaml: schemes.{prefix}.references.{field} needs a "
                 f"`scheme` — it names which scheme's codes the field holds")
-        where = f"luria.toml: schemes.{prefix}.references.{field}"
+        where = f"luria.yaml: schemes.{prefix}.references.{field}"
         required = bool(spec.get("required", True))
         found.append(Reference(field=str(field),
                                scheme=str(spec["scheme"]).upper(),
                                required=required,
                                many=bool(spec.get("many", False)),
                                converse=str(spec.get("converse", "")),
+                               label=str(spec.get("label", "")),
+                               blurb=str(spec.get("blurb", "")),
                                required_when=_required_when(where, spec,
                                                             required)))
     return tuple(found)
@@ -1259,8 +1347,9 @@ def _required_when(where: str, spec: dict, required: bool) -> RequiredWhen | Non
 
 
 def _fields(prefix: str, raw: dict, scheme_dir: Path, root: Path,
-            references: tuple, scaffolding: bool = False) -> tuple:
-    """Read a scheme's `[luria.schemes.X.fields]` tables, as
+            references: tuple, scaffolding: bool = False,
+            vocabularies: dict | None = None) -> tuple:
+    """Read a scheme's `schemes.X.fields` tables, as
     `(vocabularies, plain fields, derivations)`.
 
     One table for a field's shape and type. `vocabulary` is the one *type* it
@@ -1279,16 +1368,14 @@ def _fields(prefix: str, raw: dict, scheme_dir: Path, root: Path,
     with no values, or a default no value matches, would surface as "no
     violations", which is the quiet failure a declaration exists to remove."""
     from .derive import parse as parse_derivation
-    from .vocabularies import declared
+    vocabularies = vocabularies or {}
     found = []
     plain: list[PlainField] = []
     rules = []
+    groups: list[TagGroup] = []
     taken = {r.field for r in references}
     for field, spec in raw.items():
-        where = f"luria.toml: schemes.{prefix}.fields.{field}"
-        if field in BUILT_IN_AXES:
-            raise ValueError(f"{where}: `{field}` is built in — `tags` is "
-                             f"open, and a vocabulary is closed")
+        where = f"luria.yaml: schemes.{prefix}.fields.{field}"
         if field in taken:
             raise ValueError(f"{where}: `{field}` is also declared under "
                              f"`references`; a field has one declaration")
@@ -1321,29 +1408,46 @@ def _fields(prefix: str, raw: dict, scheme_dir: Path, root: Path,
                     f"where the value comes from — keep one")
             rules.append(rule)
         name = spec.get("vocabulary")
+        declares_groups = bool(spec.get("groups"))
         if not name:
             required = bool(spec.get("required", False))
+            many = bool(spec.get("many", False))
             when = _required_when(where, spec, required)
-            if when is None and not required and rule is None:
+            # `many` types a field too: it says the field holds a list, which
+            # is what makes it nameable in a derivation or a chain and gives
+            # the record page something to print. That is exactly what being
+            # built in used to say about `tags` (ADR-tmp8hp25).
+            if (when is None and not required and rule is None
+                    and not declares_groups and not many):
                 raise ValueError(f"{where}: declares no type — `vocabulary = "
                                  f"\"NAME\"` types the field, `derive` says "
-                                 f"where its value comes from, `required_when` "
-                                 f"says when it applies, and a table with "
-                                 f"none of them constrains nothing")
+                                 f"where its value comes from, `many` says it "
+                                 f"holds a list, `required_when` says when it "
+                                 f"applies, `groups` says which of its values "
+                                 f"combine, and a table with none of them "
+                                 f"constrains nothing")
             plain.append(PlainField(field=str(field), required=required,
-                                    many=bool(spec.get("many", False)),
-                                    required_when=when))
+                                    many=many, required_when=when))
+            # No vocabulary to derive membership from, so every group here
+            # lists its own values — which `_tag_groups` already requires.
+            groups.extend(_tag_groups(prefix, str(field),
+                                      spec.get("groups", {}) or {}, {}))
             continue
         name = str(name)
-        file = scheme_dir / f"{name}.yaml"
-        values = declared(file)
-        if not values and not (scaffolding and not file.exists()):
+        if name not in vocabularies and not scaffolding:
+            raise ValueError(
+                f"{where}: no vocabulary named {name!r} — a field's values are "
+                f"declared once under `vocabularies:` and referenced by name, "
+                f"so that two schemes can share one "
+                f"(declared: {', '.join(sorted(vocabularies)) or 'none'})")
+        values = dict(vocabularies.get(name) or {})
+        if not values and not scaffolding:
             # Absent is not the same as empty when a scaffold is being
             # planned: `luria init` reads the config to decide what to
-            # write, and the vocabulary file is one of the things it is
-            # about to write. Every other caller keeps ADR-076's eager rule.
+            # write, and the vocabulary is one of the things it is about to
+            # write. Every other caller keeps ADR-076's eager rule.
             raise ValueError(
-                f"{where}: {file.relative_to(root)} declares no values, so "
+                f"{where}: vocabulary {name!r} declares no values, so "
                 f"the field constrains nothing")
         many = bool(spec.get("many", False))
         required = bool(spec.get("required", False))
@@ -1365,14 +1469,21 @@ def _fields(prefix: str, raw: dict, scheme_dir: Path, root: Path,
                              (default if isinstance(default, list) else [default]))
             if bad := [d for d in defaults if d not in values]:
                 raise ValueError(
-                    f"{where}: default {', '.join(bad)} is not in "
-                    f"{file.relative_to(root)} (values: {', '.join(values)})")
-        found.append(Vocabulary(field=str(field), name=name, file=file,
+                    f"{where}: default {', '.join(bad)} is not in vocabulary "
+                    f"{name!r} (values: {', '.join(values)})")
+        found.append(Vocabulary(field=str(field), name=name,
+                                values_by_name=values,
                                 many=many, required=required,
                                 default=defaults,
+                                closed=bool(spec.get("closed", True)),
                                 required_when=_required_when(where, spec,
                                                              required)))
-    return tuple(found), tuple(plain), tuple(rules)
+        # A group constrains a subset of THIS field's values, so it is read
+        # here with the field rather than from a scheme-level table that
+        # could only ever have meant `tags` (ADR-tmp8hp25).
+        groups.extend(_tag_groups(prefix, str(field),
+                                  spec.get("groups", {}) or {}, values))
+    return tuple(found), tuple(plain), tuple(rules), tuple(groups)
 
 
 def _fragment(spec) -> Fragment:
@@ -1386,13 +1497,13 @@ def _fragment(spec) -> Fragment:
 class Chain:
     """A relation walked transitively and rendered as sequences (#171).
 
-        [luria.chains.lineage]
-        scheme   = "LIT"                    # whose documents are the nodes
-        relation = "extends"                # the spine: A extends B, B first
-        sibling  = "compared_against"        # optional: rivals off the spine
-        output   = "docs/lineage.md"         # one page, a section per line
-        title    = "Lines of work"
-
+        chains:
+          lineage:
+            scheme: LIT
+            relation: extends
+            sibling: compared_against
+            output: docs/lineage.md
+            title: Lines of work
     `relation` takes one field or several — `["extends", "corrects"]` — and
     several are walked as one spine (#211). That is not a convenience: a
     record can carry succession with a sign, where "builds on the parent" and
@@ -1454,7 +1565,7 @@ class Chain:
 class Journal:
     """Dated entries that persist, rendered into books (ADR-020).
 
-        [luria.journals.devlog]
+        `journals.devlog`
         dir         = "devlog.d"        # entries, partitioned yyyy/mm/dd/
         output      = "docs/devlog"     # a directory of books plus an index
         granularity = "month"           # year | month | day
@@ -1484,7 +1595,7 @@ class Journal:
 class Site:
     """How the record publishes as a browsable site (ADR-042).
 
-        [luria.site]
+        `site`
         title      = "Luria"
         base_url   = "dmarx.github.io/luria"
         source_url = "https://github.com/dmarx/luria/blob/HEAD"
@@ -1504,7 +1615,7 @@ class Site:
         logo      = "assets/brand/lockup.svg"  # shown in place of the title
         logo_dark = "assets/brand/lockup-inverted.svg"   # optional
 
-        [luria.site.theme.light]
+        `site.theme.light`
         light = "#f4f1e8"                      # any of Quartz's colour names
 
     `logo_dark` is only needed when the artwork can't invert itself. A logo
@@ -1522,12 +1633,18 @@ class Site:
     icon: Path | None = None
     logo: Path | None = None
     logo_dark: Path | None = None
-    theme: dict = field(default_factory=dict)
+    theme: dict = dcfield(default_factory=dict)
 
 
 @dataclass(frozen=True)
 class Config:
     root: Path
+    # Every named vocabulary, defined once and referenced by name. Was a
+    # `tags.yaml`/`statuses.yaml` beside each scheme's records, which meant a
+    # vocabulary two schemes share had to be two files — and in the corpus
+    # that motivated this, ten of thirteen entries had silently drifted apart
+    # (ADR-tmp8hp25).
+    vocabularies: dict[str, dict]
     issue_url: str
     docs: Path
     decisions: Path
@@ -1558,9 +1675,9 @@ class Config:
     narrow_terms: tuple[str, ...]       # this project's nouns (narrow-titles)
     network: str                        # "auto" | "never" | "require"
     # Whole records nested inside this one — directory globs, each match
-    # holding its own `luria.toml` (ADR-077, relocated by ADR-078).
+    # holding its own `luria.yaml` (ADR-077, relocated by ADR-078).
     #
-    # This lived under `[luria.site]` for as long as publishing was the only
+    # This lived under `site` for as long as publishing was the only
     # thing that needed it. It isn't a site fact: it says this project contains
     # other projects, which is what `luria index` needs in order to regenerate
     # their views and what `--check` needs in order to notice a stale one. A
@@ -1568,7 +1685,7 @@ class Config:
     # awkwardness — a distinction the layout had stopped expressing.
     include_records: tuple[str, ...] = ()
     site: Site = None  # type: ignore[assignment]
-    _raw: dict = field(default_factory=dict, repr=False)
+    _raw: dict = dcfield(default_factory=dict, repr=False)
 
     def nested_records(self) -> list[Path]:
         """Directories matched by `include_records` that are really records.
@@ -1579,7 +1696,7 @@ class Config:
         directories are nested records" would drift into a state where a record
         is published but never regenerated (DP-4).
 
-        A match without a `luria.toml` is skipped rather than failed —
+        A match without a `luria.yaml` is skipped rather than failed —
         `examples/*` is the natural way to write "every example", and a stray
         directory beside them should not break a build. A *pattern* matching
         nothing is an error, raised by the callers, because an include that
@@ -1614,9 +1731,10 @@ class Config:
         return s.stub if s else self.decisions / "README.stub"
 
     @property
-    def tags_yaml(self) -> Path:
+    def tags(self) -> dict[str, dict]:
+        """The index scheme's tag vocabulary."""
         s = self._index_scheme()
-        return s.tags_yaml if s else self.decisions / "tags.yaml"
+        return s.tags if s else {}
 
     @property
     def tag_dir(self) -> Path:
@@ -1695,21 +1813,23 @@ class Config:
         if any(path == c.output for c in self.chains.values()):
             return True
         for s in self.schemes.values():
-            if s.render == "index" and (path == s.index_path
-                                        or path.parent == s.tag_dir):
-                return True
-            # A vocabulary's per-value pages, which render beside the tag
-            # pages and are as generated as they are. Missing here for as long
-            # as vocabularies have existed, and invisible until a *retired*
-            # document became a vocabulary member: the reference report scans
-            # what this method does not exclude, so it found a citation of a
+            # The index, and a page per value of every field it groups by —
+            # the axis's among them, on the same template and in the same
+            # kind of directory (ADR-tmp8hp25).
+            #
+            # The non-axis half of this was missing for as long as
+            # vocabularies existed, and invisible until a *retired* document
+            # became a vocabulary member: the reference report scans what
+            # this method does not exclude, so it found a citation of a
             # superseded document inside a page nobody can annotate — an
-            # `inactive-ok:` written there is erased by the next build. Worse,
-            # the page is written in the same pass that renders the report, so
-            # the report saw the *previous* run's copy and `luria index` stopped
-            # converging.
-            if s.render == "index" and any(path.parent == s.vocab_dir(v.name)
-                                           for v in s.vocabularies):
+            # `inactive-ok:` written there is erased by the next build.
+            # Worse, the page is written in the same pass that renders the
+            # report, so the report saw the *previous* run's copy and
+            # `luria index` stopped converging.
+            if s.render == "index" and (
+                    path == s.index_path
+                    or any(path.parent == s.vocab_dir(f)
+                           for f in s.grouped_fields)):
                 return True
             if s.output == path:
                 return True
@@ -1736,7 +1856,7 @@ class Config:
         updated to stay true. Scanning one for stale references produces
         permanent, unactionable rows, so the status report skips it.
 
-        Three shapes qualify: a file listed in `[luria.code] historical`, an
+        Three shapes qualify: a file listed in `code.historical`, an
         uncollected fragment (it is about to *become* one), and anything in a
         journal — its entries and the books they render into alike. The last
         one is why this is a method rather than the set-membership test it used
@@ -1800,7 +1920,7 @@ def load(root: Path | None = None, text: str | None = None,
     if text is None and config_file.exists():
         text = config_file.read_text(encoding="utf-8")
     if text is not None:
-        parsed = tomllib.loads(text)
+        parsed = yaml.safe_load(text) or {}
         parsed = parsed.get("luria", parsed)
         raw = _merge(DEFAULTS, parsed)
         # A declared family replaces the default one rather than merging into
@@ -1811,8 +1931,11 @@ def load(root: Path | None = None, text: str | None = None,
                 raw[family] = parsed[family]
 
     paths = raw["paths"]
+    vocabularies = {str(name): dict(values or {})
+                    for name, values in (raw.get("vocabularies") or {}).items()}
     return Config(
         root=root,
+        vocabularies=vocabularies,
         issue_url=raw.get("issue_url", ""),
         docs=root / paths["docs"],
         decisions=root / paths["decisions"],
@@ -1821,7 +1944,8 @@ def load(root: Path | None = None, text: str | None = None,
         fragments={k: _fragment(v) for k, v in raw["fragments"].items()},
         code_globs=tuple(raw["code"]["globs"]),
         historical=frozenset(root / p for p in raw["code"]["historical"]),
-        schemes=(schemes := _schemes(raw["schemes"], root, scaffolding)),
+        schemes=(schemes := _schemes(raw["schemes"], root, scaffolding,
+                                     vocabularies)),
         remotes={
             prefix.upper(): Remote(
                 prefix.upper(),
@@ -1887,7 +2011,7 @@ def _chains(raw: dict, schemes: dict, root: Path) -> dict[str, Chain]:
     one (DP-15)."""
     out = {}
     for name, spec in raw.items():
-        where = f"luria.toml: chains.{name}"
+        where = f"luria.yaml: chains.{name}"
         prefix = str(spec.get("scheme", "")).upper()
         if prefix not in schemes:
             raise ValueError(f"{where}: scheme {prefix!r} is not declared "
@@ -1896,13 +2020,14 @@ def _chains(raw: dict, schemes: dict, root: Path) -> dict[str, Chain]:
         raw_facets = spec.get("facet_by", ("status",))
         facet_by = tuple(str(f) for f in (
             [raw_facets] if isinstance(raw_facets, str) else raw_facets))
-        # `status` is nameable because it is a declared vocabulary since
-        # #181, arriving through `vocabularies` like any other field. Only
-        # `tags` is still an axis the code assumes.
+        # Every axis is a declared field now — `status` and `tags` both
+        # arrive through `vocabularies` like any other (ADR-tmp8hp25).
+        # `status` stays nameable undeclared because it has a default
+        # vocabulary; nothing else does.
         known = ({v.field for v in schemes[prefix].vocabularies}
                  | {f.field for f in schemes[prefix].plain_fields}
                  | set(schemes[prefix].requires) | declared
-                 | {"tags", "status"})
+                 | {"status"})
         for field in facet_by:
             if field not in known:
                 raise ValueError(
@@ -1944,8 +2069,12 @@ def _chains(raw: dict, schemes: dict, root: Path) -> dict[str, Chain]:
     return out
 
 
-# The two axes every scheme has, whatever else it declares.
-BUILT_IN_CONDITION_FIELDS = ("status", "tags")
+# `status` alone, and only because it has a vocabulary a scheme need not
+# declare: `statuses.vocabulary` falls back to the default five, and
+# `superseded_by` is a rule `contract.built_in` writes for every scheme. Any
+# other field — `tags` included since ADR-tmp8hp25 — is nameable exactly when
+# the scheme declares it.
+BUILT_IN_CONDITION_FIELDS = ("status",)
 
 
 def _check_conditions(prefix: str, scheme) -> None:
@@ -1974,7 +2103,7 @@ def _check_conditions(prefix: str, scheme) -> None:
     vocab_of = {v.field: v for v in scheme.vocabularies}
 
     for field, when in _conditions(scheme):
-        where = f"luria.toml: schemes.{prefix}.fields.{field}.required_when"
+        where = f"luria.yaml: schemes.{prefix}.fields.{field}.required_when"
         if when.on not in nameable:
             raise ValueError(
                 f"{where}: `{when.on}` is not a field {prefix} declares, so "
@@ -1984,7 +2113,7 @@ def _check_conditions(prefix: str, scheme) -> None:
         if when.on == "status":
             allowed = status_words(scheme)
         elif when.on in vocab_of:
-            allowed = tuple(declared_values(vocab_of[when.on].file))
+            allowed = tuple(declared_values(vocab_of[when.on].values_by_name))
         if allowed is None:
             continue
         if bad := [v for v in when.values if v not in allowed]:
@@ -2008,7 +2137,7 @@ def _check_derivations(prefix: str, scheme, schemes=None) -> None:
     single value is that value, so a derivation off a scalar is a rename
     wearing a derivation's clothes, and renames belong in the frontmatter."""
     from .derive import lone_field
-    plural = {"tags", *(v.field for v in scheme.vocabularies if v.many),
+    plural = {*(v.field for v in scheme.vocabularies if v.many),
               *(r.field for r in scheme.references if r.many),
               *(f.field for f in scheme.plain_fields if f.many)}
     nameable = {*BUILT_IN_CONDITION_FIELDS, "number", *scheme.requires,
@@ -2017,7 +2146,7 @@ def _check_derivations(prefix: str, scheme, schemes=None) -> None:
                 *(f.field for f in scheme.plain_fields)}
     references = {r.field: r for r in scheme.references}
     for rule in scheme.derived:
-        where = f"luria.toml: schemes.{prefix}.fields.{rule.field}.derive"
+        where = f"luria.yaml: schemes.{prefix}.fields.{rule.field}.derive"
         if rule.follow is not None:
             # The names in the template belong to the *target* scheme, and
             # which scheme that is comes from the reference being followed.
@@ -2103,7 +2232,7 @@ def _alias_template(prefix: str, raw) -> str:
     template = str(raw or "").strip()
     if not template:
         return ""
-    where = f"luria.toml: schemes.{prefix}.alias"
+    where = f"luria.yaml: schemes.{prefix}.alias"
     try:
         template.format_map(_Probe())
     except (ValueError, IndexError) as exc:
@@ -2144,21 +2273,58 @@ def _conditions(scheme):
                 yield entry.field, entry.required_when
 
 
-def _schemes(raw: dict, root: Path,
-             scaffolding: bool = False) -> dict[str, Scheme]:
+def _schemes(raw: dict, root: Path, scaffolding: bool = False,
+             vocabularies: dict | None = None) -> dict[str, Scheme]:
     """Every declared scheme, with the cross-scheme checks that need them all.
 
     A reference naming a scheme that does not exist is a config error, and it
     can only be caught once the whole family is known — so it happens here
     rather than in `_references`, which sees one table at a time."""
     schemes = {}
+    vocabularies = vocabularies or {}
     for prefix, spec in raw.items():
-        tags_file = root / spec["tags"] if spec.get("tags") else None
-        tags_path = tags_file or root / spec["dir"] / "tags.yaml"
+        # `tags` is a field too. A scheme names WHICH of its fields is its
+        # primary taxonomy — the one whose values head the index and get a
+        # page each — and that is a rendering choice about this scheme, not
+        # a property of the field: a world-bible's axis is `worlds`
+        # (ADR-tmp8hp25). A scheme naming none has no taxonomy, and renders
+        # none.
+        for gone, goes in (("tags", "fields.tags.vocabulary"),
+                           ("tag_groups", "fields.<field>.groups")):
+            if gone in spec:
+                raise ValueError(
+                    f"luria.yaml: schemes.{prefix}.{gone} is not a key — "
+                    f"it belongs to the field it describes, at "
+                    f"`schemes.{prefix}.{goes}`")
+        axis = str(spec.get("axis", "") or "")
+        declared_fields = set(spec.get("fields") or {})
+        if axis and axis not in declared_fields and not scaffolding:
+            raise ValueError(
+                f"luria.yaml: schemes.{prefix}.axis names {axis!r}, which "
+                f"{prefix} does not declare under `fields:` — an axis is one "
+                f"of the scheme's own fields "
+                f"(declared: {', '.join(sorted(declared_fields)) or 'none'})")
+        # `status` is a field like any other — `fields.status.vocabulary` is
+        # where its vocabulary is named, and the only place. A second
+        # `statuses:` key beside it could disagree with the field, and did:
+        # `statuses.declared` read one while `statuses.undeclared` read the
+        # other, so a scheme could render a status legend and be reported as
+        # having no status check at the same time. What stays privileged is
+        # `active:` — WHICH word means in force — and that names a word, not
+        # a vocabulary.
+        if "statuses" in spec:
+            raise ValueError(
+                f"luria.yaml: schemes.{prefix}.statuses is not a key — "
+                f"`status` is a field, so name its vocabulary once, at "
+                f"`schemes.{prefix}.fields.status.vocabulary: "
+                f"{spec['statuses']}`")
+        statuses_vocab = str(((spec.get("fields") or {}).get("status") or {})
+                             .get("vocabulary", "") or "")
         schemes[prefix] = Scheme(
             prefix=prefix,
             dir=root / spec["dir"],
             active=spec.get("active", "Active"),
+            axis=axis,
             successor=str(spec.get("successor", "superseded_by")),
             retires_on=str(spec.get("retires_on", "Superseded")),
             render=spec.get("render", "index"),
@@ -2168,14 +2334,14 @@ def _schemes(raw: dict, root: Path,
             alias=_alias_template(prefix, spec.get("alias", "")),
             titles_generalize=bool(spec.get("titles_generalize", False)),
             requires=tuple(spec.get("requires", ())),
-            tag_groups=_tag_groups(prefix, spec.get("tag_groups", {}),
-                                   tags_path),
-            tags_file=tags_file,
+            statuses_vocab=statuses_vocab,
+            vocab_values=vocabularies,
             references=(refs := _references(prefix, spec.get("references", {}))),
-            **dict(zip(("vocabularies", "plain_fields", "derived"),
+            **dict(zip(("vocabularies", "plain_fields", "derived",
+                        "tag_groups"),
                        _fields(prefix, spec.get("fields", {}),
                                root / spec["dir"], root, refs,
-                               scaffolding))),
+                               scaffolding, vocabularies))),
             field_groups=_field_groups(prefix, spec.get("field_groups", {})),
             uniform_ok=(spec.get("uniform_ok") or None),
             uniform_share=float(spec.get("uniform_share", 1.0)),
@@ -2186,7 +2352,7 @@ def _schemes(raw: dict, root: Path,
         for ref in scheme.references:
             if ref.scheme not in schemes:
                 raise ValueError(
-                    f"luria.toml: schemes.{prefix}.references.{ref.field} "
+                    f"luria.yaml: schemes.{prefix}.references.{ref.field} "
                     f"names scheme {ref.scheme!r}, which is not declared "
                     f"(have: {', '.join(sorted(schemes))})")
     # After the loop above, so that a converse naming an undeclared scheme is

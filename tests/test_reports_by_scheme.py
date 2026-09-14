@@ -11,7 +11,15 @@ headline read `pending()`, never the rendered file, and these tests pin that
 the counts they publish do not move.
 """
 
+# inactive-ok-file: ADR-tmp8hp25 — Proposed. Named as the decision these
+# fixtures are shaped by; the citation is to the reasoning, not a claim
+# the decision is settled.
+
 from __future__ import annotations
+
+import yaml
+
+from _config import merged
 
 from pathlib import Path
 
@@ -46,18 +54,17 @@ STATUSES = ("Active:\n  blurb: in force\nProposed:\n  blurb: not yet\n"
 
 def project(tmp_path, monkeypatch, schemes=("RFC", "SPEC")) -> Path:
     """A record with one or two schemes, declared in the order given."""
-    tables = "\n".join(f"""
-[luria.schemes.{p}]
-dir = "record/{p.lower()}.d"
-output = "docs/{p.lower()}"
-""" for p in schemes)
-    write(tmp_path, "luria.toml", f"""
-[luria]
-issue_url = "https://example.test/issues/{{n}}"
-{tables}
-""")
+    tables = {"schemes": {p: {"dir": f"record/{p.lower()}.d",
+                              "output": f"docs/{p.lower()}"}
+                          for p in schemes}}
+    # One vocabulary, named by every scheme that uses it — which is what
+    # replaced a statuses.yaml beside each scheme's records (ADR-tmp8hp25).
+    tables["vocabularies"] = {"statuses": yaml.safe_load(STATUSES)}
     for p in schemes:
-        write(tmp_path, f"record/{p.lower()}.d/statuses.yaml", STATUSES)
+        tables["schemes"][p]["fields"] = {"status": {"vocabulary": "statuses"}}
+    write(tmp_path, "luria.yaml", merged("""
+issue_url: https://example.test/issues/{n}
+""", tables))
     monkeypatch.setenv("LURIA_ROOT", str(tmp_path))
     config.reset()
     return tmp_path

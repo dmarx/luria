@@ -1,7 +1,7 @@
 """The configuration reference is derived from the schema, not transcribed.
 
 The point of every test here is the same property, approached from different
-sides: **a key that exists in `luria.toml`'s schema is a row in the reference,
+sides: **a key that exists in `luria.yaml`'s schema is a row in the reference,
 whether or not anyone remembered to describe it.** A page that merely *looked*
 right today would be worth nothing — a hand-written one looks right today too,
 and that is exactly the failure this module exists to prevent (DP-3).
@@ -79,7 +79,7 @@ def test_keys_luria_fills_itself_are_not_labelled_required():
 
 def test_defaults_are_the_schema_not_this_repos_config():
     """`output` is unset for a scheme you add, whatever this repo sets for its
-    own ADRs. Reading the shipped `luria.toml` here would document a default
+    own ADRs. Reading the shipped `luria.yaml` here would document a default
     that does not exist."""
     scheme = dict((name, default) for name, _, default in config_doc.rows(Scheme))
     assert scheme["output"] == "*unset*"

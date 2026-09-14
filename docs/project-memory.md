@@ -24,18 +24,19 @@ remembering to keep the two in sync, because the lint remembers.
 
 ## The four families
 
-`luria.toml` declares what the record is made of, using four *families* of
+`luria.yaml` declares what the record is made of, using four *families* of
 table. You name the entries, and the names become the vocabulary — nothing
 in the code spells `ADR`; it is simply the scheme this package ships as a
 default.
 
 ### Schemes — referable documents
 
-```toml
-[luria.schemes.RFC]
-dir    = "record/rfcs.d"
-output = "docs/rfcs"
-render = "index"
+```yaml
+schemes:
+  RFC:
+    dir: record/rfcs.d
+    output: docs/rfcs
+    render: index
 ```
 
 A scheme is a family of documents with **codes**: `RFC-001`, `RFC-002`.
@@ -71,11 +72,11 @@ question. What each one *does*:
 |---|---|---|
 | the reading | one entry at a time, arrived at by a link | the whole set, in order |
 | `output` means | a **directory** the view renders into | the assembled **file** itself |
-| what is generated | `README.md`, a table of every entry, plus `tags/<tag>.md` per tag | one page, every body concatenated |
+| what is generated | `README.md`, a table of every entry, plus `<field>/<value>.md` per value of each grouped field | one page, every body concatenated |
 | a citation lands on | the entry's own file — `ADR-012.md` | a section anchor — `design-principles.md#dp-3` |
-| `tags.yaml` | orders the index and titles the tag pages | unused; there are no tag pages |
+| the `axis:` vocabulary | orders the index and titles the value pages | unused; an assembled document groups by nothing |
 | `inert-status` | applies | exempt — every principle being in force is the expected state, not a dead field |
-| cited from a remote | `[luria.remotes.X.schemes.Y] dir = …` | `document = …`, with an optional `anchor` |
+| cited from a remote | `remotes.X.schemes.Y.dir = …` | `document = …`, with an optional `anchor` |
 
 Watch `output`, which means something different in each: `docs/rfcs` for an
 index is a directory that will come to contain `README.md` and `tags/`, while
@@ -86,11 +87,12 @@ a project has before it splits `docs/` from `record/`.
 
 ### Journals — dated entries that persist
 
-```toml
-[luria.journals.devlog]
-dir         = "record/devlog.d"
-output      = "docs/devlog"
-granularity = "month"
+```yaml
+journals:
+  devlog:
+    dir: record/devlog.d
+    output: docs/devlog
+    granularity: month
 ```
 
 A journal entry is filed at `yyyy/mm/dd/hhmmss.md` and is true about the
@@ -104,10 +106,11 @@ with its own table, granularity and output.
 
 ### Fragment directories — pieces assembled later
 
-```toml
-[luria.fragments."record/changelog.d"]
-file  = "CHANGELOG.md"
-style = "changelog"
+```yaml
+fragments:
+  record/changelog.d:
+    file: CHANGELOG.md
+    style: changelog
 ```
 
 The changelog problem: a shared file every PR appends to is a standing
@@ -122,10 +125,11 @@ Fragments are the one *consumed* source: they exist to be collected.
 
 ### Remotes — citing another project's record
 
-```toml
-[luria.remotes.LU]
-name = "luria"
-repo = "dmarx/luria"
+```yaml
+remotes:
+  LU:
+    name: luria
+    repo: dmarx/luria
 ```
 
 A remote gives a foreign record a prefix, so `LU-ADR-013` cites a decision
@@ -162,16 +166,17 @@ The `uid` form generalises past Luria-shaped records entirely: give a
 remote a regex and a URL template and arXiv identifiers, Jira keys, or CVE
 numbers become linted, linkable references:
 
-```toml
-[luria.remotes.CVE]
-uid = "\\d{4}-\\d{4,7}"
-url = "https://nvd.nist.gov/vuln/detail/CVE-{uid}"
+```yaml
+remotes:
+  CVE:
+    uid: \d{4}-\d{4,7}
+    url: https://nvd.nist.gov/vuln/detail/CVE-{uid}
 ```
 
 One rule follows from the family design: a *settings* table (`paths`,
 `code`, `lint`, `site`) merges key by key with the defaults, but a family
 you declare **replaces the shipped family whole**. A project that writes
-`[luria.schemes.RFC]` and nothing else has exactly one scheme; the default
+`schemes.RFC` and nothing else has exactly one scheme; the default
 `ADR` is simply absent. Declare a family and it is yours entirely.
 
 ## The five statuses
@@ -206,9 +211,11 @@ exactly as every scheme did before they existed.
 **Required fields.** Beyond `status:`, `title:` and `tags:`, a scheme can
 require fields of its own:
 
-```toml
-[luria.schemes.SOTA]
-requires = ["source"]
+```yaml
+schemes:
+  SOTA:
+    requires:
+    - source
 ```
 
 A document without `source:` now fails the lint. This is also what makes a
@@ -221,23 +228,42 @@ vouches that it belongs.
 the need is *a source* and any of several fields is one, a field group
 says so and the lint asks for one:
 
-```toml
-[luria.schemes.LIT.field_groups.source]
-fields  = ["arxiv", "doi", "url"]
-require = "at-least-one"       # or "exactly-one", "at-most-one"
+```yaml
+schemes:
+  LIT:
+    field_groups:
+      source:
+        fields:
+        - arxiv
+        - doi
+        - url
+        require: at-least-one
 ```
 
 A paper never posted to arXiv but carrying a DOI, or only a URL, passes;
 one with none of the three fails, and the finding names all three.
 
-**Tag rules.** `tags.yaml` says what a tag *means*; a tag group says which may
-appear together, because some vocabularies are an axis rather than a pile:
+**Tag rules.** A vocabulary says what a value *means*; a group says which of
+them may appear together, because some fields are an axis rather than a pile.
+The group is declared under the field it constrains:
 
-```toml
-[luria.schemes.SOTA.tag_groups.primary_topic]
-require = "exactly-one"        # or "at-most-one", or "any"
-tags = ["training-optimization", "systems-optimization", "model-stability"]
-excluded_by = []               # tags that forbid this whole group
+```yaml
+schemes:
+  SOTA:
+    axis: tags
+    fields:
+      tags:
+        vocabulary: topics
+        many: true
+        closed: false
+        groups:
+          primary_topic:
+            require: exactly-one
+            tags:
+            - training-optimization
+            - systems-optimization
+            - model-stability
+            excluded_by: []
 ```
 
 `exactly-one` is the "pick a primary category" rule, checked. Tags outside the
@@ -249,30 +275,40 @@ holds.
 project defines — not codes, so not a reference; a second axis, so not a
 tag; many-valued and project-defined, so not a status:
 
-```toml
-[luria.schemes.SCENE.fields.worlds]
-vocabulary = "worlds"          # the values: worlds.yaml beside the records
-many       = true              # a list of values; omit for one
-default    = ["B"]             # what an absent field is read as
+```yaml
+schemes:
+  SCENE:
+    fields:
+      worlds:
+        vocabulary: worlds
+        many: true
+        default:
+        - B
 ```
 
-The values and what they mean live in `worlds.yaml` beside the records,
-shaped like `tags.yaml`, and the file is closed: a value it does not name is
-a finding. The default is an effective value — the lint, the index and the
-record page read an absent field as `B` — and is never written into the
-source. `luria index` renders a page per value beside the tag pages.
-`statuses.yaml` and `tags.yaml` are the first two instances of this shape.
+The values and what they mean live under `vocabularies:` in `luria.yaml`,
+named once and referenced by every field that uses them. Closed is the
+default: a value the vocabulary does not name is a finding. `closed: false`
+is the other posture — the declaration supplies order, label and blurb, and
+a document may still reach for a new value, which is what `tags` needs. The
+default is an effective value — the lint, the index and the record page read
+an absent field as `B` — and is never written into the source. `luria index`
+renders a page per value, for every grouped field alike: `status` and `tags`
+are two instances of this shape, not two special cases beside it.
 
 **Titles that generalise.** A principle stated about the one artifact it was
 noticed on is a principle nobody applies to the next one. That failure is
 quiet: the entry stays true and keeps rendering, and never gets cited.
 
-```toml
-[luria.schemes.DP]
-titles_generalize = true
-
-[luria.lint]
-narrow_terms = ["toolbar", "canvas", "queue"]
+```yaml
+schemes:
+  DP:
+    titles_generalize: true
+lint:
+  narrow_terms:
+  - toolbar
+  - canvas
+  - queue
 ```
 
 The vocabulary is your project's own concrete nouns — Luria ships none,
@@ -294,7 +330,7 @@ second scheme, is [designing a record](modeling.md).
 ## Codes and links
 
 A code in prose — in a doc page, a record entry, a `README`, or a source
-comment covered by `[luria.code] globs` — is treated as a **claim**: this
+comment covered by `code.globs` — is treated as a **claim**: this
 text says that document is why things are this way. Luria keeps the claims
 honest:
 
@@ -323,7 +359,7 @@ honest:
   report and not a failure.
 
 These findings are warnings by default. A project that wants any class to
-fail the build promotes it with `[luria.lint] fail_on` — the dial between
+fail the build promotes it with `lint.fail_on` — the dial between
 reported and enforced, per class, without ever silencing the account.
 
 ## Numbering without collisions
@@ -379,4 +415,4 @@ The README badge region (`luria index` maintains it between
 - [Configuration reference](configuration.md) — every key, generated from
   the schema.
 - [The record](record.md) — this project's own instantiation, generated
-  from its `luria.toml`.
+  from its `luria.yaml`.

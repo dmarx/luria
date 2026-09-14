@@ -8,19 +8,20 @@ before any of that, which is how it became a command nobody finished.
 
 Nothing here opens a socket.
 """
+from _config import merged
 import json
 import urllib.error
 
 from luria import config, sources
 
-from test_sources import SOURCE_TOML  # noqa: F401  (shared fixture shape)
+from test_sources import SOURCE_BASE  # noqa: F401  (shared fixture shape)
 
 
 def _project(project, network: str = "never") -> None:
     (project / "record" / "literature.d").mkdir(parents=True, exist_ok=True)
     (project / "docs" / "literature").mkdir(parents=True, exist_ok=True)
-    (project / "luria.toml").write_text(
-        SOURCE_TOML.replace('network = "never"', f'network = "{network}"'))
+    (project / "luria.yaml").write_text(
+        merged(SOURCE_BASE, {"lint": {"network": network}}))
     config.reset()
     sources.forget_refusals()
 

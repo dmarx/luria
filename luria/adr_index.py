@@ -14,9 +14,10 @@ decision's status (ADR-004).
 So the view is generated. Each document carries YAML frontmatter, and a scheme
 declares how its documents are rendered (ADR-012):
 
-  render = "index"      the browsable shape — a table plus per-tag pages
+  render = "index"      the browsable shape — a table plus per-value pages
       docs/decisions/README.md        stub prose + category lists + the table
-      docs/decisions/tags/<tag>.md    one page per tag
+      docs/decisions/<field>/<v>.md   one page per value of each grouped
+                                      field, the scheme's `axis:` first
       (sources in record/decisions.d/ — the view directory holds only what
        this generator wrote, which is what lets the lint call anything else
        in it an error, ADR-021)
@@ -36,6 +37,10 @@ the same problem for a brainstorming repo: prose lives in a `.stub`, the
 generator substitutes `{placeholders}`, and tags get their own generated pages.
 """
 
+# inactive-ok-file: ADR-tmp8hp25 — Proposed. Every mention names it as the
+# decision this file implements or is written against; the citation is to the
+# reasoning, not a claim the decision is settled.
+
 from __future__ import annotations
 
 import copy
@@ -49,7 +54,7 @@ from pathlib import Path
 
 import yaml
 
-from . import derive, referents
+from . import derive, referents, vocabularies
 from .config import current
 
 # unresolved-ok: ADR-tmp47fje — ADR-049's example of the shape, not a document
@@ -267,7 +272,16 @@ class Adr:
 
     @property
     def tags(self) -> list[str]:
-        return [str(t).strip().lower() for t in (self.meta.get("tags") or [])]
+        """This document's values on its scheme's axis, or none when the
+        scheme declares no axis (ADR-tmp8hp25)."""
+        axis = getattr(self.scheme, "axis", "") or ""
+        if not axis:
+            return []
+        # Not lower-cased. That was a `tags` convention the code applied to
+        # every value, and it disagreed with the vocabulary check beside it,
+        # which has always compared the value as written. An axis of `worlds`
+        # whose values are `A` and `B` is the case it breaks (ADR-tmp8hp25).
+        return [str(t).strip() for t in (self.meta.get(axis) or [])]
 
     def cell(self, prefix: str = "") -> str:
         """The Summary column: the `summary:` frontmatter, or empty.
@@ -334,37 +348,7 @@ def load_scheme(scheme) -> list[Adr]:
     return docs + temps
 
 
-def tag_order(adrs: list[Adr], scheme=None) -> list[tuple[str, dict]]:
-    """Declared tags first, in tags.yaml order; then any undeclared tag an ADR
-    actually uses, alphabetically. Using a new tag must never require a code
-    change — that's the whole point of pushing categories down onto the ADRs."""
-    tags_file = scheme.tags_yaml if scheme else current().tags_yaml
-    declared = yaml.safe_load(tags_file.read_text(encoding="utf-8")) if tags_file.exists() else {}
-    declared = declared or {}
-    used = {t for a in adrs for t in a.tags}
-    ordered = [(t, declared[t] or {}) for t in declared if t in used]
-    ordered += [(t, {}) for t in sorted(used - set(declared))]
-    return ordered
-
-
-def render_categories(adrs: list[Adr], tags: list[tuple[str, dict]],
-                      prefix: str = "") -> str:
-    blocks = []
-    for tag, meta in tags:
-        listed = [a for a in adrs if tag in a.tags]
-        label = meta.get("label", tag.title())
-        blurb = f" — {meta['blurb']}" if meta.get("blurb") else ""
-        # A temporary document (ADR-049) has no number to abbreviate to, so
-        # its category chip is the tail — still short, still a link.
-        links = " · ".join(
-            f"[{a.number:03d}]({prefix}{a.path.name})" if a.number is not None
-            else f"[{a.tail}]({prefix}{a.path.name})" for a in listed)
-        blocks.append(f"**[{label}](tags/{tag}.md)** ({len(listed)}){blurb}:\n{links}")
-    return "\n\n".join(blocks)
-
-
-def render_index(adrs: list[Adr], tags: list[tuple[str, dict]],
-                 scheme=None) -> str:
+def render_index(adrs: list[Adr], scheme=None) -> str:
     scheme = scheme or current().schemes["ADR"]
     prefix = prefix_for(scheme, scheme.view)
     table = TABLE_HEAD + "\n".join(a.row(prefix) for a in adrs) + "\n"
@@ -380,40 +364,12 @@ def render_index(adrs: list[Adr], tags: list[tuple[str, dict]],
              else DEFAULT_STUB.replace(
                  "{title}", "Architecture decision records"
                  if scheme.prefix == "ADR" else f"{scheme.prefix} documents"))
+    # Every grouped field, the axis first, from the one renderer that knows
+    # how a vocabulary looks — automatic for the same reason the status
+    # legend is (ADR-tmp8hp25).
     from . import vocabularies
-    categories = render_categories(adrs, tags, prefix)
-    # A declared vocabulary's values, linked to their pages, after the tag
-    # categories — automatic for the same reason the status legend is.
-    if blocks := vocabularies.index_blocks(scheme, adrs):
-        categories = f"{categories}\n\n{blocks}" if categories else blocks
-    return (prose.replace("{categories}", categories)
+    return (prose.replace("{categories}", vocabularies.index_blocks(scheme, adrs))
                  .replace("{table}", table))
-
-
-def render_tag_page(tag: str, meta: dict, adrs: list[Adr],
-                    scheme=None) -> str:
-    scheme = scheme or current().schemes["ADR"]
-    prefix = prefix_for(scheme, scheme.tag_dir)
-    label = meta.get("label", tag.title())
-    listed = [a for a in adrs if tag in a.tags]
-    # Sentence-case the first letter only. `str.capitalize()` lowercases
-    # everything after it, which silently destroys a blurb that runs to more
-    # than one sentence or names anything capitalised.
-    raw = meta.get("blurb") or ""
-    blurb = f"\n{raw[:1].upper()}{raw[1:]}.\n" if raw else ""
-    # The heading names the scheme, for the same reason DEFAULT_STUB does: a
-    # project's RFC tag page should not be titled after this package's
-    # decisions.
-    noun = "decisions" if scheme.prefix == "ADR" else f"{scheme.prefix} documents"
-    return (
-        f"<!-- GENERATED by `luria index` — do not edit. -->\n\n"
-        f"# {scheme.prefix}s tagged `{tag}`\n"
-        f"{blurb}\n"
-        f"{len(listed)} of {len(adrs)} {noun}. Back to the [full index](../README.md).\n\n"
-        + TABLE_HEAD
-        + "\n".join(a.row(prefix=prefix) for a in listed)
-        + "\n"
-    )
 
 
 def render_document(scheme, docs: list[Adr]) -> str:
@@ -486,8 +442,7 @@ def view_dirs(nested: bool = True) -> list[Path]:
     for s in cfg.schemes.values():
         if s.render != "index":
             continue
-        dirs.append(s.tag_dir)
-        dirs += [s.vocab_dir(v.name) for v in s.vocabularies]
+        dirs += [s.vocab_dir(f) for f in s.grouped_fields]
         if s.view != s.dir:
             dirs.append(s.view)
     dirs += [j.output for j in cfg.journals.values()]
@@ -514,7 +469,7 @@ def ignored(paths: list[Path]) -> set[Path]:
     """The subset of `paths` that git is configured to ignore.
 
     A generated view the project has gitignored is one it has decided not to
-    keep — `[luria.paths] reports = "build/doc-reports"` behind a CI artifact
+    keep — `paths.reports = "build/doc-reports"` behind a CI artifact
     upload is the shape that exists in the wild. The staleness check has
     nothing to compare against there: a fresh clone never has the file, so
     *missing* reads as *stale*, and the remedy the failure prints — regenerate
@@ -546,11 +501,10 @@ def _render_scheme(scheme) -> dict[Path, str]:
     docs = load_scheme(scheme)
     if scheme.render == "document":
         return {scheme.output: render_document(scheme, docs)} if scheme.output else {}
-    tags = tag_order(docs, scheme)
-    out = {scheme.index_path: render_index(docs, tags, scheme)}
-    for tag, meta in tags:
-        out[scheme.tag_dir / f"{tag}.md"] = render_tag_page(tag, meta, docs, scheme)
     from . import vocabularies
+    out = {scheme.index_path: render_index(docs, scheme)}
+    # The axis's pages come through here with every other field's: same
+    # directory, same table, one template (ADR-tmp8hp25).
     out.update(vocabularies.pages(scheme, docs))
     return out
 
