@@ -390,7 +390,7 @@ luria:
       render: index
       fields:
         status:
-          vocabulary: statuses
+          vocabulary: scene-statuses
 """)
     write(tmp_path, "record/decisions.d/statuses.yaml",
           "Active:\n  label: In force\nSuperseded:\n  label: Replaced\n")
@@ -415,7 +415,7 @@ luria:
       render: index
       fields:
         status:
-          vocabulary: statuses
+          vocabulary: scene-statuses
 """)
     write(tmp_path, "record/decisions.d/statuses.yaml",
           "Active:\n  label: In force\nSuperseded:\n  label: Replaced\n")

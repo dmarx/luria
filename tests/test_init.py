@@ -31,9 +31,17 @@ schemes:
   RFC:
     dir: record/rfcs.d
     output: docs/rfcs
+    statuses: record-statuses
     fields:
       status:
-        vocabulary: statuses
+        vocabulary: record-statuses
+vocabularies:
+  record-statuses:
+    Active: {blurb: in force}
+    Proposed: {blurb: not yet}
+    Deferred: {blurb: parked}
+    Superseded: {blurb: replaced}
+    Rejected: {blurb: declined}
 journals:
   incidents:
     dir: record/incidents.d
@@ -160,7 +168,9 @@ def test_init_writes_the_status_vocabulary(tmp_path, monkeypatch):
     for scheme in config.current().schemes.values():
         if scheme.render != "index":
             continue
-        assert scheme.statuses_yaml.exists(), scheme.prefix
+        # The words are in the config now, named once and shared, rather
+        # than a statuses.yaml per scheme (ADR-tmp8hp25).
+        assert scheme.statuses_vocab, scheme.prefix
         assert tuple(statuses.declared(scheme)) == statuses.DEFAULT_STATUSES
 
 
@@ -169,11 +179,16 @@ def test_the_written_vocabulary_is_the_one_in_force(tmp_path, monkeypatch):
     from luria import config, lint, statuses
     init.run(into=str(tmp_path))
     repoint(tmp_path, monkeypatch)
-    scheme = config.current().schemes["ADR"]
-    scheme.statuses_yaml.write_text(
-        "Active:\n  blurb: in force\nWithdrawn:\n  blurb: taken back\n")
+    path = tmp_path / "luria.yaml"
+    import yaml as _yaml
+    raw = _yaml.safe_load(path.read_text()) or {}
+    raw["vocabularies"]["record-statuses"] = {
+        "Active": {"blurb": "in force"},
+        "Withdrawn": {"blurb": "taken back"}}
+    path.write_text(_yaml.dump(raw, sort_keys=False))
     config.reset()
     values = next(v for v in config.current().schemes["ADR"].vocabularies
                   if v.field == "status")
     from luria import vocabularies
-    assert tuple(vocabularies.declared(values.file)) == ("Active", "Withdrawn")
+    assert tuple(vocabularies.declared(values.values_by_name)) == (
+        "Active", "Withdrawn")

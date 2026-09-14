@@ -81,11 +81,9 @@ def test_the_config_it_writes_is_ordinary_toml(tmp_path):
     this config sees what every other project's config looks like."""
     scaffold(tmp_path, schemes="RFC:document")
     text = (tmp_path / "luria.yaml").read_text()
-    assert """
-           schemes:
-             RFC: {}
-           """ in text
-    assert 'render = "document"' in text
+    assert "\n  RFC:\n" in text
+    assert "dir: record/rfcs.d" in text
+    assert "render: document" in text
     assert "--schemes" not in text
 
 
@@ -233,7 +231,7 @@ def test_editing_it_then_initing_scaffolds_the_edit(tmp_path, monkeypatch):
     init.config_run(into=str(tmp_path), schemes="RFC")
     cfg_file = tmp_path / "luria.yaml"
     cfg_file.write_text(cfg_file.read_text().replace(
-        'dir    = "record/rfcs.d"', 'dir    = "record/proposals.d"'))
+        "dir: record/rfcs.d", "dir: record/proposals.d"))
 
     init.write(tmp_path)
     config.reset()
@@ -253,10 +251,7 @@ def test_it_refuses_to_overwrite(tmp_path):
 
 def test_stdout_prints_without_writing(tmp_path, capsys):
     init.config_run(into=str(tmp_path), schemes="RFC", stdout=True)
-    assert """
-           schemes:
-             RFC: {}
-           """ in capsys.readouterr().out
+    assert "\n  RFC:\n" in capsys.readouterr().out
     assert not (tmp_path / "luria.yaml").exists()
 
 
@@ -267,14 +262,11 @@ def test_stdout_works_over_an_existing_config(tmp_path, capsys):
                                          issue_url: ''
                                          """)
     init.config_run(into=str(tmp_path), schemes="RFC", stdout=True)
-    assert """
-           schemes:
-             RFC: {}
-           """ in capsys.readouterr().out
+    assert "\n  RFC:\n" in capsys.readouterr().out
 
 
 def test_it_infers_the_issue_url_too(tmp_path):
     repo(tmp_path, "git@github.com:acme/widgets.git")
     init.config_run(into=str(tmp_path))
-    assert 'issue_url = "https://github.com/acme/widgets/issues/{n}"' in \
+    assert "issue_url: 'https://github.com/acme/widgets/issues/{n}'" in \
         (tmp_path / "luria.yaml").read_text()

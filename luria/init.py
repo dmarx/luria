@@ -374,10 +374,11 @@ def template_config(into: Path, issue_url: str = "", schemes: str = "",
     # with an origin remote has already written it down somewhere else.
     issue_url = issue_url or infer_issue_url(into)
     if issue_url:
-        text = text.replace(
-            'issue_url = ""',
-            f'issue_url = "{issue_url.rstrip("/")}/{{n}}"'
-            if "{n}" not in issue_url else f'issue_url = "{issue_url}"')
+        filled = (f"{issue_url.rstrip('/')}/{{n}}"
+                  if "{n}" not in issue_url else issue_url)
+        # Quoted, because a value with a `{` is a YAML flow mapping unless it
+        # is a string — the kind of thing TOML's always-quoted values hid.
+        text = text.replace("issue_url: ''", f"issue_url: '{filled}'")
     return shorthand_tables(text, schemes, journals)
 
 

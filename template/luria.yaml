@@ -58,8 +58,9 @@ schemes:
     retires_on: Superseded
     fields:
       status:
-        vocabulary: statuses
+        vocabulary: record-statuses
     tags: adr-tags
+    statuses: record-statuses
   DP:
     dir: record/principles.d
     active: Active
@@ -67,9 +68,10 @@ schemes:
     output: docs/design-principles.md
     successor: superseded_by
     retires_on: Superseded
+    statuses: record-statuses
     fields:
       status:
-        vocabulary: statuses
+        vocabulary: record-statuses
 remotes:
   LU:
     name: luria

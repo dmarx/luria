@@ -90,11 +90,14 @@ def test_the_check_covers_every_scheme(project):
             output: docs/values.md
             fields:
               status:
-                vocabulary: statuses
+                vocabulary: vp-statuses
+        vocabularies:
+          vp-statuses:
+            Active:
+              blurb: in force
         """)
     path = project / "docs" / "values" / "VP-001.md"
     path.parent.mkdir(parents=True, exist_ok=True)
-    (path.parent / "statuses.yaml").write_text("Active:\n  blurb: in force\n")
     from luria import config
     config.reset()
 
