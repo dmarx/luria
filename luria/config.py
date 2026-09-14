@@ -454,6 +454,27 @@ class Vocabulary:
 # explicitly: a write bumps mtime, so the entry expires on its own.
 _NUMBER_CACHE: dict[Path, tuple[tuple[int, int], int | None]] = {}
 
+# Directory → ((mtime_ns, size), numbered, temporary). The same bargain
+# `_NUMBER_CACHE` takes, a directory up: a document added, removed or renamed
+# moves its directory's mtime, and that is exactly when the SET of documents
+# changes. A rewrite that leaves the set alone does not move it and does not
+# need to — the number itself is cached on the file's own mtime, just below.
+#
+# Cached because the glob was not: `number_of` says "this is the hot path —
+# `documents()` runs on every lint, index and link pass", and the inner call
+# was cached while the walk and sort around it were not. Profiled serially
+# (`LURIA_JOBS=1`), one lint over a 726-document record called `documents()`
+# 24,960 times and spent 161 of 239 seconds inside it.
+_LISTING_CACHE: dict[Path, tuple[tuple[int, int],
+                                 dict[int, Path], dict[str, Path]]] = {}
+
+
+def forget_documents() -> None:
+    """Drop the directory listings — for a writer that outruns mtime
+    resolution, and for tests that rewrite a fixture faster than the
+    filesystem can distinguish."""
+    _LISTING_CACHE.clear()
+
 # `number:` is an integer on a line of its own, so it can be read without a YAML
 # parse of the whole document — this runs once per file per lint, and the
 # frontmatter of a scaffolded document is mostly comments.
@@ -737,12 +758,34 @@ class Scheme:
 
     def temp_documents(self) -> dict[str, Path]:
         """Tail → path for every temporary document awaiting concretization."""
-        found: dict[str, Path] = {}
+        return self._listing()[1]
+
+    def _listing(self) -> tuple[dict[int, Path], dict[str, Path]]:
+        """(numbered, temporary) for this scheme's directory, read once.
+
+        Both questions are answered from one walk, because they were two
+        walks of the same directory and neither was cached."""
+        try:
+            st = self.dir.stat()
+        except OSError:
+            return {}, {}
+        key = (st.st_mtime_ns, st.st_size)
+        hit = _LISTING_CACHE.get(self.dir)
+        if hit is not None and hit[0] == key:
+            return hit[1], hit[2]
+        numbered: dict[int, Path] = {}
+        temps: dict[str, Path] = {}
         for path in sorted(self.dir.glob("*.md")):
             tail = self.temp_of(path)
             if tail is not None:
-                found[tail] = path
-        return found
+                temps[tail] = path
+                continue
+            number = self.number_of(path)
+            if number is not None:
+                numbered.setdefault(number, path)
+        numbered = dict(sorted(numbered.items()))
+        _LISTING_CACHE[self.dir] = (key, numbered, temps)
+        return numbered, temps
 
     def code(self, number: str | int) -> str:
         return f"{self.prefix}-{int(number):03d}"
@@ -799,14 +842,7 @@ class Scheme:
         The one place a scheme directory is read. Five copies of this glob had
         accumulated, each with its own regex — the drift DP-4 names, harmless
         only for as long as the filename shape never changed."""
-        found: dict[int, Path] = {}
-        for path in sorted(self.dir.glob("*.md")):
-            if self.temp_of(path) is not None:
-                continue
-            number = self.number_of(path)
-            if number is not None:
-                found.setdefault(number, path)
-        return dict(sorted(found.items()))
+        return self._listing()[0]
 
 
 # The shipped URI templates, per name and per construction shape. GitHub's
@@ -2411,6 +2447,7 @@ def current() -> Config:
 def reset() -> None:
     """Drop the cache — for tests that point `LURIA_ROOT` at a fixture."""
     current.cache_clear()
+    forget_documents()
 
 
 @contextmanager

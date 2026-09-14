@@ -48,12 +48,18 @@ class Lookup:
 
 
 def _read(code: str) -> dict:
-    from .adr_index import parse_frontmatter
+    """Through `read_document`, not around it.
+
+    Derivation runs per `Adr`, and this opened and parsed the file itself —
+    so the parse cache (#249) was bypassed on the hottest path in the lint.
+    One profiled run over a 726-document record spent 36% of its wall clock
+    here, re-parsing documents the process had already parsed."""
+    from .adr_index import read_document
     path = path_of(code)
     if path is None:
         return {}
     try:
-        meta, _ = parse_frontmatter(path.read_text(encoding="utf-8"))
+        meta, _ = read_document(path)
     except OSError:
         return {}
     return meta or {}
