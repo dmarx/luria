@@ -84,3 +84,59 @@ def test_a_document_with_no_frontmatter_still_reads(tmp_path):
     meta, body = builder.read_document(path)
     assert meta == {}
     assert body == "no frontmatter here\n"
+
+
+# ── the path that went around it ──────────────────────────────────────────
+#
+# `referents._read` resolves a code to its frontmatter so a derived field can
+# read it, and it opened and parsed the file itself rather than asking
+# `read_document`. Derivation runs per `Adr`, so the cache this module exists
+# for was bypassed on the hottest path in the lint: profiling one run over a
+# 726-document record showed 9,284 such reads, 36% of the wall clock.
+
+def test_resolving_a_code_twice_does_not_reparse(tmp_path, monkeypatch):
+    from luria import referents
+    path = _doc(tmp_path / "ADR-001.md", "First")
+    builder.forget_documents()
+    monkeypatch.setattr(referents, "path_of", lambda code: path)
+
+    calls = []
+    real = builder.parse_frontmatter
+    monkeypatch.setattr(builder, "parse_frontmatter",
+                        lambda text: calls.append(1) or real(text))
+
+    assert referents._read("ADR-001")["title"] == "First"
+    assert referents._read("ADR-001")["title"] == "First"
+    assert len(calls) == 1, "the second resolution should answer from the cache"
+
+
+def test_a_rewrite_is_still_seen_through_the_referent_path(tmp_path,
+                                                           monkeypatch):
+    """The cache is only safe because `repair` writes documents mid-run and
+    reads them back. Going through it must not break that."""
+    from luria import referents
+    path = _doc(tmp_path / "ADR-001.md", "First")
+    builder.forget_documents()
+    monkeypatch.setattr(referents, "path_of", lambda code: path)
+    assert referents._read("ADR-001")["title"] == "First"
+
+    _doc(path, "Second")
+    builder.forget_documents()  # mtime resolution, as elsewhere in this file
+    assert referents._read("ADR-001")["title"] == "Second"
+
+
+# unresolved-ok-block: ADR-999 — a fixture code, deliberately not real: the
+# point of the test is what happens when a code names no document.
+def test_a_code_naming_nothing_still_answers_empty(tmp_path, monkeypatch):
+    """`{}` rather than an exception: a code resolving to nothing is already
+    the reference check's finding, and raising here would report it twice."""
+    from luria import referents
+    monkeypatch.setattr(referents, "path_of", lambda code: None)
+    assert referents._read("ADR-999") == {}
+
+
+def test_an_unreadable_document_still_answers_empty(tmp_path, monkeypatch):
+    from luria import referents
+    monkeypatch.setattr(referents, "path_of",
+                        lambda code: tmp_path / "gone.md")
+    assert referents._read("ADR-001") == {}
