@@ -7,6 +7,7 @@ restated by hand — four copies of one vocabulary, and a citation rule that
 turned out to check only that a field was not blank.
 """
 
+import yaml
 from _config import merged
 from pathlib import Path
 
@@ -53,23 +54,27 @@ generative:
 def two_schemes(tmp_path, monkeypatch):
     """Two schemes sharing one vocabulary file, as the motivating record has."""
     def build(toml_extra: str = ""):
-        write(tmp_path, "record/topics.yaml", VOCAB)
+        # The case this fixture is about: one vocabulary, two schemes.
+        # It used to be a shared FILE PATH, which is the half-measure the
+        # central table replaced (ADR-tmp8hp25).
         write(tmp_path, "luria.yaml", merged("""
                                       issue_url: https://example.test/issues/{n}
                                       schemes:
                                         LIT:
                                           dir: record/literature.d
-                                          tags: record/topics.yaml
+                                          tags: topics
                                           tag_groups:
                                             primary_topic:
                                               require: exactly-one
                                         SOTA:
                                           dir: record/practices.d
-                                          tags: record/topics.yaml
+                                          tags: topics
                                           tag_groups:
                                             primary_topic:
                                               require: exactly-one
-                                      """, toml_extra))
+                                      """,
+                                      {"vocabularies": {"topics": yaml.safe_load(VOCAB)}},
+                                      toml_extra))
         monkeypatch.setenv("LURIA_ROOT", str(tmp_path))
         config.reset()
         return tmp_path
@@ -89,13 +94,17 @@ schemes:
 
 # --- one vocabulary, pointed at twice ------------------------------------
 
-def test_two_schemes_can_share_one_vocabulary_file(two_schemes):
+def test_two_schemes_can_share_one_vocabulary(two_schemes):
     """The duplication this removes: the shared terms were previously written
-    once per scheme in tags.yaml and again per scheme in luria.yaml."""
-    root = two_schemes()
+    once per scheme in tags.yaml and again per scheme in the config — and a
+    shared FILE was the half-measure, since two schemes could point at one and
+    simply did not (ADR-tmp8hp25)."""
+    two_schemes()
     cfg = config.current()
-    assert cfg.schemes["LIT"].tags_yaml == root / "record/topics.yaml"
-    assert cfg.schemes["SOTA"].tags_yaml == root / "record/topics.yaml"
+    assert cfg.schemes["LIT"].tags_vocab == "topics"
+    assert cfg.schemes["SOTA"].tags_vocab == "topics"
+    # The same object, not two readings that happen to agree.
+    assert cfg.schemes["LIT"].tags == cfg.schemes["SOTA"].tags
 
 
 def test_group_membership_comes_from_the_vocabulary(two_schemes):
@@ -136,20 +145,19 @@ def test_a_tag_the_scheme_cannot_carry_is_not_in_its_group(two_schemes):
 def test_an_inline_list_still_wins(tmp_path, monkeypatch):
     """Derivation is the fallback, not a replacement: a group that lists tags
     means those tags, whatever the vocabulary says."""
-    write(tmp_path, "record/topics.yaml", VOCAB)
-    write(tmp_path, "luria.yaml", """
-luria:
-  issue_url: https://example.test/issues/{n}
-  schemes:
-    SOTA:
-      dir: record/practices.d
-      tags: record/topics.yaml
-      tag_groups:
-        primary_topic:
-          require: exactly-one
-          tags:
-          - stability
-""")
+    write(tmp_path, "luria.yaml", merged({"vocabularies": {
+        "topics": yaml.safe_load(VOCAB)}}, """
+issue_url: https://example.test/issues/{n}
+schemes:
+  SOTA:
+    dir: record/practices.d
+    tags: topics
+    tag_groups:
+      primary_topic:
+        require: exactly-one
+        tags:
+        - stability
+"""))
     monkeypatch.setenv("LURIA_ROOT", str(tmp_path))
     config.reset()
     group, = config.current().schemes["SOTA"].tag_groups
@@ -160,18 +168,17 @@ luria:
 def test_a_group_that_derives_nothing_is_a_config_error(tmp_path, monkeypatch):
     """The eager-validation promise: a group constraining nothing must not
     surface as "no violations"."""
-    write(tmp_path, "record/topics.yaml", "optimization:\n  label: O\n")
-    write(tmp_path, "luria.yaml", """
-luria:
-  issue_url: https://example.test/issues/{n}
-  schemes:
-    SOTA:
-      dir: record/practices.d
-      tags: record/topics.yaml
-      tag_groups:
-        primary_topic:
-          require: exactly-one
-""")
+    write(tmp_path, "luria.yaml", merged(
+        {"vocabularies": {"topics": {"optimization": {"label": "O"}}}}, """
+issue_url: https://example.test/issues/{n}
+schemes:
+  SOTA:
+    dir: record/practices.d
+    tags: topics
+    tag_groups:
+      primary_topic:
+        require: exactly-one
+"""))
     monkeypatch.setenv("LURIA_ROOT", str(tmp_path))
     config.reset()
     with pytest.raises(ValueError, match="constrains nothing"):

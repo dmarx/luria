@@ -70,7 +70,8 @@ def test_a_scheme_declaring_nothing_has_an_empty_contract(tmp_path, monkeypatch)
 
 
 def test_requires_compiles_to_a_required_untyped_field(tmp_path, monkeypatch):
-    project(tmp_path, monkeypatch, 'requires = ["arxiv"]')
+    project(tmp_path, monkeypatch,
+            {"schemes": {"SOTA": {"requires": ["arxiv"]}}})
     field, = declared(sota())
     assert field.name == "arxiv"
     assert field.required and field.reference is None
@@ -429,15 +430,15 @@ def test_describe_says_one_or_many(tmp_path, monkeypatch):
 
 # --- one of several fields (#144 review) ---------------------------------
 
-def papers(tmp_path, monkeypatch, group: str = 'fields = ["arxiv", "doi", "url"]') -> Path:
+def papers(tmp_path, monkeypatch, group: dict | None = None) -> Path:
+    group = {"fields": ["arxiv", "doi", "url"]} if group is None else group
     write(tmp_path, "luria.yaml", merged("""
                                   issue_url: https://example.test/issues/{n}
                                   schemes:
                                     LIT:
                                       dir: record/literature.d
-                                      field_groups:
-                                        source: {}
-                                  """, group))
+                                  """,
+        {"schemes": {"LIT": {"field_groups": {"source": group}}}}))
     monkeypatch.setenv("LURIA_ROOT", str(tmp_path))
     config.reset()
     return tmp_path
@@ -487,22 +488,22 @@ def test_an_empty_field_does_not_count(tmp_path, monkeypatch):
 
 def test_exactly_one_and_at_most_one_are_rules_too(tmp_path, monkeypatch):
     root = papers(tmp_path, monkeypatch,
-                  'fields = ["arxiv", "doi"]\nrequire = "exactly-one"')
+                  {"fields": ["arxiv", "doi"], "require": "exactly-one"})
     paper(root, "arxiv: '1'\ndoi: '2'")
     e, = lit_findings()
     assert "exactly one of" in e and "has `arxiv:`, `doi:`" in e
     root = papers(tmp_path, monkeypatch,
-                  'fields = ["arxiv", "doi"]\nrequire = "at-most-one"')
+                  {"fields": ["arxiv", "doi"], "require": "at-most-one"})
     paper(root)
     assert lit_findings() == []
 
 
 def test_a_group_with_no_fields_or_a_bad_rule_is_a_config_error(tmp_path, monkeypatch):
-    papers(tmp_path, monkeypatch, "fields = []")
+    papers(tmp_path, monkeypatch, {"fields": []})
     with pytest.raises(ValueError, match="lists no fields"):
         config.current()
     config.reset()
-    papers(tmp_path, monkeypatch, 'fields = ["arxiv"]\nrequire = "one"')
+    papers(tmp_path, monkeypatch, {"fields": ["arxiv"], "require": "one"})
     with pytest.raises(ValueError, match="require = 'one'"):
         config.current()
 
