@@ -51,6 +51,14 @@ one so only the unconsidered ones stay listed — acknowledged rows never fail.
 Exit 0 when clean; exit 1 with one line per violation.
 """
 
+# inactive-ok-file: ADR-tmp29lk4 — Proposed. Every mention names it as
+# the decision this file implements or is written against; the citation
+# is to the reasoning, not a claim the decision is settled.
+
+# inactive-ok-file: ADR-094 — Proposed. Named as the decision whose two
+# halves this check keeps together; the citation is to its measurement,
+# not a claim it is settled.
+
 # inactive-ok-file: ADR-099 — Proposed. Every mention names it as the
 # decision this file implements or is written against; the citation is to
 # the reasoning, not a claim the decision is settled.
@@ -455,26 +463,80 @@ def check_wikilinks(errors: list[str]) -> None:
 
 
 def check_anchors(errors: list[str]) -> None:
-    """A fragment link whose target answers to it by `<a name=>` and nothing
-    else. Addressable in the repository and on GitHub, where a fragment is a
-    real navigation; not addressable on the site the record publishes to,
-    whose router scrolls with `getElementById` — so the link works in every
-    place a contributor would check it and fails in the one place readers
-    use it (ADR-099).
+    """A fragment link that does not reach what it names.
 
-    A heading is never this, and `<a id=>` is never this. The finding is
-    exactly the spelling that is reachable one way and not the other."""
+    Two shapes. `<a name=>` alone is addressable in the repository and on
+    GitHub, where a fragment is a real navigation, and not on the site the
+    record publishes to, whose router scrolls with `getElementById` — so the
+    link works everywhere a contributor checks and fails where readers use
+    it (ADR-099). Nothing at all is the plainer case, and it became
+    checkable only once luria owned a slugger of its own: a heading's anchor
+    is the publisher's, and a check that guessed at it would report links
+    that work (ADR-tmp29lk4).
+
+    Read against the RENDER, not the committed tree — see
+    `anchors.documents`."""
     cfg = current()
     for f in anchors_mod.scan(anchors_mod.documents(), cfg.is_generated,
                               cfg.link_base):
-        # A view's anchor is the generator's, so the remedy is a code change
-        # and not an edit to the page — which the next build would erase.
-        fix = ("the generator writes it that way"
-               if f.generated else "run `luria link --fix`")
-        errors.append(
-            f"{cfg.rel(f.source)}:{f.line}: `#{f.fragment}` reaches "
-            f"{cfg.rel(f.target)} by `<a name=>`, which a published site "
-            f"cannot scroll to — {fix}")
+        where = (f"{cfg.rel(f.source)}:{f.line}: `#{f.fragment}` "
+                 f"in {cfg.rel(f.target)}")
+        if f.kind == "name-only":
+            # A view's anchor is the generator's, so the remedy is a code
+            # change and not an edit to the page the next build would erase.
+            fix = ("the generator writes it that way"
+                   if f.generated else "run `luria link --fix`")
+            errors.append(f"{where} is reachable by `<a name=>` only, which a "
+                          f"published site cannot scroll to — {fix}")
+        else:
+            errors.append(f"{where} reaches no heading and no `id` — a "
+                          f"reworded heading, a typo, or a link written "
+                          f"against a page that has moved on")
+
+
+def cite_target_lines() -> list[str]:
+    """`cite = "page"` in a record whose pages are not published.
+
+    The two halves of ADR-094 have to travel together. `cite = "page"` sends
+    a citation of DP-003 to that principle's own page rather than to an
+    anchor in the assembled view — which is right, and is the durable
+    address, because a page's path does not move when somebody rewords a
+    heading. It is also only an address if the page exists: a site that
+    excludes the scheme's sources does the one thing it can and sends the
+    reader to the repository. ADR-094 measured that when `publishable()`
+    still withheld them — links redirected off-site went from 10 to 195.
+
+    `publishable()` no longer withholds them by derivation, so this is now
+    reachable only on purpose, through `site.exclude`. On purpose is exactly
+    when it needs saying: the config asks for durable citations and the
+    publishing rules withhold the thing they resolve to, and every citation
+    silently becomes a link out of the site.
+
+    A warning rather than an error. A record may publish nowhere, or publish
+    a subset deliberately, and this cannot tell which — but it can say that
+    the two settings disagree (ADR-035)."""
+    from . import site as site_mod
+    cfg = current()
+    out: list[str] = []
+    if not cfg.site.publish:
+        return out                  # no site, so nothing resolves anywhere
+    schemes = [s for s in cfg.schemes.values()
+               if s.render == "document" and s.output and s.cite == "page"]
+    if not schemes:
+        return out
+    published = set(site_mod.publishable(cfg))
+    for scheme in schemes:
+        withheld = [p for p in scheme.documents().values()
+                    if p not in published]
+        if not withheld:
+            continue
+        out.append(
+            f"schemes.{scheme.prefix}.cite is 'page', but "
+            f"{len(withheld)} of this scheme's document(s) are not published "
+            f"— `site.exclude` withholds the page every citation of a "
+            f"{scheme.prefix} code resolves to, so each one becomes a link "
+            f"out of the site (first: {cfg.rel(withheld[0])})")
+    return out
 
 
 def check_bare_refs(errors: list[str]) -> None:
@@ -505,7 +567,8 @@ def check_bare_refs(errors: list[str]) -> None:
 # UNACKNOWLEDGED rows ever reach a class, so the directives stay the escape
 # hatch under enforcement — the dial changes the consequence, not the
 # accounting.
-FAILABLE = ("retired-citations", "unresolved-codes", "hand-written-urls",
+FAILABLE = ("retired-citations", "unresolved-codes", "unresolved-citations",
+            "hand-written-urls",
             "broken-targets", "remote-drift", "inert-status",
             "source-mismatch", "source-unchecked",
             "legacy-spellings", "narrow-titles", "stale-directives",
@@ -604,6 +667,12 @@ def status_sections() -> list[tuple[str, str, list[str]]]:
             f"{len(loose)} code(s) resolve to no document "
             "(`luria reports` for the sites, `unresolved-ok:` for the "
             "deliberate ones)", loose))
+
+    if lines := cite_target_lines():
+        sections.append((
+            "unresolved-citations",
+            f"{len(lines)} scheme(s) cite a page this record does not "
+            "publish — every citation of their codes leaves the site", lines))
 
     # A temporary code in a workflow file is one the generation job cannot
     # rewrite on the workflow's own token; a project on that token names the

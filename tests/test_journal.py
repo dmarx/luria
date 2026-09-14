@@ -7,6 +7,10 @@ each of those is checked against a tree built to say something specific rather
 than against whatever this repo happens to have filed.
 """
 
+# inactive-ok-file: ADR-tmp29lk4 — Proposed. Every mention names it as
+# the decision this file implements or is written against; the citation
+# is to the reasoning, not a claim the decision is settled.
+
 # inactive-ok-file: ADR-099 — Proposed. Every mention names it as the
 # decision this file implements or is written against; the citation is to
 # the reasoning, not a claim the decision is settled.
@@ -130,12 +134,17 @@ def test_book_lists_its_contents(tmp_path):
     file_entry(j, "2026-08-04T03:27:11", "The second thing")
     book = journal.render_book(j, "2026-08", journal.books(j)["2026-08"])
     assert "# Development log — August 2026" in book
-    assert "- [3 Aug 21:19 — The first thing](#20260803211926)" in book
-    assert "- [4 Aug 03:27 — The second thing](#20260804032711)" in book
-    # Every contents entry has somewhere to land.
+    # The contents list links the HEADING, which is the address the
+    # published page itself offers — its ¶ anchor and the publisher's own
+    # sidebar both use it, and a contents list pointing elsewhere is two
+    # addresses for one entry (ADR-tmp29lk4).
+    assert "- [3 Aug 21:19 — The first thing](#the-first-thing)" in book
+    assert "- [4 Aug 03:27 — The second thing](#the-second-thing)" in book
     for anchor in ("20260803211926", "20260804032711"):
-        # `id`, so the index's own links reach it on the published site
-        # and not only in the repository (ADR-099).
+        # The durable anchor stays, unlinked: keyed to the timestamp, which
+        # never moves, so a citation written by hand cannot rot. `id`, so it
+        # resolves on the published site and not only in the repository
+        # (ADR-099).
         assert f'<a id="{anchor}"></a>' in book
 
 
@@ -220,7 +229,7 @@ def test_index_inlines_the_current_book(tmp_path):
     file_entry(j, "2026-08-04T03:27:11", "Newest")
     index = journal.render_index(j, journal.books(j))
     assert "## Currently — [August 2026](2026-08.md)" in index
-    assert "- [4 Aug 03:27 — Newest](2026-08.md#20260804032711)" in index
+    assert "- [4 Aug 03:27 — Newest](2026-08.md#newest)" in index
     # Newest first in the inline list…
     assert index.index("Newest") < index.index("Recent")
     # …and the old book appears only on the shelf.
