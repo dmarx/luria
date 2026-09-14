@@ -32,7 +32,7 @@ So this is that decision applied one level up, and deliberately not further:
 
 Shaped after `tags.yaml`, which does the same job for the other browsing axis:
 the vocabulary lives in YAML beside the records, and any *rule* about combining
-them lives in `luria.toml`. Declaring nothing keeps today's behaviour exactly —
+them lives in `luria.yaml`. Declaring nothing keeps today's behaviour exactly —
 all five words, no legend.
 """
 

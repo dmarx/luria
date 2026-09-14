@@ -8,7 +8,7 @@ It renders only where `luria/config.py` is a file the reader can open — see
 which describes the record *it* configured; this page is the schema, and the
 schema is not theirs to maintain.
 
-Luria's capability surface *is* `luria.toml`: a scheme, a fragment directory, a
+Luria's capability surface *is* `luria.yaml`: a scheme, a fragment directory, a
 journal, a remote and the site are five composable primitives, and the ADR /
 DP / changelog / devlog record this package ships is one instantiation of them
 rather than a fixed set of parts. That was true long before this module
@@ -71,7 +71,7 @@ HEADER = """# Configuration
 
 {stamp}
 Everything Luria does is driven by one file at the project root,
-`luria.toml`. **Every key has a default**, so a project with the conventional
+`luria.yaml`. **Every key has a default**, so a project with the conventional
 layout needs only `issue_url` — and Luria runs without the file at all, on
 defaults alone, which is what lets `luria init` bootstrap into an empty
 repository.
@@ -121,7 +121,7 @@ behaves, never what the record *is*, which is why they are not in the file.
 
 | variable | effect |
 |---|---|
-| `LURIA_ROOT` | the project root, overriding the search for `luria.toml` / `.git`. What lets the test suite run against fixture trees, and what a CI job uses when it checks out a project somewhere other than the working directory. |
+| `LURIA_ROOT` | the project root, overriding the search for `luria.yaml` / `.git`. What lets the test suite run against fixture trees, and what a CI job uses when it checks out a project somewhere other than the working directory. |
 | `LURIA_JOBS` | caps the thread pool that renders views, scans files and probes remote URLs. `LURIA_JOBS=1` is the serial escape hatch — the one to reach for when a failure needs a deterministic ordering to reproduce. |
 
 ## Running one module without the package
@@ -277,7 +277,7 @@ def rows(cls: type) -> list[tuple[str, str, str]]:
 
     The default shown is the *dataclass's* — the answer to "what do I get if I
     omit this key?", which is the question a reference is asked. What the
-    shipped `luria.toml` happens to set for its own ADR scheme is a different
+    shipped `luria.yaml` happens to set for its own ADR scheme is a different
     question, and answering it here would tell a project adding a second
     scheme that `output` defaults to `docs/decisions`, which is false."""
     out = []

@@ -37,7 +37,7 @@ def doc(root: Path, rel: str, *, code: str, tags: list[str],
     return write(root, rel, "\n".join(front) + "\n")
 
 
-def project(tmp_path, monkeypatch, sota_extra: str = "") -> Path:
+def project(tmp_path, monkeypatch, sota_extra: str | dict = "") -> Path:
     write(tmp_path, "luria.yaml", merged("""
                                   issue_url: https://example.test/issues/{n}
                                   schemes:
@@ -128,6 +128,8 @@ def test_every_obligation_says_where_it_was_declared(tmp_path, monkeypatch):
             """
             schemes:
               SOTA:
+                requires:
+                - arxiv
                 references:
                   source:
                     scheme: LIT
@@ -179,6 +181,8 @@ def test_a_doubly_declared_missing_field_is_reported_once(tmp_path, monkeypatch)
                    """
                    schemes:
                      SOTA:
+                       requires:
+                       - source
                        references:
                          source:
                            scheme: LIT

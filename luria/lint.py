@@ -204,7 +204,7 @@ def check_reserved_prefix(errors: list[str]) -> None:
     for prefix in current().schemes:
         if config_mod.in_fixture_namespace(prefix):
             errors.append(
-                f"luria.toml: scheme {prefix} is in the reserved fixture "
+                f"luria.yaml: scheme {prefix} is in the reserved fixture "
                 f"namespace {config_mod.FIXTURE_NAMESPACE}\u2026 — pick another "
                 "prefix, or `rename_scheme` it if it already has documents")
 
@@ -305,7 +305,7 @@ def check_alias_collisions(errors: list[str]) -> None:
             if len(numbers) > 1:
                 codes = ", ".join(scheme.code(n) for n in sorted(numbers))
                 errors.append(
-                    f"luria.toml: schemes.{scheme.prefix}.alias renders "
+                    f"luria.yaml: schemes.{scheme.prefix}.alias renders "
                     f"`{spelling}` for {codes} — one spelling cannot answer "
                     f"for {len(numbers)} documents; add `{{number}}` to the "
                     f"template, or a field that tells them apart")
@@ -675,7 +675,7 @@ def status_sections() -> list[tuple[str, str, list[str]]]:
         sections.append((
             "acknowledged-uniformity",
             f"{len(acknowledged)} scheme(s) uniform by declaration "
-            "(`uniform_ok` in luria.toml)", acknowledged))
+            "(`uniform_ok` in luria.yaml)", acknowledged))
 
     # A citation still spelled with a concretized code's old temporary name
     # (ADR-040, ADR-049). The in-tree steady state is zero — the
@@ -811,7 +811,7 @@ def report_warnings(errors: list[str]) -> None:
     for name in sorted(fail - set(FAILABLE)):
         # A dial set to a notch that doesn't exist must not silently enforce
         # nothing (DP-1).
-        errors.append(f"luria.toml: `fail_on` names {name!r}, which is no "
+        errors.append(f"luria.yaml: `fail_on` names {name!r}, which is no "
                       f"warning class (known: {', '.join(FAILABLE)})")
 
     # A class the project has decided it does not want reported at all.
@@ -824,13 +824,13 @@ def report_warnings(errors: list[str]) -> None:
     for name in sorted(mute - set(MUTABLE)):
         # Same rule as `fail_on`: a dial set to a notch that does not exist
         # must say so rather than silently do nothing (DP-1).
-        errors.append(f"luria.toml: `mute` names {name!r}, which is no "
+        errors.append(f"luria.yaml: `mute` names {name!r}, which is no "
                       f"mutable warning class (known: {', '.join(MUTABLE)})")
     for name in sorted(mute & fail):
         # Not a precedence question. A project cannot both enforce a check
         # and refuse to hear it, and guessing which it meant would make one
         # of the two settings a lie.
-        errors.append(f"luria.toml: {name!r} is named in both `fail_on` and "
+        errors.append(f"luria.yaml: {name!r} is named in both `fail_on` and "
                       "`mute` — a class cannot be both enforced and hidden")
 
     for name, headline, lines in status_sections():
@@ -843,7 +843,7 @@ def report_warnings(errors: list[str]) -> None:
             why = ("`network = \"require\"`"
                    if name == "source-unchecked" and name not in set(current().fail_on)
                    else f"`fail_on` names {name!r}")
-            errors.append(f"{headline} — failing: {why} in luria.toml")
+            errors.append(f"{headline} — failing: {why} in luria.yaml")
             errors.extend(lines)
         else:
             print(f"luria: {headline}", file=sys.stderr)

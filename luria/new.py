@@ -14,7 +14,7 @@ driving the CLI can still set fields inline (`--title`, `--status`,
 `--summary`, `--tags`); a human never has to.
 
 **The kinds are the config.** Every journal, scheme and fragment directory in
-`luria.toml` is a kind, so a project that adds a scheme gets its scaffold for
+`luria.yaml` is a kind, so a project that adds a scheme gets its scaffold for
 free — nothing here spells "adr". One kind is built in rather than
 configured: `luria new migration` scaffolds a migration spec (ADR-040),
 because migrations belong to the machinery, not to any one project's layout.
@@ -337,7 +337,7 @@ def run(kind: str = None, title: str = None, status: str = None,
         summary: str = None, tags: str = None, name: str = None,
         **declared) -> None:
     """Scaffold an entry and print its path. KIND defaults to the journal;
-    the other kinds come from luria.toml (scheme prefixes, fragment dirs).
+    the other kinds come from luria.yaml (scheme prefixes, fragment dirs).
     Field flags are optional — content belongs to your editor.
 
     Beyond the four universal flags, a scheme's own declared fields are

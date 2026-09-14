@@ -65,7 +65,7 @@ def _statuses_yaml() -> str:
         "# The words this scheme's documents may use, and what each means.",
         "#",
         "# `status:` is a controlled vocabulary like any other, and this is",
-        "# the vocabulary: `[luria.schemes.X.fields.status]` in luria.toml is",
+        "# the vocabulary: `schemes.X.fields.status` in luria.yaml is",
         "# the wiring. Rename these, drop what you do not want, add your own.",
         "# The one rule is that the scheme's `active` word has to appear here",
         "# — it is how everything decides what is in force.",

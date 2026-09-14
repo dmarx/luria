@@ -1,7 +1,7 @@
 """Where a project keeps its record, and what its references look like.
 
 Everything else in Luria is generic; this module is the one place that knows a
-particular project. It reads `luria.toml` from the project root:
+particular project. It reads `luria.yaml` from the project root:
 
     [luria]
     issue_url = "https://github.com/owner/repo/issues/{n}"
@@ -32,7 +32,7 @@ under `docs/`. A scheme whose `output` is unset keeps the old collocated shape
 to move anything.
 
 Every key has a default, so a project with the conventional layout needs a
-`luria.toml` containing only `issue_url` — and Luria still runs without one, on
+`luria.yaml` containing only `issue_url` — and Luria still runs without one, on
 defaults alone, which is what makes `luria init` able to bootstrap.
 
 Two merge rules, split by what a table *is* (ADR-047). A settings table —
@@ -176,7 +176,7 @@ GITHUB_ISSUE_RE = re.compile(
 
 
 def find_root(start: Path | None = None) -> Path:
-    """The project root: nearest ancestor with a `luria.toml`, else with a
+    """The project root: nearest ancestor with a `luria.yaml`, else with a
     `.git`, else the starting directory. Env var `LURIA_ROOT` wins, which is
     what lets the tests run against fixture trees."""
     if env := os.environ.get("LURIA_ROOT"):
@@ -1581,7 +1581,7 @@ class Config:
     narrow_terms: tuple[str, ...]       # this project's nouns (narrow-titles)
     network: str                        # "auto" | "never" | "require"
     # Whole records nested inside this one — directory globs, each match
-    # holding its own `luria.toml` (ADR-077, relocated by ADR-078).
+    # holding its own `luria.yaml` (ADR-077, relocated by ADR-078).
     #
     # This lived under `[luria.site]` for as long as publishing was the only
     # thing that needed it. It isn't a site fact: it says this project contains
@@ -1602,7 +1602,7 @@ class Config:
         directories are nested records" would drift into a state where a record
         is published but never regenerated (DP-4).
 
-        A match without a `luria.toml` is skipped rather than failed —
+        A match without a `luria.yaml` is skipped rather than failed —
         `examples/*` is the natural way to write "every example", and a stray
         directory beside them should not break a build. A *pattern* matching
         nothing is an error, raised by the callers, because an include that

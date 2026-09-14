@@ -11,7 +11,7 @@ no place that answers the whole question.
 This module is that place (#141). A scheme's declarations compile into one
 `Contract`: the fields an entry must carry, what each must hold, and which of
 its tags combine — every obligation naming where it was declared. The lint
-runs one pass over it. Nothing is authored here; `luria.toml` is the only
+runs one pass over it. Nothing is authored here; `luria.yaml` is the only
 source, and nothing a project declared before this existed reads differently.
 
 Composition is intersection. `requires = ["source"]` and a `references` entry
@@ -79,7 +79,7 @@ class Contract:
     field_groups: tuple[FieldGroup, ...] = ()
     # Where this scheme's table lives, as a finding cites it — the prefix
     # every key path below starts from.
-    where: str = "luria.toml"
+    where: str = "luria.yaml"
     # The vocabulary file a derived tag group reads its members from
     # (`primary_for`, ADR-060), relative to the project; "" when none.
     vocabulary: str = ""
@@ -183,12 +183,12 @@ def built_in(scheme) -> tuple[Field, ...]:
 
 
 def for_scheme(scheme) -> Contract:
-    """Everything `luria.toml` declares this scheme demands of an entry.
+    """Everything `luria.yaml` declares this scheme demands of an entry.
 
     Fields keep declaration order — `requires` first, then the references
     that did not merge into one — so findings read in the order the config
     was written."""
-    where = f"luria.toml: schemes.{scheme.prefix}"
+    where = f"luria.yaml: schemes.{scheme.prefix}"
     vocabulary = ""
     if any(g.derived for g in scheme.tag_groups):
         vocabulary = f"vocabulary {scheme.tags_vocab!r}"
@@ -233,12 +233,12 @@ def for_scheme(scheme) -> Contract:
         fields.setdefault(field.name, field)
     return Contract(scheme.prefix, tuple(fields.values()), scheme.tag_groups,
                     field_groups=scheme.field_groups,
-                    where="luria.toml", vocabulary=vocabulary,
+                    where="luria.yaml", vocabulary=vocabulary,
                     derived=scheme.derived)
 
 
 def _cite(because: tuple[str, ...]) -> str:
-    """`(luria.toml: schemes.SOTA.requires, schemes.SOTA.references.source)`
+    """`(luria.yaml: schemes.SOTA.requires, schemes.SOTA.references.source)`
     — every declaration behind an obligation, grouped by the file it is in,
     so a reader is sent to the key and not just the file."""
     by_file: dict[str, list[str]] = {}
@@ -286,7 +286,7 @@ def explain(contract: Contract, field: Field, meta: dict | None = None) -> str:
     plus the key that said so.
 
     The provenance is read out of the obligation rather than spelled here,
-    so the day one comes from somewhere other than `luria.toml` the finding
+    so the day one comes from somewhere other than `luria.yaml` the finding
     says so without this function learning about it."""
     why = _condition(field, meta)
     if field.vocabulary is not None:

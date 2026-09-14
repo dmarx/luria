@@ -14,7 +14,7 @@
     luria remotes       other projects' records cited from this one
     luria site          stage the record as a Quartz vault, ready to build
     luria init          scaffold the record into a project that has none
-    luria config        write a starting luria.toml and stop, for editing
+    luria config        write a starting luria.yaml and stop, for editing
                         before anything is scaffolded
     luria upgrade       carry a record across a version boundary; every
                         command under it is temporary and says what has to

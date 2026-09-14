@@ -7,7 +7,7 @@
 
 The scaffold is planned from configuration, not copied from a fixed tree
 (ADR-048). Three sources, in order: a file named with `--config`; a
-`luria.toml` the project already has at its root; and the shipped template's
+`luria.yaml` the project already has at its root; and the shipped template's
 config, which is what a bare `luria init` has always meant. Whichever wins,
 the plan is the same function of it: a directory and a `_template.md` for
 every scheme, journal and fragment directory the config declares, a stub for
@@ -30,7 +30,7 @@ this on a project that already has half the record adds only the missing half �
 and running it twice is a no-op. A scaffolder that clobbers is a scaffolder
 nobody dares re-run, which means the one thing it is good at (filling in what a
 project grew past) never gets used. The one hard refusal: `--config` against a
-project that already has a `luria.toml` is an error, not a skip — scaffolding
+project that already has a `luria.yaml` is an error, not a skip — scaffolding
 one config's shape while a different config governs the record would build
 directories the project's own machinery doesn't know about.
 """
@@ -74,7 +74,7 @@ GENERIC_TEMPLATE = """\
 # Active | Proposed | Deferred | Superseded | Rejected. A qualifying note goes
 # in `status_note:` — prose, like `summary:`.
 # `luria lint` enforces the vocabulary; which one counts as "in force" for
-# this scheme is the `active` key in luria.toml.
+# this scheme is the `active` key in luria.yaml.
 status: Proposed
 
 title: Stated as the thing it establishes
@@ -132,7 +132,7 @@ GENERIC_STUB_DOCUMENT = """\
 # `issue_url` is the one key a conventional project still has to supply, and
 # for a repository with an origin remote it is already written down. Deriving
 # it also cascades: `[luria.site]` takes its title, its Pages URL and its
-# source base from this one value, so a project that never opens luria.toml
+# source base from this one value, so a project that never opens luria.yaml
 # gets four correct settings from having a remote.
 #
 # Only hosts whose issue path is known. A wrong issue URL is worse than an
@@ -200,7 +200,7 @@ def infer_issue_url(into: Path) -> str:
 #     luria init --schemes "RFC,SPEC:document" --journals "incidents:day"
 #
 # The shorthand is an ARGUMENT, never a stored format. What lands in
-# `luria.toml` is the ordinary explicit table, commented like the rest of the
+# `luria.yaml` is the ordinary explicit table, commented like the rest of the
 # template — a config a reader cannot read is a worse trade than the typing it
 # saved, and every other part of this package reads that file rather than a
 # second grammar. ADR-048 plans the scaffold from configuration; this only
@@ -438,11 +438,11 @@ def _statuses_yaml(scheme) -> str:
         "#",
         "# A DEFAULT, not a law: rename these, drop the ones you do not want,",
         "# add your own. Every check reads this file. The one rule is that the",
-        "# scheme's `active` word (luria.toml) has to appear here — it is how",
+        "# scheme's `active` word (luria.yaml) has to appear here — it is how",
         "# everything decides what is in force, so a vocabulary without it",
         "# means no document ever is.",
         "#",
-        "# `superseded_by:` is named by `successor` in luria.toml, and the",
+        "# `superseded_by:` is named by `successor` in luria.yaml, and the",
         "# status demanding it by `retires_on`. Rename the word here and",
         "# those two together and the record speaks your language throughout.",
         "",
@@ -480,7 +480,7 @@ def _views(cfg: Config) -> str:
                      f"narrative, one book per {j.granularity}.")
     lines.append("- [The record](record.md) — what this project's record is "
                  "made of and where each kind of entry is filed, generated "
-                 "from `luria.toml`. Read it before assuming this record can "
+                 "from `luria.yaml`. Read it before assuming this record can "
                  "only hold decisions: schemes, journals, fragment "
                  "directories and remotes are families *this* project "
                  "names.")
@@ -537,7 +537,7 @@ def write(into: Path, issue_url: str = "", dry_run: bool = False,
 
 def config_run(into: str = None, issue_url: str = "", schemes: str = "",
                journals: str = "", stdout: bool = False) -> None:
-    """Write a starting `luria.toml` from the shorthand, and stop there.
+    """Write a starting `luria.yaml` from the shorthand, and stop there.
 
     The same file `luria init` would have written, without the scaffold. It
     exists because the shorthand covers the two things projects usually vary
@@ -547,7 +547,7 @@ def config_run(into: str = None, issue_url: str = "", schemes: str = "",
     already created.
 
         luria config --schemes "RFC,SPEC:document"   # write it
-        $EDITOR luria.toml                           # change what you like
+        $EDITOR luria.yaml                           # change what you like
         luria init                                   # scaffold that shape
 
     Refuses to overwrite, like everything else here. `--stdout` prints instead
@@ -571,13 +571,13 @@ def run(into: str = None, issue_url: str = "", dry_run: bool = False,
         config: str = None, schemes: str = "", journals: str = "") -> None:
     """Scaffold the record a config declares (default: the detected root's
     own config, or the shipped template's). Never overwrites; --config PATH
-    installs that file as luria.toml and scaffolds its shape; --dry-run lists
+    installs that file as luria.yaml and scaffolds its shape; --dry-run lists
     what would be written; --issue-url makes issue numbers linkable.
 
     --schemes and --journals extend the shipped template for a project that
     wants the defaults plus a little: `--schemes "RFC,SPEC:document"`,
     `--journals "incidents:day"`. Each entry becomes an ordinary commented
-    table in the luria.toml this writes, so the shorthand is something you
+    table in the luria.yaml this writes, so the shorthand is something you
     type once rather than a format anything reads back."""
     into = (Path(into) if into else find_root()).resolve()
     print(f"luria init → {into}")

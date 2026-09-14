@@ -19,7 +19,7 @@ trail in one artifact:
     to = "NEW"
     output = "docs/guiding-principles.md"   # optional: the view moves too
     remotes = ["LU"]                        # remotes that mirror THIS project
-    configs = ["template/luria.toml"]       # extra config files to edit
+    configs = ["template/luria.yaml"]       # extra config files to edit
 
     [[operations]]
     op = "move_doc"
@@ -202,7 +202,7 @@ def _plan_rename(plan: Plan, op: dict) -> None:
         if target is None:
             raise SystemExit("luria migrate: strategy=\"supersede\" copies "
                              f"into an existing scheme — add {new_prefix!r} "
-                             "to luria.toml first")
+                             "to luria.yaml first")
         for number, path in docs.items():
             new_code, old_code = target.code(number), scheme.code(number)
             plan.copies.append((path, target.dir / target.filename(number),
@@ -225,7 +225,7 @@ def _plan_rename(plan: Plan, op: dict) -> None:
             plan.pin_moves.append(
                 (remote_prefix.upper(), old_code, new_code))
 
-    configs = [cfg.root / "luria.toml"] + \
+    configs = [cfg.root / "luria.yaml"] + \
         [cfg.root / c for c in op.get("configs", [])]
     plan.claimed_remotes += [r.upper() for r in op.get("remotes", [])]
     for config_file in configs:
