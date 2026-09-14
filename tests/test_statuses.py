@@ -377,8 +377,11 @@ def test_the_class_is_failable(tmp_path, monkeypatch):
 def _uniform_project(root: Path, monkeypatch, ack: str | None) -> None:
     _project(root, monkeypatch)
     if ack:
-        text = (root / "luria.yaml").read_text()
-        (root / "luria.yaml").write_text(text + f'uniform_ok = "{ack}"\n')
+        path = root / "luria.yaml"
+        # `uniform_ok` is a key on the SCHEME, so it merges into it rather
+        # than being appended at the document's root.
+        path.write_text(merged(path.read_text(),
+                               {"schemes": {"VP": {"uniform_ok": ack}}}))
         config.reset()
     for n in range(1, statuses.FLOOR + 1):
         _value(root, n)

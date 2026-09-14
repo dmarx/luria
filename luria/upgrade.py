@@ -98,11 +98,10 @@ def _plan(root: Path) -> tuple[list[tuple[Path, str]], list[str], list[str]]:
         if "status" in (spec.get("fields") or {}):
             notes.append(f"{prefix}: already declares `status` — left alone")
             continue
-        lines += [f"[luria.schemes.{prefix}.fields.status]",
-                  'vocabulary = "statuses"', ""]
-        values = root / str(spec.get("dir", "")) / "statuses.yaml"
-        if not values.exists():
-            writes.append((values, _statuses_yaml()))
+        # The vocabulary lives in the config under a name every scheme can
+        # point at, rather than a statuses.yaml beside each one (ADR-tmp8hp25).
+        lines += [f"schemes.{prefix}.statuses: record-statuses",
+                  f"schemes.{prefix}.fields.status.vocabulary: record-statuses"]
     return writes, lines, notes
 
 
