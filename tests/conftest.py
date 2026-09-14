@@ -56,9 +56,15 @@ def project(tmp_path, monkeypatch):
             output: docs/decisions
             active: Active
             render: index
+            axis: tags
             fields:
               status:
                 vocabulary: statuses
+              # Open, many, and named as the axis — which is all `tags` ever
+              # was, said in the config instead of assumed by the code
+              # (ADR-tmp8hp25).
+              tags:
+                many: true
         """
     )
     (tmp_path / "docs" / "design-principles.md").write_text(

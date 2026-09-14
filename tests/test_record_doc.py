@@ -176,8 +176,9 @@ def test_the_page_says_when_no_scheme_demands_more_than_the_standard_fields(unus
 def test_the_page_lists_each_obligation_with_where_it_was_declared(unusual):
     path = unusual / "luria.yaml"
     path.write_text(merged(path.read_text(), {
-        "schemes": {"RFC": {"tag_groups": {"track": {
-            "tags": ["fast", "slow"], "require": "exactly-one"}}}}}))
+        "schemes": {"RFC": {"axis": "tags", "fields": {"tags": {
+            "many": True, "groups": {"track": {
+                "tags": ["fast", "slow"], "require": "exactly-one"}}}}}}}))
     config.reset()
     path.write_text(merged(path.read_text(),
                            {"schemes": {"RFC": {"requires": ["champion"]}}}))

@@ -156,22 +156,28 @@ whether the config can state it instead:
 | every entry names its source paper — a real one | `references` with `source = { scheme = "LIT" }` | a violation |
 | an entry names several of its own kind | `references` with `follows = { scheme = "SCENE", many = true }` | a violation per element |
 | an entry belongs to one or more of a closed set of values, absent meaning one of them | `fields` with `vocabulary = "worlds"`, `many = true`, `default = ["B"]`; values in `worlds.yaml` | a violation per unknown value |
-| exactly one primary category | `tag_groups` with `require = "exactly-one"` | a violation |
+| exactly one primary category | `fields.<field>.groups` with `require: exactly-one` | a violation |
 | at most one of these, they are an axis | `require = "at-most-one"` | a violation |
 | saying it failed contradicts saying it holds | `excluded_by` | a violation |
 | a field is required only while the entry is unsettled | `fields` with `required_when = { status = ["Proposed", "Deferred"] }` | a violation naming the value that fired it |
-| this scheme only uses three of the five statuses | `statuses.yaml` | a violation |
+| this scheme only uses three of the five statuses | a `vocabularies:` entry named by `fields.status.vocabulary` | a violation |
 | a principle should not name one subsystem | `titles_generalize` + `narrow_terms` | `narrow-titles` |
 | citing something not in force should be deliberate | (always on) | `retired-citations` |
 
 ```yaml
 schemes:
   SOTA:
-    tag_groups:
-      primary_topic:
-        require: exactly-one
-        tags:
-        - training-optimization
+    axis: tags
+    fields:
+      tags:
+        vocabulary: topics
+        many: true
+        closed: false
+        groups:
+          primary_topic:
+            require: exactly-one
+            tags:
+            - training-optimization
         - systems-optimization
         - model-stability
         - distributed-optimization

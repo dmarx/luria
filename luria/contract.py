@@ -2,7 +2,8 @@
 """The obligations a scheme places on one of its entries, compiled once.
 
 `requires` says a field must be there. `references` says what it holds.
-`tag_groups` says which tags may combine. Each arrived as its own lint pass
+`fields.<field>.groups` says which of a field's values may combine. Each
+arrived as its own lint pass
 (ADR-040, ADR-054, ADR-060), each re-parsing every document's frontmatter and
 each spelling its own provenance by hand in the message it printed. Three
 passes is three places to ask "what does this scheme demand of an entry?" and
@@ -22,6 +23,10 @@ declarations and no need for one yet — a field is one key in one table, so
 today's config cannot bind it to two schemes. When a second source of
 obligations exists, a contradiction is a configuration error, never a winner.
 """
+
+# inactive-ok-file: ADR-tmp8hp25 — Proposed. Every mention names it as the
+# decision this file implements or is written against; the citation is to the
+# reasoning, not a claim the decision is settled.
 
 from __future__ import annotations
 
@@ -55,6 +60,10 @@ class Field:
     vocabulary: str | None = None
     values: tuple[str, ...] = ()
     default: tuple[str, ...] | None = None
+    # Whether a value outside `values` is a finding. False is what `tags`
+    # needed: the declaration supplies order, label and blurb, and using a
+    # new value stays an edit to a document (ADR-tmp8hp25).
+    closed: bool = True
     # Standard for every scheme rather than declared by one — `superseded_by`
     # (ADR-071). Checked like any other; not a declaration, so it stays
     # out of `Contract.empty`.
@@ -215,7 +224,7 @@ def for_scheme(scheme) -> Contract:
         fields[vocab.field] = Field(
             vocab.field,
             required=vocab.required or (prior is not None and prior.required),
-            many=vocab.many, vocabulary=vocab.name,
+            many=vocab.many, vocabulary=vocab.name, closed=vocab.closed,
             values=tuple(declared(vocab.values_by_name)), default=vocab.default,
             required_when=vocab.required_when, because=because)
     for plain in scheme.plain_fields:
@@ -262,7 +271,8 @@ _FIELD_RULE_WORDS = {"at-least-one": "at least one of",
 def group_because(contract: Contract, group: TagGroup) -> str:
     """Where a tag group was declared — and, when its membership is derived,
     where the members come from."""
-    cite = f"{contract.where}: schemes.{contract.scheme}.tag_groups.{group.name}"
+    cite = (f"{contract.where}: schemes.{contract.scheme}.fields."
+            f"{group.field}.groups.{group.name}")
     if group.derived and contract.vocabulary:
         cite += f"; members from `{contract.vocabulary}` `primary_for`"
     return f"({cite})"
@@ -546,8 +556,11 @@ def violations(contract: Contract, rel: str, meta: dict,
         elif group.require == "at-most-one" and len(present) > 1:
             out.append(f"{rel}: `{group.name}` wants at most one of {shown} "
                        f"— has {has} {cite}")
-    tags = {str(t) for t in (meta.get("tags") or [])}
     for group in contract.groups:
+        # The group's own field, not a key called `tags`: a group constrains
+        # a subset of one field's vocabulary and now says which
+        # (ADR-tmp8hp25).
+        tags = {str(t) for t in (meta.get(group.field) or [])}
         present = sorted(tags & group.tags)
         shown = ", ".join(sorted(group.tags))
         cite = group_because(contract, group)
@@ -578,6 +591,11 @@ def _vocabulary_violations(contract: Contract, field: Field, rel: str,
         if contract.demands(field, meta or {}) and field.default is None:
             return [f"{rel}: no `{field.name}:` in frontmatter — "
                     f"{explain(contract, field, meta)}"]
+        return []
+    if not field.closed:
+        # An open vocabulary declares what it has an opinion about and
+        # accepts the rest. Checking it would forbid the one case the flag
+        # exists for (ADR-tmp8hp25).
         return []
     file = next((b.split(": ", 1)[0] for b in field.because
                  if b.endswith(": values")), "")

@@ -266,6 +266,11 @@ class TagGroup:
 
     name: str
     tags: frozenset[str]
+    # The frontmatter field whose values these are. A group constrains a
+    # subset of ONE field's vocabulary, so it is declared under that field
+    # and carries its name (ADR-tmp8hp25); it was `schemes.X.tag_groups`,
+    # which could only ever mean `tags`.
+    field: str = "tags"
     # "any" (the default — the group is a label, not an axis), "at-most-one",
     # or "exactly-one".
     require: str = "any"
@@ -431,17 +436,14 @@ class Vocabulary:
     # Normalised to a tuple of values whatever the shape declared; None when
     # absence is a meaningful state rather than a spelling of the default.
     default: tuple[str, ...] | None = None
+    # Whether a value outside `values_by_name` is a finding. Closed is the
+    # default and the case ADR-076 was built for. OPEN is what `tags` needed
+    # and ADR-054 deferred: the declaration supplies order, label and blurb
+    # for the values a project has an opinion about, and adding a new one
+    # stays an edit to a document rather than to the config.
+    closed: bool = True
     # When the requirement applies, if not always (see `RequiredWhen`).
     required_when: RequiredWhen | None = None
-
-
-# The axes every scheme has, with their own files and their own rules.
-# `tags` stays: it is OPEN, and a vocabulary is closed by
-# construction (ADR-054 deferred even a `closed` flag), and its
-# `tag_groups` constrain a *subset of values*, which a vocabulary
-# cannot express. `status` needed neither — it is the closed,
-# single-valued case the mechanism was built for (#181).
-BUILT_IN_AXES = ("tags",)
 
 
 # Path → ((mtime_ns, size), number). Keyed on the stat rather than reset
@@ -568,23 +570,22 @@ class Scheme:
     # what the target scheme's template would have prompted for. The machinery
     # relocates a document; only a person can vouch that it belongs.
     requires: tuple[str, ...] = ()
-    # Which of this scheme's tags may appear together (see `TagGroup`). Empty
-    # for every scheme that does not declare `schemes.X.tag_groups`,
-    # which is the unconstrained behaviour every project has today.
+    # Which of this scheme's values may appear together (see `TagGroup`),
+    # flattened across every field that declares `groups:`. Empty for every
+    # scheme that declares none, which is the unconstrained behaviour every
+    # project has today.
     tag_groups: tuple[TagGroup, ...] = ()
-    # Where this scheme's tag vocabulary lives. Unset means the collocated
-    # `tags.yaml` beside the sources, which is where it has always been. Set,
-    # two schemes can name ONE file and share a vocabulary instead of keeping
-    # a copy each (ADR-060).
-    # The NAME of the vocabulary backing this scheme's tags, looked up in
-    # `Config.vocabularies`. Two schemes naming one vocabulary is the point;
-    # it was previously unsayable. Read from `schemes.X.tags`, because `tags`
-    # is the one axis the code still assumes.
-    tags_vocab: str = ""
-    # The same, for `status` — but DERIVED from `fields.status.vocabulary`
-    # rather than declared beside it, because `status` is a field like any
-    # other and a second key could disagree with the field (ADR-tmp8hp25).
+    # The NAME of the vocabulary behind `status` — DERIVED from
+    # `fields.status.vocabulary` rather than declared beside it, because
+    # `status` is a field like any other and a second key could disagree with
+    # the field (ADR-tmp8hp25). `tags_vocab` is the same, off `axis`.
     statuses_vocab: str = ""
+    # Which of this scheme's fields is its primary taxonomy: the field whose
+    # values head the index under `{categories}` and get a page each. A
+    # rendering choice about the scheme — one project's axis is `tags`,
+    # another's is `worlds` — so it is named here and assumed nowhere. Empty
+    # means the scheme has no taxonomy and renders none.
+    axis: str = ""
     # The central table, threaded in so a scheme can answer for its own words
     # without every caller reaching back through `current()`.
     vocab_values: dict[str, dict] = dcfield(default_factory=dict)
@@ -644,7 +645,9 @@ class Scheme:
 
     @property
     def tag_dir(self) -> Path:
-        return self.view / "tags"
+        """Where the axis's per-value pages render. `<view>/<axis>/`, so a
+        scheme whose axis is `tags` keeps the path it has always had."""
+        return self.view / (self.axis or "tags")
 
     def vocab_dir(self, field: str) -> Path:
         """Where a vocabulary-backed field's per-value pages render, beside
@@ -666,9 +669,22 @@ class Scheme:
         return self.dir / "README.stub"
 
     @property
+    def axis_field(self):
+        """The `Vocabulary` behind `axis`, or None when there is no axis."""
+        return next((v for v in self.vocabularies if v.field == self.axis),
+                    None)
+
+    @property
+    def tags_vocab(self) -> str:
+        """The NAME of the vocabulary behind the axis, for a finding to cite."""
+        v = self.axis_field
+        return v.name if v else ""
+
+    @property
     def tags(self) -> dict[str, dict]:
-        """This scheme's tag vocabulary, by value."""
-        return dict(self.vocab_values.get(self.tags_vocab) or {})
+        """This scheme's axis vocabulary, by value."""
+        v = self.axis_field
+        return dict(v.values_by_name) if v else {}
 
     @property
     def statuses(self) -> dict[str, dict]:
@@ -1122,9 +1138,9 @@ def primary_tags(prefix: str, values: dict) -> frozenset[str]:
     return frozenset(found)
 
 
-def _tag_groups(prefix: str, raw: dict,
+def _tag_groups(prefix: str, field: str, raw: dict,
                 tag_values: dict | None = None) -> tuple[TagGroup, ...]:
-    """Read a scheme's `schemes.X.tag_groups` tables.
+    """Read one field's `groups:` tables.
 
     Validated here rather than at lint time: a misspelled rule is a config
     error, and a config error that surfaces as "no violations" is the quiet
@@ -1139,7 +1155,8 @@ def _tag_groups(prefix: str, raw: dict,
         rule = str(spec.get("require", "any"))
         if rule not in REQUIRE_RULES:
             raise ValueError(
-                f"luria.yaml: schemes.{prefix}.tag_groups.{name} has "
+                f"luria.yaml: schemes.{prefix}.fields.{field}.groups.{name} "
+                f"has "
                 f"require = {rule!r}; expected one of {list(REQUIRE_RULES)}")
         tags = frozenset(str(x) for x in spec.get("tags", ()))
         derived = False
@@ -1148,11 +1165,12 @@ def _tag_groups(prefix: str, raw: dict,
             derived = bool(tags)
         if not tags:
             raise ValueError(
-                f"luria.yaml: schemes.{prefix}.tag_groups.{name} lists no "
-                f"tags and no tag in this scheme's vocabulary names "
-                f"{prefix} in its `primary_for`, so it constrains nothing")
+                f"luria.yaml: schemes.{prefix}.fields.{field}.groups.{name} "
+                f"lists no `tags` and no value in this field's vocabulary "
+                f"names {prefix} in its `primary_for`, so it constrains "
+                f"nothing")
         groups.append(TagGroup(
-            name=name, tags=tags, require=rule, derived=derived,
+            name=name, tags=tags, field=field, require=rule, derived=derived,
             excluded_by=frozenset(str(x) for x in spec.get("excluded_by", ()))))
     return tuple(groups)
 
@@ -1338,12 +1356,10 @@ def _fields(prefix: str, raw: dict, scheme_dir: Path, root: Path,
     found = []
     plain: list[PlainField] = []
     rules = []
+    groups: list[TagGroup] = []
     taken = {r.field for r in references}
     for field, spec in raw.items():
         where = f"luria.yaml: schemes.{prefix}.fields.{field}"
-        if field in BUILT_IN_AXES:
-            raise ValueError(f"{where}: `{field}` is built in — `tags` is "
-                             f"open, and a vocabulary is closed")
         if field in taken:
             raise ValueError(f"{where}: `{field}` is also declared under "
                              f"`references`; a field has one declaration")
@@ -1376,18 +1392,30 @@ def _fields(prefix: str, raw: dict, scheme_dir: Path, root: Path,
                     f"where the value comes from — keep one")
             rules.append(rule)
         name = spec.get("vocabulary")
+        declares_groups = bool(spec.get("groups"))
         if not name:
             required = bool(spec.get("required", False))
+            many = bool(spec.get("many", False))
             when = _required_when(where, spec, required)
-            if when is None and not required and rule is None:
+            # `many` types a field too: it says the field holds a list, which
+            # is what makes it nameable in a derivation or a chain and gives
+            # the record page something to print. That is exactly what being
+            # built in used to say about `tags` (ADR-tmp8hp25).
+            if (when is None and not required and rule is None
+                    and not declares_groups and not many):
                 raise ValueError(f"{where}: declares no type — `vocabulary = "
                                  f"\"NAME\"` types the field, `derive` says "
-                                 f"where its value comes from, `required_when` "
-                                 f"says when it applies, and a table with "
-                                 f"none of them constrains nothing")
+                                 f"where its value comes from, `many` says it "
+                                 f"holds a list, `required_when` says when it "
+                                 f"applies, `groups` says which of its values "
+                                 f"combine, and a table with none of them "
+                                 f"constrains nothing")
             plain.append(PlainField(field=str(field), required=required,
-                                    many=bool(spec.get("many", False)),
-                                    required_when=when))
+                                    many=many, required_when=when))
+            # No vocabulary to derive membership from, so every group here
+            # lists its own values — which `_tag_groups` already requires.
+            groups.extend(_tag_groups(prefix, str(field),
+                                      spec.get("groups", {}) or {}, {}))
             continue
         name = str(name)
         if name not in vocabularies and not scaffolding:
@@ -1431,9 +1459,15 @@ def _fields(prefix: str, raw: dict, scheme_dir: Path, root: Path,
                                 values_by_name=values,
                                 many=many, required=required,
                                 default=defaults,
+                                closed=bool(spec.get("closed", True)),
                                 required_when=_required_when(where, spec,
                                                              required)))
-    return tuple(found), tuple(plain), tuple(rules)
+        # A group constrains a subset of THIS field's values, so it is read
+        # here with the field rather than from a scheme-level table that
+        # could only ever have meant `tags` (ADR-tmp8hp25).
+        groups.extend(_tag_groups(prefix, str(field),
+                                  spec.get("groups", {}) or {}, values))
+    return tuple(found), tuple(plain), tuple(rules), tuple(groups)
 
 
 def _fragment(spec) -> Fragment:
@@ -1968,13 +2002,14 @@ def _chains(raw: dict, schemes: dict, root: Path) -> dict[str, Chain]:
         raw_facets = spec.get("facet_by", ("status",))
         facet_by = tuple(str(f) for f in (
             [raw_facets] if isinstance(raw_facets, str) else raw_facets))
-        # `status` is nameable because it is a declared vocabulary since
-        # #181, arriving through `vocabularies` like any other field. Only
-        # `tags` is still an axis the code assumes.
+        # Every axis is a declared field now — `status` and `tags` both
+        # arrive through `vocabularies` like any other (ADR-tmp8hp25).
+        # `status` stays nameable undeclared because it has a default
+        # vocabulary; nothing else does.
         known = ({v.field for v in schemes[prefix].vocabularies}
                  | {f.field for f in schemes[prefix].plain_fields}
                  | set(schemes[prefix].requires) | declared
-                 | {"tags", "status"})
+                 | {"status"})
         for field in facet_by:
             if field not in known:
                 raise ValueError(
@@ -2016,8 +2051,12 @@ def _chains(raw: dict, schemes: dict, root: Path) -> dict[str, Chain]:
     return out
 
 
-# The two axes every scheme has, whatever else it declares.
-BUILT_IN_CONDITION_FIELDS = ("status", "tags")
+# `status` alone, and only because it has a vocabulary a scheme need not
+# declare: `statuses.vocabulary` falls back to the default five, and
+# `superseded_by` is a rule `contract.built_in` writes for every scheme. Any
+# other field — `tags` included since ADR-tmp8hp25 — is nameable exactly when
+# the scheme declares it.
+BUILT_IN_CONDITION_FIELDS = ("status",)
 
 
 def _check_conditions(prefix: str, scheme) -> None:
@@ -2080,7 +2119,7 @@ def _check_derivations(prefix: str, scheme, schemes=None) -> None:
     single value is that value, so a derivation off a scalar is a rename
     wearing a derivation's clothes, and renames belong in the frontmatter."""
     from .derive import lone_field
-    plural = {"tags", *(v.field for v in scheme.vocabularies if v.many),
+    plural = {*(v.field for v in scheme.vocabularies if v.many),
               *(r.field for r in scheme.references if r.many),
               *(f.field for f in scheme.plain_fields if f.many)}
     nameable = {*BUILT_IN_CONDITION_FIELDS, "number", *scheme.requires,
@@ -2226,18 +2265,27 @@ def _schemes(raw: dict, root: Path, scaffolding: bool = False,
     schemes = {}
     vocabularies = vocabularies or {}
     for prefix, spec in raw.items():
-        # `tags:` names a vocabulary. Defaulting to the scheme's own
-        # prefix-free name keeps a one-scheme project from having to say
-        # anything, while two schemes sharing a vocabulary is now one word on
-        # each (ADR-tmp8hp25). `tags` is the one axis the code still assumes;
-        # everything else, `status` included, is a field in `fields:`.
-        tags_vocab = str(spec.get("tags", "tags"))
-        if tags_vocab and tags_vocab not in vocabularies and spec.get("tags") \
-                and not scaffolding:
+        # `tags` is a field too. A scheme names WHICH of its fields is its
+        # primary taxonomy — the one whose values head the index and get a
+        # page each — and that is a rendering choice about this scheme, not
+        # a property of the field: a world-bible's axis is `worlds`
+        # (ADR-tmp8hp25). A scheme naming none has no taxonomy, and renders
+        # none.
+        for gone, goes in (("tags", "fields.tags.vocabulary"),
+                           ("tag_groups", "fields.<field>.groups")):
+            if gone in spec:
+                raise ValueError(
+                    f"luria.yaml: schemes.{prefix}.{gone} is not a key — "
+                    f"it belongs to the field it describes, at "
+                    f"`schemes.{prefix}.{goes}`")
+        axis = str(spec.get("axis", "") or "")
+        declared_fields = set(spec.get("fields") or {})
+        if axis and axis not in declared_fields and not scaffolding:
             raise ValueError(
-                f"luria.yaml: schemes.{prefix}.tags names vocabulary "
-                f"{tags_vocab!r}, which is not declared under `vocabularies:` "
-                f"(declared: {', '.join(sorted(vocabularies)) or 'none'})")
+                f"luria.yaml: schemes.{prefix}.axis names {axis!r}, which "
+                f"{prefix} does not declare under `fields:` — an axis is one "
+                f"of the scheme's own fields "
+                f"(declared: {', '.join(sorted(declared_fields)) or 'none'})")
         # `status` is a field like any other — `fields.status.vocabulary` is
         # where its vocabulary is named, and the only place. A second
         # `statuses:` key beside it could disagree with the field, and did:
@@ -2258,6 +2306,7 @@ def _schemes(raw: dict, root: Path, scaffolding: bool = False,
             prefix=prefix,
             dir=root / spec["dir"],
             active=spec.get("active", "Active"),
+            axis=axis,
             successor=str(spec.get("successor", "superseded_by")),
             retires_on=str(spec.get("retires_on", "Superseded")),
             render=spec.get("render", "index"),
@@ -2267,13 +2316,11 @@ def _schemes(raw: dict, root: Path, scaffolding: bool = False,
             alias=_alias_template(prefix, spec.get("alias", "")),
             titles_generalize=bool(spec.get("titles_generalize", False)),
             requires=tuple(spec.get("requires", ())),
-            tag_groups=_tag_groups(prefix, spec.get("tag_groups", {}),
-                                   dict(vocabularies.get(tags_vocab) or {})),
-            tags_vocab=tags_vocab,
             statuses_vocab=statuses_vocab,
             vocab_values=vocabularies,
             references=(refs := _references(prefix, spec.get("references", {}))),
-            **dict(zip(("vocabularies", "plain_fields", "derived"),
+            **dict(zip(("vocabularies", "plain_fields", "derived",
+                        "tag_groups"),
                        _fields(prefix, spec.get("fields", {}),
                                root / spec["dir"], root, refs,
                                scaffolding, vocabularies))),

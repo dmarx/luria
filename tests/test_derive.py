@@ -5,6 +5,10 @@ the derivation resolves everywhere a field is read, writing it down is a
 finding, and a declaration that could never resolve is refused at load.
 """
 
+# inactive-ok-file: ADR-tmp8hp25 — Proposed. Every mention names it as the
+# decision this file implements or is written against; the citation is to the
+# reasoning, not a claim the decision is settled.
+
 from __future__ import annotations
 
 import yaml
@@ -34,10 +38,18 @@ encoding:
   label: Encoding
 """
 
+# `tags` is a declared field since ADR-tmp8hp25 — open, so a secondary tag
+# outside the vocabulary is fine, which is what these tests turn on — and
+# `primary_topic` derives the first of its values.
 DERIVED = """
 schemes:
   LIT:
+    axis: tags
     fields:
+      tags:
+        vocabulary: lit-tags
+        many: true
+        closed: false
       primary_topic:
         derive: '{tags[0]}'
         vocabulary: lit-tags
@@ -288,7 +300,10 @@ def test_a_derivation_needs_no_vocabulary_to_be_a_field(tmp_path, monkeypatch):
     project(tmp_path, monkeypatch, """
                                    schemes:
                                      LIT:
+                                       axis: tags
                                        fields:
+                                         tags:
+                                           many: true
                                          primary_topic:
                                            derive: '{tags[0]}'
                                    """)

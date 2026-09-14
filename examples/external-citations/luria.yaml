@@ -18,6 +18,11 @@ schemes:
     fields:
       status:
         vocabulary: note-statuses
+      tags:
+        many: true
+        required: true
+        closed: false
+    axis: tags
 remotes:
   ARXIV:
     name: arXiv

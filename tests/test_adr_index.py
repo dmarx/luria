@@ -279,6 +279,10 @@ def test_split_scheme_rows_link_into_the_source_tree(project, monkeypatch):
           ADR:
             dir: record/decisions.d
             output: docs/decisions
+            axis: tags
+            fields:
+              tags:
+                many: true
         """)
     config.reset()
     from tests import _scheme
@@ -441,21 +445,29 @@ def _rfc_project(tmp_path, monkeypatch):
     (tmp_path / "luria.yaml").write_text(
         """
         issue_url: https://example.test/{n}
+        vocabularies:
+          rfc-tags:
+            network:
+              label: Network
+              blurb: routing and transport. HTTP and gRPC both live here
         schemes:
           RFC:
             dir: record/rfcs.d
             output: docs/rfcs
             active: Active
             render: index
+            axis: tags
+            fields:
+              tags:
+                vocabulary: rfc-tags
+                many: true
+                closed: false
         """)
     d = tmp_path / "record" / "rfcs.d"
     d.mkdir(parents=True)
     (d / "RFC-001.md").write_text(
         "---\nstatus: Active\ntitle: 'A proposal'\nversion: 1\n"
         "tags:\n- network\ndate: '2026-01-01'\n---\n\n# RFC-001: A proposal\n")
-    (d / "tags.yaml").write_text(
-        "network:\n  label: Network\n"
-        "  blurb: routing and transport. HTTP and gRPC both live here\n")
     monkeypatch.setenv("LURIA_ROOT", str(tmp_path))
     config.reset()
     return config.current().schemes["RFC"]

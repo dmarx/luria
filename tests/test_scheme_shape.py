@@ -66,16 +66,26 @@ def two_schemes(tmp_path, monkeypatch):
                                       schemes:
                                         LIT:
                                           dir: record/literature.d
-                                          tags: topics
-                                          tag_groups:
-                                            primary_topic:
-                                              require: exactly-one
+                                          axis: tags
+                                          fields:
+                                            tags:
+                                              vocabulary: topics
+                                              many: true
+                                              closed: false
+                                              groups:
+                                                primary_topic:
+                                                  require: exactly-one
                                         SOTA:
                                           dir: record/practices.d
-                                          tags: topics
-                                          tag_groups:
-                                            primary_topic:
-                                              require: exactly-one
+                                          axis: tags
+                                          fields:
+                                            tags:
+                                              vocabulary: topics
+                                              many: true
+                                              closed: false
+                                              groups:
+                                                primary_topic:
+                                                  require: exactly-one
                                       """,
                                       {"vocabularies": {"topics": yaml.safe_load(VOCAB)}},
                                       toml_extra))
@@ -155,12 +165,17 @@ issue_url: https://example.test/issues/{n}
 schemes:
   SOTA:
     dir: record/practices.d
-    tags: topics
-    tag_groups:
-      primary_topic:
-        require: exactly-one
-        tags:
-        - stability
+    axis: tags
+    fields:
+      tags:
+        vocabulary: topics
+        many: true
+        closed: false
+        groups:
+          primary_topic:
+            require: exactly-one
+            tags:
+            - stability
 """))
     monkeypatch.setenv("LURIA_ROOT", str(tmp_path))
     config.reset()
@@ -178,10 +193,15 @@ issue_url: https://example.test/issues/{n}
 schemes:
   SOTA:
     dir: record/practices.d
-    tags: topics
-    tag_groups:
-      primary_topic:
-        require: exactly-one
+    axis: tags
+    fields:
+      tags:
+        vocabulary: topics
+        many: true
+        closed: false
+        groups:
+          primary_topic:
+            require: exactly-one
 """))
     monkeypatch.setenv("LURIA_ROOT", str(tmp_path))
     config.reset()

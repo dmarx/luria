@@ -123,7 +123,7 @@ def contracts_section(cfg) -> str:
     if not blocks:
         return ("*Nothing beyond the standard fields — `status`, `title`, "
                 "`tags`, `date`. A scheme asks for more with `requires`, "
-                "`references` and `tag_groups`; see the "
+                "`references` and field `groups`; see the "
                 f"[schema]({SCHEMA_URL}).*\n")
     return "\n".join(blocks)
 

@@ -9,12 +9,16 @@ Checks (each one fails the build):
 1b. **Journals** — every entry's path agrees with its `created:` timestamp and
    carries a `title:` (ADR-020); `version:` agrees with `history:` (ADR-019).
 2. **Frontmatter** — every document in a reference scheme carries a `status:`
-   from the canonical vocabulary, at least one `tags:` entry (ADR-003), and a
-   `title:` that agrees with its body heading (ADR-013).
+   from the canonical vocabulary and a `title:` that agrees with its body
+   heading (ADR-013). "At least one `tags:` entry" (ADR-003) is checked in
+   2b now, as `required: true` on whichever field the scheme names as its
+   axis — a scheme that declares no taxonomy is not told it is missing one
+   (ADR-tmp8hp25).
 2b. **Contracts** — what a scheme declares beyond the standard set, compiled
    once per scheme (`luria/contract.py`, #141): fields it `requires`
-   (ADR-040), what its `references` hold (ADR-060), and which of its tags may
-   combine (`tag_groups`, ADR-054). One pass, each finding saying why.
+   (ADR-040), what its `references` hold (ADR-060), and which of its values may
+   combine (`fields.<field>.groups`, ADR-054). One pass, each finding
+   saying why.
 3. **View directories** — a view directory holds only generated files
    (ADR-021), so a hand-written file inside one is a failure. Whether a
    committed view is *current* is the generation job's question, answered by
@@ -42,6 +46,10 @@ one so only the unconsidered ones stay listed — acknowledged rows never fail.
 
 Exit 0 when clean; exit 1 with one line per violation.
 """
+
+# inactive-ok-file: ADR-tmp8hp25 — Proposed. Every mention names it as the
+# decision this file implements or is written against; the citation is to the
+# reasoning, not a claim the decision is settled.
 
 from __future__ import annotations
 
@@ -135,8 +143,11 @@ def check_frontmatter(errors: list[str]) -> None:
             # It is a `required_when` on the built-in field now, checked with
             # every other obligation in `check_contracts` (ADR-071 stated
             # with the mechanism rather than beside it).
-            if not (meta.get("tags") or []):
-                errors.append(f"{rel}: no `tags:` in frontmatter (see ADR-003)")
+            # "Every entry carries tags" used to be a branch here, naming
+            # a field the code assumed. It is `required: true` on the axis
+            # field now, checked in `check_contracts` with every other
+            # obligation — one implementation, and a scheme with no axis is
+            # not told it is missing one (ADR-tmp8hp25).
 
 
 
@@ -211,7 +222,7 @@ def check_reserved_prefix(errors: list[str]) -> None:
 
 def check_contracts(errors: list[str]) -> None:
     """Each scheme's contract, enforced — what it `requires`, what its
-    `references` hold, which of its `tag_groups` combine (ADR-040, ADR-060,
+    `references` hold, which of its grouped values combine (ADR-040, ADR-060,
     ADR-054). Compiled once per scheme and checked in one pass over its
     documents (#141), where there used to be one pass per table.
 

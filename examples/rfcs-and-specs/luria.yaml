@@ -19,6 +19,11 @@ schemes:
     fields:
       status:
         vocabulary: rfc-statuses
+      tags:
+        many: true
+        required: true
+        closed: false
+    axis: tags
   SPEC:
     dir: record/specs.d
     output: docs/interfaces.md
@@ -26,5 +31,10 @@ schemes:
     fields:
       status:
         vocabulary: rfc-statuses
+      tags:
+        many: true
+        required: true
+        closed: false
+    axis: tags
 site:
   title: RFCs and specs

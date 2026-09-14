@@ -45,7 +45,12 @@ schemes:
     fields:
       status:
         vocabulary: lit-statuses
-    tags: lit-tags
+      tags:
+        vocabulary: lit-tags
+        many: true
+        required: true
+        closed: false
+    axis: tags
   SOTA:
     dir: record/practices.d
     output: docs/practices
@@ -54,17 +59,22 @@ schemes:
       source:
         scheme: LIT
         required: true
-    tag_groups:
-      primary_topic:
-        require: exactly-one
-        tags:
-        - optimization
-        - stability
-        - systems
     fields:
       status:
         vocabulary: sota-statuses
-    tags: lit-tags
+      tags:
+        vocabulary: lit-tags
+        many: true
+        required: true
+        closed: false
+        groups:
+          primary_topic:
+            require: exactly-one
+            tags:
+            - optimization
+            - stability
+            - systems
+    axis: tags
 remotes:
   ARXIV:
     name: arXiv

@@ -8,6 +8,10 @@ same; what changes is that there is one place to ask "what does this scheme
 demand, and why?"
 """
 
+# inactive-ok-file: ADR-tmp8hp25 — Proposed. Every mention names it as the
+# decision this file implements or is written against; the citation is to the
+# reasoning, not a claim the decision is settled.
+
 from __future__ import annotations
 
 from _config import merged
@@ -135,15 +139,21 @@ def test_every_obligation_says_where_it_was_declared(tmp_path, monkeypatch):
                 references:
                   source:
                     scheme: LIT
-                tag_groups:
-                  axis:
-                    tags:
-                    - a
-                    - b
-                    require: exactly-one
+                axis: tags
+                fields:
+                  tags:
+                    many: true
+                    groups:
+                      axis:
+                        tags:
+                        - a
+                        - b
+                        require: exactly-one
             """)
     c = sota()
-    assert {f.name for f in declared(c)} == {"arxiv", "source"}
+    # `tags` is in the contract now: it is a declared field like any
+    # other since ADR-tmp8hp25, rather than an axis the code assumed.
+    assert {f.name for f in declared(c)} == {"arxiv", "source", "tags"}
     for field in declared(c):
         assert field.because and all("luria.yaml" in b for b in field.because)
     group, = c.groups
@@ -162,12 +172,16 @@ def test_one_pass_reports_fields_and_groups_together(tmp_path, monkeypatch):
                        references:
                          source:
                            scheme: LIT
-                       tag_groups:
-                         axis:
-                           tags:
-                           - a
-                           - b
-                           require: exactly-one
+                       axis: tags
+                       fields:
+                         tags:
+                           many: true
+                           groups:
+                             axis:
+                               tags:
+                               - a
+                               - b
+                               require: exactly-one
                    """)
     doc(root, "record/practices.d/SOTA-001.md", code="SOTA-001",
         tags=["a", "b"], extra="source: ADR-001")
@@ -220,14 +234,17 @@ def test_the_shipped_record_is_clean_through_the_contract():
     and nothing else, so the pass still finds nothing to report on it.
 
     `empty` stopped being true here when `status:` became a field a scheme
-    declares rather than one the code assumes. That is the change working:
-    the record page lists the five words and cites `statuses.yaml`, where
-    before it said "nothing beyond the standard fields" and the words were
-    not readable from the record at all."""
+    declares rather than one the code assumes, and again when `tags:` did
+    (ADR-tmp8hp25). That is the change working twice: the record page lists
+    both vocabularies and cites where each is declared, where before it said
+    "nothing beyond the standard fields" and neither was readable from the
+    record at all."""
     for scheme in config.current().schemes.values():
         declared = [f.name for f in contract.for_scheme(scheme).fields
                     if not f.builtin]
-        assert declared == ["status"], (scheme.prefix, declared)
+        # ADR declares its tag axis; DP renders as one document and has none.
+        assert declared in (["status"], ["status", "tags"]), \
+            (scheme.prefix, declared)
     errors: list[str] = []
     lint.check_contracts(errors)
     assert errors == []
@@ -281,18 +298,22 @@ def test_a_group_finding_names_its_key_and_derived_membership(tmp_path, monkeypa
                    """
                    schemes:
                      SOTA:
-                       tag_groups:
-                         axis:
-                           tags:
-                           - a
-                           - b
-                           require: exactly-one
+                       axis: tags
+                       fields:
+                         tags:
+                           many: true
+                           groups:
+                             axis:
+                               tags:
+                               - a
+                               - b
+                               require: exactly-one
                    """)
     doc(root, "record/practices.d/SOTA-001.md", code="SOTA-001", tags=[])
     errors: list[str] = []
     lint.check_contracts(errors)
     e, = errors
-    assert "(luria.yaml: schemes.SOTA.tag_groups.axis)" in e
+    assert "(luria.yaml: schemes.SOTA.fields.tags.groups.axis)" in e
 
 
 def test_describe_is_one_renderer_for_the_whole_contract(tmp_path, monkeypatch):
@@ -310,14 +331,18 @@ def test_describe_is_one_renderer_for_the_whole_contract(tmp_path, monkeypatch):
                   cites:
                     scheme: LIT
                     required: false
-                tag_groups:
-                  axis:
-                    tags:
-                    - a
-                    - b
-                    require: exactly-one
-                    excluded_by:
-                    - z
+                axis: tags
+                fields:
+                  tags:
+                    many: true
+                    groups:
+                      axis:
+                        tags:
+                        - a
+                        - b
+                        require: exactly-one
+                        excluded_by:
+                        - z
             """)
     lines = contract.describe(sota())
     text = "\n".join(lines)
@@ -326,9 +351,13 @@ def test_describe_is_one_renderer_for_the_whole_contract(tmp_path, monkeypatch):
     assert "`cites`" in text and "optional" in text
     assert "`axis`" in text and "exactly one of `a`, `b`" in text and "`z`" in text
     for key in ("schemes.SOTA.requires", "schemes.SOTA.references.source",
-                "schemes.SOTA.references.cites", "schemes.SOTA.tag_groups.axis"):
+                "schemes.SOTA.references.cites",
+                 "schemes.SOTA.fields.tags.groups.axis"):
         assert key in text, key
-    assert len(lines) == 4
+    # arxiv, source, cites, tags, and the group on tags: the axis field is
+    # one of the contract's own lines now (ADR-tmp8hp25).
+    assert "`tags`" in text
+    assert len(lines) == 5
 
 
 def test_describe_of_an_empty_contract_is_empty(tmp_path, monkeypatch):

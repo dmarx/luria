@@ -39,3 +39,8 @@ schemes:
     fields:
       status:
         vocabulary: adr-statuses
+      tags:
+        many: true
+        required: true
+        closed: false
+    axis: tags

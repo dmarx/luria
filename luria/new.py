@@ -90,7 +90,7 @@ def _sub_line(text: str, field: str, value, many: bool = False) -> str:
     pattern = re.compile(rf"^{field}:.*(?:\n(?:  |- ).*)*", re.MULTILINE)
     if isinstance(value, (tuple, list)):
         value = ", ".join(str(v) for v in value)
-    if field == "tags" or many:
+    if many:
         items = [v.strip() for v in str(value).split(",") if v.strip()]
         replacement = f"{field}:\n" + "\n".join(f"- {v}" for v in items)
     elif field == "summary":

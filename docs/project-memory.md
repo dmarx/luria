@@ -243,20 +243,27 @@ schemes:
 A paper never posted to arXiv but carrying a DOI, or only a URL, passes;
 one with none of the three fails, and the finding names all three.
 
-**Tag rules.** `tags.yaml` says what a tag *means*; a tag group says which may
-appear together, because some vocabularies are an axis rather than a pile:
+**Tag rules.** A vocabulary says what a value *means*; a group says which of
+them may appear together, because some fields are an axis rather than a pile.
+The group is declared under the field it constrains:
 
 ```yaml
 schemes:
   SOTA:
-    tag_groups:
-      primary_topic:
-        require: exactly-one
-        tags:
-        - training-optimization
-        - systems-optimization
-        - model-stability
-        excluded_by: []
+    axis: tags
+    fields:
+      tags:
+        vocabulary: topics
+        many: true
+        closed: false
+        groups:
+          primary_topic:
+            require: exactly-one
+            tags:
+            - training-optimization
+            - systems-optimization
+            - model-stability
+            excluded_by: []
 ```
 
 `exactly-one` is the "pick a primary category" rule, checked. Tags outside the

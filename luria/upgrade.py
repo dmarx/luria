@@ -199,16 +199,38 @@ def convert_config(root: Path) -> tuple[str, list[str], list[Path]]:
                     vocabs[named] = yaml.safe_load(f.read_text(encoding="utf-8")) or {}
                     orphans.append(f)
                     notes.append(f"{prefix}.fields vocabulary {named} -> {named}")
-        # `status` is a field, so its vocabulary is named in `fields:` and
-        # nowhere else. A record that never declared the field still had a
-        # `statuses.yaml` the old code read by position; wiring it up here is
-        # what carries that vocabulary across, and `schemes.X.statuses` does
-        # not exist on the far side of the boundary.
+        # `status` and `tags` are fields, so their vocabularies are named in
+        # `fields:` and nowhere else. A record that never declared either
+        # still had the `.yaml` beside its records, which the old code read
+        # by position; wiring them up here is what carries the vocabularies
+        # across, and `schemes.X.statuses`/`.tags` do not exist on the far
+        # side of the boundary.
+        fields = spec.setdefault("fields", {})
         if folded := spec.pop("statuses", ""):
-            fields = spec.setdefault("fields", {})
             if not (fields.get("status") or {}).get("vocabulary"):
                 fields.setdefault("status", {})["vocabulary"] = folded
                 notes.append(f"{prefix}.status -> vocabulary {folded}")
+        folded = spec.pop("tags", "")
+        # `tag_groups` constrained a subset of the tag vocabulary; it is
+        # declared with the field it constrains now.
+        moved = spec.pop("tag_groups", None)
+        if folded or moved or "tags" in fields:
+            entry = fields.setdefault("tags", {})
+            if folded and not entry.get("vocabulary"):
+                entry["vocabulary"] = folded
+            # What `tags:` always was and nothing could say: many, expected
+            # on every entry, and OPEN — a new tag is an edit to a document.
+            entry.setdefault("many", True)
+            entry.setdefault("required", True)
+            entry.setdefault("closed", False)
+            if moved is not None:
+                entry["groups"] = moved
+                notes.append(f"{prefix}.tag_groups -> fields.tags.groups")
+            # Which field heads the index. Every record crossing this
+            # boundary has exactly one, because the old code only had one.
+            spec["axis"] = "tags"
+            notes.append(f"{prefix}.tags -> field, axis"
+                         + (f", vocabulary {folded}" if folded else ""))
     out = {"vocabularies": vocabs, **cfg} if vocabs else cfg
     # Emitted by the module that also *edits* configs, so a freshly converted
     # file is already in the shape every later `luria init`/`migrate` writes.

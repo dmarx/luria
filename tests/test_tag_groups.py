@@ -1,4 +1,4 @@
-"""`[luria.schemes.X.tag_groups]` — which of a scheme's tags may combine.
+"""`fields.<field>.groups` — which of a field's values may combine.
 
 `tags.yaml` has always said what a tag *means* and nothing has said which may
 appear together. For a pile of labels that is right; for an axis it leaves the
@@ -6,6 +6,10 @@ rule to prose. The motivating case came from a downstream record whose decision
 said "exactly one strength tag" and whose fourth argument shipped with none,
 four documents before anyone counted.
 """
+
+# inactive-ok-file: ADR-tmp8hp25 — Proposed. Every mention names it as the
+# decision this file implements or is written against; the citation is to the
+# reasoning, not a claim the decision is settled.
 from _config import merged
 from pathlib import Path
 
@@ -21,19 +25,23 @@ schemes:
     output: docs/arguments
     active: Active
     render: index
-    tag_groups:
-      strength:
-        tags:
-        - sound
-        - overreach
-        - invalid
-        require: exactly-one
-      failure:
-        tags:
-        - equivocation
-        - gap
-        excluded_by:
-        - sound
+    axis: tags
+    fields:
+      tags:
+        many: true
+        groups:
+          strength:
+            tags:
+            - sound
+            - overreach
+            - invalid
+            require: exactly-one
+          failure:
+            tags:
+            - equivocation
+            - gap
+            excluded_by:
+            - sound
 """
 
 
@@ -87,16 +95,21 @@ def test_excluded_by_is_silent_when_the_group_is_absent(tmp_path, monkeypatch):
 
 
 def test_at_most_one_allows_zero(tmp_path, monkeypatch):
-    cfg = merged(CONFIG, {"schemes": {"ARG": {"tag_groups": {
-        "strength": {"require": "at-most-one"}}}}})
+    cfg = merged(CONFIG, {"schemes": {"ARG": {"fields": {"tags": {"groups": {
+        "strength": {"require": "at-most-one"}}}}}}})
     assert errors_for(tmp_path, monkeypatch, cfg=cfg) == []
 
 
 def test_a_scheme_with_no_groups_is_unconstrained(tmp_path, monkeypatch):
-    """Every record that predates this feature."""
+    """Every record that predates this feature.
+
+    The whole field goes, not just its `groups`: a scheme that says nothing
+    about its tags declares no tags field, and then has no axis either
+    (ADR-tmp8hp25)."""
     import yaml as _yaml
     raw = _yaml.safe_load(CONFIG)
-    raw["schemes"]["ARG"].pop("tag_groups")
+    raw["schemes"]["ARG"].pop("axis")
+    raw["schemes"]["ARG"].pop("fields")
     cfg = _yaml.dump(raw, sort_keys=False)
     assert errors_for(tmp_path, monkeypatch, "anything", cfg=cfg) == []
 
@@ -104,16 +117,16 @@ def test_a_scheme_with_no_groups_is_unconstrained(tmp_path, monkeypatch):
 def test_an_unknown_rule_is_a_config_error(tmp_path, monkeypatch):
     """Caught at parse time. A misspelled rule that surfaced as 'no
     violations' would be the quiet failure this feature exists to remove."""
-    cfg = merged(CONFIG, {"schemes": {"ARG": {"tag_groups": {
-        "strength": {"require": "one"}}}}})
+    cfg = merged(CONFIG, {"schemes": {"ARG": {"fields": {"tags": {"groups": {
+        "strength": {"require": "one"}}}}}}})
     with pytest.raises(ValueError, match="require = 'one'"):
         project(tmp_path, monkeypatch, "sound", cfg=cfg)
         config.current()
 
 
 def test_a_group_with_no_tags_is_a_config_error(tmp_path, monkeypatch):
-    cfg = merged(CONFIG, {"schemes": {"ARG": {"tag_groups": {
-        "strength": {"tags": []}}}}})
-    with pytest.raises(ValueError, match="lists no tags"):
+    cfg = merged(CONFIG, {"schemes": {"ARG": {"fields": {"tags": {"groups": {
+        "strength": {"tags": []}}}}}}})
+    with pytest.raises(ValueError, match="lists no `tags`"):
         project(tmp_path, monkeypatch, "sound", cfg=cfg)
         config.current()

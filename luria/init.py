@@ -263,7 +263,16 @@ def _scheme_entry(prefix: str, render: str) -> tuple[dict, str]:
         # of it, which is the whole point of the table being central
         # (ADR-tmp8hp25) — and it names it where every other controlled
         # field does, because `status` is not a special one.
-        "fields": {"status": {"vocabulary": "statuses"}},
+        "fields": {
+            "status": {"vocabulary": "statuses"},
+            # Open and undeclared: the scaffold does not invent a taxonomy
+            # for a family it has only just been told the name of. Declare
+            # `vocabulary:` when you have one, and the values get pages.
+            "tags": {"many": True, "required": True},
+        },
+        # WHICH field heads this scheme's index. Named rather than assumed —
+        # a world-bible's axis is `worlds` (ADR-tmp8hp25).
+        "axis": "tags",
     }, ("\n%s — %s.\n"
         "The paths follow the prefix; rename them if this family is better\n"
         "called something other than what its codes spell." % (prefix, reading))

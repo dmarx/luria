@@ -136,6 +136,51 @@ structure addressed by path. It is also the only emitter — the TOML
 converter writes through it too, so a converted config starts in the shape
 every later edit produces and a one-key change never reads as a rewrite.
 
+**`tags` is a field too, and the axis is named rather than assumed.** This
+was the last thing the code knew by name, and it held out for two stated
+reasons:
+
+> `tags` stays: it is OPEN, and a vocabulary is closed by construction
+> ([ADR-054](ADR-054.md) deferred even a `closed` flag), and its `tag_groups` constrain a
+> *subset of values*, which a vocabulary cannot express.
+
+Both are true, and both are things a declaration can say once it is allowed
+to. `Vocabulary` gains `closed` (default true; `tags` sets it false — the
+values a project has an opinion about supply order, label and blurb, and
+reaching for a new one stays an edit to a document). `tag_groups` moves from
+`schemes.X.tag_groups` to `fields.<field>.groups`, which is where it always
+belonged: a group constrains a subset of ONE field's values, and the
+scheme-level table could only ever have meant `tags`. The check read
+`meta["tags"]` whatever the group was about, so a group on any other field
+saw nothing and passed every document — a rule that looked enforced.
+
+What is left is one key:
+
+    schemes:
+      SCENE:
+        axis: worlds        # which field heads this scheme's index
+        fields:
+          worlds: {vocabulary: worlds, many: true, closed: false}
+
+`axis` is not `tags` renamed. It says which of *this scheme's own* fields
+gets the categories block and a page per value — a rendering choice about a
+scheme, and one a world-bible answers differently from an anthology. A
+scheme naming none has no taxonomy and renders none, which the old code
+could not express: every scheme had `tags`, and every document was told to
+carry them.
+
+`BUILT_IN_AXES` is gone, `BUILT_IN_CONDITION_FIELDS` is `("status",)` —
+status alone, and only because it has a default vocabulary no scheme has to
+declare — and the lint's "no `tags:` in frontmatter" branch is `required:
+true` on the axis field, checked with every other obligation.
+
+Two smaller things went with it. `many: true` now types a field on its own:
+it says the field holds a list, which is what makes it nameable in a chain
+or a derivation, and that is exactly what being built in used to say about
+`tags`. And axis values are no longer lower-cased on the way in — a `tags`
+convention the code applied to every value, which disagreed with the
+vocabulary check beside it that has always compared the value as written.
+
 **A vocabulary-backed field's pages render under the FIELD's name**, not the
 vocabulary's. That was the last thing to go wrong here and the least obvious:
 pages rendered at `<view>/<vocabulary>/`, so sharing a vocabulary between two
@@ -188,6 +233,18 @@ than in a later release where it would surprise someone.
   change did first, in four places. It keeps the comments and puts the block
   in the wrong mapping, which is worse: a lost comment is visible in the
   diff, and a scheme that quietly became a journal is not.
+
+- **Leave `tags` built in and generalize the rest.** Where this change
+  stopped the first time, on the two reasons quoted above. Rejected once
+  they turned out to be missing features rather than facts: `closed` was
+  deferred, not impossible, and a group naming its own field is strictly
+  more expressive than one that cannot. The tell was the group check
+  reading `meta["tags"]` — a rule that could only be written for one field
+  was silently wrong for any other.
+- **Derive the axis instead of naming it** (the one open, many-valued
+  field). It works until a scheme has two, and then it picks one without
+  saying so. A rendering decision that a reader cannot find in the config
+  is the failure this whole decision is about.
 
 - **JSON for the lockfile stays.** It is generated, not authored, and machine
   round-tripping is the only thing it is for. Unifying it would be consistency

@@ -8,6 +8,10 @@ reference, not a tag, not a status. Declared explicitly, closed, with a
 default that is an effective value and never a rewrite.
 """
 
+# inactive-ok-file: ADR-tmp8hp25 — Proposed. Every mention names it as the
+# decision this file implements or is written against; the citation is to the
+# reasoning, not a claim the decision is settled.
+
 from __future__ import annotations
 
 import yaml
@@ -55,11 +59,16 @@ def world(tmp_path, monkeypatch, table: dict | None = None,
           field: str | None = None, extra: dict | None = None) -> Path:
     field = field or name
     table = {"many": True, "default": ["B"]} if table is None else table
+    fields: dict = {field: {"vocabulary": name, **table}}
+    # `tags` is a declared field since ADR-tmp8hp25, so a scheme that wants
+    # a tag axis says so — which these tests need, since they assert the
+    # vocabulary's pages render *beside* the tag pages.
+    fields.setdefault("tags", {"many": True, "closed": False})
     cfg: dict = {"issue_url": "https://example.test/issues/{n}",
                  "schemes": {"SCENE": {"dir": "record/scenes.d",
                                        "output": "docs/scenes",
-                                       "fields": {field: {"vocabulary": name,
-                                                          **table}}}}}
+                                       "axis": "tags",
+                                       "fields": fields}}}
     # The values live in the config now, under the name the field asks for.
     if vocab is not None:
         cfg["vocabularies"] = {name: yaml.safe_load(vocab)}
@@ -72,8 +81,9 @@ def world(tmp_path, monkeypatch, table: dict | None = None,
 
 
 def field():
+    """The vocabulary field under test — not the tag axis beside it."""
     f, = [f for f in contract.for_scheme(current().schemes["SCENE"]).fields
-          if not f.builtin]
+          if not f.builtin and f.name != "tags"]
     return f
 
 
@@ -128,10 +138,17 @@ def test_required_and_default_together_is_a_config_error(tmp_path, monkeypatch):
         current()
 
 
-def test_the_built_in_axes_cannot_be_redeclared(tmp_path, monkeypatch):
-    world(tmp_path, monkeypatch, name="tags", vocab="a:\n  label: A\n")
-    with pytest.raises(ValueError, match="built in"):
-        current()
+def test_the_axis_is_a_declared_field_like_any_other(tmp_path, monkeypatch):
+    """`tags` used to be refused here — it was an axis the code assumed, and
+    the mechanism carved it out (ADR-054's deferred `closed` flag was the
+    reason). It is a field now: backed by a vocabulary, OPEN, and named by
+    the scheme as its axis (ADR-tmp8hp25)."""
+    world(tmp_path, monkeypatch, name="tags",
+          vocab="a:\n  label: A\n", table={"many": True, "closed": False})
+    scheme = current().schemes["SCENE"]
+    assert scheme.axis == "tags"
+    assert scheme.tags_vocab == "tags"
+    assert set(scheme.tags) == {"a"}
 
 
 def test_a_field_entry_declares_its_type(tmp_path, monkeypatch):
@@ -146,7 +163,7 @@ luria:
       dir: record/scenes.d
       fields:
         worlds:
-          many: true
+          default: [B]
 """)
     write(tmp_path, "record/scenes.d/worlds.yaml", WORLDS)
     monkeypatch.setenv("LURIA_ROOT", str(tmp_path))
@@ -185,7 +202,9 @@ def test_the_field_and_its_vocabulary_may_be_named_differently(tmp_path, monkeyp
     assert "`world: Z` is not in the `worlds` vocabulary" in e
     pages = {p.relative_to(root).as_posix() for p in adr_index.outputs()}
     assert "docs/scenes/world/C.md" in pages
-    line, = contract.describe(contract.for_scheme(current().schemes["SCENE"]))
+    line = next(l for l in contract.describe(
+        contract.for_scheme(current().schemes["SCENE"]))
+        if not l.startswith("`tags`"))
     assert line.startswith("`world` —") and "schemes.SCENE.fields.world" in line
 
 
@@ -193,7 +212,9 @@ def test_the_field_and_its_vocabulary_may_be_named_differently(tmp_path, monkeyp
 
 def test_describe_names_the_values_the_default_and_both_files(tmp_path, monkeypatch):
     world(tmp_path, monkeypatch)
-    line, = contract.describe(contract.for_scheme(current().schemes["SCENE"]))
+    line = next(l for l in contract.describe(
+        contract.for_scheme(current().schemes["SCENE"]))
+        if not l.startswith("`tags`"))
     assert "`worlds`" in line and "one or more of `A`, `B`, `C`" in line
     assert "absent means `B`" in line
     assert "schemes.SCENE.fields.worlds" in line

@@ -80,6 +80,11 @@ def _listing(scheme, docs) -> list[tuple[object, object, dict[str, list]]]:
     fields = {f.name: f for f in for_scheme(scheme).fields}
     out = []
     for vocab in scheme.vocabularies:
+        # The axis renders as the index's categories and its own tag pages,
+        # which say more than a chip row does. One field, one rendering —
+        # and the project chooses which field that is (ADR-tmp8hp25).
+        if vocab.field == getattr(scheme, "axis", ""):
+            continue
         field = fields[vocab.field]
         under: dict[str, list] = {v: [] for v in field.values}
         for doc in docs:

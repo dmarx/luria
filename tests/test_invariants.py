@@ -6,6 +6,10 @@ names that something, the record made the claim and never said what it meant
 was wrong.
 """
 
+# inactive-ok-file: ADR-tmp8hp25 — Proposed. Every mention names it as the
+# decision this file implements or is written against; the citation is to the
+# reasoning, not a claim the decision is settled.
+
 from __future__ import annotations
 
 from _config import merged
@@ -25,6 +29,13 @@ def write(root: Path, rel: str, text: str) -> Path:
 RELATIONS = """
 schemes:
   LIT:
+    axis: tags
+    fields:
+      # A chain may only assert an invariant on a field the scheme declares,
+      # and since ADR-tmp8hp25 `tags` is one of those rather than an axis the
+      # code assumes.
+      tags:
+        many: true
     references:
       extends:
         scheme: LIT

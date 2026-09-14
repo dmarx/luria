@@ -86,7 +86,12 @@ schemes:
     fields:
       status:
         vocabulary: statuses
-    tags: decision-tags
+      tags:
+        vocabulary: decision-tags
+        many: true
+        required: true
+        closed: false
+    axis: tags
   DP:
     cite: page
     dir: record/principles.d
@@ -97,6 +102,11 @@ schemes:
     fields:
       status:
         vocabulary: statuses
+      tags:
+        many: true
+        required: true
+        closed: false
+    axis: tags
 remotes:
   SG:
     name: strata-g
