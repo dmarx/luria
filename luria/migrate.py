@@ -73,6 +73,7 @@ from pathlib import Path
 
 from . import aliases as aliases_mod
 from . import doc_refs, new as new_mod, remotes
+from . import yaml_edit
 from .config import current, is_temp_tail
 
 MIGRATIONS_DIR = "record/migrations.d"
@@ -490,65 +491,50 @@ def sweep_text(text: str, plan: Plan, paths: bool = True,
     return text, count
 
 
-SECTION_RE = re.compile(r"^\s*\[([^\]]+)\]\s*(?:#.*)?$")
-
 
 def rename_key_at(text: str, path: tuple[str, ...], old: str, new: str) -> str:
     """Rename one mapping key, and only where it sits under `path`.
 
-    Edits the lines rather than round-tripping the document: a config is
-    written by a person and carries their comments, and a migration that
-    silently strips them has taken more than it was asked for.
-
-    Indentation is the nesting, so the parent stack is recoverable from the
-    text alone — which is all this needs, and less than a parser would take.
-    """
-    out, stack = [], []          # stack: (indent, key) for each open mapping
-    for line in text.splitlines(keepends=True):
-        body = line.rstrip("\n")
-        stripped = body.lstrip(" ")
-        if stripped and not stripped.startswith("#") and ":" in stripped:
-            indent = len(body) - len(stripped)
-            while stack and stack[-1][0] >= indent:
-                stack.pop()
-            key = stripped.split(":", 1)[0].strip()
-            if (tuple(k for _, k in stack) == path and key == old
-                    and stripped.split(":", 1)[1].strip() in ("", "{}")):
-                line = f"{' ' * indent}{new}:" + body[indent + len(key) + 1:] + "\n"
-                key = new
-            stack.append((indent, key))
-        out.append(line)
-    return "".join(out)
+    Round-tripped rather than swept: `remotes.ARXIV` and `schemes.ARXIV` are
+    the same six characters in the text and two different places in the
+    document, and only a parser tells them apart. The round trip is
+    ruamel's, so the comments a person wrote in their config survive a
+    migration that was asked to rename a key (ADR-tmp8hp25)."""
+    data = yaml_edit.load(text)
+    node = yaml_edit.at(data, path)
+    # A family's table, not a setting that happens to share its name: the
+    # value is the block the rename is about, or nothing yet.
+    if node is None or not isinstance(node.get(old, False), (dict, type(None))):
+        return text
+    return yaml_edit.dump(data) if yaml_edit.rename_key(data, path, old, new) else text
 
 
 def config_paths_pass(text: str, plan: Plan) -> str:
-    """Path pairs in a config file, section-aware: a remote's `document =`
+    """Path pairs in a config file, section-aware: a remote's `document:`
     line spells *that project's* path, which only moves if the spec claimed
     the remote via `remotes = [...]`. Everything outside unclaimed remote
     sections — the scheme's `output`, the `paths` values, comments —
-    follows the rename."""
-    out: list[str] = []
-    stack: list[tuple[int, str]] = []
-    for line in text.splitlines(keepends=True):
-        body = line.rstrip("\n")
-        stripped = body.lstrip(" ")
-        if stripped and not stripped.startswith("#") and ":" in stripped:
-            indent = len(body) - len(stripped)
-            while stack and stack[-1][0] >= indent:
-                stack.pop()
-            key = stripped.split(":", 1)[0].strip()
-            # The enclosing mapping is what decides whose path this line
-            # spells, and in YAML that is the indentation rather than a
-            # header — so the section is recovered the same way
-            # `rename_key_at` recovers it (ADR-tmp8hp25).
-            section = ".".join(k for _, k in stack)
-            stack.append((indent, key))
-        else:
-            section = ".".join(k for _, k in stack)
-        frozen = False
-        if m2 := re.match(r"(?:luria\.)?remotes\.([A-Za-z0-9]+)", section):
-            frozen = m2.group(1).upper() not in plan.claimed_remotes
-        if not frozen:
+    follows the rename.
+
+    Which lines are whose comes from the parser rather than from counting
+    indentation, because the enclosing mapping is what decides whose path a
+    line spells and the parser is the thing that knows it. The rewrite is
+    still textual: a rename reaches into comments and into the middle of
+    string values, and neither is a node to reassign (ADR-tmp8hp25)."""
+    lines = text.splitlines(keepends=True)
+    data = yaml_edit.load(text)
+    frozen: set[int] = set()
+    for at in (("remotes",), ("luria", "remotes")):
+        for name in yaml_edit.at(data, at) or {}:
+            if str(name).upper() in plan.claimed_remotes:
+                continue
+            where = yaml_edit.span(data, at + (str(name),))
+            if where:
+                start, stop = where
+                frozen.update(range(start, len(lines) if stop is None else stop))
+    out = []
+    for i, line in enumerate(lines):
+        if i not in frozen:
             for old, new in plan.path_pairs:
                 line = line.replace(old, new)
         out.append(line)

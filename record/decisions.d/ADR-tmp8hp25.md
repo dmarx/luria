@@ -101,6 +101,29 @@ nothing could render, quote in a finding, or scaffold from — which is how a
 record ended up with fourteen practices citing adoption as evidence while
 every mechanical check stayed green.
 
+**Two YAML libraries, and each has one job.** omegaconf *composes* a config:
+`OmegaConf.merge` folds a project's file onto the defaults and the schema
+types the result. ruamel *edits* one: `luria init` adds a scheme, `luria
+upgrade` wires up a field, `luria migrate` renames one, and all three rewrite
+a file somebody wrote and has to keep reading.
+
+Neither library does the other's job, and the failure in each direction is
+silent. `OmegaConf.merge` drops every comment — right for building a config
+out of defaults, wrong for editing one on disk, where the comments are most
+of what the file is. Editing the text instead keeps the comments and gets the
+structure wrong: TOML tables concatenate, so a `[schemes.RFC]` appended to a
+file belonged to `schemes` wherever it landed, while YAML nests by
+indentation, so the same block appended joins whichever top-level key happens
+to be last — and `RFC:` occurs under `schemes:` and under every
+`remotes.<R>.schemes:`, so a sweep cannot tell one from the other either.
+This change was written the second way first, and all four sites had the bug.
+
+`luria/yaml_edit.py` is the one place that knows how a config is edited:
+ruamel in round-trip mode, four operations, comments intact and the
+structure addressed by path. It is also the only emitter — the TOML
+converter writes through it too, so a converted config starts in the shape
+every later edit produces and a one-key change never reads as a rewrite.
+
 **A vocabulary-backed field's pages render under the FIELD's name**, not the
 vocabulary's. That was the last thing to go wrong here and the least obvious:
 pages rendered at `<view>/<vocabulary>/`, so sharing a vocabulary between two
@@ -143,6 +166,16 @@ than in a later release where it would surprise someone.
   `statuses.yaml` with *different* words cannot keep all five on the name
   `statuses`, so four move anyway — and the rule "your pages move unless your
   vocabularies happen not to collide" is not one anybody can hold.
+
+- **Edit configs with omegaconf, since it is already a dependency.** One
+  library instead of two, and it composes correctly. Rejected because it
+  drops comments, and a command that silently deletes a person's notes from
+  their own config has taken more than it was asked for. The two libraries
+  are not redundant; they answer different questions.
+- **Edit configs by rewriting the lines, to keep the comments.** What this
+  change did first, in four places. It keeps the comments and puts the block
+  in the wrong mapping, which is worse: a lost comment is visible in the
+  diff, and a scheme that quietly became a journal is not.
 
 - **JSON for the lockfile stays.** It is generated, not authored, and machine
   round-tripping is the only thing it is for. Unifying it would be consistency

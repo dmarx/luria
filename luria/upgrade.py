@@ -31,6 +31,7 @@ import yaml
 from dataclasses import dataclass
 from pathlib import Path
 
+from . import yaml_edit
 from .config import CONFIG_NAME, find_root
 from .statuses import DEFAULT_STATUSES
 
@@ -123,33 +124,31 @@ def _declared(text: str, prefixes: list[str], values: dict) -> str:
     """`text` with `status` wired up for each scheme, and the vocabulary it
     names declared once.
 
-    Written INTO each scheme's block rather than appended: YAML nests by
-    indentation, so `schemes.VP.statuses: x` at the end of the document is a
-    key literally called "schemes.VP.statuses", and an indented block there
-    attaches to whatever the last top-level key happens to be. Editing the
-    text rather than round-tripping the document is what keeps the comments a
-    project wrote in its own config."""
-    lines = text.splitlines(keepends=True)
-    for prefix in reversed(prefixes):
-        for i, line in enumerate(lines):
-            if line.rstrip("\n") != f"  {prefix}:":
-                continue
-            end = next((j for j in range(i + 1, len(lines))
-                        if lines[j].strip() and not lines[j].startswith("    ")),
-                       len(lines))
-            lines.insert(end, "    statuses: statuses\n"
-                              "    fields:\n"
-                              "      status:\n"
-                              "        vocabulary: statuses\n")
-            break
-    out = "".join(lines)
-    if "\nvocabularies:" not in out and not out.startswith("vocabularies:"):
-        out = ("vocabularies:\n"
-               + "  statuses:\n"
-               + "".join(f"    {w}:\n      blurb: {b}\n"
-                         for w, b in values.items())
-               + out)
-    return out
+    Written into the document rather than onto the end of it. YAML nests by
+    indentation, so an appended `schemes.VP.statuses: x` is a key literally
+    called "schemes.VP.statuses", and an appended indented block joins
+    whichever top-level key happens to be last — both of them silent. The
+    round trip is ruamel's, so the comments a project wrote in its own
+    config come through it (ADR-tmp8hp25)."""
+    data = yaml_edit.load(text)
+    base = ("luria",) if isinstance(data.get("luria"), dict) else ()
+    for prefix in prefixes:
+        yaml_edit.merge_into(
+            data,
+            {"statuses": "statuses",
+             "fields": {"status": {"vocabulary": "statuses"}}},
+            base + ("schemes", prefix))
+    vocabularies = yaml_edit.at(data, base + ("vocabularies",))
+    if vocabularies is None:
+        # First in the file, because a reader asking what a status *means*
+        # should not have to scroll past every scheme to find out.
+        into = yaml_edit.ensure(data, base) if base else data
+        into.insert(0, "vocabularies", {})
+        vocabularies = into["vocabularies"]
+    words = vocabularies.setdefault("statuses", {})
+    for word, blurb in values.items():
+        words.setdefault(word, {"blurb": blurb})
+    return yaml_edit.dump(data)
 
 
 TOML_NAME = "luria.toml"
@@ -203,8 +202,10 @@ def convert_config(root: Path) -> tuple[str, list[str], list[Path]]:
                     orphans.append(f)
                     notes.append(f"{prefix}.fields vocabulary {named} -> {named}")
     out = {"vocabularies": vocabs, **cfg} if vocabs else cfg
-    return (yaml.dump(out, sort_keys=False, allow_unicode=True, width=100),
-            notes, orphans)
+    # Emitted by the module that also *edits* configs, so a freshly converted
+    # file is already in the shape every later `luria init`/`migrate` writes.
+    # Two emitters would mean the first one-key edit reflowed the whole file.
+    return yaml_edit.dump(out), notes, orphans
 
 
 def _run_yaml(where: Path, dry_run: bool) -> None:

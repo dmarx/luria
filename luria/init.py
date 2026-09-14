@@ -45,6 +45,7 @@ import re
 import os
 from pathlib import Path
 
+from . import yaml_edit
 from .config import CONFIG_NAME, Config, Scheme, find_root, load
 
 
@@ -247,93 +248,74 @@ def _spec(item: str, kinds: tuple, default: str, what: str) -> tuple:
     return name, kind
 
 
-def _scheme_table(prefix: str, render: str) -> str:
+def _scheme_entry(prefix: str, render: str) -> tuple[dict, str]:
+    """One scheme's table and the comment that introduces it."""
     slug = _slug(prefix)
     output = "docs/%s.md" % slug if render == "document" else "docs/%s" % slug
     reading = ("read as a whole, so its entries concatenate into one page"
                if render == "document" else
                "browsed one at a time, so its view is an index plus tag pages")
-    return (
-        "\n  # %s — %s.\n"
-        "  # The paths follow the prefix; rename them if this family is better\n"
-        "  # called something other than what its codes spell.\n"
-        "  %s:\n"
-        "    dir: record/%s.d\n"
-        "    output: %s\n"
-        "    render: %s\n"
+    return {
+        "dir": "record/%s.d" % slug,
+        "output": output,
+        "render": render,
         # Every scheme names the same vocabulary rather than getting a copy
         # of it, which is the whole point of the table being central
         # (ADR-tmp8hp25).
-        "    statuses: statuses\n"
-        % (prefix, reading, prefix, slug, output, render))
+        "statuses": "statuses",
+    }, ("\n%s — %s.\n"
+        "The paths follow the prefix; rename them if this family is better\n"
+        "called something other than what its codes spell." % (prefix, reading))
 
 
-def _journal_table(name: str, granularity: str) -> str:
+def _journal_entry(name: str, granularity: str) -> tuple[dict, str]:
+    """One journal's table and the comment that introduces it."""
     title = name.replace("-", " ").replace("_", " ").capitalize()
-    return (
-        "\n  # %s — dated entries that persist and are never revised, collected\n"
-        "  # into one book per %s.\n"
-        "  %s:\n"
-        "    dir: record/%s.d\n"
-        "    output: docs/%s\n"
-        "    granularity: %s\n"
-        "    title: %s\n"
-        % (name, granularity, name, name, name, granularity, title))
+    return {
+        "dir": "record/%s.d" % name,
+        "output": "docs/%s" % name,
+        "granularity": granularity,
+        "title": title,
+    }, ("\n%s — dated entries that persist and are never revised, collected\n"
+        "into one book per %s." % (name, granularity))
 
 
 def shorthand_tables(text: str, schemes: str, journals: str) -> str:
     """The template's config, plus one table per shorthand entry.
 
-    Additive by design. The template already declares ADR and DP, so appending
-    a third scheme keeps all three — which is what "mostly the defaults" has to
-    mean, given that a declared family replaces the shipped one whole
-    (ADR-047). Removing a default is deleting its table, which is an edit to a
-    file the user can now see."""
-    added = []
-    for item in (s for s in schemes.split(",") if s.strip()):
-        prefix, render = _spec(item, RENDERS, "index", "scheme")
-        prefix = prefix.upper()
-        if "\n  %s:\n" % prefix in text:
-            raise SystemExit(
-                "luria init: the template already declares %s; drop it from "
-                "--schemes and edit the table it writes" % prefix)
-        added.append(_scheme_table(prefix, render))
-    for item in (s for s in journals.split(",") if s.strip()):
-        name, granularity = _spec(item, GRANULARITIES, "month", "journal")
-        if "\n  %s:\n" % name in text:
-            raise SystemExit(
-                "luria init: the template already declares the %s journal; "
-                "drop it from --journals and edit its table" % name)
-        added.append(_journal_table(name, granularity))
-    if not added:
-        return text
-    return _insert_under(text, "schemes:", [a for a in added if "\n    dir: record" in a
-                                            and "granularity" not in a],
-                         "journals:", [a for a in added if "granularity" in a])
+    Additive by design. The template already declares ADR and DP, so adding
+    a third scheme keeps all three — which is what "mostly the defaults" has
+    to mean, given that a declared family replaces the shipped one whole
+    (ADR-047). Removing a default is deleting its table, which is an edit to
+    a file the user can now see.
 
-
-def _insert_under(text: str, first_key: str, first_blocks: list,
-                  second_key: str, second_blocks: list) -> str:
-    """Append blocks INSIDE a top-level mapping rather than after it.
-
-    TOML tables concatenate: a new `schemes.RFC` at the end of the file
-    belonged to `schemes` wherever it landed. YAML nests by indentation, so an
-    indented block at the end of the document attaches to whatever the last
-    top-level key happens to be — which is silent, and wrong."""
-    for key, blocks in ((first_key, first_blocks), (second_key, second_blocks)):
-        if not blocks:
-            continue
-        lines = text.splitlines(keepends=True)
-        try:
-            at = next(i for i, l in enumerate(lines) if l.startswith(key))
-        except StopIteration:
-            text = text.rstrip("\n") + "\n" + key + "\n" + "".join(blocks)
-            continue
-        end = next((i for i in range(at + 1, len(lines))
-                    if lines[i].strip() and not lines[i].startswith((" ", "\t"))),
-                   len(lines))
-        text = "".join(lines[:end]) + "".join(blocks) + "".join(lines[end:])
-    return text
+    Added to the document rather than to the end of the text: YAML nests by
+    indentation, so an indented block appended to a file joins whichever
+    top-level key happens to be last — silently, and wrongly. The round trip
+    is ruamel's, so the template's comments survive it (ADR-tmp8hp25)."""
+    data = yaml_edit.load(text)
+    base = ("luria",) if isinstance(data.get("luria"), dict) else ()
+    indent = 2 * (len(base) + 1)
+    added = 0
+    for family, split, kinds, default, entry, what in (
+            ("schemes", schemes, RENDERS, "index", _scheme_entry, "scheme"),
+            ("journals", journals, GRANULARITIES, "month", _journal_entry,
+             "journal")):
+        for item in (s for s in split.split(",") if s.strip()):
+            name, kind = _spec(item, kinds, default, what)
+            if what == "scheme":
+                name = name.upper()
+            into = yaml_edit.ensure(data, base + (family,))
+            if name in into:
+                raise SystemExit(
+                    "luria init: the template already declares %s; drop it "
+                    "from --%ss and edit the table it writes" % (name, what))
+            body, note = entry(name, kind)
+            yaml_edit.set_block(into, name, body, before=note, indent=indent)
+            added += 1
+    # Unchanged means unchanged: a no-op must not rewrite the file it was
+    # handed just because it parsed it.
+    return yaml_edit.dump(data) if added else text
 
 
 def _read(rel: str) -> str:

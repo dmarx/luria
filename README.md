@@ -51,7 +51,7 @@ drift from their sources.
 
 <!-- luria:badges -->
 [![needs decision: 6](https://img.shields.io/badge/needs%20decision-6-orange)](docs/reports/pending-decisions.md)
-[![cited, not in force: 1](https://img.shields.io/badge/cited,%20not%20in%20force-1-orange)](docs/reports/reference-status.md)
+[![cited, not in force: 0](https://img.shields.io/badge/cited,%20not%20in%20force-0-brightgreen)](docs/reports/reference-status.md)
 <!-- /luria:badges -->
 
 <!-- luria:site -->
@@ -67,7 +67,9 @@ output of one of the features, applied to the project that ships it.
 pip install luria
 ```
 
-Python 3.11+. Two runtime dependencies (PyYAML, fire).
+Python 3.11+. Four runtime dependencies: PyYAML and omegaconf read the
+config, ruamel.yaml edits it without dropping your comments, and fire is
+the CLI.
 
 ## Sixty seconds
 
