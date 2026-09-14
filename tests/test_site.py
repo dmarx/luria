@@ -17,7 +17,7 @@ from luria.config import current, load, rooted
 
 from _scheme import decision
 
-# inactive-ok-file: ADR-tmp39e44 — Proposed. Named as the decision these
+# inactive-ok-file: ADR-101 — Proposed. Named as the decision these
 # assertions were rewritten against; the citation is to its reasoning, not a
 # claim it is settled.
 
@@ -182,7 +182,7 @@ def test_a_staging_directory_inside_the_project_is_not_republished(project):
 
 
 def _quartz_config(root) -> dict:
-    """The generated config, parsed. YAML since Quartz 5 (ADR-tmp39e44)."""
+    """The generated config, parsed. YAML since Quartz 5 (ADR-101)."""
     import yaml
     return yaml.safe_load((root / "quartz.config.yaml").read_text())
 
@@ -297,7 +297,7 @@ def test_the_graph_sits_above_the_article_not_in_the_sidebar(tmp_path):
     the right rail is at the bottom of the page on most windows (#71).
 
     One key since Quartz 5, where it was a generated `quartz.layout.ts` — the
-    whole reason luria wrote TSX at all (ADR-tmp39e44)."""
+    whole reason luria wrote TSX at all (ADR-101)."""
     site.stage(tmp_path)
     graph = _plugin(_quartz_config(tmp_path), "graph")
     assert graph["layout"]["position"] == "beforeBody"

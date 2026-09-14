@@ -12,7 +12,7 @@ Luria owns that file, and owns the layout inside it for a reason: Quartz
 puts the graph in a sidebar that stacks *below the article* under 1200px, so
 on most windows the one view the site exists for was the last thing on the
 page (#71). Since Quartz 5 the position is a key on the graph plugin's own
-entry rather than a generated `quartz.layout.ts` (ADR-tmp39e44). Anything
+entry rather than a generated `quartz.layout.ts` (ADR-101). Anything
 `stage` writes beside `content/` has to be copied by `actions/site`, and a
 test holds that pair together.
 
@@ -48,7 +48,7 @@ was mentioned. The line is composed with wikilinks and expanded by the same
 resolver the record uses everywhere else.
 """
 
-# inactive-ok-file: ADR-tmp39e44 — Proposed. Named as the decision this
+# inactive-ok-file: ADR-101 — Proposed. Named as the decision this
 # module was rewritten to implement; the citation is to its reasoning, not a
 # claim it is settled.
 
@@ -1020,7 +1020,7 @@ def stage(out: Path, cfg=None, nested: bool = True) -> Report:
     repo_url = re.sub(r"/blob/[^/]+/?$", "", cfg.site.source_url)
     # One file, where Quartz 4 needed two: v5 takes its layout from each
     # plugin's own `layout:` key, so the generated `quartz.layout.ts` — and
-    # the TSX luria had to write to move one component — is gone (ADR-tmp39e44).
+    # the TSX luria had to write to move one component — is gone (ADR-101).
     (out / "quartz.config.yaml").write_text(
         QUARTZ_CONFIG.format(title=cfg.site.title,
                              base_url=cfg.site.base_url,

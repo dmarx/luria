@@ -5,7 +5,7 @@
 
 `Proposed` and `Deferred` both describe an open question. Neither says *since when*, and that is the signal: a decision proposed last week is pending; the same one a year later was either overdue or settled in code and never written back.
 
-**8 document(s) awaiting a decision.**
+**9 document(s) awaiting a decision.**
 
 | Open since | Status | Code | Cited | Unack. | Title |
 |---|---|---|--:|--:|---|
@@ -16,7 +16,8 @@
 | 2026-09-13 | Proposed | [ADR-098](../../record/decisions.d/ADR-098.md) | 61 | 0 | One config file, one format, vocabularies declared once |
 | 2026-09-13 | Proposed | [ADR-096](../../record/decisions.d/ADR-096.md) | 0 | 0 | A rate limit is an answer, not a reason to ask again |
 | 2026-09-14 | Proposed | [ADR-099](../../record/decisions.d/ADR-099.md) | 18 | 0 | An anchor is an id, and a fragment link is checked against one |
-| 2026-09-14 | Proposed | [ADR-100](../../record/decisions.d/ADR-100.md) | 11 | 1 | A generated link uses the anchor the page offers, and luria owns the slug |
+| 2026-09-14 | Proposed | [ADR-100](../../record/decisions.d/ADR-100.md) | 12 | 0 | A generated link uses the anchor the page offers, and luria owns the slug |
+| 2026-09-14 | Proposed | [ADR-101](../../record/decisions.d/ADR-101.md) | 8 | 0 | The site builds on Quartz 5 |
 
 The citation count is the second axis, and it flips the priority: an old proposal nothing references is a stalled idea worth closing, while an old proposal many files cite is a decision the codebase has already made and hasn't written down.
 
