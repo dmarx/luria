@@ -1063,16 +1063,8 @@ def _apply(text: str, refs: list[Ref], source: Path, adrs: dict[int, Path],
     return "".join(out)
 
 
-def doc_files(views: bool = False) -> list[Path]:
+def doc_files() -> list[Path]:
     """Every file the reference rules apply to.
-
-    `views` keeps the generated pages in. Off by default and right for every
-    reference rule — a view is rewritten by the next build, so a finding
-    about one is a finding nobody can act on where it is reported. The
-    anchor check is the exception that earns the flag: a generated page can
-    link into another generated page, which is where luria's own devlog
-    index put 55 unreachable fragments, and a check that only reads sources
-    is a check shaped so it cannot see them (ADR-tmp1wx7r, DP-4).
 
     `*.stub` counts. A stub is the one hand-written part of a generated view,
     and its prose lands in a page the lint then skips *because* it is
@@ -1101,8 +1093,7 @@ def doc_files(views: bool = False) -> list[Path]:
         paths += sorted(journal.dir.rglob("*.md"))
     seen, out = set(), []
     for path in paths:
-        if path.exists() and path not in seen and (
-                views or not cfg.is_generated(path)):
+        if path.exists() and path not in seen and not cfg.is_generated(path):
             seen.add(path)
             out.append(path)
     return out

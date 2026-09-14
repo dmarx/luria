@@ -80,26 +80,47 @@ The check is what makes this stay fixed — the generator is not the only thing
 that writes an anchor, and the next hand-written one would put the bug back
 silently, which is the polarity [DP-3](../principles.d/DP-003.md) rules out.
 
-Two things the check has to get right, and both were wrong first:
+**It reads the render, not the tree.** This took three tries and is the
+whole of what the check is.
 
-- **It reads views.** Every other reference rule reads sources, correctly: a
-  view is rewritten by the next build, so a finding about one is a finding
-  nobody can act on where it is reported. But the motivating case is a
-  *journal index linking into a journal book*, and both are generated. A
-  check that only reads sources is a check shaped so it cannot see the defect
-  it exists for ([DP-4](../principles.d/DP-004.md)). `doc_files(views=True)` is the exception, and the
-  anchor check is the only caller.
+Sources alone cannot see the defect: the motivating case is a *journal index
+linking into a journal book*, and both are generated. A check shaped so it
+cannot see what it exists for is not a check ([DP-4](../principles.d/DP-004.md)).
+
+The committed views cannot be used either, and CI is what said so. A branch
+carries the *default branch's* copies of every view and deliberately does not
+update them ([ADR-068](ADR-068.md), the amendment on where views land), so a check reading
+them fails every pull request that touches an anchor — and names a repair the
+author is not allowed to make. `check_view_dirs` has always known this, and
+its docstring says it plainly: *"a branch carries the default branch's copies
+and has nothing to be stale against."*
+
+So the check is handed **every source, and every view as the generator would
+write it** — `adr_index.outputs()`, in memory. That asks the question that is
+actually about this source tree: will the views this record produces contain
+a fragment nothing can scroll to? It is silent on a branch whose sources are
+right and whose committed views are old, and it fires the moment an emitter
+or a stub writes a `name` again.
+
+Two smaller things it also had to get right:
+
 - **It resolves from `link_base`, not from the file's own directory.** A
   `render = "document"` scheme's prose is written to resolve from the page it
   assembles into, so `../../docs/values.md` in a source is correct there and
   nonsense from the source's folder. Resolving naively reported five real
   links as broken targets.
+- **One finding per unreachable fragment.** A stub is the authored part of a
+  generated page, so its prose is found twice — once where a person wrote it
+  and once in the view. The view copy is dropped when an authored one exists,
+  because the authored copy is the one somebody can edit.
 
-**The repair is the target's, and its owner decides the remedy.** The link is
-spelled correctly; the thing it names cannot be found. So `--fix` edits the
-document holding the anchor — and never a view, because the next `luria index`
-would erase it. A finding about a view says `luria index` instead, which is
-the repair that actually lands.
+**The repair edits the file holding the anchor.** The link is spelled
+correctly; the thing it names cannot be found. Which file that is cannot be
+read off the link's target — a `<a name=>` in a stub is reported against the
+*view* it renders into, and the view is not the thing to edit. So `--fix`
+repairs every authored document carrying a reported fragment, and never a
+view. Loose, and safe to be: only anchors some link actually named are
+touched, and turning `name` into `id` is an improvement wherever it lands.
 
 ## Alternatives considered
 
@@ -130,8 +151,9 @@ the repair that actually lands.
 the 89 links resolve. Any adopter's record does the same on its next build;
 nothing in a source has to change.
 
-The check reads views, so it is the one reference rule that can report a
-finding a contributor cannot fix where it is reported. That is the right
-trade here and worth knowing: the message says `luria index`, and the
-existing staleness check already means a record whose views disagree with its
-sources is failing for another reason too.
+The check renders the record to answer its question, which makes it the most
+expensive reference rule — `adr_index.outputs()` is the same work `luria
+index` does. It runs once per lint and shares nothing with the generation
+job, which is a cost worth revisiting if the lint gets slow. It buys the
+thing that made the first two versions of this check useless: an answer that
+does not depend on which branch you are standing on.

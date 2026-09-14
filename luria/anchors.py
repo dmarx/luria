@@ -77,50 +77,64 @@ class Finding:
     line: int
     target: Path
     fragment: str
-    # True when the target is a generated view. The anchor is still wrong,
-    # and editing it would be erased by the next build — the repair is the
-    # generator's, which emits `id`, so the remedy is `luria index`.
+    # True when the source is a generated view — the anchor is the
+    # generator's to fix, and an edit written there is erased by the next
+    # build.
     generated: bool = False
 
 
-def scan(files, generated=None, base=None) -> list[Finding]:
-    """Every such link across `files`, with the target read once each.
+def scan(documents: dict[Path, str], generated=None, base=None) -> list[Finding]:
+    """Every such link across `documents`, a mapping of path to content.
 
-    `generated` answers "is this path a view?" and `base` answers "where does
-    this prose render?" — `Config.is_generated` and `Config.link_base` in
-    practice. Passed in rather than reached for so the scan stays a function
-    of the tree it is handed.
+    Content rather than paths, and this is the whole of what CI taught this
+    check. Read from disk, it reports the COMMITTED views — and a branch
+    carries the default branch's copies of those and is forbidden to update
+    them (ADR-018), so the check failed every pull request that touched an
+    anchor and named a repair the author was not allowed to make. Handed the
+    render instead, it asks the question that is actually about this source
+    tree: will the views this record produces contain a fragment nothing can
+    scroll to? `check_view_dirs` has always worked this way, and its
+    docstring says why — "a branch carries the default branch's copies and
+    has nothing to be stale against".
 
-    `base` is not the file's own directory, and assuming it was is a bug
-    this had until a real record showed it: a `render = "document"` scheme's
-    prose is written to resolve from the page it assembles into, so
-    `../../docs/values.md` in a source is correct there and nonsense from
-    the source's own folder. `link_base` is the one place that knows."""
+    `generated` answers "is this path a view?" and `base` answers "where
+    does this prose render?" — `Config.is_generated` and `Config.link_base`
+    in practice. `base` is not the file's own directory: a
+    `render = "document"` scheme's prose is written to resolve from the page
+    it assembles into, so `../../docs/values.md` in a source is correct there
+    and nonsense from the source's own folder."""
     generated = generated or (lambda _p: False)
     base = base or (lambda p: p.parent)
     cache: dict[Path, set[str]] = {}
     found: list[Finding] = []
-    for path in files:
-        try:
-            text = path.read_text(encoding="utf-8")
-        except (OSError, UnicodeDecodeError):
-            continue
+
+    def anchors_at(target: Path) -> set[str]:
+        if target not in cache:
+            text = documents.get(target)
+            if text is None:
+                try:
+                    text = target.read_text(encoding="utf-8")
+                except (OSError, UnicodeDecodeError):
+                    text = ""
+            cache[target] = by_name_only(text)
+        return cache[target]
+
+    for path, text in documents.items():
         where = Path(base(path))
         for m in FRAGMENT_LINK_RE.finditer(text):
             # Normalized textually rather than resolved: `..` through a
             # directory `luria index` has not created yet fails on the
             # filesystem and reads fine, which is what a renderer does.
             target = Path(os.path.normpath(where / m.group(1)))
-            if target not in cache:
-                try:
-                    cache[target] = by_name_only(
-                        target.read_text(encoding="utf-8"))
-                except (OSError, UnicodeDecodeError):
-                    cache[target] = set()
-            if m.group(2) in cache[target]:
+            if m.group(2) in anchors_at(target):
                 found.append(Finding(path, text.count("\n", 0, m.start()) + 1,
-                                     target, m.group(2), generated(target)))
-    return found
+                                     target, m.group(2), generated(path)))
+    # A stub's prose is *in* the page it renders into, so the same link is
+    # found twice — once where a person wrote it and once in the view. One
+    # defect, reported where it can be acted on.
+    authored = {(f.target, f.fragment) for f in found if not f.generated}
+    return [f for f in found
+            if not f.generated or (f.target, f.fragment) not in authored]
 
 
 def repair(text: str, fragments: set[str]) -> str:
@@ -133,3 +147,23 @@ def repair(text: str, fragments: set[str]) -> str:
         return (f'<a id="{m.group(1)}"></a>' if m.group(1) in fragments
                 else m.group(0))
     return NAME_ANCHOR_RE.sub(swap, text)
+
+
+def documents(rendered: dict[Path, str] | None = None) -> dict[Path, str]:
+    """What the anchor check reads: every source, and every view AS THE
+    GENERATOR WOULD WRITE IT — never the committed copy.
+
+    The motivating case is a journal index linking into a journal book, and
+    both are generated, so sources alone cannot see it. The committed copies
+    cannot be used either: on a branch they are the default branch's, which
+    this record deliberately does not update there (ADR-018)."""
+    from . import doc_refs
+    from .adr_index import outputs
+    out: dict[Path, str] = {}
+    for path in doc_refs.doc_files():
+        try:
+            out[path] = path.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            continue
+    out.update(outputs() if rendered is None else rendered)
+    return out

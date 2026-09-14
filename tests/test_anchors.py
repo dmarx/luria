@@ -15,7 +15,7 @@ surface those views are published to — and worked everywhere a contributor
 would look for the bug.
 
 `id` satisfies both. These are the tests for that, and for the check that
-keeps a hand-written anchor from reintroducing it.
+keeps a hand-written anchor from reintroducing it (ADR-tmp1wx7r).
 """
 
 # inactive-ok-file: ADR-tmp1wx7r — Proposed. Every mention names it as the
@@ -98,50 +98,49 @@ def test_the_fixer_rewrites_the_anchor_it_named(project, monkeypatch):
     assert errors == [], errors
 
 
-def test_a_view_is_named_as_the_generators_to_fix(project, monkeypatch):
-    """The defect is the same and the remedy is not. An edit written into a
-    view is erased by the next build, so a finding that said `luria link
-    --fix` would be sending the reader to make a change that vanishes."""
+def test_a_stale_committed_view_is_not_a_finding(project, monkeypatch):
+    """The regression CI found. A branch carries the DEFAULT branch's copies
+    of every view and deliberately does not update them (ADR-018), so a
+    check that read them failed every pull request touching an anchor and
+    named a repair the author was not allowed to make. The question is about
+    this source tree: what will the views it renders contain?"""
     root = _journal_project(project, monkeypatch)
     book = root / "docs" / "devlog" / "2026-09.md"
     book.parent.mkdir(parents=True, exist_ok=True)
     book.write_text('# Book\n\n<a name="20260901120000"></a>\n\n## An entry\n')
-    (root / "record" / "decisions.d" / "ADR-001.md").write_text(
-        "---\nstatus: Active\ntitle: 'A decision'\nversion: 1\ntags:\n- x\n"
-        "date: '2026-01-01'\n---\n\n# ADR-001: A decision\n\n"
-        "See [the entry](../../docs/devlog/2026-09.md#20260901120000).\n")
+    (book.parent / "README.md").write_text(
+        "# Development log\n\n- [An entry](2026-09.md#20260901120000)\n")
     config.reset()
     errors: list[str] = []
     lint.check_anchors(errors)
-    assert any("luria index" in e for e in errors), errors
-    assert not any("link --fix" in e for e in errors), errors
-
-    # And the fixer leaves it exactly as it is.
-    from luria import link_refs
-    before = book.read_text()
-    assert link_refs.fix_anchors(fix=True) == 0
-    assert book.read_text() == before
+    assert errors == [], errors
 
 
-def test_a_view_linking_into_a_view_is_seen(project, monkeypatch):
-    """The motivating case, and the one a source-only scan cannot reach: a
-    journal's index links into its books, and both are generated. 55 such
-    links sat in this project's own devlog for as long as the journal has
-    existed, and every reference check in the tool read past them."""
-    root = _journal_project(project, monkeypatch)
-    out = root / "docs" / "devlog"
-    out.mkdir(parents=True, exist_ok=True)
-    (out / "2026-09.md").write_text(
-        '# Book\n\n<a name="20260901120000"></a>\n\n## An entry\n')
-    (out / "README.md").write_text(
-        "# Development log\n\n"
-        "- [An entry](2026-09.md#20260901120000)\n")
+def test_an_anchor_that_reaches_a_view_through_a_stub_is_a_finding(
+        project, monkeypatch):
+    """A stub is the hand-written part of a generated page, so an anchor
+    written there lands in a view the same way the generator's does — and is
+    the one case where a person, not the generator, owns the repair. The
+    finding names the stub, which is the file they can edit."""
+    root = project
+    scheme = config.current().schemes["ADR"]
+    scheme.dir.mkdir(parents=True, exist_ok=True)
+    scheme.stub.write_text(
+        "# Decisions\n\n"
+        '<a name="why"></a>\n\nWhy these exist.\n\n'
+        "See [the reason](README.md#why).\n\n{categories}\n\n{table}\n")
     config.reset()
     errors: list[str] = []
     lint.check_anchors(errors)
     assert len(errors) == 1, errors
-    assert "docs/devlog/README.md" in errors[0]
-    assert "luria index" in errors[0]
+    assert "README.stub" in errors[0] and "#why" in errors[0]
+
+    from luria import link_refs
+    assert link_refs.fix_anchors(fix=True) == 1
+    assert '<a id="why"></a>' in scheme.stub.read_text()
+    errors = []
+    lint.check_anchors(errors)
+    assert errors == [], errors
 
 
 # --- fixtures -------------------------------------------------------------

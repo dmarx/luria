@@ -61,30 +61,39 @@ def linkify_files(paths: list[Path], fix: bool = False) -> tuple[int, list[Path]
 def fix_anchors(fix: bool = False) -> int:
     """Rewrite every `<a name=>` something links to into an `<a id=>`.
 
-    Whole-record rather than per-path, and it edits the TARGET: the link is
-    spelled correctly and the thing it names cannot be found, so narrowing
-    to the files named on the command line would repair the half of a pair
-    the defect is not in (ADR-tmp1wx7r).
+    Whole-record rather than per-path, because it edits the file holding the
+    ANCHOR: the link is spelled correctly and the thing it names cannot be
+    found, so narrowing to the paths on the command line would repair the
+    half of a pair the defect is not in (ADR-tmp1wx7r).
+
+    Which file that is cannot be read off the link's target. A stub is the
+    authored part of a generated page, so a `<a name=>` written in one is
+    reported against the VIEW it renders into — and the view is not the
+    thing to edit, since the next build overwrites it. So this repairs every
+    authored document carrying a reported fragment. Loose, and safe to be:
+    `repair` only touches anchors some link actually named, and turning
+    `name` into `id` is an improvement in any file it lands in.
 
     Returns the number of files changed — or that would change."""
     from . import anchors as anchors_mod
     cfg = current()
-    wanted: dict[Path, set[str]] = {}
-    for f in anchors_mod.scan(doc_refs.doc_files(views=True), cfg.is_generated,
-                                   cfg.link_base):
+    docs = anchors_mod.documents()
+    fragments = {f.fragment for f in anchors_mod.scan(
+        docs, cfg.is_generated, cfg.link_base)}
+    if not fragments:
+        return 0
+    changed = 0
+    for path, text in docs.items():
         # Never a view: the next `luria index` overwrites it, so a repair
         # written there is a repair that vanishes. The generator emits `id`.
-        if not f.generated:
-            wanted.setdefault(f.target, set()).add(f.fragment)
-    changed = 0
-    for target, fragments in wanted.items():
-        text = target.read_text(encoding="utf-8")
+        if cfg.is_generated(path):
+            continue
         fresh = anchors_mod.repair(text, fragments)
         if fresh == text:
             continue
         changed += 1
         if fix:
-            target.write_text(fresh, encoding="utf-8")
+            path.write_text(fresh, encoding="utf-8")
     return changed
 
 

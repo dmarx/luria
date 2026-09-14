@@ -465,12 +465,12 @@ def check_anchors(errors: list[str]) -> None:
     A heading is never this, and `<a id=>` is never this. The finding is
     exactly the spelling that is reachable one way and not the other."""
     cfg = current()
-    for f in anchors_mod.scan(doc_refs.doc_files(views=True), cfg.is_generated,
+    for f in anchors_mod.scan(anchors_mod.documents(), cfg.is_generated,
                               cfg.link_base):
-        # A view's anchor is the generator's to fix, and an edit written
-        # there is erased by the next build — so the remedy differs even
-        # though the defect is the same.
-        fix = "run `luria index`" if f.generated else "run `luria link --fix`"
+        # A view's anchor is the generator's, so the remedy is a code change
+        # and not an edit to the page — which the next build would erase.
+        fix = ("the generator writes it that way"
+               if f.generated else "run `luria link --fix`")
         errors.append(
             f"{cfg.rel(f.source)}:{f.line}: `#{f.fragment}` reaches "
             f"{cfg.rel(f.target)} by `<a name=>`, which a published site "
