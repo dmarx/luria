@@ -4,7 +4,7 @@
 
 **Proposed** — not in force yet — an open question, so citing it as settled is what the reference report catches.
 
-4 of 95 decisions. Back to the [full index](../README.md).
+5 of 97 decisions. Back to the [full index](../README.md).
 
 | # | Title | Summary | Status |
 |---|---|---|---|
@@ -12,3 +12,4 @@
 | [ADR-092](../../../record/decisions.d/ADR-092.md) | A derivation may follow a reference: one hop, against written frontmatter | `derive` gains `from`, naming a reference to render the template against, so a fact one scheme owns can be read by another instead of copied into it. Rejected: a `ref.` namespace inside the template, which would have made the template language grow a second grammar; and resolving the target's own derivations first, which buys chaining at the cost of cycle detection and an evaluation order. | Proposed |
 | [ADR-094](../../../record/decisions.d/ADR-094.md) | A cited document gets a page, and where a citation points is configurable | A `render = "document"` scheme's sources are published as pages, and a new `cite` key chooses whether a citation of its codes resolves to that page or to an anchor in the assembled view. This record sets "page"; unset keeps today's behaviour. Rejected: emitting anchors that survive each publisher, and shipping the key without the pages, which sends citations off-site. | Proposed |
 | [ADR-095](../../../record/decisions.d/ADR-095.md) | An acknowledgement can carry its own deadline | A directive may be written `until <YYYY-MM-DD>`; after that date `find` stops returning it, so every check behaves as if it were never written, and `luria lint` reports what expired. Rejected: a relative duration, which needs an anchor the file does not carry; and a version milestone, which needs a project-version concept luria does not have. | Proposed |
+| [ADR-096](../../../record/decisions.d/ADR-096.md) | A rate limit is an answer, not a reason to ask again | A 429 was retried three times with 3s→6s backoff, so under a sustained throttle every identifier paid 9 seconds to reach the `throttled` it already had after the first request — and `Retry-After`, the one piece of scheduling information a throttle carries, was parsed and spent on a message string. Fails fast instead, honours a short `Retry-After`, and stops asking a remote that has refused. Rejects a longer backoff, a global rate limiter, and persisting the refusal. | Proposed |

@@ -1142,7 +1142,7 @@ def _field_groups(prefix: str, raw: dict) -> tuple[FieldGroup, ...]:
     return tuple(groups)
 
 
-def _checked_converses(prefix: str, refs: tuple) -> tuple:
+def _checked_converses(prefix: str, refs: tuple, schemes: dict) -> tuple:
     """Refuse a converse declaration that cannot mean what it says.
 
     A relation's converse is the relation read backwards: if A `extends` B
@@ -1150,26 +1150,35 @@ def _checked_converses(prefix: str, refs: tuple) -> tuple:
     complete one side from the other, and symmetry is simply the case where
     a relation is its own converse.
 
+    **The converse lives on the scheme whose codes the field holds**, which
+    is the declaring scheme itself only when the relation does not cross one.
+    `SOTA.introduced_by` holds `LIT` codes, so its converse `introduces` is a
+    field on `LIT` holding `SOTA` codes — and until ADR-097 that could
+    not be declared at all, so a crossing relation was sayable from one end
+    and unreachable from the other (#253).
+
     Four things have to hold, and each of them fails silently otherwise —
     a pair that never completes looks exactly like a record with nothing
     missing (DP-15)."""
-    by_name = {r.field: r for r in refs}
     for ref in refs:
         if not ref.converse:
             continue
         where = f"luria.yaml: schemes.{prefix}.references.{ref.field}.converse"
+        far = schemes.get(ref.scheme)
+        by_name = {r.field: r for r in far.references} if far else {}
         other = by_name.get(ref.converse)
         if other is None:
             raise ValueError(
-                f"{where}: {ref.converse!r} is not a reference {prefix} "
-                f"declares — a converse names the field holding the same "
-                f"relation read backwards, and it has to exist to be written "
-                f"into (declared: {', '.join(sorted(by_name)) or 'none'})")
-        if other.scheme != ref.scheme:
+                f"{where}: {ref.converse!r} is not a reference {ref.scheme} "
+                f"declares — {ref.field!r} holds {ref.scheme} codes, so the "
+                f"same relation read backwards is a field on {ref.scheme}, "
+                f"and it has to exist to be written into "
+                f"(declared: {', '.join(sorted(by_name)) or 'none'})")
+        if other.scheme != prefix:
             raise ValueError(
-                f"{where}: {ref.field!r} holds {ref.scheme} codes and "
-                f"{ref.converse!r} holds {other.scheme} codes — the same "
-                f"relation read backwards points at the same scheme")
+                f"{where}: {ref.field!r} is on {prefix} and "
+                f"{ref.scheme}.{ref.converse!r} holds {other.scheme} codes — "
+                f"the same relation read backwards points back at {prefix}")
         if other.converse != ref.field:
             raise ValueError(
                 f"{where}: {ref.converse!r} does not name {ref.field!r} back "
@@ -1235,7 +1244,7 @@ def _references(prefix: str, raw: dict) -> tuple[Reference, ...]:
                                blurb=str(spec.get("blurb", "")),
                                required_when=_required_when(where, spec,
                                                             required)))
-    return tuple(_checked_converses(prefix, tuple(found)))
+    return tuple(found)
 
 
 def _required_when(where: str, spec: dict, required: bool) -> RequiredWhen | None:
@@ -2231,6 +2240,10 @@ def _schemes(raw: dict, root: Path, scaffolding: bool = False,
                     f"luria.yaml: schemes.{prefix}.references.{ref.field} "
                     f"names scheme {ref.scheme!r}, which is not declared "
                     f"(have: {', '.join(sorted(schemes))})")
+    # After the loop above, so that a converse naming an undeclared scheme is
+    # reported as the missing scheme rather than as a missing field on it.
+    for prefix, scheme in schemes.items():
+        _checked_converses(prefix, scheme.references, schemes)
     return schemes
 
 
