@@ -59,7 +59,7 @@ which files they cover — the exact class of bug ADR-002 exists to prevent. One
 config object, resolved once from disk.
 """
 
-# inactive-ok-file: ADR-tmp1wx7r — Proposed. Every mention names it as the
+# inactive-ok-file: ADR-099 — Proposed. Every mention names it as the
 # decision this file implements or is written against; the citation is to
 # the reasoning, not a claim the decision is settled.
 
@@ -541,7 +541,7 @@ class Scheme:
     #            single-page app can only find `id`, so the fragment was
     #            unreachable by the router and reachable by every other means,
     #            including the repository a contributor checks it in. The
-    #            generator emits `id` now (ADR-tmp1wx7r). `cite` keeps its
+    #            generator emits `id` now (ADR-099). `cite` keeps its
     #            other reason, which was always the real one.
     #   "view" — `output#anchor`, the assembled page. What every project did
     #            before this key, and right where the set is meant to be read

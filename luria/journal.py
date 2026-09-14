@@ -40,7 +40,7 @@ buy — a listing of what happened, in the file where it happened, that cannot g
 stale.
 """
 
-# inactive-ok-file: ADR-tmp1wx7r — Proposed. Every mention names it as the
+# inactive-ok-file: ADR-099 — Proposed. Every mention names it as the
 # decision this file implements or is written against; the citation is to
 # the reasoning, not a claim the decision is settled.
 
@@ -189,7 +189,7 @@ def render_book(journal: Journal, key: str, filed: list[Entry]) -> str:
         # `a[name]`. Only `id` resolves on a Quartz site, whose SPA router
         # scrolls with `getElementById` — so `name` alone put every entry
         # link in this journal at the top of its book, on the one surface the
-        # book is published to (ADR-tmp1wx7r).
+        # book is published to (ADR-099).
         lines += ["---", "", f'<a id="{entry.anchor}"></a>', "",
                   f"## {entry.title}", "",
                   f"*{entry.created.strftime('%Y-%m-%d %H:%M:%S')}"

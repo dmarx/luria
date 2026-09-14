@@ -18,7 +18,7 @@ with `--fix` instead of hand-editing (ADR-005).
 behaviour, for a run that must touch nothing but link text.
 """
 
-# inactive-ok-file: ADR-tmp1wx7r — Proposed. Every mention names it as the
+# inactive-ok-file: ADR-099 — Proposed. Every mention names it as the
 # decision this file implements or is written against; the citation is to
 # the reasoning, not a claim the decision is settled.
 
@@ -64,7 +64,7 @@ def fix_anchors(fix: bool = False) -> int:
     Whole-record rather than per-path, because it edits the file holding the
     ANCHOR: the link is spelled correctly and the thing it names cannot be
     found, so narrowing to the paths on the command line would repair the
-    half of a pair the defect is not in (ADR-tmp1wx7r).
+    half of a pair the defect is not in (ADR-099).
 
     Which file that is cannot be read off the link's target. A stub is the
     authored part of a generated page, so a `<a name=>` written in one is

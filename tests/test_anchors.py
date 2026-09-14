@@ -15,10 +15,10 @@ surface those views are published to — and worked everywhere a contributor
 would look for the bug.
 
 `id` satisfies both. These are the tests for that, and for the check that
-keeps a hand-written anchor from reintroducing it (ADR-tmp1wx7r).
+keeps a hand-written anchor from reintroducing it (ADR-099).
 """
 
-# inactive-ok-file: ADR-tmp1wx7r — Proposed. Every mention names it as the
+# inactive-ok-file: ADR-099 — Proposed. Every mention names it as the
 # decision this file implements or is written against; the citation is to
 # the reasoning, not a claim the decision is settled.
 

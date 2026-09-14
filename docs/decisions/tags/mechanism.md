@@ -4,7 +4,7 @@
 
 **Mechanism** — collectors, generators, the lint, the directive vocabulary.
 
-68 of 98 decisions. Back to the [full index](../README.md).
+69 of 99 decisions. Back to the [full index](../README.md).
 
 | # | Title | Summary | Status |
 |---|---|---|---|
@@ -76,3 +76,4 @@
 | [ADR-096](../../../record/decisions.d/ADR-096.md) | A rate limit is an answer, not a reason to ask again | A 429 was retried three times with 3s→6s backoff, so under a sustained throttle every identifier paid 9 seconds to reach the `throttled` it already had after the first request — and `Retry-After`, the one piece of scheduling information a throttle carries, was parsed and spent on a message string. Fails fast instead, honours a short `Retry-After`, and stops asking a remote that has refused. Rejects a longer backoff, a global rate limiter, and persisting the refusal. | Proposed |
 | [ADR-097](../../../record/decisions.d/ADR-097.md) | A converse belongs to the scheme whose codes the field holds | `converse` was resolved against the declaring scheme's own fields, so a relation crossing a scheme boundary was sayable from one end and unreachable from the other — luria.toml said so out loud on `NOTE.paper`. The converse now lives on the scheme whose codes the field holds, with same-scheme as the case where those coincide. Rejects a `converse_scheme` key and a fully-qualified converse name. | Active |
 | [ADR-098](../../../record/decisions.d/ADR-098.md) | One config file, one format, vocabularies declared once | Config was TOML, vocabularies were YAML files beside each scheme's records, and the lockfile was JSON — three formats for one system, with no reason any of them could state. Worse, a vocabulary two schemes share had to be two files: in the corpus that motivated this, ten of thirteen entries had silently drifted. Moves to one `luria.yaml` with a central `vocabularies:` table, omegaconf underneath the existing validation rather than in place of it. Rejects keeping vocabularies local, and rejects letting structured configs replace the semantic checks. | Proposed |
+| [ADR-099](../../../record/decisions.d/ADR-099.md) | An anchor is an id, and a fragment link is checked against one | The generator anchored assembled documents and journal entries with `<a name="x">`. That is reachable on a real navigation and nowhere else, so every one of those links worked in the repository and on GitHub and landed at the top of the page on the published site — 89 of the 100 fragment links in this repository. Emits `id` instead, and adds a check with a `--fix`, so the next hand-written anchor cannot put it back. Corrects ADR-094, whose measurement was right and whose stated cause was not. | Proposed |

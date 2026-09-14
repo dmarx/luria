@@ -35,7 +35,7 @@ renders into `docs/devlog/` (ADR-020). `link_base()` maps a path to the
 directory its links must resolve from.
 """
 
-# inactive-ok-file: ADR-tmp1wx7r — Proposed. Every mention names it as the
+# inactive-ok-file: ADR-099 — Proposed. Every mention names it as the
 # decision this file implements or is written against; the citation is to
 # the reasoning, not a claim the decision is settled.
 
@@ -659,7 +659,7 @@ def adr_paths() -> dict[int, Path]:
     return scheme.documents() if scheme else {}
 
 
-# Read either spelling, emit `id` (ADR-tmp1wx7r): a project whose
+# Read either spelling, emit `id` (ADR-099): a project whose
 # principles are still one hand-written file may anchor them by `name`, and
 # that file resolves fine in the repository — it is only the published site
 # that cannot reach it, which is the finding, not a reason to stop reading it.

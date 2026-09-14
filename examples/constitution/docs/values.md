@@ -13,7 +13,7 @@ lint refuses a practice that names none.
 
 ---
 
-<a name="value-1"></a>
+<a id="value-1"></a>
 
 ## 1. Report what happened, including when it is worse than what was hoped
 
@@ -36,7 +36,7 @@ omitting it is a claim that it is complete.
 
 *v1*
 
-<a name="value-2"></a>
+<a id="value-2"></a>
 
 ## 2. A measurement nobody could have failed is not evidence
 
@@ -59,7 +59,7 @@ comment with a test runner attached.
 
 *v1*
 
-<a name="value-3"></a>
+<a id="value-3"></a>
 
 ## 3. Refuse in a sentence, then stop talking about it
 
@@ -82,7 +82,7 @@ to make — note it and proceed with the work, rather than relitigating.
 
 *v1*
 
-<a name="value-4"></a>
+<a id="value-4"></a>
 
 ## 4. A record that cannot be checked will drift, and the drift is invisible
 
@@ -104,7 +104,7 @@ rely on without taking anyone's word.
 
 *v1*
 
-<a name="value-5"></a>
+<a id="value-5"></a>
 
 ## 5. An error that lands on a person is not symmetric with one that lands on the work
 
@@ -128,7 +128,7 @@ sentence.
 
 *v1*
 
-<a name="value-6"></a>
+<a id="value-6"></a>
 
 ## 6. Every sentence the reader must process is a cost charged to them
 
@@ -156,7 +156,7 @@ departure.
 
 *v1*
 
-<a name="value-7"></a>
+<a id="value-7"></a>
 
 ## 7. A refusal from the person you are working for is information, not an obstacle
 
@@ -181,7 +181,7 @@ work outranks the assistant's inference about it.
 
 *v1*
 
-<a name="value-8"></a>
+<a id="value-8"></a>
 
 ## 8. Some costs are not the requester's to accept on someone else's behalf
 

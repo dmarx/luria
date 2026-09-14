@@ -23,7 +23,7 @@ instance is a decision, a pattern is a principle.
 
 ---
 
-<a name="dp-1"></a>
+<a id="dp-1"></a>
 
 ## 1. No silent refusal
 
@@ -51,7 +51,7 @@ precondition.
 
 *v1 · origin: The strata-g design-language review, where tools silently no-opped on inputs that didn't meet their preconditions*
 
-<a name="dp-2"></a>
+<a id="dp-2"></a>
 
 ## 2. A file every contribution must touch is a lock — hand out fragments, generate the view
 
@@ -81,7 +81,7 @@ stated about one artifact is a value nobody applies to the next one.
 
 *v2 · shaped by [ADR-002](../record/decisions.d/ADR-002.md), [ADR-004](../record/decisions.d/ADR-004.md) · origin: Fragments assembled into a changelog; then, months later, the identical conflicts recurring on the narrative log; then the decision index*
 
-<a name="dp-3"></a>
+<a id="dp-3"></a>
 
 ## 3. A hand-maintained projection of a source of truth will drift — derive it
 
@@ -117,7 +117,7 @@ complete list, so nothing about the system reports the gap.
 
 *v2 · shaped by [ADR-004](../record/decisions.d/ADR-004.md), [ADR-005](../record/decisions.d/ADR-005.md) · origin: A hardcoded type union that had drifted to 13 of 21 keys; generalized by a later arc where every one of five converted projections was already wrong*
 
-<a name="dp-4"></a>
+<a id="dp-4"></a>
 
 ## 4. One authoritative implementation, read the same way everywhere
 
@@ -142,7 +142,7 @@ files.
 
 *v1 · shaped by [ADR-005](../record/decisions.d/ADR-005.md), [ADR-006](../record/decisions.d/ADR-006.md) · origin: A tool-icon migration whose bug was precisely a fallback that only one render site preferred, so every other site leaked the legacy value*
 
-<a name="dp-5"></a>
+<a id="dp-5"></a>
 
 ## 5. Culture must be compiled
 
@@ -166,7 +166,7 @@ convention from the corpus and stops trying.
 
 *v1 · shaped by [ADR-003](../record/decisions.d/ADR-003.md), [ADR-005](../record/decisions.d/ADR-005.md) · origin: The strata-g project-memory doctrine. The linked-versus-bare reference split was the demonstration: convention written down but unguarded, and the corpus drifted toward random rather than toward wrong*
 
-<a name="dp-6"></a>
+<a id="dp-6"></a>
 
 <!-- inactive-ok-file: ADR-007 — the evidence trail predates the supersession; ADR-035 carries the doctrine -->
 # DP-006: Fire before trusting
@@ -194,7 +194,7 @@ until something has proved the instrument can speak.
 
 *v1 · shaped by [ADR-007](../record/decisions.d/ADR-007.md) · origin: Two inert mechanisms in strata-g — an alert shape that could never fire, and a CI fast path whose fail-safe polarity made a month of inertness invisible. Both were discovered by accident rather than by the thing they guarded*
 
-<a name="dp-7"></a>
+<a id="dp-7"></a>
 
 ## 7. No private brains
 
@@ -211,7 +211,7 @@ shared docs, and the agent file links to it.
 
 *v1 · origin: The strata-g project-memory doctrine*
 
-<a name="dp-8"></a>
+<a id="dp-8"></a>
 
 ## 8. File it in the same contribution as the work
 
@@ -229,7 +229,7 @@ expensive thing for the next person to rediscover.
 
 *v1 · shaped by [ADR-002](../record/decisions.d/ADR-002.md) · origin: The reason the fragment convention exists at all — the changelog was being reconstructed retroactively from git log, badly*
 
-<a name="dp-9"></a>
+<a id="dp-9"></a>
 
 ## 9. Structure is read before text — spend affordances deliberately
 
@@ -284,7 +284,7 @@ don't merely avoid falsifying them.
 
 *v2 · shaped by [ADR-012](../record/decisions.d/ADR-012.md), [ADR-013](../record/decisions.d/ADR-013.md), [ADR-021](../record/decisions.d/ADR-021.md) · origin: An inventory of one repository's layout found the same rules expressed structurally in some places and not at all in others — two source containers marked `.d` and two unmarked, a generated document beside its own sources, an index buried under the things it indexes, and `README.md` meaning "edit me" in one directory and "never edit me" in the next. The layout had been shaping attention the whole time; nobody had been steering it*
 
-<a name="dp-10"></a>
+<a id="dp-10"></a>
 
 ## 10. Defaults follow the failure mode: guards opt out, disclosures opt in
 
@@ -329,7 +329,7 @@ the answer sets the default.
 
 *v1 · shaped by [ADR-035](../record/decisions.d/ADR-035.md)*
 
-<a name="dp-11"></a>
+<a id="dp-11"></a>
 
 ## 11. It's not mine, but I'll pick it up anyway
 
@@ -380,7 +380,7 @@ anything, and that restraint is what keeps the licence worth having.
 
 *v1 · origin: Carried in from strata-g, luria's first consumer, after a stretch in which almost every repair here was found by tripping over an unrelated one*
 
-<a name="dp-12"></a>
+<a id="dp-12"></a>
 
 ## 12. One document, one thing
 
@@ -495,7 +495,7 @@ five citations to state, and none of them means anything alone.
 
 *v2 · shaped by [ADR-035](../record/decisions.d/ADR-035.md), [ADR-056](../record/decisions.d/ADR-056.md), [ADR-060](../record/decisions.d/ADR-060.md), [ADR-071](../record/decisions.d/ADR-071.md) · origin: Three splits in one session, each made for the same reason and none of them by rule: a lint check separated from the vocabulary it reads, two scheme audits written as two decisions rather than one, and a status feature split from the report that would have caught the bug motivating it. Then, in a record of practices rather than decisions, an `overrides` edge whose prose had to name which clause of its target it argued with — the same defect, arriving as a relation instead of as a bundle*
 
-<a name="dp-13"></a>
+<a id="dp-13"></a>
 
 ## 13. Exempting a ledger from one matcher exempts it from none of the others
 
@@ -550,7 +550,7 @@ matcher for the same pattern already exists, it needs its own.
 
 *v1 · shaped by [ADR-040](../record/decisions.d/ADR-040.md), [ADR-049](../record/decisions.d/ADR-049.md) · origin: The first migration's first live day: three subsystems attacked the `formerly:` stamps the migration had just written, independently, and each was found separately because fixing one taught nothing about the others*
 
-<a name="dp-14"></a>
+<a id="dp-14"></a>
 
 ## 14. Meet the project where it is
 
@@ -609,7 +609,7 @@ are rarely the ones that look like yours.
 
 *v1 · shaped by [ADR-064](../record/decisions.d/ADR-064.md) · origin: A Windows user ran `luria init` and then `luria index`, and got a stack trace writing a check mark into a status report. Nothing about their project was unusual. The tool had required a UTF-8-capable platform without ever saying so*
 
-<a name="dp-15"></a>
+<a id="dp-15"></a>
 
 ## 15. An absence reads exactly like a success — give the silent case a signal
 
@@ -674,7 +674,7 @@ count of zero is itself a signal.
 
 *v1 · origin: Not one episode but an audit. Four principles in this record — [DP-001](../record/principles.d/DP-001.md), [DP-003](../record/principles.d/DP-003.md), [DP-006](../record/principles.d/DP-006.md), [DP-010](../record/principles.d/DP-010.md) — each lean on the word *silent* at the load-bearing moment, and none of them says why silence is the problem. The premise had been re-derived four times without once being written down*
 
-<a name="dp-16"></a>
+<a id="dp-16"></a>
 
 ## 16. An awkward structure is reporting a distinction the model has stopped expressing
 
@@ -745,7 +745,7 @@ year later.
 
 *v1 · shaped by [ADR-060](../record/decisions.d/ADR-060.md), [ADR-071](../record/decisions.d/ADR-071.md) · origin: Extracted from [DP-009](../record/principles.d/DP-009.md), where it had been the third of three jobs and had never once been cited — the symptom [DP-012](../record/principles.d/DP-012.md) names. Promoted on its second substrate: [DP-009](../record/principles.d/DP-009.md) found it in the file tree (a `.stub` beside the page it feeds, two `README.md` files with opposite rules), and a typed `overrides` edge found it again in the citation graph, where the edge's prose had to name which clause of its target it argued with*
 
-<a name="dp-17"></a>
+<a id="dp-17"></a>
 
 ## 17. A record states what is true now — git already keeps what was written then
 

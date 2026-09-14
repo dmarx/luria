@@ -11,7 +11,7 @@ arrives from a different direction: the fragments live one directory *below*
 the page they assemble into.
 """
 
-# inactive-ok-file: ADR-tmp1wx7r — Proposed. Every mention names it as the
+# inactive-ok-file: ADR-099 — Proposed. Every mention names it as the
 # decision this file implements or is written against; the citation is to
 # the reasoning, not a claim the decision is settled.
 
@@ -147,7 +147,7 @@ def test_document_emits_a_stable_anchor(project):
     and its heading moves (ADR-012)."""
     value(project, 3, "Fire before trusting")
     # `id`, not `name`: the anchor has to be reachable by
-    # `getElementById`, which is all a single-page router has (ADR-tmp1wx7r).
+    # `getElementById`, which is all a single-page router has (ADR-099).
     assert '<a id="vp-3"></a>' in render(project)
 
 

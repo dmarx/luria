@@ -32,7 +32,7 @@ Checks (each one fails the build):
    the fixer cannot clear, because the request was explicit.
 6. **Reachable anchors** — a fragment link whose target answers to it by
    `<a name=>` alone, which a real navigation reaches and a published site's
-   router does not (ADR-tmp1wx7r). `luria link --fix` rewrites the
+   router does not (ADR-099). `luria link --fix` rewrites the
    anchor.
 
 It also prints WARNINGS, which by default never affect the exit code
@@ -51,7 +51,7 @@ one so only the unconsidered ones stay listed — acknowledged rows never fail.
 Exit 0 when clean; exit 1 with one line per violation.
 """
 
-# inactive-ok-file: ADR-tmp1wx7r — Proposed. Every mention names it as the
+# inactive-ok-file: ADR-099 — Proposed. Every mention names it as the
 # decision this file implements or is written against; the citation is to
 # the reasoning, not a claim the decision is settled.
 
@@ -460,7 +460,7 @@ def check_anchors(errors: list[str]) -> None:
     real navigation; not addressable on the site the record publishes to,
     whose router scrolls with `getElementById` — so the link works in every
     place a contributor would check it and fails in the one place readers
-    use it (ADR-tmp1wx7r).
+    use it (ADR-099).
 
     A heading is never this, and `<a id=>` is never this. The finding is
     exactly the spelling that is reachable one way and not the other."""

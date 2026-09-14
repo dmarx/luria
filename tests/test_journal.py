@@ -7,7 +7,7 @@ each of those is checked against a tree built to say something specific rather
 than against whatever this repo happens to have filed.
 """
 
-# inactive-ok-file: ADR-tmp1wx7r — Proposed. Every mention names it as the
+# inactive-ok-file: ADR-099 — Proposed. Every mention names it as the
 # decision this file implements or is written against; the citation is to
 # the reasoning, not a claim the decision is settled.
 import datetime as dt
@@ -135,7 +135,7 @@ def test_book_lists_its_contents(tmp_path):
     # Every contents entry has somewhere to land.
     for anchor in ("20260803211926", "20260804032711"):
         # `id`, so the index's own links reach it on the published site
-        # and not only in the repository (ADR-tmp1wx7r).
+        # and not only in the repository (ADR-099).
         assert f'<a id="{anchor}"></a>' in book
 
 
