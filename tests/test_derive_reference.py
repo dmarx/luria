@@ -133,7 +133,7 @@ def test_the_index_picks_which_reference(tmp_path, monkeypatch):
 
 
 def test_a_scalar_reference_needs_no_index(tmp_path, monkeypatch):
-    root = project(tmp_path, monkeypatch, FOLLOW.replace('"source[0]"', '"paper"'))
+    root = project(tmp_path, monkeypatch, FOLLOW.replace("from: source[0]", "from: paper"))
     paper(root, 7, "2019-05-01")
     path = practice(root, 1, source=["LIT-007"], paper_code="LIT-007")
     assert meta_of(path)["published"] == "2019-05-01"
@@ -156,7 +156,7 @@ def test_no_reference_derives_nothing(tmp_path, monkeypatch):
 
 
 def test_an_index_past_the_end_derives_nothing(tmp_path, monkeypatch):
-    root = project(tmp_path, monkeypatch, FOLLOW.replace('"source[0]"', '"source[2]"'))
+    root = project(tmp_path, monkeypatch, FOLLOW.replace("from: source[0]", "from: source[2]"))
     paper(root, 1)
     path = practice(root, 1, source=["LIT-001"])
     assert "published" not in meta_of(path)
@@ -185,7 +185,7 @@ def test_it_reads_written_frontmatter_not_the_target_s_own_derivation(
     """One hop. The target's `published` here is itself derived, and this
     resolves to nothing rather than chaining — which is what makes a cycle
     impossible by construction rather than by detection."""
-    extra = FOLLOW + """
+    extra = merged(FOLLOW, """
                      schemes:
                        LIT:
                          fields:
@@ -196,7 +196,7 @@ def test_it_reads_written_frontmatter_not_the_target_s_own_derivation(
                              scheme: LIT
                              required: false
                              many: false
-                     """
+                     """)
     root = project(tmp_path, monkeypatch, extra)
     write(root, "record/literature.d/LIT-009.md",
           "---\nstatus: Active\ntitle: 'Paper 9'\ndate: '2026-01-01'\n"
@@ -231,19 +231,19 @@ def test_a_written_value_that_disagrees_is_the_motivating_defect(
 # --- refused at load ---------------------------------------------------------
 
 def test_from_must_name_a_reference_this_scheme_holds(tmp_path, monkeypatch):
-    root = project(tmp_path, monkeypatch, FOLLOW.replace('"source[0]"', '"nope"'))
+    root = project(tmp_path, monkeypatch, FOLLOW.replace("from: source[0]", "from: nope"))
     with pytest.raises(ValueError, match="`nope` is not a reference"):
         config.current()
 
 
 def test_a_plural_reference_needs_an_index(tmp_path, monkeypatch):
-    root = project(tmp_path, monkeypatch, FOLLOW.replace('"source[0]"', '"source"'))
+    root = project(tmp_path, monkeypatch, FOLLOW.replace("from: source[0]", "from: source"))
     with pytest.raises(ValueError, match="holds several"):
         config.current()
 
 
 def test_a_scalar_reference_refuses_an_index(tmp_path, monkeypatch):
-    root = project(tmp_path, monkeypatch, FOLLOW.replace('"source[0]"', '"paper[0]"'))
+    root = project(tmp_path, monkeypatch, FOLLOW.replace("from: source[0]", "from: paper[0]"))
     with pytest.raises(ValueError, match="holds one"):
         config.current()
 
@@ -251,7 +251,7 @@ def test_a_scalar_reference_refuses_an_index(tmp_path, monkeypatch):
 def test_the_template_is_checked_against_the_target_scheme(tmp_path, monkeypatch):
     """`{nonesuch}` is not a field LIT can hold, so this would resolve to
     nothing on every document — the quiet failure eager validation exists for."""
-    root = project(tmp_path, monkeypatch, FOLLOW.replace('"{published}"', '"{nonesuch}"'))
+    root = project(tmp_path, monkeypatch, FOLLOW.replace("'{published}'", "'{nonesuch}'"))
     with pytest.raises(ValueError, match="nonesuch"):
         config.current()
 
@@ -275,7 +275,8 @@ def test_many_on_a_followed_derivation_names_the_derive_line(tmp_path, monkeypat
     """The refusal quotes the literal `derive =` value. `spec` also names the
     followed reference, which was written on its own line — quoting it here
     would print backticks inside a quoted string."""
-    root = project(tmp_path, monkeypatch, FOLLOW + "many = true\n")
+    root = project(tmp_path, monkeypatch, merged(FOLLOW, {"schemes": {"SOTA": {"fields": {
+                       "published": {"many": True}}}}}))
     with pytest.raises(ValueError) as caught:
         config.current()
     assert 'derive = "{published}"' in str(caught.value)
@@ -295,6 +296,6 @@ def test_from_alone_renders_nothing(tmp_path, monkeypatch):
 
 
 def test_a_malformed_from_says_so(tmp_path, monkeypatch):
-    root = project(tmp_path, monkeypatch, FOLLOW.replace('"source[0]"', '"source[]"'))
+    root = project(tmp_path, monkeypatch, FOLLOW.replace("from: source[0]", "from: source[]"))
     with pytest.raises(ValueError, match="is not a reference"):
         config.current()

@@ -118,7 +118,7 @@ def test_order_is_the_whole_statement(tmp_path, monkeypatch):
 
 def test_an_explicit_index_reads_further_in(tmp_path, monkeypatch):
     root = project(tmp_path, monkeypatch,
-                   DERIVED.replace('"{tags[0]}"', '"{tags[1]}"'))
+                   DERIVED.replace("'{tags[0]}'", "'{tags[1]}'"))
     path = note(root, 1, ["stability", "optimizers"])
     assert adr_index.Adr(path, scheme()).meta["primary_topic"] == "optimizers"
 
@@ -179,7 +179,7 @@ def test_the_derived_value_is_checked_against_its_vocabulary(
     path = note(root, 1, ["homemade", "stability"])
     out = findings(root, path)
     assert len(out) == 1
-    assert "`primary_topic: homemade` is not in the `tags` vocabulary" in out[0]
+    assert "`primary_topic: homemade` is not in the `lit-tags` vocabulary" in out[0]
 
 
 def test_a_secondary_tag_outside_the_vocabulary_is_fine(tmp_path, monkeypatch):
@@ -192,27 +192,27 @@ def test_a_secondary_tag_outside_the_vocabulary_is_fine(tmp_path, monkeypatch):
 def test_a_chain_can_assert_the_derived_field(tmp_path, monkeypatch):
     """The point of the exercise: `invariant` reads a derived field like any
     other, so a relation can assert the primary rather than any tag."""
-    root = project(tmp_path, monkeypatch, DERIVED + """
+    root = project(tmp_path, monkeypatch, merged(DERIVED, """
                                                     chains:
                                                       lineage:
                                                         scheme: LIT
                                                         relation: extends
                                                         output: docs/lineage.md
                                                         invariant: primary_topic
-                                                    """)
+                                                    """))
     note(root, 1, ["stability", "optimizers"])
     note(root, 2, ["optimizers", "stability"], extends=["LIT-001"])
     chain = config.current().chains["lineage"]
     assert [h.codes for h in invariants.edges(chain)] == [("LIT-001", "LIT-002")]
 
-    root = project(tmp_path, monkeypatch, DERIVED + """
+    root = project(tmp_path, monkeypatch, merged(DERIVED, """
                                                     chains:
                                                       lineage:
                                                         scheme: LIT
                                                         relation: extends
                                                         output: docs/lineage.md
                                                         invariant: primary_topic
-                                                    """)
+                                                    """))
     note(root, 1, ["stability", "optimizers"])
     note(root, 2, ["stability"], extends=["LIT-001"])
     assert invariants.edges(config.current().chains["lineage"]) == []
@@ -222,22 +222,22 @@ def test_sharing_a_secondary_binds_tags_but_not_the_primary(
         tmp_path, monkeypatch):
     """The two readings the pair makes available, on one record: `tags` is
     satisfied by any shared value, `primary_topic` only by the first."""
-    both = DERIVED + """
+    both = merged(DERIVED, """
                      chains:
                        lineage:
                          scheme: LIT
                          relation: extends
                          output: docs/lineage.md
                          invariant: tags
-                     """
+                     """)
     root = project(tmp_path, monkeypatch, both)
     note(root, 1, ["optimizers", "stability"])
     note(root, 2, ["encoding", "stability"], extends=["LIT-001"])
     assert invariants.edges(config.current().chains["lineage"]) == []
 
     root = project(tmp_path, monkeypatch,
-                   both.replace('invariant = "tags"',
-                                'invariant = "primary_topic"'))
+                   merged(both, {"chains": {"lineage": {
+                       "invariant": "primary_topic"}}}))
     note(root, 1, ["optimizers", "stability"])
     note(root, 2, ["encoding", "stability"], extends=["LIT-001"])
     assert [h.codes for h in
@@ -255,27 +255,28 @@ def test_the_record_page_says_where_the_value_comes_from(tmp_path, monkeypatch):
 # --- refused at load ---------------------------------------------------------
 
 @pytest.mark.parametrize("spec,message", [
-    ('"tags"', "reads no field"),
-    ('"LIT-{tags[0]"', "not a template"),
-    ('"{primary_topic}"', "derives from itself"),
-    ('"{nonexistent}"', "is not a field LIT declares"),
-    ('"{status}"', "renames a field rather than deriving one"),
+    ("'tags'", "reads no field"),
+    ("'LIT-{tags[0]'", "not a template"),
+    ("'{primary_topic}'", "derives from itself"),
+    ("'{nonexistent}'", "is not a field LIT declares"),
+    ("'{status}'", "renames a field rather than deriving one"),
 ])
 def test_a_derivation_that_could_never_resolve_is_refused(
         tmp_path, monkeypatch, spec, message):
-    project(tmp_path, monkeypatch, DERIVED.replace('"{tags[0]}"', spec))
+    project(tmp_path, monkeypatch, DERIVED.replace("'{tags[0]}'", spec))
     with pytest.raises(ValueError, match=message):
         config.current()
 
 
 @pytest.mark.parametrize("extra,message", [
-    ("many = true", "drop `many`"),
-    ("required = true", "require `tags` instead"),
-    ('default = "stability"', "two answers to where the value comes from"),
+    ({"many": True}, "drop `many`"),
+    ({"required": True}, "require `tags` instead"),
+    ({"default": "stability"}, "two answers to where the value comes from"),
 ])
 def test_a_second_answer_about_the_value_is_refused(
         tmp_path, monkeypatch, extra, message):
-    project(tmp_path, monkeypatch, DERIVED + extra + "\n")
+    project(tmp_path, monkeypatch, merged(DERIVED, {
+        "schemes": {"LIT": {"fields": {"primary_topic": extra}}}}))
     with pytest.raises(ValueError, match=message):
         config.current()
 
@@ -375,6 +376,6 @@ def test_derive_and_alias_render_through_one_vocabulary(tmp_path, monkeypatch):
 def test_a_template_reading_nothing_is_refused(tmp_path, monkeypatch):
     """A constant is a default, not a derivation — and `default` is the
     spelling that already means that."""
-    project(tmp_path, monkeypatch, DERIVED.replace('"{tags[0]}"', '"constant"'))
+    project(tmp_path, monkeypatch, DERIVED.replace("'{tags[0]}'", "constant"))
     with pytest.raises(ValueError, match="reads no field"):
         config.current()
