@@ -17,6 +17,10 @@ from luria.config import current, load, rooted
 
 from _scheme import decision
 
+# inactive-ok-file: ADR-tmp39e44 — Proposed. Named as the decision these
+# assertions were rewritten against; the citation is to its reasoning, not a
+# claim it is settled.
+
 # unresolved-ok-file: ADR-919 — a fixture code, deliberately not real: the
 # point of the test it appears in is that it resolves to nothing.
 
@@ -177,15 +181,32 @@ def test_a_staging_directory_inside_the_project_is_not_republished(project):
     assert not (out / "content" / "build").exists()
 
 
+def _quartz_config(root) -> dict:
+    """The generated config, parsed. YAML since Quartz 5 (ADR-tmp39e44)."""
+    import yaml
+    return yaml.safe_load((root / "quartz.config.yaml").read_text())
+
+
+def _plugin(config: dict, name: str) -> dict:
+    return next(p for p in config["plugins"]
+                if p["source"].endswith(f"/{name}"))
+
+
 def test_config_is_written_with_the_project_title(tmp_path):
     site.stage(tmp_path)
-    config = (tmp_path / "quartz.config.ts").read_text()
-    assert 'pageTitle: "luria"' in config
-    assert 'baseUrl: "dmarx.github.io/luria"' in config
+    config = _quartz_config(tmp_path)
+    assert config["configuration"]["pageTitle"] == "luria"
+    assert config["configuration"]["baseUrl"] == "dmarx.github.io/luria"
     # The two settings the record depends on, guarded because a Quartz upgrade
-    # is exactly where a default would quietly come back (DP-3).
-    assert 'markdownLinkResolution: "relative"' in config
-    assert '"frontmatter", "filesystem"' in config
+    # is exactly where a default would quietly come back (DP-3). Both survived
+    # the move to 5, under the same names — which is the kind of thing that
+    # has to be asserted rather than assumed.
+    assert (_plugin(config, "crawl-links")["options"]["markdownLinkResolution"]
+            == "relative")
+    # No `git` provider: the vault is a staged copy outside any repository,
+    # so a git lookup finds nothing and warns once per file.
+    assert (_plugin(config, "created-modified-date")["options"]["priority"]
+            == ["frontmatter", "filesystem"])
 
 
 def test_links_out_of_the_site_go_to_the_repository(tmp_path):
@@ -273,12 +294,15 @@ def test_the_landing_page_is_named_and_still_answers_to_README(tmp_path):
 
 def test_the_graph_sits_above_the_article_not_in_the_sidebar(tmp_path):
     """Quartz's sidebars stack below the content under 1200px, so a graph in
-    the right rail is at the bottom of the page on most windows (#71)."""
+    the right rail is at the bottom of the page on most windows (#71).
+
+    One key since Quartz 5, where it was a generated `quartz.layout.ts` — the
+    whole reason luria wrote TSX at all (ADR-tmp39e44)."""
     site.stage(tmp_path)
-    layout = (tmp_path / "quartz.layout.ts").read_text()
-    before, _, right = layout.partition("right: [")
-    assert "Component.Graph(" in before.split("left: [")[0]
-    assert "Component.Graph(" not in right
+    graph = _plugin(_quartz_config(tmp_path), "graph")
+    assert graph["layout"]["position"] == "beforeBody"
+    # Under the title and its metadata, which are 10 and 20.
+    assert graph["layout"]["priority"] > 20
 
 
 def test_the_action_copies_everything_the_staging_writes(tmp_path):
@@ -307,7 +331,7 @@ def test_the_palette_merges_over_the_generators_defaults():
     assert 'light: "#f4f1e8"' in block          # this project's paper
     assert 'fontOrigin' not in block            # only the colour block
     for mode in ("lightMode", "darkMode"):
-        assert f"{mode}: {{" in block
+        assert f"{mode}:" in block               # YAML since Quartz 5
     for name in site.THEME_DEFAULTS["light"]:
         assert f"{name}: " in block, f"{name} dropped from the palette"
 
