@@ -195,3 +195,100 @@ def test_a_group_reads_its_own_field_not_a_key_called_tags(
     errors: list[str] = []
     lint.check_contracts(errors)
     assert not [e for e in errors if "`line`" in e], errors
+
+
+# --- one renderer for every grouped field ---------------------------------
+#
+# There were two: a categories block and a tag page for the axis, a chip row
+# and a value page for everything else. Same directory, same table, same
+# footer — and they had drifted in the label fallback, the blurb, and
+# whether an undeclared value appeared at all.
+
+BOTH = """    axis: tags
+    fields:
+      tags:
+        vocabulary: topics
+        many: true
+        closed: false
+      worlds:
+        vocabulary: worlds
+        many: true
+"""
+
+
+def test_the_axis_heads_the_index_whatever_order_the_fields_are_in(
+        tmp_path, monkeypatch):
+    """`fields:` is written in whatever order reads best, which is not an
+    answer about which taxonomy comes first."""
+    root = project(tmp_path, monkeypatch, BOTH,
+                   front="tags:\n- record\nworlds:\n- A\n")
+    index = builder.outputs()[root / "docs/scenes/README.md"]
+    assert index.index("(tags/record.md)") < index.index("**By worlds:**")
+
+
+def test_both_kinds_of_page_come_off_one_template(tmp_path, monkeypatch):
+    """The axis's page and another field's differ in the field they name and
+    nothing else — where they used to differ in the heading, the blurb, and
+    which module wrote them."""
+    root = project(tmp_path, monkeypatch, BOTH,
+                   front="tags:\n- record\nworlds:\n- A\n")
+    out = builder.outputs()
+    tag = out[root / "docs/scenes/tags/record.md"]
+    world = out[root / "docs/scenes/worlds/A.md"]
+    assert "# SCENEs with `tags` `record`" in tag
+    assert "# SCENEs with `worlds` `A`" in world
+    for page in (tag, world):
+        assert "1 of 1 SCENE documents." in page
+        assert "Back to the [full index](../README.md)." in page
+    assert "**Record** — how the anthology stores things." in tag
+    assert "**The unbroken line**." in world
+
+
+def test_an_open_fields_undeclared_value_gets_a_row_and_a_page(
+        tmp_path, monkeypatch):
+    """It always did on the axis and never did anywhere else, because the two
+    renderers answered this differently. One walk, one answer — and `closed`
+    is what decides it."""
+    root = project(tmp_path, monkeypatch, BOTH,
+                   front="tags:\n- homemade\nworlds:\n- A\n")
+    out = builder.outputs()
+    assert (root / "docs/scenes/tags/homemade.md") in out
+    assert "(tags/homemade.md)" in out[root / "docs/scenes/README.md"]
+
+
+def test_a_closed_fields_unknown_value_gets_neither(tmp_path, monkeypatch):
+    """Publishing a page for it would be publishing the mistake — the lint
+    is already reporting the value."""
+    root = project(tmp_path, monkeypatch, BOTH,
+                   front="tags:\n- record\nworlds:\n- Z\n")
+    out = builder.outputs()
+    assert (root / "docs/scenes/worlds/Z.md") not in out
+    errors: list[str] = []
+    lint.check_contracts(errors)
+    assert any("Z" in e for e in errors), errors
+
+
+def test_a_declared_value_nobody_uses_still_has_a_row_and_a_page(
+        tmp_path, monkeypatch):
+    """The vocabulary says the value exists, and `(0)` is the useful thing to
+    know about it. The row carries no colon, because there is no list of
+    documents to introduce."""
+    root = project(tmp_path, monkeypatch, BOTH,
+                   front="tags:\n- record\nworlds:\n- A\n")
+    out = builder.outputs()
+    assert (root / "docs/scenes/worlds/B.md") in out
+    index = out[root / "docs/scenes/README.md"]
+    assert "**By worlds:**" in index and "(worlds/B.md) (0)" in index
+
+
+def test_grouped_fields_is_the_one_answer(tmp_path, monkeypatch):
+    """Three places need it — which directories the generator owns, which
+    are exempt from the docs index, and which paths are generated — and a
+    fourth disagreeing with them is how a page becomes an orphan."""
+    project(tmp_path, monkeypatch, BOTH, front="tags:\n- record\n")
+    scheme = config.current().schemes["SCENE"]
+    assert scheme.grouped_fields[0] == "tags"
+    assert set(scheme.grouped_fields) == {"tags", "worlds"}
+    assert scheme.tag_dir == scheme.vocab_dir("tags")
+    assert set(builder.view_dirs()) >= {scheme.vocab_dir(f)
+                                        for f in scheme.grouped_fields}

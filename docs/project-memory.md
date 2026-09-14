@@ -72,9 +72,9 @@ question. What each one *does*:
 |---|---|---|
 | the reading | one entry at a time, arrived at by a link | the whole set, in order |
 | `output` means | a **directory** the view renders into | the assembled **file** itself |
-| what is generated | `README.md`, a table of every entry, plus `tags/<tag>.md` per tag | one page, every body concatenated |
+| what is generated | `README.md`, a table of every entry, plus `<field>/<value>.md` per value of each grouped field | one page, every body concatenated |
 | a citation lands on | the entry's own file — `ADR-012.md` | a section anchor — `design-principles.md#dp-3` |
-| `tags.yaml` | orders the index and titles the tag pages | unused; there are no tag pages |
+| the `axis:` vocabulary | orders the index and titles the value pages | unused; an assembled document groups by nothing |
 | `inert-status` | applies | exempt — every principle being in force is the expected state, not a dead field |
 | cited from a remote | `remotes.X.schemes.Y.dir = …` | `document = …`, with an optional `anchor` |
 
@@ -286,12 +286,15 @@ schemes:
         - B
 ```
 
-The values and what they mean live in `worlds.yaml` beside the records,
-shaped like `tags.yaml`, and the file is closed: a value it does not name is
-a finding. The default is an effective value — the lint, the index and the
-record page read an absent field as `B` — and is never written into the
-source. `luria index` renders a page per value beside the tag pages.
-`statuses.yaml` and `tags.yaml` are the first two instances of this shape.
+The values and what they mean live under `vocabularies:` in `luria.yaml`,
+named once and referenced by every field that uses them. Closed is the
+default: a value the vocabulary does not name is a finding. `closed: false`
+is the other posture — the declaration supplies order, label and blurb, and
+a document may still reach for a new value, which is what `tags` needs. The
+default is an effective value — the lint, the index and the record page read
+an absent field as `B` — and is never written into the source. `luria index`
+renders a page per value, for every grouped field alike: `status` and `tags`
+are two instances of this shape, not two special cases beside it.
 
 **Titles that generalise.** A principle stated about the one artifact it was
 noticed on is a principle nobody applies to the next one. That failure is

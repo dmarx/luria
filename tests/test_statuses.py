@@ -218,7 +218,7 @@ def test_the_meaning_reaches_the_generated_index(tmp_path, monkeypatch):
              "  blurb: the corpus contains it and it is wrong\n")
     _value(tmp_path, 1, "Active")
     scheme = _scheme()
-    page = adr_index.render_index(adr_index.load_scheme(scheme), [], scheme)
+    page = adr_index.render_index(adr_index.load_scheme(scheme), scheme)
     assert "Asserted" in page and "The record asserts this" in page
     assert "Defeated" in page, "a declared status renders even when unused"
     assert page.index("| Status |") < page.index("| # | Title |"), \

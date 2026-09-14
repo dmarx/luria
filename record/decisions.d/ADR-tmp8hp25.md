@@ -181,6 +181,41 @@ or a derivation, and that is exactly what being built in used to say about
 convention the code applied to every value, which disagreed with the
 vocabulary check beside it that has always compared the value as written.
 
+**One renderer for every field a view groups by.** With `tags` a declared
+field, the two renderers wrote into the same directory — so they could not
+both stay. `vocabularies.py` renders all of them; `tag_order`,
+`render_categories` and `render_tag_page` are gone.
+
+They had drifted, which is the argument for collapsing rather than
+choosing. Three ways:
+
+- **The label fallback.** Already one answer since `vocabularies.label_of`,
+  but the tag page reached it and the value page reached it differently.
+- **The blurb.** The tag page sentence-cased it with a hand-rolled
+  `raw[:1].upper()` — `str.capitalize()` having silently destroyed a blurb
+  running to more than one sentence — while the value page printed
+  `**Label** — blurb`. One template now: `**Label** — blurb.`
+- **A value the vocabulary does not declare.** The axis showed it, every
+  other field dropped it. Neither was reasoning about it; `closed` is,
+  and a field naming no vocabulary is open for the plainer reason that
+  there is no closed set to fall outside of.
+
+What is left of the difference is a shape the *scheme* chooses, not one the
+code knows: the axis lists the documents under each value because it is the
+browsing surface, and every other field is a row of chips because the
+value's own page already holds the table.
+
+`Scheme.grouped_fields` is the one answer to which fields those are —
+three places needed it (which directories the generator owns, which are
+exempt from the docs index, which paths count as generated) and a fourth
+disagreeing with them is how a page becomes an orphan.
+
+**This changes published pages, once.** No path moves. A value page's
+heading goes from `# ADRs tagged \`record\`` to `# ADRs with \`tags\`
+\`record\``, its blurb gains the label, and a declared value nobody uses
+now gets a row reading `(0)` and a page of its own, where the axis used to
+omit it and every other field already showed it.
+
 **A vocabulary-backed field's pages render under the FIELD's name**, not the
 vocabulary's. That was the last thing to go wrong here and the least obvious:
 pages rendered at `<view>/<vocabulary>/`, so sharing a vocabulary between two

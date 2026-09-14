@@ -10,6 +10,10 @@ The second half covers `render = "document"` (ADR-012), where the same trap
 arrives from a different direction: the fragments live one directory *below*
 the page they assemble into.
 """
+
+# inactive-ok-file: ADR-tmp8hp25 — Proposed. Every mention names it as the
+# decision this file is written against; the citation is to the reasoning,
+# not a claim the decision is settled.
 import re
 import sys
 from pathlib import Path
@@ -473,26 +477,34 @@ def _rfc_project(tmp_path, monkeypatch):
     return config.current().schemes["RFC"]
 
 
-def test_tag_page_names_its_own_scheme_not_decisions(tmp_path, monkeypatch):
-    """A project's RFC tag page should not be titled after this package's
-    decisions — the same rule DEFAULT_STUB already states for the index."""
-    scheme = _rfc_project(tmp_path, monkeypatch)
+def _axis_page(root, scheme, value: str = "network") -> str:
+    from luria import vocabularies
     docs = builder.load_scheme(scheme)
-    page = builder.render_tag_page(
-        "network", {"label": "Network"}, docs, scheme)
-    assert "# RFCs tagged `network`" in page
-    assert "ADRs tagged" not in page
+    return vocabularies.pages(scheme, docs)[scheme.tag_dir / f"{value}.md"]
+
+
+def test_an_axis_page_names_its_own_scheme_not_decisions(tmp_path, monkeypatch):
+    """A project's RFC tag page should not be titled after this package's
+    decisions — the same rule DEFAULT_STUB already states for the index.
+
+    Rendered by `vocabularies.pages` since ADR-tmp8hp25: the axis's pages go
+    through the same template as every other field's, into the same kind of
+    directory, and `render_tag_page` was the second copy of it."""
+    scheme = _rfc_project(tmp_path, monkeypatch)
+    page = _axis_page(tmp_path, scheme)
+    assert "# RFCs with `tags` `network`" in page
+    assert "ADRs" not in page
     assert "1 of 1 RFC documents." in page
     assert "decisions." not in page
 
 
-def test_tag_page_blurb_keeps_its_casing(tmp_path, monkeypatch):
-    """`str.capitalize()` lowercases everything after the first character, so
-    a blurb running to more than one sentence loses its capitals silently."""
+def test_an_axis_page_blurb_keeps_its_casing(tmp_path, monkeypatch):
+    """The old renderer sentence-cased the blurb with a hand-rolled
+    `raw[:1].upper()`, because `str.capitalize()` lowercases everything
+    after the first character and silently destroyed a blurb running to
+    more than one sentence. The one template prints it as written."""
     scheme = _rfc_project(tmp_path, monkeypatch)
-    docs = builder.load_scheme(scheme)
-    meta = {"label": "Network",
-            "blurb": "routing and transport. HTTP and gRPC both live here"}
-    page = builder.render_tag_page("network", meta, docs, scheme)
-    assert "Routing and transport. HTTP and gRPC both live here." in page
+    page = _axis_page(tmp_path, scheme)
+    assert ("**Network** — routing and transport. HTTP and gRPC both live "
+            "here." in page)
     assert "http and grpc" not in page

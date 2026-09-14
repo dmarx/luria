@@ -83,9 +83,8 @@ def check_docs_index(errors: list[str]) -> None:
     # links the entrypoint and the rest indexes itself (ADR-021).
     exempt = ({s.dir for s in cfg.schemes.values()}
               | {s.view for s in cfg.schemes.values() if s.render == "index"}
-              | {s.tag_dir for s in cfg.schemes.values() if s.render == "index"}
-              | {s.vocab_dir(v.field) for s in cfg.schemes.values()
-                 if s.render == "index" for v in s.vocabularies}
+              | {s.vocab_dir(f) for s in cfg.schemes.values()
+                 if s.render == "index" for f in s.grouped_fields}
               | {j.dir for j in cfg.journals.values()}
               | {j.output for j in cfg.journals.values()}
               | {cfg.reports})

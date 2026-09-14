@@ -644,14 +644,30 @@ class Scheme:
         return self.view / "README.md"
 
     @property
+    def grouped_fields(self) -> tuple[str, ...]:
+        """Every field whose values a view groups by, axis first.
+
+        The declared vocabularies, plus the axis when it declares none — a
+        scheme may head its index with a field it has not enumerated, which
+        is the ordinary starting point and what `luria init` scaffolds. One
+        definition, because three places need the same answer: which
+        directories the generator owns, which are exempt from the docs
+        index, and which paths are generated (ADR-tmp8hp25)."""
+        # Axis first wherever it is declared, because it heads the index:
+        # the `fields:` table is written in whatever order reads best, and
+        # that is not an answer about which taxonomy comes first.
+        named = [v.field for v in self.vocabularies if v.field != self.axis]
+        return tuple(([self.axis] if self.axis else []) + named)
+
+    @property
     def tag_dir(self) -> Path:
         """Where the axis's per-value pages render. `<view>/<axis>/`, so a
         scheme whose axis is `tags` keeps the path it has always had."""
         return self.view / (self.axis or "tags")
 
     def vocab_dir(self, field: str) -> Path:
-        """Where a vocabulary-backed field's per-value pages render, beside
-        the tag pages.
+        """Where a grouped field's per-value pages render — the axis's among
+        them, since it is a declared field like any other (ADR-tmp8hp25).
 
         Keyed on the FIELD, not on the vocabulary's name: a name is a config
         detail and a published path is not, so sharing a vocabulary between
@@ -1797,21 +1813,23 @@ class Config:
         if any(path == c.output for c in self.chains.values()):
             return True
         for s in self.schemes.values():
-            if s.render == "index" and (path == s.index_path
-                                        or path.parent == s.tag_dir):
-                return True
-            # A vocabulary's per-value pages, which render beside the tag
-            # pages and are as generated as they are. Missing here for as long
-            # as vocabularies have existed, and invisible until a *retired*
-            # document became a vocabulary member: the reference report scans
-            # what this method does not exclude, so it found a citation of a
+            # The index, and a page per value of every field it groups by —
+            # the axis's among them, on the same template and in the same
+            # kind of directory (ADR-tmp8hp25).
+            #
+            # The non-axis half of this was missing for as long as
+            # vocabularies existed, and invisible until a *retired* document
+            # became a vocabulary member: the reference report scans what
+            # this method does not exclude, so it found a citation of a
             # superseded document inside a page nobody can annotate — an
-            # `inactive-ok:` written there is erased by the next build. Worse,
-            # the page is written in the same pass that renders the report, so
-            # the report saw the *previous* run's copy and `luria index` stopped
-            # converging.
-            if s.render == "index" and any(path.parent == s.vocab_dir(v.field)
-                                           for v in s.vocabularies):
+            # `inactive-ok:` written there is erased by the next build.
+            # Worse, the page is written in the same pass that renders the
+            # report, so the report saw the *previous* run's copy and
+            # `luria index` stopped converging.
+            if s.render == "index" and (
+                    path == s.index_path
+                    or any(path.parent == s.vocab_dir(f)
+                           for f in s.grouped_fields)):
                 return True
             if s.output == path:
                 return True
