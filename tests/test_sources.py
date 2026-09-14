@@ -9,11 +9,12 @@ and none asked whether it pointed where it said.
 Nothing here opens a socket: the resolved titles come from the committed
 lockfile, exactly as the lint reads them.
 """
+from _config import merged
 import json
 
 from luria import config, lint, sources
 
-SOURCE_TOML = (
+SOURCE_BASE = (
     """
 issue_url: https://example.test/issues/{n}
 lint:
@@ -38,7 +39,7 @@ def _project(project, extra: str = "", network: str = "never") -> None:
     (project / "record" / "literature.d").mkdir(parents=True, exist_ok=True)
     (project / "docs" / "literature").mkdir(parents=True, exist_ok=True)
     (project / "luria.yaml").write_text(
-        SOURCE_TOML.replace('network = "never"', f'network = "{network}"') + extra)
+        merged(SOURCE_BASE, {"lint": {"network": network}}, extra))
     config.reset()
 
 
