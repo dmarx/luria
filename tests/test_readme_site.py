@@ -6,6 +6,7 @@ reader of the repository front page could see it. Luria's own README carried a
 hand-typed link on the line *after* the region `luria index` rewrites, which
 is the projection DP-3 is about.
 """
+from _config import merged
 from pathlib import Path
 
 from luria import config, lint, readme, site
@@ -17,14 +18,8 @@ schemes:
   ADR:
     dir: docs/decisions
 """)
-PUBLISHES = BASE + """
-                   site:
-                     exclude: []
-                   """
-UNPUBLISHED = BASE + """
-                     site:
-                       publish: false
-                     """
+PUBLISHES = merged(BASE, {"site": {"exclude": []}})
+UNPUBLISHED = merged(BASE, {"site": {"publish": False}})
 
 
 def at(project, toml: str) -> Path:

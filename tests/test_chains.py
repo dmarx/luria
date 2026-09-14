@@ -58,7 +58,7 @@ schemes:
 """
 
 
-def project(tmp_path, monkeypatch, extra: str = RELATIONS + CHAIN) -> Path:
+def project(tmp_path, monkeypatch, extra: str = merged(RELATIONS, CHAIN)) -> Path:
     write(tmp_path, "luria.yaml", merged("""
                                   issue_url: https://example.test/issues/{n}
                                   schemes:
@@ -196,13 +196,13 @@ def test_succession_is_not_expected_to_be_symmetric(tmp_path, monkeypatch):
 
 def test_no_sibling_relation_declared_means_no_symmetry_finding(
         tmp_path, monkeypatch):
-    root = project(tmp_path, monkeypatch, RELATIONS + """
+    root = project(tmp_path, monkeypatch, merged(RELATIONS, """
                                                       chains:
                                                         lineage:
                                                           scheme: LIT
                                                           relation: extends
                                                           output: docs/lineage.md
-                                                      """)
+                                                      """))
     note(root, 1, "One design")
     note(root, 2, "The other", compared_against=["LIT-001"])
     assert chains.rows() == []
@@ -270,13 +270,13 @@ def test_an_undeclared_relation_is_a_config_error(tmp_path, monkeypatch):
 def test_a_chain_over_an_undeclared_scheme_is_a_config_error(
         tmp_path, monkeypatch):
     with pytest.raises(ValueError, match="NOPE"):
-        project(tmp_path, monkeypatch, RELATIONS + """
+        project(tmp_path, monkeypatch, merged(RELATIONS, """
                                                    chains:
                                                      lineage:
                                                        scheme: NOPE
                                                        relation: extends
                                                        output: docs/lineage.md
-                                                   """)
+                                                   """))
         config.current()
 
 
@@ -379,6 +379,14 @@ chains:
 """
 
 VOCAB = """
+vocabularies:
+  consensus:
+    unassessed:
+      label: Not judged
+    contested:
+      label: In dispute
+    converged:
+      label: Agreed
 schemes:
   LIT:
     fields:
@@ -389,10 +397,7 @@ schemes:
 
 
 def _showing(tmp_path, monkeypatch):
-    root = project(tmp_path, monkeypatch, RELATIONS + VOCAB + SHOWN)
-    write(root, "record/literature.d/consensus.yaml",
-          "unassessed:\n  label: Not judged\ncontested:\n  label: In dispute\n"
-          "converged:\n  label: Agreed\n")
+    root = project(tmp_path, monkeypatch, merged(RELATIONS, VOCAB, SHOWN))
     config.reset()
     return root
 
@@ -437,7 +442,7 @@ def test_showing_a_field_the_scheme_does_not_declare_is_a_config_error(
     """Same reason a chain over an undeclared relation is: it would render
     nothing, and nothing looks exactly like correct (DP-15)."""
     with pytest.raises(ValueError, match="consensus"):
-        project(tmp_path, monkeypatch, RELATIONS + SHOWN)
+        project(tmp_path, monkeypatch, merged(RELATIONS, SHOWN))
         config.current()
 
 
@@ -449,7 +454,7 @@ def test_facet_by_names_every_axis_including_status(
     which made the chain the last thing still treating `status` as a
     built-in axis after #181 made it a declared vocabulary like any other.
     The chain names what it shows; `status` is in that list or it is not."""
-    root = project(tmp_path, monkeypatch, RELATIONS + VOCAB + """
+    root = project(tmp_path, monkeypatch, merged(RELATIONS, VOCAB, """
                                                               chains:
                                                                 lineage:
                                                                   scheme: LIT
@@ -457,7 +462,7 @@ def test_facet_by_names_every_axis_including_status(
                                                                   output: docs/lineage.md
                                                                   facet_by:
                                                                   - consensus
-                                                              """)
+                                                              """))
     write(root, "record/literature.d/consensus.yaml",
           "unassessed:\n  label: Not judged\ncontested:\n  label: In dispute\n")
     config.reset()
@@ -480,21 +485,21 @@ def test_facet_by_defaults_to_status_alone(tmp_path, monkeypatch):
 
 def test_a_scalar_facet_by_still_reads(tmp_path, monkeypatch):
     """One field is a list of one, written the shorter way."""
-    root = project(tmp_path, monkeypatch, RELATIONS + """
+    root = project(tmp_path, monkeypatch, merged(RELATIONS, """
                                                       chains:
                                                         lineage:
                                                           scheme: LIT
                                                           relation: extends
                                                           output: docs/lineage.md
                                                           facet_by: status
-                                                      """)
+                                                      """))
     config.reset()
     assert config.current().chains["lineage"].facet_by == ("status",)
 
 
 def test_a_facet_naming_nothing_is_refused(tmp_path, monkeypatch):
     with pytest.raises(ValueError, match="nowhere"):
-        project(tmp_path, monkeypatch, RELATIONS + """
+        project(tmp_path, monkeypatch, merged(RELATIONS, """
                                                    chains:
                                                      lineage:
                                                        scheme: LIT
@@ -503,7 +508,7 @@ def test_a_facet_naming_nothing_is_refused(tmp_path, monkeypatch):
                                                        facet_by:
                                                        - status
                                                        - nowhere
-                                                   """)
+                                                   """))
         config.current()
 
 
@@ -604,7 +609,7 @@ chains:
 
 
 def test_a_spine_of_two_relations_is_one_line(tmp_path, monkeypatch):
-    root = project(tmp_path, monkeypatch, SIGNED + SIGNED_CHAIN)
+    root = project(tmp_path, monkeypatch, merged(SIGNED, SIGNED_CHAIN))
     note(root, 1, "Origin")
     note(root, 2, "Builds on it", extends=["LIT-001"])
     note(root, 3, "Fixes that", corrects=["LIT-002"])
@@ -615,7 +620,7 @@ def test_a_spine_of_two_relations_is_one_line(tmp_path, monkeypatch):
 
 
 def test_a_second_spine_relation_nests_like_the_first(tmp_path, monkeypatch):
-    root = project(tmp_path, monkeypatch, SIGNED + SIGNED_CHAIN)
+    root = project(tmp_path, monkeypatch, merged(SIGNED, SIGNED_CHAIN))
     note(root, 1, "Origin")
     note(root, 2, "Fixes it", corrects=["LIT-001"])
     page = chains.outputs()[root / "docs/lineage.md"]
@@ -632,7 +637,7 @@ def test_a_scalar_relation_still_reads(tmp_path, monkeypatch):
 
 
 def test_the_header_names_every_spine_relation(tmp_path, monkeypatch):
-    root = project(tmp_path, monkeypatch, SIGNED + SIGNED_CHAIN)
+    root = project(tmp_path, monkeypatch, merged(SIGNED, SIGNED_CHAIN))
     note(root, 1, "Origin")
     note(root, 2, "Fixes it", corrects=["LIT-001"])
     page = chains.outputs()[root / "docs/lineage.md"]
@@ -641,7 +646,7 @@ def test_the_header_names_every_spine_relation(tmp_path, monkeypatch):
 
 def test_a_spine_relation_the_scheme_does_not_declare_is_refused(
         tmp_path, monkeypatch):
-    project(tmp_path, monkeypatch, SIGNED + """
+    project(tmp_path, monkeypatch, merged(SIGNED, """
                                             chains:
                                               lineage:
                                                 scheme: LIT
@@ -649,14 +654,14 @@ def test_a_spine_relation_the_scheme_does_not_declare_is_refused(
                                                 - extends
                                                 - supersedes
                                                 output: docs/lineage.md
-                                            """)
+                                            """))
     with pytest.raises(ValueError, match="supersedes"):
         config.current()
 
 
 def test_a_cycle_across_two_spine_relations_is_a_finding(
         tmp_path, monkeypatch):
-    root = project(tmp_path, monkeypatch, SIGNED + SIGNED_CHAIN)
+    root = project(tmp_path, monkeypatch, merged(SIGNED, SIGNED_CHAIN))
     note(root, 1, "One", extends=["LIT-002"])
     note(root, 2, "Two", corrects=["LIT-001"])
     found = chains.rows()

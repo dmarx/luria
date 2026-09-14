@@ -13,6 +13,8 @@ the counts they publish do not move.
 
 from __future__ import annotations
 
+import yaml
+
 from _config import merged
 
 from pathlib import Path

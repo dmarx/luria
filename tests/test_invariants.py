@@ -54,10 +54,10 @@ chains:
 """
 
 # The same chain, declaring nothing about any field.
-SILENT = CHAIN.replace('invariant = "tags"\n', "")
+SILENT = CHAIN.replace("    invariant: tags\n", "")
 
 
-def project(tmp_path, monkeypatch, extra: str = RELATIONS + CHAIN) -> Path:
+def project(tmp_path, monkeypatch, extra: str = merged(RELATIONS, CHAIN)) -> Path:
     write(tmp_path, "luria.yaml", merged("""
                                   issue_url: https://example.test/issues/{n}
                                   schemes:
@@ -187,13 +187,15 @@ def test_a_single_valued_field_is_compared_by_equality(tmp_path, monkeypatch):
     """Equality and intersection are the same test once a scalar reads as a
     set of one, which is why the config needs no operator."""
     root = project(tmp_path, monkeypatch,
-                   RELATIONS + CHAIN.replace('"tags"', '"status"'))
+                   merged(RELATIONS, CHAIN).replace("invariant: tags",
+                                                     "invariant: status"))
     note(root, 1, ["x"], status="Active")
     note(root, 2, ["x"], extends=["LIT-001"], status="Proposed")
     assert [h.codes for h in invariants.edges(chain())] == [("LIT-001", "LIT-002")]
 
     root = project(tmp_path, monkeypatch,
-                   RELATIONS + CHAIN.replace('"tags"', '"status"'))
+                   merged(RELATIONS, CHAIN).replace("invariant: tags",
+                                                     "invariant: status"))
     note(root, 1, ["x"], status="Active")
     note(root, 2, ["x"], extends=["LIT-001"], status="Active")
     assert invariants.edges(chain()) == []
@@ -213,7 +215,7 @@ def test_a_field_absent_on_one_end_shares_nothing(tmp_path, monkeypatch):
 def test_a_chain_declaring_no_invariant_reports_nothing(tmp_path, monkeypatch):
     """The default that keeps the check from firing on relations which never
     asserted a shared field — the reason it is opt-in at all."""
-    root = project(tmp_path, monkeypatch, RELATIONS + SILENT)
+    root = project(tmp_path, monkeypatch, merged(RELATIONS, SILENT))
     note(root, 1, ["optimizers"])
     note(root, 2, ["stability"], extends=["LIT-001"])
     assert invariants.findings() == ([], [])
@@ -225,7 +227,8 @@ def test_an_invariant_naming_an_undeclared_field_is_refused(
     report every line and mean nothing."""
     import pytest
     project(tmp_path, monkeypatch,
-            RELATIONS + CHAIN.replace('"tags"', '"nonexistent"'))
+            merged(RELATIONS, CHAIN).replace("invariant: tags",
+                                             "invariant: nonexistent"))
     # The config is parsed lazily, so the refusal lands on first read rather
     # than on write — which is still before any document is walked.
     with pytest.raises(ValueError, match="invariant"):
@@ -245,7 +248,7 @@ def test_the_report_names_both_findings(tmp_path, monkeypatch):
 
 
 def test_the_report_says_so_when_nothing_is_declared(tmp_path, monkeypatch):
-    root = project(tmp_path, monkeypatch, RELATIONS + SILENT)
+    root = project(tmp_path, monkeypatch, merged(RELATIONS, SILENT))
     note(root, 1, ["x"])
     note(root, 2, ["y"], extends=["LIT-001"])
     assert "No chain declares an `invariant`" in reports.unbound_lineage(root)
