@@ -29,7 +29,8 @@ particular project. It reads `luria.yaml` from the project root:
       ADR:
         dir: record/decisions.d     # ground truth, filed by hand
         output: docs/decisions      # the browsable view, generated
-        statuses: statuses
+        fields:
+          status: {vocabulary: statuses}
 
 The layout this describes is the read/write boundary (ADR-021): everything a
 contributor *files* lives under `record/`, every view a reader *browses* lives
@@ -575,10 +576,14 @@ class Scheme:
     # `tags.yaml` beside the sources, which is where it has always been. Set,
     # two schemes can name ONE file and share a vocabulary instead of keeping
     # a copy each (ADR-060).
-    # The NAME of the vocabulary backing this scheme's `tags:` and `status:`,
-    # looked up in `Config.vocabularies`. Two schemes naming one vocabulary is
-    # the point; it was previously unsayable.
+    # The NAME of the vocabulary backing this scheme's tags, looked up in
+    # `Config.vocabularies`. Two schemes naming one vocabulary is the point;
+    # it was previously unsayable. Read from `schemes.X.tags`, because `tags`
+    # is the one axis the code still assumes.
     tags_vocab: str = ""
+    # The same, for `status` — but DERIVED from `fields.status.vocabulary`
+    # rather than declared beside it, because `status` is a field like any
+    # other and a second key could disagree with the field (ADR-tmp8hp25).
     statuses_vocab: str = ""
     # The central table, threaded in so a scheme can answer for its own words
     # without every caller reaching back through `current()`.
@@ -2221,19 +2226,34 @@ def _schemes(raw: dict, root: Path, scaffolding: bool = False,
     schemes = {}
     vocabularies = vocabularies or {}
     for prefix, spec in raw.items():
-        # `tags:` and `statuses:` name a vocabulary. Defaulting to the
-        # scheme's own prefix-free names keeps a one-scheme project from
-        # having to say anything, while two schemes sharing a vocabulary is
-        # now one word on each (ADR-tmp8hp25).
+        # `tags:` names a vocabulary. Defaulting to the scheme's own
+        # prefix-free name keeps a one-scheme project from having to say
+        # anything, while two schemes sharing a vocabulary is now one word on
+        # each (ADR-tmp8hp25). `tags` is the one axis the code still assumes;
+        # everything else, `status` included, is a field in `fields:`.
         tags_vocab = str(spec.get("tags", "tags"))
-        statuses_vocab = str(spec.get("statuses", "statuses"))
-        for key, named in (("tags", tags_vocab), ("statuses", statuses_vocab)):
-            if named and named not in vocabularies and spec.get(key) \
-                    and not scaffolding:
-                raise ValueError(
-                    f"luria.yaml: schemes.{prefix}.{key} names vocabulary "
-                    f"{named!r}, which is not declared under `vocabularies:` "
-                    f"(declared: {', '.join(sorted(vocabularies)) or 'none'})")
+        if tags_vocab and tags_vocab not in vocabularies and spec.get("tags") \
+                and not scaffolding:
+            raise ValueError(
+                f"luria.yaml: schemes.{prefix}.tags names vocabulary "
+                f"{tags_vocab!r}, which is not declared under `vocabularies:` "
+                f"(declared: {', '.join(sorted(vocabularies)) or 'none'})")
+        # `status` is a field like any other — `fields.status.vocabulary` is
+        # where its vocabulary is named, and the only place. A second
+        # `statuses:` key beside it could disagree with the field, and did:
+        # `statuses.declared` read one while `statuses.undeclared` read the
+        # other, so a scheme could render a status legend and be reported as
+        # having no status check at the same time. What stays privileged is
+        # `active:` — WHICH word means in force — and that names a word, not
+        # a vocabulary.
+        if "statuses" in spec:
+            raise ValueError(
+                f"luria.yaml: schemes.{prefix}.statuses is not a key — "
+                f"`status` is a field, so name its vocabulary once, at "
+                f"`schemes.{prefix}.fields.status.vocabulary: "
+                f"{spec['statuses']}`")
+        statuses_vocab = str(((spec.get("fields") or {}).get("status") or {})
+                             .get("vocabulary", "") or "")
         schemes[prefix] = Scheme(
             prefix=prefix,
             dir=root / spec["dir"],

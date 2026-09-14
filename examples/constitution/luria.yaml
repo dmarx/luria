@@ -61,7 +61,6 @@ schemes:
     fields:
       status:
         vocabulary: value-statuses
-    statuses: value-statuses
   PRACTICE:
     dir: record/practices.d
     output: docs/practices
@@ -80,7 +79,6 @@ schemes:
       status:
         vocabulary: value-statuses
     tags: practice-tags
-    statuses: value-statuses
   BOUNDARY:
     dir: record/boundaries.d
     output: docs/boundaries
@@ -98,7 +96,6 @@ schemes:
       status:
         vocabulary: value-statuses
     tags: boundary-tags
-    statuses: value-statuses
 journals:
   sessions:
     dir: record/sessions.d

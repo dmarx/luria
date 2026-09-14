@@ -39,4 +39,3 @@ schemes:
     fields:
       status:
         vocabulary: adr-statuses
-    statuses: adr-statuses

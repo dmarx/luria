@@ -395,7 +395,6 @@ luria:
       dir: record/decisions.d
       output: docs/decisions
       render: index
-      statuses: adr-statuses
       fields:
         status:
           vocabulary: adr-statuses
@@ -425,7 +424,6 @@ luria:
       dir: record/decisions.d
       output: docs/decisions
       render: index
-      statuses: adr-statuses
       fields:
         status:
           vocabulary: adr-statuses

@@ -35,7 +35,6 @@ schemes:
   RFC:
     dir: record/rfcs.d
     output: docs/rfcs
-    statuses: statuses
     fields:
       status:
         vocabulary: statuses

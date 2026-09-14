@@ -73,8 +73,7 @@ def _wire(root: Path, values: dict | None = None) -> None:
     declaring the words are one edit rather than two files."""
     path = root / "luria.yaml"
     wiring: dict = {"schemes": {"VP": {
-        "fields": {"status": {"vocabulary": "vp-statuses"}},
-        "statuses": "vp-statuses"}}}
+        "fields": {"status": {"vocabulary": "vp-statuses"}}}}}
     if values is not None:
         wiring["vocabularies"] = {"vp-statuses": values}
     path.write_text(merged(path.read_text(), wiring))
@@ -810,3 +809,41 @@ def test_a_spent_upgrade_says_it_can_be_deleted(tmp_path, monkeypatch):
     config.reset()
     rows = lint.spent_upgrades()
     assert any("statuses" in r and "remove it at" in r for r in rows), rows
+
+
+def test_a_scheme_level_statuses_key_says_where_the_vocabulary_goes(
+        tmp_path, monkeypatch):
+    """`status` is a field, so `fields.status.vocabulary` names its
+    vocabulary and nothing else does.
+
+    A second `schemes.X.statuses:` beside it was not merely redundant: it
+    could disagree with the field, and the two readers disagreed with it.
+    `statuses.declared` read the scheme key while `statuses.undeclared` read
+    the field, so a scheme could render a status legend and be reported as
+    having no status check at all. The key is refused rather than ignored —
+    silently dropping the vocabulary somebody named is the same failure one
+    step later."""
+    _project(tmp_path, monkeypatch)
+    path = tmp_path / "luria.yaml"
+    path.write_text(merged(path.read_text(),
+                           {"schemes": {"VP": {"statuses": "vp-statuses"}}}))
+    config.reset()
+    with pytest.raises(ValueError) as caught:
+        config.current()
+    assert "fields.status.vocabulary: vp-statuses" in str(caught.value)
+
+
+def test_active_stays_a_scheme_level_word(tmp_path, monkeypatch):
+    """What is privileged about `status` is not its vocabulary but `active:`
+    — WHICH word means in force, the role the whole citation apparatus rests
+    on. That names a word, not a vocabulary, so it stays where it is."""
+    _project(tmp_path, monkeypatch)
+    _declare(tmp_path, "Current:\n  blurb: in force\nOld:\n  blurb: not\n")
+    path = tmp_path / "luria.yaml"
+    path.write_text(merged(path.read_text(),
+                           {"schemes": {"VP": {"active": "Current"}}}))
+    config.reset()
+    scheme = config.current().schemes["VP"]
+    assert scheme.active == "Current"
+    assert set(scheme.statuses) == {"Current", "Old"}
+    assert statuses.problems(scheme) == []

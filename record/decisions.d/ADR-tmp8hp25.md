@@ -67,9 +67,21 @@ alternatives.
 
     schemes:
       ADR:
-        statuses: statuses
+        fields: {status: {vocabulary: statuses}}
       DP:
-        statuses: statuses          # the same words, said once
+        fields: {status: {vocabulary: statuses}}   # said once
+
+**One place names it.** `status` is a field, so `fields.status.vocabulary`
+is where its vocabulary is named and there is no second
+`schemes.X.statuses:` beside it. This change shipped with both, and they
+were not merely redundant: `statuses.declared` read the scheme key while
+`statuses.undeclared` read the field, so a scheme could render a status
+legend and be reported as having no status check at the same time. What
+stays privileged is `active:` — WHICH word means in force, the role the
+whole citation apparatus rests on — and that names a word, not a
+vocabulary. `tags:` stays a scheme-level key for the opposite reason: it
+is the one axis the code still assumes, with no `fields.` spelling to
+collide with.
 
 A vocabulary's per-value pages render at `<view>/<name>/`, so its **name is
 part of a published path**. Luria's own shared vocabulary is called

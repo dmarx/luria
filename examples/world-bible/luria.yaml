@@ -47,6 +47,5 @@ schemes:
       status:
         vocabulary: scene-statuses
     tags: scene-tags
-    statuses: scene-statuses
 site:
   title: World bible

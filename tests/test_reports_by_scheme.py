@@ -61,7 +61,7 @@ def project(tmp_path, monkeypatch, schemes=("RFC", "SPEC")) -> Path:
     # replaced a statuses.yaml beside each scheme's records (ADR-tmp8hp25).
     tables["vocabularies"] = {"statuses": yaml.safe_load(STATUSES)}
     for p in schemes:
-        tables["schemes"][p]["statuses"] = "statuses"
+        tables["schemes"][p]["fields"] = {"status": {"vocabulary": "statuses"}}
     write(tmp_path, "luria.yaml", merged("""
 issue_url: https://example.test/issues/{n}
 """, tables))

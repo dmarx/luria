@@ -60,7 +60,6 @@ schemes:
       status:
         vocabulary: statuses
     tags: adr-tags
-    statuses: statuses
   DP:
     dir: record/principles.d
     active: Active
@@ -68,7 +67,6 @@ schemes:
     output: docs/design-principles.md
     successor: superseded_by
     retires_on: Superseded
-    statuses: statuses
     fields:
       status:
         vocabulary: statuses

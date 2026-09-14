@@ -56,7 +56,6 @@ def project(tmp_path, monkeypatch):
             output: docs/decisions
             active: Active
             render: index
-            statuses: statuses
             fields:
               status:
                 vocabulary: statuses

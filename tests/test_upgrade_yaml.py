@@ -99,8 +99,8 @@ def test_two_schemes_holding_the_same_words_end_up_naming_one_vocabulary(
     upgrade.run("yaml", root=str(tmp_path))
     loaded = yaml.safe_load((tmp_path / "luria.yaml").read_text())
     assert len(loaded["vocabularies"]) == 1
-    assert (loaded["schemes"]["ADR"]["statuses"]
-            == loaded["schemes"]["DP"]["statuses"])
+    assert (loaded["schemes"]["ADR"]["fields"]["status"]["vocabulary"]
+            == loaded["schemes"]["DP"]["fields"]["status"]["vocabulary"])
 
 
 def test_words_that_differ_stay_two_vocabularies(tmp_path, monkeypatch):
@@ -111,8 +111,27 @@ def test_words_that_differ_stay_two_vocabularies(tmp_path, monkeypatch):
     upgrade.run("yaml", root=str(tmp_path))
     loaded = yaml.safe_load((tmp_path / "luria.yaml").read_text())
     assert len(loaded["vocabularies"]) == 2
-    assert (loaded["schemes"]["ADR"]["statuses"]
-            != loaded["schemes"]["DP"]["statuses"])
+    assert (loaded["schemes"]["ADR"]["fields"]["status"]["vocabulary"]
+            != loaded["schemes"]["DP"]["fields"]["status"]["vocabulary"])
+
+
+def test_a_folded_vocabulary_is_wired_to_the_status_field(tmp_path,
+                                                          monkeypatch):
+    """The TOML fixture declares no `fields.status` — and neither did the
+    records this converter exists for, because the declaration is #181's
+    second half and they predate it.
+
+    `schemes.X.statuses` does not exist on the far side of the boundary, so
+    a `statuses.yaml` folded into the central table has to reach the field
+    that reads it. Carrying the words across and leaving nothing pointing at
+    them would be a conversion that loses the vocabulary while reporting
+    success."""
+    _record(tmp_path)
+    upgrade.run("yaml", root=str(tmp_path))
+    loaded = yaml.safe_load((tmp_path / "luria.yaml").read_text())
+    named = loaded["schemes"]["ADR"]["fields"]["status"]["vocabulary"]
+    assert loaded["vocabularies"][named]["Active"]["blurb"] == "in force"
+    assert "statuses" not in loaded["schemes"]["ADR"]
 
 
 # ── what it will not do ──────────────────────────────────────────────────

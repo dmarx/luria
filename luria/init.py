@@ -261,8 +261,9 @@ def _scheme_entry(prefix: str, render: str) -> tuple[dict, str]:
         "render": render,
         # Every scheme names the same vocabulary rather than getting a copy
         # of it, which is the whole point of the table being central
-        # (ADR-tmp8hp25).
-        "statuses": "statuses",
+        # (ADR-tmp8hp25) — and it names it where every other controlled
+        # field does, because `status` is not a special one.
+        "fields": {"status": {"vocabulary": "statuses"}},
     }, ("\n%s — %s.\n"
         "The paths follow the prefix; rename them if this family is better\n"
         "called something other than what its codes spell." % (prefix, reading))

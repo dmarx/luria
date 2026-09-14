@@ -18,7 +18,6 @@ schemes:
     fields:
       status:
         vocabulary: note-statuses
-    statuses: note-statuses
 remotes:
   ARXIV:
     name: arXiv

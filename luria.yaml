@@ -87,7 +87,6 @@ schemes:
       status:
         vocabulary: statuses
     tags: decision-tags
-    statuses: statuses
   DP:
     cite: page
     dir: record/principles.d
@@ -98,7 +97,6 @@ schemes:
     fields:
       status:
         vocabulary: statuses
-    statuses: statuses
 remotes:
   SG:
     name: strata-g

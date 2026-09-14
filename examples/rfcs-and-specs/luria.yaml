@@ -19,7 +19,6 @@ schemes:
     fields:
       status:
         vocabulary: rfc-statuses
-    statuses: rfc-statuses
   SPEC:
     dir: record/specs.d
     output: docs/interfaces.md
@@ -27,6 +26,5 @@ schemes:
     fields:
       status:
         vocabulary: rfc-statuses
-    statuses: rfc-statuses
 site:
   title: RFCs and specs

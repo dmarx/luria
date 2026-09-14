@@ -284,8 +284,8 @@ def test_a_miscased_status_value_is_refused(tmp_path, monkeypatch):
 
 def test_a_status_outside_what_the_scheme_declares_is_refused(
         tmp_path, monkeypatch):
-    """A scheme narrowing the vocabulary in `statuses.yaml` narrows what a
-    condition on `status` can name too."""
+    """A scheme narrowing its status vocabulary narrows what a condition on
+    `status` can name too."""
     root = project(tmp_path, monkeypatch,
                    """
                    vocabularies:
@@ -294,8 +294,8 @@ def test_a_status_outside_what_the_scheme_declares_is_refused(
                        Proposed: {label: Not yet}
                    schemes:
                      SOTA:
-                       statuses: sota-statuses
                        fields:
+                         status: {vocabulary: sota-statuses}
                          promote_when:
                            required_when:
                              status:

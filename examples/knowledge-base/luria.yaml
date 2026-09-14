@@ -46,7 +46,6 @@ schemes:
       status:
         vocabulary: lit-statuses
     tags: lit-tags
-    statuses: lit-statuses
   SOTA:
     dir: record/practices.d
     output: docs/practices
@@ -66,7 +65,6 @@ schemes:
       status:
         vocabulary: sota-statuses
     tags: lit-tags
-    statuses: sota-statuses
 remotes:
   ARXIV:
     name: arXiv

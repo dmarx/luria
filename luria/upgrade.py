@@ -134,9 +134,7 @@ def _declared(text: str, prefixes: list[str], values: dict) -> str:
     base = ("luria",) if isinstance(data.get("luria"), dict) else ()
     for prefix in prefixes:
         yaml_edit.merge_into(
-            data,
-            {"statuses": "statuses",
-             "fields": {"status": {"vocabulary": "statuses"}}},
+            data, {"fields": {"status": {"vocabulary": "statuses"}}},
             base + ("schemes", prefix))
     vocabularies = yaml_edit.at(data, base + ("vocabularies",))
     if vocabularies is None:
@@ -201,6 +199,16 @@ def convert_config(root: Path) -> tuple[str, list[str], list[Path]]:
                     vocabs[named] = yaml.safe_load(f.read_text(encoding="utf-8")) or {}
                     orphans.append(f)
                     notes.append(f"{prefix}.fields vocabulary {named} -> {named}")
+        # `status` is a field, so its vocabulary is named in `fields:` and
+        # nowhere else. A record that never declared the field still had a
+        # `statuses.yaml` the old code read by position; wiring it up here is
+        # what carries that vocabulary across, and `schemes.X.statuses` does
+        # not exist on the far side of the boundary.
+        if folded := spec.pop("statuses", ""):
+            fields = spec.setdefault("fields", {})
+            if not (fields.get("status") or {}).get("vocabulary"):
+                fields.setdefault("status", {})["vocabulary"] = folded
+                notes.append(f"{prefix}.status -> vocabulary {folded}")
     out = {"vocabularies": vocabs, **cfg} if vocabs else cfg
     # Emitted by the module that also *edits* configs, so a freshly converted
     # file is already in the shape every later `luria init`/`migrate` writes.
