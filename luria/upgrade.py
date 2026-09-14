@@ -31,7 +31,7 @@ import yaml
 from dataclasses import dataclass
 from pathlib import Path
 
-from . import yaml_edit
+from . import toml_comments, yaml_edit
 from .config import CONFIG_NAME, find_root
 from .statuses import DEFAULT_STATUSES
 
@@ -152,9 +152,50 @@ def _declared(text: str, prefixes: list[str], values: dict) -> str:
 TOML_NAME = "luria.toml"
 
 
+# Where a comment's key went. `tags`, `statuses` and `tag_groups` do not exist
+# on the far side of the boundary: each splits into a vocabulary (named once,
+# centrally) and a field that names it. Prose written about the old key was
+# written about the thing the field now holds, so it follows the field.
+def _moved(path: tuple[str, ...]) -> tuple[str, ...]:
+    if len(path) < 3 or path[0] != "schemes":
+        return path
+    head, rest = path[:2], path[2:]
+    if rest[0] == "statuses":
+        return head + ("fields", "status") + rest[1:]
+    if rest[0] == "tags":
+        return head + ("fields", "tags") + rest[1:]
+    if rest[0] == "tag_groups":
+        return head + ("fields", "tags", "groups") + rest[1:]
+    return path
+
+
+def _carry(doc, blocks: list[tuple[tuple[str, ...], str]]) -> list[str]:
+    """Write each block above the key it documented. Returns the prose that
+    had nowhere to land, so the caller can print it rather than eat it."""
+    stranded: list[str] = []
+    for path, text in blocks:
+        if not path:
+            doc.yaml_set_start_comment(text)
+            continue
+        where = _moved(path)
+        parent = doc
+        for key in where[:-1]:
+            parent = parent.get(key) if hasattr(parent, "get") else None
+            if not hasattr(parent, "yaml_set_comment_before_after_key"):
+                parent = None
+                break
+        if parent is None or where[-1] not in parent:
+            stranded.append(f"{'.'.join(path)}\n{text}")
+            continue
+        parent.yaml_set_comment_before_after_key(
+            where[-1], before=text, indent=2 * (len(where) - 1))
+    return stranded
+
+
 def convert_config(root: Path) -> tuple[str, list[str], list[Path]]:
     """One `luria.yaml` from a TOML config and the vocabulary files beside
-    each scheme's records: (the YAML, what it folded, what nothing reads now).
+    each scheme's records: (the YAML, what it folded, what nothing reads now,
+    what prose had nowhere to land).
 
     **Parsed with `tomllib` and written with `yaml`, never moved as bytes.**
     `uid = "(\\d{4})[.:](\\d{4,5})"` does not survive a copy — the two
@@ -163,8 +204,15 @@ def convert_config(root: Path) -> tuple[str, list[str], list[Path]]:
     the reason a regex in a `uid` is the thing to check afterwards.
 
     A vocabulary two schemes hold identical copies of becomes ONE entry they
-    both name, which is the whole point of the boundary (ADR-098)."""
-    cfg = tomllib.loads((root / TOML_NAME).read_text(encoding="utf-8"))
+    both name, which is the whole point of the boundary (ADR-098).
+
+    **Comments are carried, because they are not values.** The re-encoding
+    argument above is about escaping, and a comment has none: it is prose
+    attached to a place, and `toml_comments` recovers the place. What a
+    project wrote to explain its own config is the part of the config a
+    reader needs most, and the first version of this dropped all of it."""
+    raw = (root / TOML_NAME).read_text(encoding="utf-8")
+    cfg = tomllib.loads(raw)
     cfg = cfg.get("luria", cfg)
     vocabs: dict[str, dict] = {}
     by_text: dict[str, str] = {}
@@ -183,7 +231,7 @@ def convert_config(root: Path) -> tuple[str, list[str], list[Path]]:
                              f"(the same words {by_text[text]} already holds)")
                 continue
             name = f"{prefix.lower()}-{kind}"
-            vocabs[name] = yaml.safe_load(text) or {}
+            vocabs[name] = yaml_edit.load(text)
             by_text[text] = name
             spec[kind] = name
             notes.append(f"{prefix}.{kind} -> {name}")
@@ -196,7 +244,8 @@ def convert_config(root: Path) -> tuple[str, list[str], list[Path]]:
             elif named and named not in vocabs:
                 f = root / str(spec.get("dir", "")) / f"{named}.yaml"
                 if f.exists():
-                    vocabs[named] = yaml.safe_load(f.read_text(encoding="utf-8")) or {}
+                    vocabs[named] = yaml_edit.load(
+                        f.read_text(encoding="utf-8"))
                     orphans.append(f)
                     notes.append(f"{prefix}.fields vocabulary {named} -> {named}")
         # `status` and `tags` are fields, so their vocabularies are named in
@@ -235,7 +284,15 @@ def convert_config(root: Path) -> tuple[str, list[str], list[Path]]:
     # Emitted by the module that also *edits* configs, so a freshly converted
     # file is already in the shape every later `luria init`/`migrate` writes.
     # Two emitters would mean the first one-key edit reflowed the whole file.
-    return yaml_edit.dump(out), notes, orphans
+    #
+    # Round-tripped once before the comments go on: the values came from
+    # `tomllib` as plain dicts, and a plain dict has nowhere to hold a
+    # comment. Loading what we just dumped is what turns them into the
+    # structures ruamel can annotate.
+    doc = yaml_edit.load(yaml_edit.dump(out))
+    stranded = _carry(doc, toml_comments.blocks(raw))
+    return (toml_comments.rejoin(yaml_edit.dump(doc)), notes, orphans,
+            stranded)
 
 
 def _run_yaml(where: Path, dry_run: bool) -> None:
@@ -247,7 +304,7 @@ def _run_yaml(where: Path, dry_run: bool) -> None:
               f"across, and `luria upgrade yaml` can be deleted once every "
               f"other one is")
         return
-    text, notes, orphans = convert_config(where)
+    text, notes, orphans, stranded = convert_config(where)
     for note in notes:
         print(f"  {note}")
     if dry_run:
@@ -261,6 +318,20 @@ def _run_yaml(where: Path, dry_run: bool) -> None:
         print(f"\n  nothing reads these now — check the result first, then:")
         print("    git rm " + " ".join(str(f.relative_to(where)) for f in orphans)
               + f" {TOML_NAME}")
+    if stranded:
+        # Printed in full rather than counted. These are the only lines the
+        # crossing cannot place, and a count would tell you something was
+        # lost without telling you what — which is the failure this whole
+        # carry exists to stop.
+        print(f"\n  {len(stranded)} comment(s) documented a key that does not "
+              f"exist on the far side. Nothing else says this, so here they "
+              f"are — put them where they belong in {CONFIG_NAME}:\n")
+        for block in stranded:
+            where_wrote, _, prose = block.partition("\n")
+            print(f"    # was: {where_wrote}")
+            for line in prose.splitlines():
+                print(f"    # {line}".rstrip())
+            print()
     print("\n  check a regex survived the format change before you trust it:"
           "\n    luria lint")
 
