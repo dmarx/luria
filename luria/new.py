@@ -300,12 +300,12 @@ def new_migration(fields: dict[str, str], name: str | None) -> Path:
     from .migrate import MIGRATIONS_DIR
     mig_dir = current().root / MIGRATIONS_DIR
     taken = [int(m.group(1)) for p in
-             (mig_dir.glob("*.toml") if mig_dir.exists() else [])
+             (mig_dir.glob("*.yaml") if mig_dir.exists() else [])
              if (m := re.match(r"(\d{4})-", p.name))]
     number = f"{max(taken, default=0) + 1:04d}"
     title = fields.get("title") or "What moves, and why"
     slug = name or re.sub(r"[^a-z0-9]+", "-", title.lower()).strip("-")
-    path = mig_dir / f"{number}-{slug}.toml"
+    path = mig_dir / f"{number}-{slug}.yaml"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(MIGRATION_TEMPLATE.format(number=number, title=title), encoding="utf-8")
     return path

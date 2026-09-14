@@ -375,7 +375,8 @@ def test_a_project_with_no_artwork_still_gets_a_stylesheet(project):
 
 # --- nested records (ADR-077) -------------------------------------------
 
-def parent(tmp_path, monkeypatch, include='include_records = ["sub/*"]') -> Path:
+def parent(tmp_path, monkeypatch, include: dict | None = None) -> Path:
+    include = {"include_records": ["sub/*"]} if include is None else include
     """A minimal record that publishes whatever `include` names.
 
     `include_records` sits in `[luria]`, not `[luria.site]`: it says this
@@ -383,8 +384,7 @@ def parent(tmp_path, monkeypatch, include='include_records = ["sub/*"]') -> Path
     site does (ADR-078)."""
     (tmp_path / "docs").mkdir(parents=True, exist_ok=True)
     (tmp_path / "luria.yaml").write_text(
-        '[luria]\nissue_url = "https://example.test/issues/{n}"\n'
-        f"{include}\n")
+        merged("issue_url: https://example.test/issues/{n}\n", include))
     (tmp_path / "README.md").write_text("# Parent\n\nThe outer record.\n")
     (tmp_path / "docs" / "README.md").write_text("# Docs\n\nNothing here.\n")
     monkeypatch.setenv("LURIA_ROOT", str(tmp_path))

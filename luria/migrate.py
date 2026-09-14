@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """`luria migrate` — execute a migration spec (ADR-040).
 
-    luria migrate 0001                  # run record/migrations.d/0001-*.toml
+    luria migrate 0001                  # run record/migrations.d/0001-*.yaml
     luria migrate 0001 --dry-run        # print the plan: mapping, moves, files
     luria migrate 0001 --commit         # run, commit, append blame-ignore
 
 A migration renames a scheme, or moves documents between schemes, without
-losing the record's memory. The spec is a TOML file in `record/migrations.d/`
+losing the record's memory. The spec is a YAML file in `record/migrations.d/`
 (`luria new migration` scaffolds one) — the executable plan and the audit
 trail in one artifact:
 
@@ -63,7 +63,7 @@ from __future__ import annotations
 import re
 import subprocess
 import sys
-import tomllib
+import yaml
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -175,13 +175,13 @@ def _spec_path(ref: str) -> Path:
     if direct.exists():
         return direct.resolve()
     mig_dir = cfg.root / MIGRATIONS_DIR
-    for candidate in (mig_dir / ref, mig_dir / f"{ref}.toml"):
+    for candidate in (mig_dir / ref, mig_dir / f"{ref}.yaml"):
         if candidate.exists():
             return candidate
-    matches = sorted(mig_dir.glob(f"{ref}*.toml")) if mig_dir.exists() else []
+    matches = sorted(mig_dir.glob(f"{ref}*.yaml")) if mig_dir.exists() else []
     if len(matches) == 1:
         return matches[0]
-    have = ", ".join(p.name for p in sorted(mig_dir.glob("*.toml"))) \
+    have = ", ".join(p.name for p in sorted(mig_dir.glob("*.yaml"))) \
         if mig_dir.exists() else "none"
     raise SystemExit(f"luria migrate: no spec matches {ref!r} in "
                      f"{MIGRATIONS_DIR}/ (have: {have})")
@@ -677,7 +677,7 @@ def run(spec: str, dry_run: bool = False, commit: bool = False) -> None:
     path, filename or leading number). --dry-run prints the plan; --commit
     commits the result and appends it to .git-blame-ignore-revs."""
     spec_path = _spec_path(str(spec))
-    parsed = tomllib.loads(spec_path.read_text(encoding="utf-8"))
+    parsed = yaml.safe_load(spec_path.read_text(encoding="utf-8")) or {}
     title = parsed.get("title") or spec_path.stem
     plan = build_plan(parsed, title)
 

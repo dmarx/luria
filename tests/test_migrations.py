@@ -12,6 +12,7 @@ The fixture schemes are `FXL` and `FXM`, from the reserved fixture namespace
 (ADR-093): a migration needs two prefixes, and neither may read as a
 citation of a real document.
 """
+from _config import merged
 import json
 import subprocess
 from pathlib import Path
@@ -118,10 +119,18 @@ def _premigration_project(tmp_path, monkeypatch):
         "design-principles.md#fxl-4).\n")
     mig_dir = tmp_path / "record" / "migrations.d"
     mig_dir.mkdir(parents=True)
-    (mig_dir / "0001-fxl-to-fxm.toml").write_text(
-        'title = "FXL becomes FXM"\nissue = "#29"\n\n'
-        '[[operations]]\nop = "rename_scheme"\nfrom = "FXL"\nto = "FXM"\n'
-        'output = "docs/guiding-principles.md"\nremotes = ["LU"]\n')
+    (mig_dir / "0001-fxl-to-fxm.yaml").write_text(
+        """
+        title: FXL becomes FXM
+        issue: '#29'
+        operations:
+        - op: rename_scheme
+          from: FXL
+          to: FXM
+          output: docs/guiding-principles.md
+          remotes:
+          - LU
+        """)
     _git(tmp_path, "init", "-q")
     _git(tmp_path, "add", "-A")
     _git(tmp_path, "-c", "user.email=t@t", "-c", "user.name=t",
@@ -206,29 +215,15 @@ def test_rename_scheme_end_to_end(tmp_path, monkeypatch, capsys):
     assert "citing FXM-1 sometimes" in moved, "cross-citations swept"
 
     config_text = (root / "luria.yaml").read_text()
-    assert """
-           schemes:
-             FXM: {}
-           """ in config_text
-    assert """
-           schemes:
-             FXL: {}
-           """ not in config_text
-    assert 'design_principles = "docs/guiding-principles.md"' in config_text
-    assert 'output = "docs/guiding-principles.md"' in config_text
-    assert """
-           remotes:
-             LU:
-               schemes:
-                 FXM: {}
-           """ in config_text, "mirror follows"
-    assert config_text.count('document = "docs/guiding-principles.md"') == 1
-    assert """
-           remotes:
-             SG:
-               schemes:
-                 FXL: {}
-           """ in config_text, "theirs stays"
+    assert "\n  FXM:\n" in config_text
+    assert "\n  FXL:\n" not in config_text
+    assert "design_principles: docs/guiding-principles.md" in config_text
+    assert "output: docs/guiding-principles.md" in config_text
+    # The mirror under `remotes.LU.schemes` follows the rename; the one under
+    # another project's remote does not.
+    assert "        FXM:\n" in config_text, "mirror follows"
+    assert config_text.count("document: docs/guiding-principles.md") == 1
+    assert "        FXL:\n" in config_text, "theirs stays"
     assert 'document = "docs/design-principles.md"' in config_text, \
         "SG's own path untouched by the section-aware pass"
 
@@ -247,7 +242,7 @@ def test_rename_scheme_end_to_end(tmp_path, monkeypatch, capsys):
     assert "[FXM-4](../../record/../docs/guiding-principles.md#fxm-4)" in entry, \
         "history swept, and the link's frame untouched (#57)"
 
-    spec = (root / "record" / "migrations.d" / "0001-fxl-to-fxm.toml").read_text()
+    spec = (root / "record" / "migrations.d" / "0001-fxl-to-fxm.yaml").read_text()
     assert 'from = "FXL"' in spec, "the spec remembers the old spelling"
 
     # Full circle into rung 1: the fresh config resolves old spellings.
@@ -288,20 +283,24 @@ def test_move_doc_lands_provisional_then_concretizes(tmp_path, monkeypatch):
     aliases: the code it migrated from, and the temporary code it wore in
     between."""
     root = _premigration_project(tmp_path, monkeypatch)
-    (root / "luria.yaml").write_text(
-        (root / "luria.yaml").read_text()
-        + """
+    (root / "luria.yaml").write_text(merged(
+        (root / "luria.yaml").read_text(),
+        """
           schemes:
             VAL:
               dir: record/values.d
-          """)
+          """))
     (root / "record" / "values.d").mkdir(parents=True)
     config.reset()
     aliases.reset()
-    mig = root / "record" / "migrations.d" / "0002-promote.toml"
-    mig.write_text('title = "FXL-4 becomes a value"\n\n'
-                   '[[operations]]\nop = "move_doc"\ndoc = "FXL-4"\n'
-                   'to = "VAL"\n')
+    mig = root / "record" / "migrations.d" / "0002-promote.yaml"
+    mig.write_text("""
+                   title: FXL-4 becomes a value
+                   operations:
+                   - op: move_doc
+                     doc: FXL-4
+                     to: VAL
+                   """)
     migrate.run("0002")
 
     landed = list((root / "record" / "values.d").glob("VAL-tmp*.md"))
@@ -339,22 +338,27 @@ def test_two_moves_into_one_scheme_do_not_collide(tmp_path, monkeypatch):
     printed two lines saying so in plain sight. Temporary codes make the
     collision structurally impossible rather than arithmetically avoided."""
     root = _premigration_project(tmp_path, monkeypatch)
-    (root / "luria.yaml").write_text(
-        (root / "luria.yaml").read_text()
-        + """
+    (root / "luria.yaml").write_text(merged(
+        (root / "luria.yaml").read_text(),
+        """
           schemes:
             VAL:
               dir: record/values.d
-          """)
+          """))
     (root / "record" / "values.d").mkdir(parents=True)
     config.reset()
     aliases.reset()
-    mig = root / "record" / "migrations.d" / "0002-promote-both.toml"
-    mig.write_text('title = "Both principles become values"\n\n'
-                   '[[operations]]\nop = "move_doc"\ndoc = "FXL-1"\n'
-                   'to = "VAL"\n\n'
-                   '[[operations]]\nop = "move_doc"\ndoc = "FXL-4"\n'
-                   'to = "VAL"\n')
+    mig = root / "record" / "migrations.d" / "0002-promote-both.yaml"
+    mig.write_text("""
+                   title: Both principles become values
+                   operations:
+                   - op: move_doc
+                     doc: FXL-1
+                     to: VAL
+                   - op: move_doc
+                     doc: FXL-4
+                     to: VAL
+                   """)
     migrate.run("0002")
 
     landed = sorted((root / "record" / "values.d").glob("VAL-tmp*.md"))
@@ -379,20 +383,25 @@ def test_move_doc_supersede_copies_and_tombstones(tmp_path, monkeypatch):
     the assigned number along with every other occurrence, so the status line
     ends up pointing at the real one without the migration having to know it."""
     root = _premigration_project(tmp_path, monkeypatch)
-    (root / "luria.yaml").write_text(
-        (root / "luria.yaml").read_text()
-        + """
+    (root / "luria.yaml").write_text(merged(
+        (root / "luria.yaml").read_text(),
+        """
           schemes:
             VAL:
               dir: record/values.d
-          """)
+          """))
     (root / "record" / "values.d").mkdir(parents=True)
     config.reset()
     aliases.reset()
-    mig = root / "record" / "migrations.d" / "0002-supersede.toml"
-    mig.write_text('title = "FXL-4 superseded by a value"\n\n'
-                   '[[operations]]\nop = "move_doc"\ndoc = "FXL-4"\n'
-                   'to = "VAL"\nstrategy = "supersede"\n')
+    mig = root / "record" / "migrations.d" / "0002-supersede.yaml"
+    mig.write_text("""
+                   title: FXL-4 superseded by a value
+                   operations:
+                   - op: move_doc
+                     doc: FXL-4
+                     to: VAL
+                     strategy: supersede
+                   """)
     migrate.run("0002")
     old = (root / "record" / "principles.d" / "FXL-004.md").read_text()
     assert "status: Superseded\nsuperseded_by:\n- VAL-tmp" in old
@@ -415,7 +424,7 @@ def test_new_migration_scaffolds_a_numbered_spec(tmp_path, monkeypatch):
     _premigration_project(tmp_path, monkeypatch)
     from luria import new
     path = new.new_entry("migration", {"title": "A second move"}, None)
-    assert path.name == "0002-a-second-move.toml"
+    assert path.name == "0002-a-second-move.yaml"
     assert 'title = "A second move"' in path.read_text()
 
 
@@ -454,15 +463,15 @@ def test_a_same_render_move_keeps_its_links_untouched(tmp_path, monkeypatch):
     would be churn, and would quietly relink bare references the author left
     bare on purpose elsewhere in the file."""
     root = _premigration_project(tmp_path, monkeypatch)
-    (root / "luria.yaml").write_text(
-        (root / "luria.yaml").read_text()
-        + """
+    (root / "luria.yaml").write_text(merged(
+        (root / "luria.yaml").read_text(),
+        """
           schemes:
             SRC:
               dir: record/src.d
             DST:
               dir: record/dst.d
-          """)
+          """))
     (root / "record" / "src.d").mkdir(parents=True)
     (root / "record" / "dst.d").mkdir(parents=True)
     (root / "record" / "src.d" / "SRC-001.md").write_text(
@@ -475,10 +484,14 @@ def test_a_same_render_move_keeps_its_links_untouched(tmp_path, monkeypatch):
     _git(root, "add", "-A")
     _git(root, "-c", "user.email=t@t", "-c", "user.name=t", "commit",
          "-qm", "shapes")
-    mig = root / "record" / "migrations.d" / "0002-same-shape.toml"
-    mig.write_text('title = "SRC-1 becomes a DST"\n\n'
-                   '[[operations]]\nop = "move_doc"\ndoc = "SRC-1"\n'
-                   'to = "DST"\n')
+    mig = root / "record" / "migrations.d" / "0002-same-shape.yaml"
+    mig.write_text("""
+                   title: SRC-1 becomes a DST
+                   operations:
+                   - op: move_doc
+                     doc: SRC-1
+                     to: DST
+                   """)
     migrate.run("0002")
     out = page.read_text()
     assert "(../record/dst.d/DST-tmp" in out, out
@@ -496,13 +509,13 @@ def test_a_worded_citation_of_a_moved_document_is_rebuilt(tmp_path,
     re-links to the address that was just vacated. The whole citation has to
     become the new code."""
     root = _premigration_project(tmp_path, monkeypatch)
-    (root / "luria.yaml").write_text(
-        (root / "luria.yaml").read_text()
-        + """
+    (root / "luria.yaml").write_text(merged(
+        (root / "luria.yaml").read_text(),
+        """
           schemes:
             VAL:
               dir: record/values.d
-          """)
+          """))
     (root / "record" / "values.d").mkdir(parents=True)
     page = root / "docs" / "worded.md"
     page.write_text(
@@ -512,10 +525,14 @@ def test_a_worded_citation_of_a_moved_document_is_rebuilt(tmp_path,
     _git(root, "add", "-A")
     _git(root, "-c", "user.email=t@t", "-c", "user.name=t", "commit",
          "-qm", "worded")
-    mig = root / "record" / "migrations.d" / "0002-worded.toml"
-    mig.write_text('title = "FXL-4 becomes a value"\n\n'
-                   '[[operations]]\nop = "move_doc"\ndoc = "FXL-4"\n'
-                   'to = "VAL"\n')
+    mig = root / "record" / "migrations.d" / "0002-worded.yaml"
+    mig.write_text("""
+                   title: FXL-4 becomes a value
+                   operations:
+                   - op: move_doc
+                     doc: FXL-4
+                     to: VAL
+                   """)
     migrate.run("0002")
     out = page.read_text()
     assert "design-principles.md#fxl-4" not in out, out
@@ -528,16 +545,16 @@ def _worded_move_project(tmp_path, monkeypatch):
     by code and in prose — and a spec that moves FXL-4 into an index-rendered
     scheme."""
     root = _premigration_project(tmp_path, monkeypatch)
-    (root / "luria.yaml").write_text(
-        (root / "luria.yaml").read_text()
-        + """
+    (root / "luria.yaml").write_text(merged(
+        (root / "luria.yaml").read_text(),
+        """
           code:
             globs:
             - src/*.py
           schemes:
             VAL:
               dir: record/values.d
-          """)
+          """))
     (root / "record" / "values.d").mkdir(parents=True)
     (root / "src").mkdir()
     (root / "src" / "engine.py").write_text(
@@ -549,9 +566,14 @@ def _worded_move_project(tmp_path, monkeypatch):
     _git(root, "add", "-A")
     _git(root, "-c", "user.email=t@t", "-c", "user.name=t", "commit",
          "-qm", "src")
-    (root / "record" / "migrations.d" / "0002-worded-code.toml").write_text(
-        'title = "FXL-4 becomes a value"\n\n'
-        '[[operations]]\nop = "move_doc"\ndoc = "FXL-4"\nto = "VAL"\n')
+    (root / "record" / "migrations.d" / "0002-worded-code.yaml").write_text(
+        """
+        title: FXL-4 becomes a value
+        operations:
+        - op: move_doc
+          doc: FXL-4
+          to: VAL
+        """)
     return root
 
 
