@@ -168,16 +168,23 @@ def test_a_field_has_one_declaration(tmp_path, monkeypatch):
 
 
 def test_the_field_and_its_vocabulary_may_be_named_differently(tmp_path, monkeypatch):
-    """`world:` in the frontmatter, drawn from `worlds.yaml`: the field is
-    the author's word, the vocabulary is the file's. Pages render under the
-    vocabulary's name; the finding and the record line use the field's."""
+    """`world:` in the frontmatter, drawn from the `worlds` vocabulary: the
+    field is the author's word, the vocabulary is the shared one's.
+
+    **Pages render under the FIELD's name**, and the finding and the record
+    line use it too. They used to render under the vocabulary's, which made a
+    config detail into a published path — so sharing a vocabulary between two
+    schemes, or renaming one, moved pages and orphaned the old directory.
+
+    inactive-ok: ADR-tmp8hp25 — Proposed, named as the decision that moved
+    this path; the citation is to the reasoning."""
     root = world(tmp_path, monkeypatch, field="world", table={})
     scene(root, 1, "world: C")
     scene(root, 2, "world: Z")
     e, = findings()
     assert "`world: Z` is not in the `worlds` vocabulary" in e
     pages = {p.relative_to(root).as_posix() for p in adr_index.outputs()}
-    assert "docs/scenes/worlds/C.md" in pages
+    assert "docs/scenes/world/C.md" in pages
     line, = contract.describe(contract.for_scheme(current().schemes["SCENE"]))
     assert line.startswith("`world` —") and "schemes.SCENE.fields.world" in line
 

@@ -485,7 +485,7 @@ def view_dirs(nested: bool = True) -> list[Path]:
         if s.render != "index":
             continue
         dirs.append(s.tag_dir)
-        dirs += [s.vocab_dir(v.name) for v in s.vocabularies]
+        dirs += [s.vocab_dir(v.field) for v in s.vocabularies]
         if s.view != s.dir:
             dirs.append(s.view)
     dirs += [j.output for j in cfg.journals.values()]

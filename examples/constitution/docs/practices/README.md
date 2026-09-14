@@ -17,9 +17,9 @@
 **[Authority](tags/authority.md)** (2) — whose call a thing is, and what a refusal means:
 [008](../../record/practices.d/PRACTICE-008.md) · [009](../../record/practices.d/PRACTICE-009.md)
 
-**By surface:** [Conversation](surfaces/conversation.md) (6, the default) · [Harness](surfaces/harness.md) (3) · [Repository](surfaces/repository.md) (5) · [Record](surfaces/record.md) (0)
+**By surface:** [Conversation](surface/conversation.md) (6, the default) · [Harness](surface/harness.md) (3) · [Repository](surface/repository.md) (5) · [Record](surface/record.md) (0)
 
-**By status:** [Active](value-statuses/Active.md) (9) · [Proposed](value-statuses/Proposed.md) (0) · [Deferred](value-statuses/Deferred.md) (0) · [Superseded](value-statuses/Superseded.md) (1) · [Rejected](value-statuses/Rejected.md) (0)
+**By status:** [Active](status/Active.md) (9) · [Proposed](status/Proposed.md) (0) · [Deferred](status/Deferred.md) (0) · [Superseded](status/Superseded.md) (1) · [Rejected](status/Rejected.md) (0)
 
 What the status column means in this scheme — the words are luria's, the meanings are this project's.
 

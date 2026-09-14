@@ -11,7 +11,7 @@
 **[Identity](tags/identity.md)** (1) — how a person is named and referred to:
 [003](../../record/boundaries.d/BOUNDARY-003.md)
 
-**By status:** [Active](value-statuses/Active.md) (3) · [Proposed](value-statuses/Proposed.md) (0) · [Deferred](value-statuses/Deferred.md) (0) · [Superseded](value-statuses/Superseded.md) (0) · [Rejected](value-statuses/Rejected.md) (0)
+**By status:** [Active](status/Active.md) (3) · [Proposed](status/Proposed.md) (0) · [Deferred](status/Deferred.md) (0) · [Superseded](status/Superseded.md) (0) · [Rejected](status/Rejected.md) (0)
 
 What the status column means in this scheme — the words are luria's, the meanings are this project's.
 

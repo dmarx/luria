@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """`luria upgrade` — carry a record across a version boundary (#181).
 
-    luria upgrade statuses            # write what the new version requires
-    luria upgrade statuses --dry-run  # print what it would write
+    luria upgrade                     # list them, with what each waits on
+    luria upgrade yaml                # luria.toml -> luria.yaml
+    luria upgrade yaml --dry-run      # print what it would write
 
 **Every command in here is temporary by construction.** An upgrade exists to
 move records that predate a change onto it, and once they have moved it is
@@ -23,6 +24,8 @@ would be unrunnable in exactly the situation it exists for.
 # decision is settled.
 
 from __future__ import annotations
+
+import tomllib
 
 import yaml
 from dataclasses import dataclass
@@ -53,6 +56,14 @@ class Upgrade:
 
 
 SUNSET = {
+    "yaml": Upgrade(
+        summary="convert `luria.toml` and the per-scheme vocabulary files "
+                "into one `luria.yaml`",
+        sunset="1.0.0, or when no record on TOML remains. This is the only "
+               "way across the boundary ADR-tmp8hp25 drew — the new version "
+               "does not read TOML at all — so it has to outlive every "
+               "record that has not crossed it.",
+    ),
     "statuses": Upgrade(
         summary="declare `status:` as the controlled vocabulary it is",
         sunset="1.0.0. Both records that predated #181 have run it "
@@ -141,6 +152,88 @@ def _declared(text: str, prefixes: list[str], values: dict) -> str:
     return out
 
 
+TOML_NAME = "luria.toml"
+
+
+def convert_config(root: Path) -> tuple[str, list[str], list[Path]]:
+    """One `luria.yaml` from a TOML config and the vocabulary files beside
+    each scheme's records: (the YAML, what it folded, what nothing reads now).
+
+    **Parsed with `tomllib` and written with `yaml`, never moved as bytes.**
+    `uid = "(\\d{4})[.:](\\d{4,5})"` does not survive a copy — the two
+    formats escape differently — so every value is re-encoded by a writer that
+    knows its own rules. That is the only version of this that is safe, and
+    the reason a regex in a `uid` is the thing to check afterwards.
+
+    A vocabulary two schemes hold identical copies of becomes ONE entry they
+    both name, which is the whole point of the boundary (ADR-tmp8hp25)."""
+    cfg = tomllib.loads((root / TOML_NAME).read_text(encoding="utf-8"))
+    cfg = cfg.get("luria", cfg)
+    vocabs: dict[str, dict] = {}
+    by_text: dict[str, str] = {}
+    notes: list[str] = []
+    orphans: list[Path] = []
+    for prefix, spec in (cfg.get("schemes") or {}).items():
+        for kind in ("tags", "statuses"):
+            f = root / str(spec.get("dir", "")) / f"{kind}.yaml"
+            if not f.exists():
+                continue
+            text = f.read_text(encoding="utf-8")
+            orphans.append(f)
+            if text in by_text:
+                spec[kind] = by_text[text]
+                notes.append(f"{prefix}.{kind} -> {by_text[text]} "
+                             f"(the same words {by_text[text]} already holds)")
+                continue
+            name = f"{prefix.lower()}-{kind}"
+            vocabs[name] = yaml.safe_load(text) or {}
+            by_text[text] = name
+            spec[kind] = name
+            notes.append(f"{prefix}.{kind} -> {name}")
+    # A field's `vocabulary` named a file stem beside the records.
+    for prefix, spec in (cfg.get("schemes") or {}).items():
+        for fspec in (spec.get("fields") or {}).values():
+            named = fspec.get("vocabulary")
+            if named in ("tags", "statuses") and spec.get(named):
+                fspec["vocabulary"] = spec[named]
+            elif named and named not in vocabs:
+                f = root / str(spec.get("dir", "")) / f"{named}.yaml"
+                if f.exists():
+                    vocabs[named] = yaml.safe_load(f.read_text(encoding="utf-8")) or {}
+                    orphans.append(f)
+                    notes.append(f"{prefix}.fields vocabulary {named} -> {named}")
+    out = {"vocabularies": vocabs, **cfg} if vocabs else cfg
+    return (yaml.dump(out, sort_keys=False, allow_unicode=True, width=100),
+            notes, orphans)
+
+
+def _run_yaml(where: Path, dry_run: bool) -> None:
+    """The boundary crossing. Leaves the TOML on disk: deleting what you just
+    converted, before anyone has read the result, is not a migration anybody
+    should trust."""
+    if not (where / TOML_NAME).exists():
+        print(f"yaml: no {TOML_NAME} at {where} — this record is already "
+              f"across, and `luria upgrade yaml` can be deleted once every "
+              f"other one is")
+        return
+    text, notes, orphans = convert_config(where)
+    for note in notes:
+        print(f"  {note}")
+    if dry_run:
+        print(f"  would write {CONFIG_NAME}")
+        for f in orphans:
+            print(f"  would leave {f.relative_to(where)} unread")
+        return
+    (where / CONFIG_NAME).write_text(text, encoding="utf-8")
+    print(f"  wrote {CONFIG_NAME}")
+    if orphans:
+        print(f"\n  nothing reads these now — check the result first, then:")
+        print("    git rm " + " ".join(str(f.relative_to(where)) for f in orphans)
+              + f" {TOML_NAME}")
+    print("\n  check a regex survived the format change before you trust it:"
+          "\n    luria lint")
+
+
 def run(name: str = "", *, dry_run: bool = False, root: str = "") -> None:
     """Write what a new version requires into a record that predates it.
 
@@ -156,6 +249,12 @@ def run(name: str = "", *, dry_run: bool = False, root: str = "") -> None:
     if name not in SUNSET:
         raise SystemExit(f"luria upgrade: no upgrade named {name!r} "
                          f"(have: {', '.join(SUNSET) or 'none'})")
+    if name == "yaml":
+        return _run_yaml(where, dry_run)
+    if (where / TOML_NAME).exists() and not (where / CONFIG_NAME).exists():
+        raise SystemExit(
+            f"luria upgrade {name}: this record still has a {TOML_NAME}, "
+            f"which nothing reads — run `luria upgrade yaml` first")
     writes, lines, notes = _plan(where)
     for note in notes:
         print(f"  {note}")

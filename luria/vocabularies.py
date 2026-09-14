@@ -104,7 +104,7 @@ def index_blocks(scheme, docs) -> str:
             count = len(under[value])
             note = ", the default" if field.default and value in field.default else ""
             chips.append(f"[{_label(meta.get(value, {}), value)}]"
-                         f"({vocab.name}/{value}.md) ({count}{note})")
+                         f"({vocab.field}/{value}.md) ({count}{note})")
         blocks.append(f"**By {axis}:** " + " · ".join(chips))
     return "\n\n".join(blocks)
 
@@ -116,7 +116,7 @@ def pages(scheme, docs) -> dict[Path, str]:
     noun = "decisions" if scheme.prefix == "ADR" else f"{scheme.prefix} documents"
     for vocab, field, under in _listing(scheme, docs):
         meta = declared(vocab.values_by_name)
-        where = scheme.vocab_dir(vocab.name)
+        where = scheme.vocab_dir(vocab.field)
         prefix = prefix_for(scheme, where)
         for value in field.values:
             listed = under[value]

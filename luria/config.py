@@ -641,9 +641,17 @@ class Scheme:
     def tag_dir(self) -> Path:
         return self.view / "tags"
 
-    def vocab_dir(self, name: str) -> Path:
-        """Where a vocabulary's per-value pages render, beside the tag pages."""
-        return self.view / name
+    def vocab_dir(self, field: str) -> Path:
+        """Where a vocabulary-backed field's per-value pages render, beside
+        the tag pages.
+
+        Keyed on the FIELD, not on the vocabulary's name: a name is a config
+        detail and a published path is not, so sharing a vocabulary between
+        two schemes — or renaming one — must not move anybody's pages
+        (ADR-tmp8hp25). Two schemes naming one vocabulary still render their
+        own pages, under their own views.
+        """
+        return self.view / field
 
     # The stub and the tag metadata are *authored*, so they live with the
     # sources — the view directory holds only what the generator wrote, which
@@ -1763,7 +1771,7 @@ class Config:
             # the page is written in the same pass that renders the report, so
             # the report saw the *previous* run's copy and `luria index` stopped
             # converging.
-            if s.render == "index" and any(path.parent == s.vocab_dir(v.name)
+            if s.render == "index" and any(path.parent == s.vocab_dir(v.field)
                                            for v in s.vocabularies):
                 return True
             if s.output == path:

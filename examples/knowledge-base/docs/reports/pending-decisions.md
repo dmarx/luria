@@ -9,8 +9,10 @@
 
 | Open since | Status | Code | Cited | Unack. | Title |
 |---|---|---|--:|--:|---|
-| 2026-08-22 | Deferred | [SOTA-002](../../record/practices.d/SOTA-002.md) | 1 | 1 | Prefer decoupled weight decay to L2 regularization added to the loss |
+| 2026-08-22 | Deferred | [SOTA-002](../../record/practices.d/SOTA-002.md) | 0 | 0 | Prefer decoupled weight decay to L2 regularization added to the loss |
 
 The citation count is the second axis, and it flips the priority: an old proposal nothing references is a stalled idea worth closing, while an old proposal many files cite is a decision the codebase has already made and hasn't written down.
 
 This count and the reference-status report's will differ, and that is not an off-by-one. That report covers documents something actually **cites** and hasn't acknowledged; this one covers every **undecided** document. One here is missing from there for exactly one of two reasons: nothing cites it, or every citation carries an `inactive-ok` annotation.
+
+**Cited nowhere at all** (1): [SOTA-002](../../record/practices.d/SOTA-002.md) — this is the cheapest to close, since nothing depends on the answer.

@@ -5,7 +5,7 @@
 **[security](tags/security.md)** (1):
 [001](../../record/notes.d/NOTE-001.md)
 
-**By status:** [Active](note-statuses/Active.md) (1) · [Proposed](note-statuses/Proposed.md) (0) · [Deferred](note-statuses/Deferred.md) (0) · [Superseded](note-statuses/Superseded.md) (0) · [Rejected](note-statuses/Rejected.md) (0)
+**By status:** [Active](status/Active.md) (1) · [Proposed](status/Proposed.md) (0) · [Deferred](status/Deferred.md) (0) · [Superseded](status/Superseded.md) (0) · [Rejected](status/Rejected.md) (0)
 
 What the status column means in this scheme — the words are luria's, the meanings are this project's.
 

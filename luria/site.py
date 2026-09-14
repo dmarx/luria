@@ -602,7 +602,7 @@ def _vocabulary_bits(meta: dict, source: Path) -> list[str]:
         if not values:
             continue
         links = [
-            f"[{v}]({posixpath.relpath((scheme.vocab_dir(vocab.name) / f'{v}.md').as_posix(), source.parent.as_posix())})"
+            f"[{v}]({posixpath.relpath((scheme.vocab_dir(vocab.field) / f'{v}.md').as_posix(), source.parent.as_posix())})"
             for v in values]
         bits.append((vocab.field.replace("_", " ").capitalize(), links))
     return bits

@@ -101,6 +101,21 @@ nothing could render, quote in a finding, or scaffold from — which is how a
 record ended up with fourteen practices citing adoption as evidence while
 every mechanical check stayed green.
 
+**A vocabulary-backed field's pages render under the FIELD's name**, not the
+vocabulary's. That was the last thing to go wrong here and the least obvious:
+pages rendered at `<view>/<vocabulary>/`, so sharing a vocabulary between two
+schemes — the entire point of this decision — moved published pages and left
+the old directory behind as an orphan. What that broke said nothing about
+paths: the bare-reference check skips generated views and recognises them *by
+generated-output path*, so an orphan is not one, and pages generated for a
+year started being scanned as hand-written prose.
+
+A vocabulary's name is a config detail; a published path is not. Keyed on the
+field, no config change can ever move a page. **This moves existing pages
+once** — `<view>/statuses/` becomes `<view>/status/` — which is the right
+place to spend it: at a format boundary a record crosses deliberately, rather
+than in a later release where it would surprise someone.
+
 ## Alternatives considered
 
 - **Keep vocabularies beside the records.** The locality argument: a scheme's
@@ -122,6 +137,13 @@ every mechanical check stayed green.
   schema complaint about a key of the wrong type, at exactly the moment a user
   is confused. The plumbing was worth replacing; the checks are the part that
   earns its keep.
+- **Key the view path on the vocabulary's name, and have the converter keep
+  the old stem.** It would move nothing in the common case. It fails exactly
+  where this decision is aimed: a record whose five schemes each have a
+  `statuses.yaml` with *different* words cannot keep all five on the name
+  `statuses`, so four move anyway — and the rule "your pages move unless your
+  vocabularies happen not to collide" is not one anybody can hold.
+
 - **JSON for the lockfile stays.** It is generated, not authored, and machine
   round-tripping is the only thing it is for. Unifying it would be consistency
   for its own sake.

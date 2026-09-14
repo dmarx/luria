@@ -15,7 +15,7 @@ line.
 
 **By worlds:** [The unbroken line](worlds/A.md) (1) · [The main line](worlds/B.md) (2, the default) · [The long winter](worlds/C.md) (1)
 
-**By status:** [Active](scene-statuses/Active.md) (3) · [Proposed](scene-statuses/Proposed.md) (0) · [Deferred](scene-statuses/Deferred.md) (0) · [Superseded](scene-statuses/Superseded.md) (0) · [Rejected](scene-statuses/Rejected.md) (0)
+**By status:** [Active](status/Active.md) (3) · [Proposed](status/Proposed.md) (0) · [Deferred](status/Deferred.md) (0) · [Superseded](status/Superseded.md) (0) · [Rejected](status/Rejected.md) (0)
 
 What the status column means in this scheme — the words are luria's, the meanings are this project's.
 

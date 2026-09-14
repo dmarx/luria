@@ -2,7 +2,7 @@
 
 <!-- GENERATED below this line by `luria index` — edit README.stub instead. -->
 
-**By status:** [Active](adr-statuses/Active.md) (0) · [Proposed](adr-statuses/Proposed.md) (0) · [Deferred](adr-statuses/Deferred.md) (0) · [Superseded](adr-statuses/Superseded.md) (0) · [Rejected](adr-statuses/Rejected.md) (0)
+**By status:** [Active](status/Active.md) (0) · [Proposed](status/Proposed.md) (0) · [Deferred](status/Deferred.md) (0) · [Superseded](status/Superseded.md) (0) · [Rejected](status/Rejected.md) (0)
 
 What the status column means in this scheme — the words are luria's, the meanings are this project's.
 
