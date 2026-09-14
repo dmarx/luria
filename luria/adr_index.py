@@ -37,6 +37,10 @@ the same problem for a brainstorming repo: prose lives in a `.stub`, the
 generator substitutes `{placeholders}`, and tags get their own generated pages.
 """
 
+# inactive-ok-file: ADR-tmp1wx7r — Proposed. Every mention names it as the
+# decision this file implements or is written against; the citation is to
+# the reasoning, not a claim the decision is settled.
+
 # inactive-ok-file: ADR-098 — Proposed. Every mention names it as the
 # decision this file implements or is written against; the citation is to the
 # reasoning, not a claim the decision is settled.
@@ -401,8 +405,12 @@ def render_document(scheme, docs: list[Adr]) -> str:
         # and a heading-derived anchor stops resolving the moment the wording
         # moves, silently, which is the fail-stale polarity DP-3 rules out.
         # This one is keyed to the number, which is the thing that never moves.
+        #
+        # `id`, not `name`: a fragment reaches `a[name]` only on a real
+        # navigation, and a Quartz site is a SPA whose router scrolls with
+        # `getElementById` (ADR-tmp1wx7r).
         slot = doc.number if doc.number is not None else doc.tail
-        body = f'<a name="{doc.prefix.lower()}-{slot}"></a>\n\n{body}'
+        body = f'<a id="{doc.prefix.lower()}-{slot}"></a>\n\n{body}'
         meta = [f"*v{doc.version}"]
         if doc.influenced_by:
             meta.append("shaped by " + ", ".join(

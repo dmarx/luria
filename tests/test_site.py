@@ -537,7 +537,7 @@ def test_a_nested_record_is_regenerated_by_the_parents_index(tmp_path, monkeypat
     # demotes the fragment's H1 and renumbers it, so the code does not survive
     # literally — the stable anchor does, which is the point of having one.
     text = view.read_text()
-    assert '<a name="note-1">' in text and "Body." in text, (
+    assert '<a id="note-1">' in text and "Body." in text, (
         "the parent's index wrote the file but rendered none of the child's "
         "documents into it — which is what happens when the PARENT's config "
         "does the rendering, since it has no NOTE scheme"

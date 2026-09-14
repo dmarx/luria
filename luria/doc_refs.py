@@ -35,6 +35,10 @@ renders into `docs/devlog/` (ADR-020). `link_base()` maps a path to the
 directory its links must resolve from.
 """
 
+# inactive-ok-file: ADR-tmp1wx7r — Proposed. Every mention names it as the
+# decision this file implements or is written against; the citation is to
+# the reasoning, not a claim the decision is settled.
+
 # unresolved-ok-file: ADR-919, ADR-157, DP-017, DP-018 — illustrative codes in
 # this module's prose. The DP pair became visible once scheme references were
 # found by pattern rather than by hardcoded kind; they were always here.
@@ -655,7 +659,11 @@ def adr_paths() -> dict[int, Path]:
     return scheme.documents() if scheme else {}
 
 
-EXPLICIT_ANCHOR_RE = re.compile(r'^<a name="[a-z]+-(\d+)"></a>\s*$')
+# Read either spelling, emit `id` (ADR-tmp1wx7r): a project whose
+# principles are still one hand-written file may anchor them by `name`, and
+# that file resolves fine in the repository — it is only the published site
+# that cannot reach it, which is the finding, not a reason to stop reading it.
+EXPLICIT_ANCHOR_RE = re.compile(r'^<a (?:id|name)="[a-z]+-(\d+)"></a>\s*$')
 HEADING_ANCHOR_RE = re.compile(r"^##\s+(\d+)\.\s+(.+?)\s*$")
 
 

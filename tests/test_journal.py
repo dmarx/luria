@@ -6,6 +6,10 @@ Ordering, book membership and the contents list are all derived from it, so
 each of those is checked against a tree built to say something specific rather
 than against whatever this repo happens to have filed.
 """
+
+# inactive-ok-file: ADR-tmp1wx7r — Proposed. Every mention names it as the
+# decision this file implements or is written against; the citation is to
+# the reasoning, not a claim the decision is settled.
 import datetime as dt
 from pathlib import Path
 
@@ -130,7 +134,9 @@ def test_book_lists_its_contents(tmp_path):
     assert "- [4 Aug 03:27 — The second thing](#20260804032711)" in book
     # Every contents entry has somewhere to land.
     for anchor in ("20260803211926", "20260804032711"):
-        assert f'<a name="{anchor}"></a>' in book
+        # `id`, so the index's own links reach it on the published site
+        # and not only in the repository (ADR-tmp1wx7r).
+        assert f'<a id="{anchor}"></a>' in book
 
 
 def test_anchor_is_the_timestamp_not_the_title(tmp_path):

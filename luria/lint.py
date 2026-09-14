@@ -30,6 +30,10 @@ Checks (each one fails the build):
 5. **Wikilinks** — a `[[CODE]]` is the author asserting a reference (ADR-025):
    resolvable ones await `luria link --fix`; unresolvable ones are an error
    the fixer cannot clear, because the request was explicit.
+6. **Reachable anchors** — a fragment link whose target answers to it by
+   `<a name=>` alone, which a real navigation reaches and a published site's
+   router does not (ADR-tmp1wx7r). `luria link --fix` rewrites the
+   anchor.
 
 It also prints WARNINGS, which by default never affect the exit code
 (ADR-035): references to retired documents, codes that resolve to no document
@@ -47,6 +51,10 @@ one so only the unconsidered ones stay listed — acknowledged rows never fail.
 Exit 0 when clean; exit 1 with one line per violation.
 """
 
+# inactive-ok-file: ADR-tmp1wx7r — Proposed. Every mention names it as the
+# decision this file implements or is written against; the citation is to
+# the reasoning, not a claim the decision is settled.
+
 # inactive-ok-file: ADR-098 — Proposed. Every mention names it as the
 # decision this file implements or is written against; the citation is to the
 # reasoning, not a claim the decision is settled.
@@ -63,6 +71,7 @@ from . import (adr_pending, badges, chains, ci, contract, directives, doc_refs,
                link_targets, narrow_titles, pins, ref_status, remotes,
                relations, sources, statuses, templates)
 from . import aliases as aliases_mod
+from . import anchors as anchors_mod
 from . import config as config_mod
 from .config import current
 
@@ -443,6 +452,29 @@ def check_wikilinks(errors: list[str]) -> None:
             else:
                 errors.append(f"{rel}:{w.line}: [[{w.inner}]] is not yet a "
                               "link — run `luria link --fix`")
+
+
+def check_anchors(errors: list[str]) -> None:
+    """A fragment link whose target answers to it by `<a name=>` and nothing
+    else. Addressable in the repository and on GitHub, where a fragment is a
+    real navigation; not addressable on the site the record publishes to,
+    whose router scrolls with `getElementById` — so the link works in every
+    place a contributor would check it and fails in the one place readers
+    use it (ADR-tmp1wx7r).
+
+    A heading is never this, and `<a id=>` is never this. The finding is
+    exactly the spelling that is reachable one way and not the other."""
+    cfg = current()
+    for f in anchors_mod.scan(anchors_mod.documents(), cfg.is_generated,
+                              cfg.link_base):
+        # A view's anchor is the generator's, so the remedy is a code change
+        # and not an edit to the page — which the next build would erase.
+        fix = ("the generator writes it that way"
+               if f.generated else "run `luria link --fix`")
+        errors.append(
+            f"{cfg.rel(f.source)}:{f.line}: `#{f.fragment}` reaches "
+            f"{cfg.rel(f.target)} by `<a name=>`, which a published site "
+            f"cannot scroll to — {fix}")
 
 
 def check_bare_refs(errors: list[str]) -> None:
@@ -877,6 +909,7 @@ def run() -> None:
     check_version_history(errors)
     check_bare_refs(errors)
     check_wikilinks(errors)
+    check_anchors(errors)
     report_warnings(errors)
     if errors:
         print(f"luria: {len(errors)} violation(s)", file=sys.stderr)
