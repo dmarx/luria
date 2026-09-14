@@ -26,18 +26,18 @@ def _record_project(tmp_path, monkeypatch):
     (tmp_path / "docs").mkdir()
     (tmp_path / "luria.yaml").write_text(
         """
-        issue_url: https://example.test/issues/{n}
-        paths:
-          design_principles: docs/guiding-principles.md
-        schemes:
-          FXM:
-            dir: record/principles.d
-            render: document
-            output: docs/guiding-principles.md
-        remotes:
-          SG:
-            repo: example/strata-g
-        """
+issue_url: https://example.test/issues/{n}
+paths:
+  design_principles: docs/guiding-principles.md
+schemes:
+  FXM:
+    dir: record/principles.d
+    render: document
+    output: docs/guiding-principles.md
+remotes:
+  SG:
+    repo: example/strata-g
+"""
     )
     fxm_dir = tmp_path / "record" / "principles.d"
     fxm_dir.mkdir(parents=True)
@@ -73,26 +73,26 @@ def _premigration_project(tmp_path, monkeypatch):
     (tmp_path / "docs").mkdir()
     (tmp_path / "luria.yaml").write_text(
         """
-        issue_url: https://example.test/issues/{n}
-        paths:
-          design_principles: docs/design-principles.md
-        schemes:
-          FXL:
-            dir: record/principles.d
-            render: document
-            output: docs/design-principles.md
-        remotes:
-          SG:
-            repo: example/strata-g
-            schemes:
-              FXL:
-                document: docs/design-principles.md
-          LU:
-            repo: example/this-project
-            schemes:
-              FXL:
-                document: docs/design-principles.md
-        """
+issue_url: https://example.test/issues/{n}
+paths:
+  design_principles: docs/design-principles.md
+schemes:
+  FXL:
+    dir: record/principles.d
+    render: document
+    output: docs/design-principles.md
+remotes:
+  SG:
+    repo: example/strata-g
+    schemes:
+      FXL:
+        document: docs/design-principles.md
+  LU:
+    repo: example/this-project
+    schemes:
+      FXL:
+        document: docs/design-principles.md
+"""
     )
     (tmp_path / "docs" / "design-principles.md").write_text(
         "<!-- GENERATED -->\n\n# Principles\n\n"
@@ -221,10 +221,10 @@ def test_rename_scheme_end_to_end(tmp_path, monkeypatch, capsys):
     assert "output: docs/guiding-principles.md" in config_text
     # The mirror under `remotes.LU.schemes` follows the rename; the one under
     # another project's remote does not.
-    assert "        FXM:\n" in config_text, "mirror follows"
+    assert "      FXM:\n" in config_text, "mirror follows"
     assert config_text.count("document: docs/guiding-principles.md") == 1
-    assert "        FXL:\n" in config_text, "theirs stays"
-    assert 'document = "docs/design-principles.md"' in config_text, \
+    assert "      FXL:\n" in config_text, "theirs stays"
+    assert "document: docs/design-principles.md" in config_text, \
         "SG's own path untouched by the section-aware pass"
 
     assert not (root / "docs" / "design-principles.md").exists(), \
@@ -243,7 +243,7 @@ def test_rename_scheme_end_to_end(tmp_path, monkeypatch, capsys):
         "history swept, and the link's frame untouched (#57)"
 
     spec = (root / "record" / "migrations.d" / "0001-fxl-to-fxm.yaml").read_text()
-    assert 'from = "FXL"' in spec, "the spec remembers the old spelling"
+    assert "from: FXL" in spec, "the spec remembers the old spelling"
 
     # Full circle into rung 1: the fresh config resolves old spellings.
     config.reset()

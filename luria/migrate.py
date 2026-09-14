@@ -131,7 +131,14 @@ class Plan:
     # renamed, it is re-derived.
     removals: list[Path] = field(default_factory=list)
     # (file, old section header, new section header)
-    section_renames: list[tuple[Path, str, str]] = field(default_factory=list)
+    # (file, parent path, old key, new key). A TOML section header was
+    # fully qualified, so renaming one was a string replacement. A YAML key is
+    # not: `FXL:` appears under `schemes:` and again under every
+    # `remotes.<R>.schemes:`, and renaming this project's scheme must leave
+    # another project's mirror alone — so the path comes with the key
+    # (ADR-tmp8hp25).
+    section_renames: list[tuple[Path, tuple[str, ...], str, str]] = \
+        field(default_factory=list)
     # Config files that get the section-aware path pass instead of the
     # blanket path sweep — a remote's `document =` line spells *its* path.
     config_files: list[Path] = field(default_factory=list)
@@ -233,13 +240,11 @@ def _plan_rename(plan: Plan, op: dict) -> None:
             raise SystemExit(f"luria migrate: {config_file} not found")
         plan.config_files.append(config_file)
         plan.section_renames.append(
-            (config_file, f"[luria.schemes.{old_prefix}]",
-             f"[luria.schemes.{new_prefix}]"))
+            (config_file, ("schemes",), old_prefix, new_prefix))
         for remote_prefix in op.get("remotes", []):
             plan.section_renames.append(
-                (config_file,
-                 f"[luria.remotes.{remote_prefix}.schemes.{old_prefix}]",
-                 f"[luria.remotes.{remote_prefix}.schemes.{new_prefix}]"))
+                (config_file, ("remotes", remote_prefix, "schemes"),
+                 old_prefix, new_prefix))
 
     if op.get("output") and scheme.output:
         old_rel = cfg.rel(scheme.output)
@@ -484,17 +489,58 @@ def sweep_text(text: str, plan: Plan, paths: bool = True,
 SECTION_RE = re.compile(r"^\s*\[([^\]]+)\]\s*(?:#.*)?$")
 
 
+def rename_key_at(text: str, path: tuple[str, ...], old: str, new: str) -> str:
+    """Rename one mapping key, and only where it sits under `path`.
+
+    Edits the lines rather than round-tripping the document: a config is
+    written by a person and carries their comments, and a migration that
+    silently strips them has taken more than it was asked for.
+
+    Indentation is the nesting, so the parent stack is recoverable from the
+    text alone — which is all this needs, and less than a parser would take.
+    """
+    out, stack = [], []          # stack: (indent, key) for each open mapping
+    for line in text.splitlines(keepends=True):
+        body = line.rstrip("\n")
+        stripped = body.lstrip(" ")
+        if stripped and not stripped.startswith("#") and ":" in stripped:
+            indent = len(body) - len(stripped)
+            while stack and stack[-1][0] >= indent:
+                stack.pop()
+            key = stripped.split(":", 1)[0].strip()
+            if (tuple(k for _, k in stack) == path and key == old
+                    and stripped.split(":", 1)[1].strip() in ("", "{}")):
+                line = f"{' ' * indent}{new}:" + body[indent + len(key) + 1:] + "\n"
+                key = new
+            stack.append((indent, key))
+        out.append(line)
+    return "".join(out)
+
+
 def config_paths_pass(text: str, plan: Plan) -> str:
     """Path pairs in a config file, section-aware: a remote's `document =`
     line spells *that project's* path, which only moves if the spec claimed
     the remote via `remotes = [...]`. Everything outside unclaimed remote
     sections — the scheme's `output`, the `[luria.paths]` values, comments —
     follows the rename."""
-    out = []
-    section = ""
+    out: list[str] = []
+    stack: list[tuple[int, str]] = []
     for line in text.splitlines(keepends=True):
-        if m := SECTION_RE.match(line):
-            section = m.group(1)
+        body = line.rstrip("\n")
+        stripped = body.lstrip(" ")
+        if stripped and not stripped.startswith("#") and ":" in stripped:
+            indent = len(body) - len(stripped)
+            while stack and stack[-1][0] >= indent:
+                stack.pop()
+            key = stripped.split(":", 1)[0].strip()
+            # The enclosing mapping is what decides whose path this line
+            # spells, and in YAML that is the indentation rather than a
+            # header — so the section is recovered the same way
+            # `rename_key_at` recovers it (ADR-tmp8hp25).
+            section = ".".join(k for _, k in stack)
+            stack.append((indent, key))
+        else:
+            section = ".".join(k for _, k in stack)
         frozen = False
         if m2 := re.match(r"(?:luria\.)?remotes\.([A-Za-z0-9]+)", section):
             frozen = m2.group(1).upper() not in plan.claimed_remotes
@@ -551,10 +597,11 @@ def apply(plan: Plan) -> tuple[int, int]:
         source.write_text(
             statuses.set_status(text, "Superseded", superseded_by=[new_code]),
             encoding="utf-8")
-    for config_file, old_header, new_header in plan.section_renames:
+    for config_file, path, old_key, new_key in plan.section_renames:
         text = config_file.read_text(encoding="utf-8")
-        if old_header in text:
-            config_file.write_text(text.replace(old_header, new_header), encoding="utf-8")
+        renamed = rename_key_at(text, path, old_key, new_key)
+        if renamed != text:
+            config_file.write_text(renamed, encoding="utf-8")
     for config_file in plan.config_files:
         config_file.write_text(
             config_paths_pass(config_file.read_text(encoding="utf-8"), plan), encoding="utf-8")
@@ -659,7 +706,9 @@ def describe(plan: Plan) -> list[str]:
         lines.append(f"  copy {current().rel(source)} -> "
                      f"{current().rel(new_path)}  ({old_code} superseded "
                      f"by {new_code})")
-    for config_file, old_header, new_header in plan.section_renames:
+    for config_file, path, old_key, new_key in plan.section_renames:
+        old_header = ".".join((*path, old_key))
+        new_header = ".".join((*path, new_key))
         lines.append(f"  {current().rel(config_file)}: {old_header} -> "
                      f"{new_header}")
     return lines
