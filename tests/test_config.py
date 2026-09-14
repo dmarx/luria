@@ -23,7 +23,7 @@ def test_a_declared_family_replaces_the_default(tmp_path):
 
 
 def test_an_undeclared_family_keeps_the_default(tmp_path):
-    cfg = load_text(tmp_path, '[luria]\nissue_url = ""\n')
+    cfg = load_text(tmp_path, "issue_url: ''\n")
     assert set(cfg.schemes) == {"ADR"}
     assert set(cfg.journals) == {"devlog"}
 

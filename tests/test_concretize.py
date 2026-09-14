@@ -10,6 +10,7 @@ temp docs don't have) that no unit test of the minter would have seen.
 
 # unresolved-ok-file: ADR-000, ADR-tmpab123 — the first is the string `[ADR-0`,
 # which the reference scanner reads as a code; the second is a fixture tail
+from _config import merged
 import re
 import subprocess
 from pathlib import Path
@@ -162,13 +163,9 @@ def test_concretize_rewrites_history_too(merge_project):
     outside the tree."""
     root, first, _ = merge_project
     a = first.stem
-    (root / "luria.yaml").write_text(
-        TOML + """
-               journals:
-                 devlog:
-                   dir: record/devlog.d
-                   output: docs/devlog
-               """)
+    (root / "luria.yaml").write_text(merged(TOML, {
+        "journals": {"devlog": {"dir": "record/devlog.d",
+                                "output": "docs/devlog"}}}))
     config.reset()
     entry = root / "record" / "devlog.d" / "2026" / "01" / "02" / "030405.md"
     entry.parent.mkdir(parents=True)
