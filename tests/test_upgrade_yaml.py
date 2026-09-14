@@ -411,3 +411,18 @@ def test_every_comment_line_survives_the_crossing(tmp_path, capsys):
     landed = set(_comment_lines(out))
     missing = [w for w in want if w not in landed and w not in said]
     assert not missing, missing
+
+
+def test_no_comment_line_is_carried_twice(tmp_path):
+    """Presence is not enough: `yaml_set_comment_before_after_key` APPENDS to
+    whatever a key already carries, so a caller that joins the blocks itself
+    writes the first one twice. Counting is what catches that, and the
+    presence property above cannot."""
+    (tmp_path / "record" / "decisions.d").mkdir(parents=True)
+    (tmp_path / "luria.toml").write_text(EVERY_SHAPE)
+    (tmp_path / "record" / "decisions.d" / "statuses.yaml").write_text(
+        SHAPED_WORDS)
+    upgrade.run("yaml", root=str(tmp_path))
+    got = _comment_lines((tmp_path / "luria.yaml").read_text())
+    repeated = {line for line in got if got.count(line) > 1}
+    assert not repeated, repeated
