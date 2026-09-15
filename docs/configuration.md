@@ -332,7 +332,8 @@ graph        = "docs/graphs/architecture.json"   # strata-g graph data
 graph_height = "320px"                           # optional
 ```
 
-Set, that graph replaces `Component.Graph` on every page — one curated map
+Set, that graph replaces Quartz's own graph plugin on every page — one
+curated map
 of the project, the same everywhere, rather than a neighbourhood computed
 per page. Unset, Quartz's local graph is what the site keeps.
 
@@ -354,6 +355,7 @@ that doesn't is used as it is in both modes.
 | `theme` | `dict` | *unset* |
 | `graph` | `Path \| None` | *unset* |
 | `graph_height` | `str` | `"320px"` |
+| `graph_depth` | `int` | `1` |
 
 ## Environment variables
 
