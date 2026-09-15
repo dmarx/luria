@@ -1,0 +1,37 @@
+name: Llamero: Repo Map For LLM
+on:
+#  push:
+    # branches:
+    #   - main
+    # paths:
+    #   - '.github/workflows/generate-summaries.yml'
+    #   - 'src/summary_generator/**'
+    #   - 'pyproject.toml'
+  workflow_dispatch:
+
+jobs:
+  generate-summaries:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        
+    - name: Create dummy requirements.txt for next step
+      run: touch requirements.txt
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        cache: 'pip'
+
+    - name: Install project
+      run: pip install -e .
+
+    - name: Generate summaries
+      run: llamero summarize all
