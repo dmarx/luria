@@ -214,7 +214,54 @@ def _docstring_line_spans(text: str) -> list[tuple[int, int]]:
     return spans
 
 
+# (path, text) → the scan of it. Both scans below are pure functions of those
+# two, and both are expensive on Python sources: `_blocks` walks an AST to find
+# docstring spans, `_comment_fragments` runs the tokenizer. Neither was reached
+# once per file — `_parse` re-derives both on every directive lookup, and the
+# lookups are per check, not per document. One lint over this repository called
+# each 11,142 times over 451 distinct inputs, about 25 readings apiece, and
+# spent 30 of its 33 seconds inside them (#265).
+#
+# Keyed on the text rather than a stat, which is the whole reason this is a
+# safe cache and not a staleness bug waiting for `field_edit` and `repair` to
+# rewrite a document mid-run: the caller hands the content in, so new content
+# is a new key. Nothing has to remember to drop anything.
+#
+# Bounded by the distinct revisions of the files one command touches. Reads and
+# writes come from `parallel.pmap`'s threads as well as the main one; a plain
+# dict is enough because the worst a race can do is compute the same pure
+# answer twice and store an equal value over an equal one.
+_BLOCK_CACHE: dict[tuple[Path | None, str], list[tuple[int, int]]] = {}
+_FRAGMENT_CACHE: dict[tuple[Path, str], list[tuple[int, int, str]]] = {}
+
+
+def forget_scans() -> None:
+    """Drop the scan caches — for tests that count how often a scan runs."""
+    _BLOCK_CACHE.clear()
+    _FRAGMENT_CACHE.clear()
+
+
 def blocks(text: str, path: Path | None = None) -> list[tuple[int, int]]:
+    """Blank-line-delimited runs of lines, 1-based inclusive — see `_blocks`."""
+    key = (path, text)
+    hit = _BLOCK_CACHE.get(key)
+    if hit is None:
+        hit = _blocks(text, path)
+        _BLOCK_CACHE[key] = hit
+    return list(hit)      # callers get their own list to mutate
+
+
+def comment_fragments(path: Path, text: str) -> list[tuple[int, int, str]]:
+    """Every real comment in `path` — see `_comment_fragments`."""
+    key = (path, text)
+    hit = _FRAGMENT_CACHE.get(key)
+    if hit is None:
+        hit = _comment_fragments(path, text)
+        _FRAGMENT_CACHE[key] = hit
+    return list(hit)      # callers get their own list to mutate
+
+
+def _blocks(text: str, path: Path | None) -> list[tuple[int, int]]:
     """Blank-line-delimited runs of lines, 1-based inclusive.
 
     A fenced block is atomic — a blank line inside a code sample doesn't end
@@ -247,7 +294,7 @@ def blocks(text: str, path: Path | None = None) -> list[tuple[int, int]]:
     return out
 
 
-def comment_fragments(path: Path, text: str) -> list[tuple[int, int, str]]:
+def _comment_fragments(path: Path, text: str) -> list[tuple[int, int, str]]:
     """(line, char offset, comment body) for every real comment in `path`."""
     suffix = path.suffix.lower()
     if suffix in {".md", ".markdown"}:
