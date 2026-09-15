@@ -6,6 +6,7 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 
 ## Currently — [September 2026](2026-09.md)
 
+- [15 Sep 02:23 — The 36 scans were 8 corpora and one render done twice](2026-09.md#the-36-scans-were-8-corpora-and-one-render-done-twice)
 - [15 Sep 01:06 — A frozen dataclass that cannot be hashed, and a test that cited three ghosts](2026-09.md#a-frozen-dataclass-that-cannot-be-hashed-and-a-test-that-cited-three-ghosts)
 - [15 Sep 00:30 — The lint's time was in re-reading, not reading](2026-09.md#the-lints-time-was-in-re-reading-not-reading)
 - [14 Sep 20:02 — Three comment-carry bugs the examples passed and the property caught](2026-09.md#three-comment-carry-bugs-the-examples-passed-and-the-property-caught)
@@ -70,9 +71,9 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 
 ## All books
 
-107 entries across 2 books, newest first.
+108 entries across 2 books, newest first.
 
 | Book | Entries | First | Last |
 |---|--:|---|---|
-| [2026-09](2026-09.md) | 61 | 2026-09-03 | 2026-09-15 |
+| [2026-09](2026-09.md) | 62 | 2026-09-03 | 2026-09-15 |
 | [2026-08](2026-08.md) | 46 | 2026-08-03 | 2026-08-28 |
