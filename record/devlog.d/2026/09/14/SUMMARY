@@ -1,0 +1,480 @@
+---
+File: record/devlog.d/2026/09/14/042025.md
+---
+---
+title: "The config migration's two silent failures were both about indentation"
+created: '2026-09-14T04:20:25'
+tags:
+- mechanism
+- method
+---
+
+TOML and YAML differ in one way that matters to a migration, and it caused
+both of the real bugs in this one: **a TOML table header is fully qualified
+and a YAML key is not.**
+
+    [luria.remotes.SG.schemes.FXL]      # says exactly where it is
+      FXL:                              # says only "one level in from here"
+
+Everything that edited the config as text was built on the first fact.
+
+## `rename_scheme` renamed nothing
+
+It string-replaced `[luria.schemes.FXL]` with `[luria.schemes.FXM]`. There is
+no such string in a YAML config, so the rename silently did not happen — and
+the test that caught it was asserting on the *new* spelling, which never
+appeared.
+
+Renaming the bare key would be worse than not renaming it. `FXL:` occurs under
+`schemes:` and again under every `remotes.<R>.schemes:`, and the point of the
+section-aware pass is that renaming **this** project's scheme leaves **another**
+project's mirror alone.
+
+`rename_key_at(text, path, old, new)` walks the lines tracking the open-mapping
+stack by indentation and renames the key only where the stack equals `path`.
+Line editing rather than a round-trip: a config is written by a person and
+carries their comments, and a migration that strips them has taken more than it
+was asked for.
+
+## The same assumption, one function over, sweeping the wrong paths
+
+`config_paths_pass` freezes an unclaimed remote's own `document:` path so a
+rename of our scheme does not rewrite theirs. It found the current section
+with a TOML-header regex — so under YAML `section` stayed `""`, nothing was
+ever frozen, and **the other project's path got rewritten**.
+
+That one is worse than the rename. A no-op is visible the moment anyone looks;
+this wrote a wrong value into a config and looked like success.
+
+## Where the third one was
+
+`luria upgrade statuses` appended `schemes.VP.statuses: record-statuses` to the
+document. YAML has no dotted-path syntax, so that is a key literally named
+`schemes.VP.statuses`, sitting beside `schemes:` and meaning nothing.
+
+Three bugs, one root: **TOML composes by concatenation and YAML composes by
+nesting.** The same fact broke the test fixtures — `BASE + extra` had to become
+a merge — and broke `luria init`, where an indented block appended to the end
+of a document attaches to whatever the last top-level key happens to be.
+
+## A vocabulary's name is a published path
+
+Not a bug, but the last thing to go wrong, and the least obvious. The shared
+status vocabulary was called `record-statuses` — a better name — and a
+vocabulary's per-value pages render at `<view>/<name>/`. So the rename moved
+`docs/decisions/statuses/` to `docs/decisions/record-statuses/` and left the
+old directory behind as an orphan.
+
+What that broke is worth stating, because nothing about it says "path": the
+bare-reference check skips generated views, and it recognises them by
+generated-output path. An orphaned view directory is not one — so pages that
+had been generated for a year started being scanned as hand-written prose and
+reported every code in them.
+
+The vocabulary is called `statuses`.
+
+## Numbers
+
+345 tests passing at the low point, 1143 now, 0 failing. `luria lint` clean on
+this record with 0 unacknowledged references.
+
+
+
+---
+File: record/devlog.d/2026/09/14/151540.md
+---
+---
+created: '2026-09-14 15:15:40'
+title: Every fragment link in the record worked everywhere except where it is read
+tags:
+- mechanism
+---
+
+The report was "the devlog links appear to be broken on the rendered site",
+with a guess attached: a render mode configured as an intent not to emit
+fragments, with no way to ask for anchors. The guess was wrong and the
+instinct behind it was right — something *was* configured around this, just
+not that.
+
+## What it actually was
+
+The devlog index links `2026-09.md#20260914042025`. The book contains
+`<a name="20260914042025"></a>`. Both correct. The link works in the
+repository, on GitHub, in any editor preview.
+
+It does not work on the site, and the reason is one attribute. From Quartz
+v4.5.2, `quartz/components/scripts/spa.inline.ts`, at both call sites:
+
+    const el = document.getElementById(decodeURIComponent(url.hash.substring(1)))
+    el?.scrollIntoView()
+
+`getElementById` finds an `id`. An `<a name>` has no `id`. The HTML spec has
+a *real navigation* fall back to `a[name]` — which is exactly why this
+worked in every place anybody looked at it. A single-page app never performs
+one.
+
+I confirmed it against the live site rather than reasoning about it: the
+published `2026-09` page contains all 55 `<a name="…">` elements and not one
+matching `id`. The element is there. Nothing is dropping it.
+
+## The part worth writing down
+
+[ADR-094](../../record/decisions.d/ADR-094.md) had already measured this — "330 links across 81 pages, none of
+which resolved" — and recorded the cause as *Quartz drops the element and
+slugifies each heading's own text instead*. On that basis it rejected "emit
+anchors that survive the publisher", reasoning that the repair would mean
+finding a spelling this publisher keeps and re-finding it for the next one.
+
+The measurement was right. The explanation was wrong, and it was wrong in the
+direction that costs the most: it turned a one-attribute fix into an argument
+about publisher portability, and the workaround it motivated — `cite`,
+pointing citations at a document's own page instead of the anchor — shipped
+and worked, which removed the pressure to look again.
+
+The devlog had no equivalent escape hatch, so its links stayed broken for as
+long as the journal has existed.
+
+**An explanation that fits the evidence is not the same as an explanation that
+is true.** "Quartz drops raw HTML" fits "none of these links resolve" exactly.
+Checking it cost one `curl` and a `grep`.
+
+## Why no check caught it
+
+89 of the 100 fragment links in this repository resolved by `name` and no
+other way, and every reference rule luria runs read straight past them. Two
+reasons, and both are about the shape of the query rather than the rule:
+
+- **Every reference rule reads sources.** That is right — a view is rewritten
+  by the next build, so a finding about one is a finding nobody can act on
+  where it is reported. But the motivating case is a journal *index* linking
+  into a journal *book*, and both are generated. The check that would have
+  caught this had to be the one exception, and `doc_files(views=True)` now is.
+- **The link and the anchor were each individually correct.** The target
+  exists, the path resolves, the anchor is in the file. There is no broken
+  string anywhere. The only thing wrong is a relationship between two
+  documents that no rule was looking at.
+
+The new check is narrow on purpose. It does not ask "does every fragment
+resolve" — a fragment naming a heading is resolved by a slug each renderer
+computes slightly differently, so that check would have to model several
+slugifiers to avoid reporting links that work. `name`-only is unambiguous,
+mechanically repairable, and the whole of what was actually broken.
+
+## The check failed CI, and the reason is the good part
+
+The first version read the committed views off disk. Locally it was green,
+because I had run `luria index` before `luria lint` and the views on disk
+were the fixed ones. CI checks out the branch and lints without generating —
+and a branch carries the *default branch's* copies of every view, because
+this record deliberately does not commit views on a branch ([ADR-068](../../record/decisions.d/ADR-068.md)). So the
+check reported 55 violations against files the pull request is **forbidden to
+fix**, and would have done so on every future PR that touched an anchor.
+
+I had even written the wart into the ADR and argued it was acceptable: *"the
+check reads views, so it is the one reference rule that can report a finding
+a contributor cannot fix where it is reported. That is the right trade here."*
+It was not a trade. It was a bug I had rationalised because I could not see
+how else to reach a view→view link.
+
+The answer was already in the codebase, one function away. `check_view_dirs`:
+
+> computed against what the generator would write, in memory, so the check
+> reads sources and writes nothing … a branch carries the default branch's
+> copies and has nothing to be stale against.
+
+So the check is handed every source plus `adr_index.outputs()` — the views as
+this source tree renders them. The question stops being "what is committed"
+and becomes "what will this record produce", which is the only version of the
+question that has the same answer on a branch and on main.
+
+**Verified both directions before pushing this time**, which is the habit the
+first round skipped: with the fixed generator and `main`'s stale views on
+disk, 0 findings. With my source fix stashed so the old generator runs, 55.
+
+## Three things I got wrong on the way
+
+**The first version of the check resolved a link target against the linking
+file's own directory.** It reported five real links in the constitution
+example as pointing at missing files. They are correct as written: a
+`render = "document"` scheme's prose is written to resolve from the page it
+assembles into, which is what `Config.link_base` has always known. Naive
+resolution reinvented a frame the project already had, and got it wrong.
+
+**The first version of the check also read only sources**, so when I pointed
+it at the pre-fix book it found nothing — the bug it was written for,
+invisible to it. That took thirty seconds to find because I checked it
+against the actual broken state instead of only against a fixture.
+
+**And then I over-corrected into reading the committed views**, which is the
+CI failure above. Sources-only could not see the defect; disk-views could not
+be trusted on a branch. The render is the only reading that is right on both
+counts, and I reached it third.
+
+One more, smaller: a stub is the authored part of a generated page, so an
+anchor written in one is found twice — in the stub and in the view it renders
+into. Same defect, two findings, and the second one's suggested remedy was
+wrong, because a person *can* fix a stub. One finding per unreachable
+fragment now, reported where somebody can act on it.
+
+
+
+---
+File: record/devlog.d/2026/09/14/171701.md
+---
+---
+created: '2026-09-14 17:17:01'
+title: Owning somebody else's algorithm, checked against their output
+tags:
+- mechanism
+---
+
+The report was "the devlog links are still broken", with the observation
+attached: the contents list links `#20260903035841`, the page's own heading
+link is `#three-lint-passes-compile-into-one-contract-per-scheme`.
+
+## First: they were not broken
+
+I drove a real Chromium at the published page rather than reasoning about it
+again. Cold load, in-page contents click, and a cross-page SPA hop from the
+journal index all land at scrollY 3451, with the entry's heading at the top
+of the viewport. The SPA hop was verified to be one — a marker set on
+`window` before the click survived it, which a full navigation would have
+destroyed.
+
+So the previous fix held. The site had rebuilt (Pages deployed 16:21 UTC,
+after the merge) and a stale cached copy is the likely thing that was being
+read.
+
+## But the observation was right, and better than the bug report
+
+Two addresses existed for one entry. Luria wrote the durable one and linked
+it; the publisher wrote the slug one and put the ¶ anchor and its sidebar
+Table of Contents on it. **A record whose pages disagree with themselves
+about how to name a thing is a record you have to test rather than read** —
+which is exactly what happened here, to somebody who read it carefully and
+correctly concluded something was off.
+
+## The fix I recommended was not available
+
+Put the timestamp on the heading: one address, the durable one. I checked
+before implementing, and both halves are load-bearing:
+
+    // rehype-slug
+    if (headingRank(node) && !node.properties.id) { … }
+
+so a heading carrying the timestamp never gets a slug — and Quartz's sidebar
+TOC is a *markdown* plugin computing its links from the heading **text**,
+with its own slugger, ignoring ids entirely. Every sidebar link on every
+book and on the principles document would have pointed at an id that no
+longer existed.
+
+I would have shipped that. The only reason I didn't is that I went to read
+the plugin before writing the code, which is the third time in two days that
+reading the publisher's source beat reasoning about it.
+
+## Owning github-slugger, and why it is affordable
+
+Linking the heading means producing the id the publisher will assign. That
+is `github-slugger`, and a fourth copy of somebody else's algorithm is a
+thing to do carefully or not at all.
+
+I wrote the obvious implementation and diffed it against **288 headings
+across five pages the site had actually published**. 283 matched. The five
+that did not were both of its bugs:
+
+- `_` is a word character, so `github-slugger` keeps it. My version stripped
+  `_` as a markdown emphasis marker and turned `fail_on` into `failon`.
+- The order is `replace(regex, '').replace(/ /g, '-')` — remove punctuation
+  **then** turn each space into one hyphen. My version collapsed runs, so
+  `log — September`, whose em-dash removal leaves two spaces, came out
+  `log-september` where the publisher writes `log--september`.
+
+Neither was going to be found by thinking harder about it. Both were found
+in one diff against real output, which took a `curl` and a loop.
+
+Then the unit tests found a third: my repeat-numbering carried the counter
+in a local instead of re-reading it, so a document with "Notes", "Notes 1"
+and "Notes" again proposed `notes-1` forever. The suite hung rather than
+failed, which is its own tell.
+
+**What makes the copy affordable is not care, it is the check beside it.**
+Luria renders the page it links into, so the anchor check can ask whether
+every generated fragment resolves against the very text the generator
+produced. A drift between our slugger and theirs is a lint failure in the
+first build after, not a link that quietly goes nowhere.
+
+## The rule that came out of the conversation
+
+Widening the anchor check to "reaches nothing" was rejected in [ADR-099](../../record/decisions.d/ADR-099.md),
+correctly at the time: *"a fragment naming a heading is resolved by a slug
+each renderer computes slightly differently, so the check would have to
+model several slugifiers to avoid reporting links that work."* The objection
+dissolved the moment luria had to model one anyway.
+
+And one level up, the conflict that was actually being pointed at: a
+citation's durable address is either an anchor or a page, `cite` chooses,
+and choosing the page while `site.exclude` withholds it leaves every
+citation of that scheme's codes pointing out of the site. [ADR-094](../../record/decisions.d/ADR-094.md) measured
+that shape — 10 links leaving the site became 195 — and fixed the derivation
+that caused it without anything stopping a project from doing it on purpose.
+`unresolved-citations` says so now.
+
+
+
+---
+File: record/devlog.d/2026/09/14/183542.md
+---
+---
+title: 'Quartz 5 builds, and the popover bug was already fixed there'
+created: '2026-09-14T18:35:42'
+tags:
+- mechanism
+- method
+---
+
+<!-- inactive-ok-file: ADR-100 — Proposed. Named as the decision this entry
+     continues from; the citation is to what that decision left open, not a
+     claim it is settled. -->
+
+The contents list of a devlog book had one wart left after [ADR-100](../../record/decisions.d/ADR-100.md): the
+links went to the right section, but *hovering* one previewed the top of
+the page instead. Every hover, every link, always the first section.
+
+The cause is upstream. Quartz's `showPopover` caches a popover element per
+pathname; on a cache hit it scrolls the cached element to the requested
+anchor. The scroll line reads `popoverInner` before its own `const`
+declaration — a temporal dead zone — so it throws, the exception is
+swallowed by the hover handler, and the preview keeps whatever scroll
+position the first hover gave it. The first hover is fine precisely because
+it takes the construction path, not the cache path.
+
+Proving it took patching the minified bundle in a built site and hovering
+again. That is worth doing before reporting anything upstream: the theory
+"a TDZ throw is swallowed" and the observation "the preview never moves"
+are compatible with several other causes, and the patch discriminates.
+
+Then the useful discovery: Quartz 5 already contains the fix. It derives the
+element from the popover it was handed rather than from a variable declared
+later, so there was nothing to upstream — only a version to move to.
+
+## The measurement that lied
+
+The first attempt to confirm v5 was clean reported a residual error. It was
+an artifact of how the measurement was taken: hovering link B without moving
+the mouse away from link A meant the sample landed mid-transition on a
+popover that was still animating, so the scroll position read as stale when
+it was merely late. Moving the pointer to `(0, 0)` between hovers and
+reading the delta directly gave `delta: 0` on every link.
+
+The lesson is the same one this record keeps relearning: a renderer claim
+checked against a real browser is worth more than a renderer claim derived
+from reading the renderer, and a measurement harness needs its own
+skepticism before its output does.
+
+## The pin that would have been wrong
+
+[ADR-042](../../record/decisions.d/ADR-042.md) rejected Quartz 5 with a real measurement — v5.0.0's plugin
+installer crashes on `.scss` under Node 22 — and said to revisit on the next
+patch release. The blocker is fixed, but *not in a release*: v5.0.0 is still
+the newest tag. Following [ADR-042](../../record/decisions.d/ADR-042.md)'s own "pinned to a tag" rule would have
+pinned the exact build that the same ADR measured as unbuildable.
+
+So the pin is a commit, and the departure is written down where the default
+lives rather than only in the decision. Move it to a tag once one ships past
+v5.0.0.
+
+## What the upgrade paid for
+
+Beyond the popover: v5 positions each component from its own plugin entry in
+`quartz.config.yaml`, so the generated `quartz.layout.ts` disappeared —
+ninety lines of TSX that luria wrote for one reason, to move the graph out
+of a sidebar that stacks below the article under 1200px ([#71](https://github.com/dmarx/luria/issues/71)). That is now
+three keys on the graph plugin. `luria site` writes one generated file where
+it used to write two, and `actions/site` copies one.
+
+Verified end to end before the switch: 372 packages install in ten seconds,
+317 pages build in about a minute, 109 internal links resolve, the graph
+lands in the content column, popovers land on the right section, and the
+console is clean.
+
+
+
+---
+File: record/devlog.d/2026/09/14/200226.md
+---
+---
+title: 'Three comment-carry bugs the examples passed and the property caught'
+created: '2026-09-14T20:02:26'
+tags:
+- mechanism
+- method
+---
+
+[ADR-102](../../record/decisions.d/ADR-102.md) taught the TOML crossing to carry a project's config comments. Eight
+tests, every one written failing first, all passing. Verified against the real
+477-line config it was written for: 42 of 42 comment blocks carried.
+
+Then I migrated that config for real and read the output. Three things were
+wrong, and the eight tests were blind to all of them.
+
+## What the examples could not see
+
+**Vocabulary prose landed flush left.** A `tags.yaml` is written at column 0
+because it is its own document. Inlined under `vocabularies:` its keys are two
+levels in, and ruamel emits a carried comment at the column it was stored
+with — so twenty-two lines explaining the thirteen topics sat hard against the
+left margin inside an indented mapping, attached to nothing a reader could
+see. The test asserted the text was *present*. It was.
+
+**Two blocks merged into one.** `[luria.site]` had a trailing comment; a blank
+line later, `[luria.lint]` had its own. My scanner treated a blank line as not
+ending a run, so both accumulated and both were emitted above `lint:`. The
+site comment was present, in the wrong place, saying something false about the
+key underneath it.
+
+**Two things were dropped outright.** Prose after a vocabulary's last entry,
+and a comment inside a multi-line array — `tags = [..., # why these two, ...]`.
+The second is the case [ADR-102](../../record/decisions.d/ADR-102.md) names as a known limit, and says will be
+*reported*. It was not reported. The scanner skipped it before any block
+existed to strand, so the report had nothing to print. The ADR described a
+behaviour the code did not have.
+
+## The check that found them
+
+Not another example. A property:
+
+> every comment line in the sources appears in the result
+
+Fifteen lines of script over the real config. It printed `352 of 369`, and the
+seventeen it named were the bugs. After the fixes: `369 of 369`.
+
+The examples were not bad tests — each pinned a real behaviour, and they still
+do. They were just all instances of "this text appears somewhere", which is
+the one thing that stayed true through three distinct failures. A property
+that quantifies over the whole input cannot be satisfied by the case you
+happened to think of.
+
+It is now a test, over a fixture carrying every shape a comment can take:
+table, key, dotted key, inside a multi-line value, vocabulary header,
+per-entry, trailing.
+
+## A smaller thing, worth the rename
+
+`toml_comments.py` reads the YAML vocabulary files too, and had since the hour
+it was written. A module named for one format, doing two, was going to be
+wrong for as long as it existed, so it is `comment_carry.py` now — cheaper an
+hour after the merge than a year after.
+
+## What the carry taught about the record
+
+One carried comment turned out to be false, which is the kind of thing only
+moving prose surfaces. The LIT vocabulary's header says it holds "the seven a
+practice can carry, plus five the corpus needs and the practice registry never
+did". Both vocabularies now hold the same thirteen keys — they converged, and
+the prose describing them as deliberately different never caught up.
+
+Before [ADR-102](../../record/decisions.d/ADR-102.md), that sentence would have been deleted by the migration, and
+with it the evidence that the two lists were once meant to differ. That is a
+better argument for the carry than the line count.
+
+

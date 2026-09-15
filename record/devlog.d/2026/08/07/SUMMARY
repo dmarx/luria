@@ -1,0 +1,426 @@
+---
+File: record/devlog.d/2026/08/07/045929.md
+---
+---
+title: 'The CLI sheds the commands that were only the module layout showing through'
+created: '2026-08-07T04:59:29'
+tags: []
+---
+
+The prompt was an observation, not a bug: for machinery this small, eleven
+CLI commands is a lot. The audit confirmed it quickly, because the codebase
+had already written the indictment about itself — `reports.py`'s docstring
+says the detail behind `ref-status` and `pending` is detail "nobody runs",
+and bare `luria badges` printed a stderr note whose content was "you
+probably meant `luria index`". The third witness was CLAUDE.md, which never
+mentioned `badges`, `reports` or `collect` to contributors at all: the
+documented surface had already shrunk, the dispatcher just hadn't noticed.
+
+The mechanism of the accumulation was worth naming in the ADR: `cli.py` maps
+one command per module because every module keeps a standalone `main()` for
+vendoring, so registering a new module cost one dict line and was always
+done. The interface was a projection of the package layout — the exact drift
+shape the record's own [DP-3](../../record/principles.d/DP-003.md)
+describes, running on the tooling itself.
+
+What shipped ([ADR-030](../../record/decisions.d/ADR-030.md)): six
+contributor commands, `reports` and `collect` labelled as CI's in the help
+text, and `badges` / `ref-status` / `pending` removed. The first draft kept
+the old names alive as a `RETIRED` dict — each one exiting 2 with a pointer
+at its successor, argued from [DP-1](../../record/principles.d/DP-001.md) — and review deleted it: a deprecation
+shim serves users with a workflow to migrate, this project has one user and
+no such workflow, and a name that answers is a name that still exists. The
+instinct to preserve was the exact reflex the PR was cutting, pointed at
+itself. A removed name now falls through to "unknown command" plus the
+usage, which already lists everything that took the old jobs.
+
+Approaches considered and dropped along the way:
+
+- **Deleting the retired modules' `main()`s.** Tempting as a full amputation,
+  but it breaks the vendor-one-file property for no gain in surface, and the
+  interactive flags (`--all`, `--as-of`) would have had to grow back inside
+  `reports` immediately. The commands died; `python -m luria.ref_status`
+  lives.
+- **Folding `link` into `lint --fix`.** The ruff/eslint idiom, and the two
+  already share `doc_refs.py`. Left alone deliberately: the check/fix split
+  is [ADR-005](../../record/decisions.d/ADR-005.md)'s shape, and this
+  change is about removing false claims from the surface, not minimizing the
+  count.
+- **Superseding [ADR-007](../../record/decisions.d/ADR-007.md).** Wrong
+  remedy — its choice (reported, never enforced) is untouched; only its
+  Decision section's delivery mechanism named the two commands. That is the
+  correct-in-place case, so it went to v2 with a history note instead.
+
+Two traps for the next person. First, hand-writing relative links in a
+journal entry: I computed the depth from the entry's own directory, and the
+generated book's link check failed — the fixer writes devlog links relative
+to the *book*, not the source. Don't compute anything; type `[[ADR-030]]`
+and run `luria link --fix`. Second, the retirement messages in `lint.py` and
+`ref_status.py` pointed readers at `luria ref-status --all` from inside
+warning output. Retiring a command means grepping for it in *strings*, not
+just in the dispatch table — the lint's own advice would otherwise have
+recommended a command that answers with a refusal.
+
+
+
+---
+File: record/devlog.d/2026/08/07/155534.md
+---
+---
+title: 'Reports become views a badge can land on, and created: fills itself in'
+created: '2026-08-07T15:55:34'
+tags: []
+---
+
+**Two issues in one arc ([#33](https://github.com/dmarx/luria/issues/33), [#35](https://github.com/dmarx/luria/issues/35)), both about the machinery
+refusing to use facts it already had.**
+
+For [#33](https://github.com/dmarx/luria/issues/33) the gap was almost comic once stated: `journal.read()` has always
+fallen back to the path when `created:` is missing — the renderer trusted the
+path as a witness — while the lint demanded a human transcribe that same path
+into the frontmatter by hand. The fix ([ADR-031](../../record/decisions.d/ADR-031.md)) puts population in
+`luria index`'s write mode, so CI's generation job repairs a hand-filed entry
+the same way it commits the views. The deliberate non-fix is the disagreement
+case: field and path telling different stories stays an error, because
+overwriting either side would invent a fact.
+
+For [#35](https://github.com/dmarx/luria/issues/35) the design work was all in two constraints that only surface
+after you decide to commit the reports ([ADR-032](../../record/decisions.d/ADR-032.md)):
+
+- **The clock had to come out.** The old reports stamped "Generated
+  <today>" and computed ages in days. Committed and staleness-checked, that
+  report goes stale at midnight with no record change behind it — and worse,
+  every active branch rewrites the same two files daily, which is the exact
+  merge-conflict shape [DP-2](../../record/principles.d/DP-002.md) names. Ages became dates ("open since
+  2026-08-03"); the live day-count arithmetic stayed in the lint's console
+  warnings, which nobody commits. A first attempt pinned this with "today's
+  date appears nowhere in the output" and review rightly shot it down: a
+  decision filed today and still `Proposed` puts today's date in the pending
+  report legitimately, so the blunt assertion fails on a correct report. The
+  pin that survives is on what the clock *would have added* — the "N days"
+  column — not on the date strings the record itself supplies.
+- **The scanner had to be blinded to them.** A reference-status report is a
+  page that *lists* retired codes. Scan it like any docs page and every
+  flagged code gains a citation site inside the page that flags it; the next
+  render adds rows for the report's own rows, and the view never converges —
+  the report reporting the report. `is_generated` now covers the reports
+  directory, which excludes it from the bare-reference lint, the fixer, and
+  the status scan in one move, since all three already route through it.
+
+The false start worth recording: the first plan kept `luria reports` writing
+date-stamped files and only *added* a committed copy. That is two spellings
+of the same view — the projection-drift shape — and it died on the question
+"which one does the badge trust?". The committed view is the report;
+`luria reports` survives only to regenerate it elsewhere for the CI artifact,
+which matters exactly when the lint failed on staleness and the committed
+copies are the thing that can't be trusted.
+
+An unplanned collision worth its own line: the record had been using
+`ADR-032` as the canonical *specimen* of "a code that resolves to nothing" —
+in two decision bodies, two test files, all excused with `unresolved-ok`.
+Filing the real thirty-second decision made every specimen resolve, and five
+directives went stale at once. The machinery caught its own fixture: the
+stale-annotation warning fired exactly as designed, and the fix was to retire
+the excuses (a citation of an Active decision needs none). Lesson: an example
+code should come from outside the sequence (`ADR-777`, `ADR-999`), because
+the sequence eventually arrives.
+
+Trap for the next person: anything that makes a new directory under `docs/`
+has to be threaded through three registries, not one — `is_generated` (scan
+and fixer exemption), `view_dirs()` (orphan cleanup and stray-file
+detection), and `check_docs_index`'s exempt set (self-indexing view dirs).
+Missing any one of the three fails in a different, delayed way.
+
+
+
+---
+File: record/devlog.d/2026/08/07/164832.md
+---
+---
+title: 'A blunt directive and a fixture prefix, both priced in visibility'
+created: '2026-08-07T16:48:32'
+tags: []
+---
+
+Both features came out of review on the [#35](https://github.com/dmarx/luria/issues/35) arc: the reports needed
+`is_generated` to escape the scanner because nothing lighter existed
+([#37](https://github.com/dmarx/luria/issues/37)), and filing [ADR-032](../../record/decisions.d/ADR-032.md) detonated every directive that had
+borrowed its number as a specimen ([#38](https://github.com/dmarx/luria/issues/38)).
+
+**`unlinted-file:` ([ADR-033](../../record/decisions.d/ADR-033.md)).** The implementation turned out to be
+three early returns, which is the payoff of an earlier decision: the lint
+and the fixer both read `rewritable_refs`, so one guard covers both and they
+cannot disagree about an exempted page — the [ADR-005](../../record/decisions.d/ADR-005.md) sharing paying rent
+again. The design work was in what *not* to build: no line/block scopes
+(backticks already are the narrow form — a quoted code is a specimen), and
+no exemption from the non-reference checks (a page the machinery no longer
+knows about at all is a different, worse feature). The load-bearing piece is
+the counting: the reference report lists opted-out files even when the
+answer is "none", because the blanket exemption is the one suppression the
+report cannot converge past.
+
+**The `FX` prefix ([ADR-034](../../record/decisions.d/ADR-034.md)).** The pleasant surprise was that no new
+machinery was needed at all: a remote with a constant `url` template and no
+`repo` already resolves every code to that URL — `Remote.link` calls
+`.format()` on it and a template with no placeholders is a no-op. One config
+stanza, and `FX-ADR-032` is resolvable by construction. The alternative that
+looked right and wasn't: a dedicated *scheme*. A scheme's codes resolve to
+documents in a directory, and a fixture code must resolve to no document
+while remaining a valid reference — only the remote-url rung has that shape.
+
+One boundary worth restating because it will trip someone: **directive
+arguments still take local codes only.** `unresolved-ok: FX-ADR-032` is a
+malformed annotation, not a clever one — the prefix is for references in
+prose and tests, never for the vocabulary that governs them.
+
+No failed approaches beyond the scheme-vs-remote fork; the traps this time
+were all inherited from the previous arc and already recorded there.
+
+
+
+---
+File: record/devlog.d/2026/08/07/181733.md
+---
+---
+title: 'The ''never'' comes out of ADR-007: enforcement becomes a dial'
+created: '2026-08-07T18:17:33'
+tags: []
+---
+
+Review on the [#32](https://github.com/dmarx/luria/issues/32) arc caught the record contradicting itself: [ADR-007](../../record/decisions.d/ADR-007.md)'s
+"warnings, **never** able to fail a build" forbids the last rung of the
+ladder the project instruments — prose → convention → mechanism →
+**guarantee** ([DP-5](../../record/principles.d/DP-005.md)) — for exactly the findings the machinery is best at
+counting ([#40](https://github.com/dmarx/luria/issues/40)). The fix is [ADR-035](../../record/decisions.d/ADR-035.md): warn-by-default survives with
+all of [ADR-007](../../record/decisions.d/ADR-007.md)'s reasoning intact, and `[luria.lint] fail_on` promotes named
+warning classes to lint failures for the projects that want teeth.
+
+Implementation notes:
+
+- The refactor that made it safe: `report_warnings` used to print each class
+  inline with its own scan calls; it now reads one `status_sections()`
+  computation and either prints a section or appends it to the violations.
+  One computation, two consequences — the warning path and the enforcement
+  path cannot disagree about what a class contains, the same
+  shared-scanner property [ADR-005](../../record/decisions.d/ADR-005.md) uses for the lint and the fixer.
+- **Only unacknowledged rows reach a class**, which fell out for free: the
+  sections were already built from the acknowledged-filtered pools. Under
+  enforcement, `inactive-ok:` stops being a way to quiet a warning and
+  becomes a way to state an exception to a failing rule — a better version
+  of the same directive.
+- A wrong notch (`fail_on = ["retired-refs"]`) is itself a lint error naming
+  the vocabulary; a dial set to a notch that doesn't exist must not silently
+  enforce nothing ([DP-1](../../record/principles.d/DP-001.md)).
+
+The supersession chase was the bulk of the work: flipping [ADR-007](../../record/decisions.d/ADR-007.md) to
+`Superseded` made 43 citations across 30 files go loud at once — the
+[ADR-013](../../record/decisions.d/ADR-013.md) rename experience, an order of magnitude larger. The
+classification that made it tractable: **present-tense guidance repoints to
+the successor** (docs, module docstrings, test headers — the claim they make
+is now [ADR-035](../../record/decisions.d/ADR-035.md)'s), while **historical bodies keep their citation and gain an
+acknowledgement** (a decision that cited [ADR-007](../../record/decisions.d/ADR-007.md) while it was in force is
+quoting the record, not asserting current doctrine). One self-inflicted trap
+worth writing down: the blanket repoint changed "([ADR-007](../../record/decisions.d/ADR-007.md))" to "([ADR-035](../../record/decisions.d/ADR-035.md))"
+inside two sentences that still said "never affect the exit code" — a
+citation swap can silently falsify the sentence around it, so read the
+sentence, not just the code.
+
+Also filed from the same review round: the `luria new <kind>` proposal
+(generalizing entry creation beyond the journal), taken as its own issue and
+arc rather than a rider on this one.
+
+
+
+---
+File: record/devlog.d/2026/08/07/182641.md
+---
+---
+title: 'One scaffold for every entry kind, fired on its own record'
+created: '2026-08-07T18:26:41'
+tags: []
+---
+
+Review on [ADR-030](../../record/decisions.d/ADR-030.md) pointed out that `luria journal new` was the special
+case pretending to be the feature: decisions and principles were already
+templated ("copy `_template.md` to the next free number" as CLAUDE.md
+prose), changelog fragments already had a naming convention, and everything
+`new` needs to know is discoverable in the config ([#42](https://github.com/dmarx/luria/issues/42)). [ADR-036](../../record/decisions.d/ADR-036.md) is
+the generalization: `luria new [kind]`, kinds derived from `luria.toml`.
+
+The design constraint that shaped everything came verbatim from the review:
+**compute identity, never content.** The old journal command demanded a
+title on the command line; the new scaffold demands nothing, computes the
+number/timestamp/date/filename, prints the path and gets out of the way of
+the editor. Named field flags exist for tools driving the CLI (an LLM can
+pass `--title` and `--summary` in one shot), but a human never fills
+frontmatter at a prompt.
+
+Two implementation notes worth keeping:
+
+- **Line substitution over parse-and-redump.** The obvious YAML round-trip
+  strips the templates' teaching comments — which are most of what a
+  template hands a first-time author. So fields are replaced in place with
+  regexes that understand the two block shapes (`>-` scalars and lists),
+  and `--title` also rewrites the body heading, so the scaffold can never
+  fail the title-agreement check it just created.
+- **The fragment path is idempotent on purpose.** One fragment per
+  contribution ([ADR-002](../../record/decisions.d/ADR-002.md)) means the second `luria new changelog` on a
+  branch returns the first file rather than minting a sibling.
+
+Fired before trusted ([DP-6](../../record/principles.d/DP-006.md)): this entry and the branch's changelog
+fragment are the first two documents `luria new` created outside the test
+suite — the fragment took the branch-slug name, this entry took its
+timestamp path, and both passed the lint on arrival.
+
+
+
+---
+File: record/devlog.d/2026/08/07/183530.md
+---
+---
+title: 'The agent file becomes a map'
+created: '2026-08-07T18:35:30'
+tags: []
+---
+
+Review asked for CLAUDE.md — both this repo's and the scaffolded one — to be
+truncated to links plus "run `luria --help`" ([ADR-037](../../record/decisions.d/ADR-037.md), the CLAUDE.md
+half of [#45](https://github.com/dmarx/luria/issues/45)). The evidence was already on the table: the command block
+in CLAUDE.md had been hand-chased twice in one week (once when [ADR-030](../../record/decisions.d/ADR-030.md)
+removed three commands, once when [ADR-036](../../record/decisions.d/ADR-036.md) swapped `journal` for `new`),
+which is the [DP-3](../../record/principles.d/DP-003.md) drifting-copy shape wearing an agent-file costume.
+
+What made the truncation safe rather than lossy: everything CLAUDE.md
+restated already has an authoritative, *linted* home — the four layers and
+correction protocol in project memory, the directive vocabulary in the
+directives doc, the command surface in `luria --help` (derived from the
+dispatch table, so it cannot drift from the code). The only prose kept is
+what a link can't carry: three one-line ground rules, and the failure-mode
+statement that when the map disagrees with the territory, the map is wrong.
+
+One structural consequence worth noting: the two CLAUDE.mds stop mirroring
+each other. The old file opened with "everything below is also
+template/CLAUDE.md", which was a third synchronization obligation; a map of
+this repository and a map of an adopting project are different documents
+that merely share a shape, and now they're maintained as such.
+
+Not done here, deliberately: the README command table and the Makefile help
+are the remaining hand copies of the surface, still tracked by [#45](https://github.com/dmarx/luria/issues/45) —
+this arc retired the copy that misleads an agent fastest, not all four.
+
+Two riders from the same review round, same arc:
+
+- **The Makefile retired** ([ADR-038](../../record/decisions.d/ADR-038.md)). The datum that settled it: CI's
+  entire Makefile usage was one `make test` line — the doctrine in its own
+  header ("run what CI runs is always `make <target>`") had been false since
+  [ADR-029](../../record/decisions.d/ADR-029.md) moved the docs jobs into composite actions. Deleting it also
+  surfaced a straggler the [ADR-036](../../record/decisions.d/ADR-036.md) sweep missed: the devlog blurb in
+  `luria.toml` still said `luria journal new`, because that sweep grepped
+  `.md`/`.yml`/`.py` and the blurb lives in a `.toml` string. Command names
+  hide in *strings in any file type*, not just the file types you thought of.
+- **`luria init` and a pre-existing CLAUDE.md**: verified it never
+  overwrites (skip-and-report), and the enhancement went to stdout rather
+  than appending into the user's file — writing into a file luria doesn't
+  own is the overwrite problem in miniature, and a printed recommendation
+  needs nobody's permission.
+
+And a third rider: the README's command table — one of the four surface
+copies — became a workflow narrative instead (file it warm → let the
+machinery write the plumbing → check before you push), ending in the same
+sentence the map ends in: `luria --help` is the authoritative list. A table
+that echoes `--help` is a copy; a narrative that shows when you'd reach for
+each command is content the help text can't carry.
+
+
+
+---
+File: record/devlog.d/2026/08/07/190509.md
+---
+---
+title: 'Idiomatic Fire, drafted: what the rewrite cost and bought'
+created: '2026-08-07T19:05:09'
+tags: []
+---
+
+Review on [ADR-030](../../record/decisions.d/ADR-030.md) called the idiomatic-Fire shape ([ADR-039](../../record/decisions.d/ADR-039.md),
+`Proposed` — the draft PR is the question, the merge verdict is the
+answer): delete every module's argparse layer, expose typed `run()`
+functions, and let `fire.Fire(COMMANDS)` derive flags and help from
+signatures and docstrings.
+
+The two constraints that shaped every edit:
+
+- **Exit codes are not return values.** Fire *prints* what a function
+  returns — `lint.main()` returning 1 under Fire would print "1" and exit
+  0, a CI gate that green-lights everything. So every `run()` returns
+  `None` and raises `SystemExit(n)` to fail. This is the one convention the
+  old shape enforced by type signature (`-> int`) that the new shape
+  enforces only by discipline, and it is the strongest argument *against*
+  the refactor.
+- **The false positive that almost shipped as a bug report**: the first
+  smoke test read `luria frobnicate` as exiting 0 — Fire looked broken.
+  It was the shell: `luria frobnicate; echo $?` piped through `tail`
+  measures the pipeline. Re-run bare, Fire exits 2 with "Cannot find key"
+  plus the available-commands list, which is the [ADR-030](../../record/decisions.d/ADR-030.md) refusal
+  property for free.
+
+What the deletion actually measured: ~150 lines of argparse across ten
+modules, replaced by nothing — the `run()` signatures already existed in
+spirit as each parser's argument list. The whole surface was re-smoked
+end-to-end (`init → index → new adr/dp → lint` in a scratch project, every
+flag spelling the composite actions use), and exit codes came through Fire
+byte-identically.
+
+Costs, honestly: `fire>=0.7` is the first runtime dependency beyond PyYAML;
+the tiered contributor/CI help text became Fire's house
+`NAME`/`SYNOPSIS`/`FLAGS` format (the tiering now lives in docs only); and
+Fire's stack-trace-flavoured error footer is chattier than the old
+one-line refusal. The worth-it verdict is deliberately left to the PR
+review — that is what a draft is for.
+
+
+
+---
+File: record/devlog.d/2026/08/07/234804.md
+---
+---
+title: 'The rename that refused to stay small: DP→GP becomes a migrations doctrine'
+created: '2026-08-07T23:48:04'
+tags: [record, mechanism]
+---
+
+Issue [#29](https://github.com/dmarx/luria/issues/29) asked whether "design principles" should become "guiding
+principles". The answer ([ADR-040](../../record/decisions.d/ADR-040.md)) is yes —
+and that the rename should wait for machinery, because it is one instance of
+a move the record will keep needing: a scheme renamed, or documents shifted
+to a new rung of the abstraction ladder (norms between decisions and
+principles; values above them).
+
+Two findings shaped the design, and both would be traps to rediscover:
+
+**Unrewritten history is unwatched history.** The first draft preserved old
+spellings in journals ("labels are history, targets are navigation"). The
+review killed it with one observation: a code that matches no configured
+scheme is invisible to the reference scanner, so the linter silently drops
+every file still using the old spelling. The preservation instinct produces
+the opposite of preservation — history nothing checks. Full rewrite won, with
+`.git-blame-ignore-revs` absorbing the blame noise and git itself holding the
+immutability guarantee.
+
+**The sweep must be a mapping, not a pattern.** `s/DP-/GP-/` eats the
+`DP-018` fixture in `tests/test_remotes.py`, the `DP-004` docstring example
+in `remotes.py`, and — worse — composed remote codes like `SG-DP-18`, which
+address *another project's* namespace. Enumerating exact pairs makes the
+protected set be "everything not named" instead of an exclusion list someone
+forgets to extend.
+
+The bookkeeping split took a round to settle: a `[[migrations]]` ledger in
+config lost to a `formerly:` frontmatter field in each moved document, with
+the alias map derived at runtime — config describes the present; documents
+carry their pasts.
+
+Plan is filed as [#54](https://github.com/dmarx/luria/issues/54) (machinery: rung 1 aliasing, then rung 2 `luria
+migrate`) and [#55](https://github.com/dmarx/luria/issues/55) (the DP→GP run itself, which doubles as rung 2's
+acceptance test).
+
+

@@ -1,0 +1,1398 @@
+---
+File: record/principles.d/DP-001.md
+---
+---
+number: 1
+status: Active
+title: 'No silent refusal'
+version: 1
+tags:
+- craft
+date: '2026-08-03'
+influenced_by: []
+origin: >-
+  The strata-g design-language review, where tools silently no-opped on inputs
+  that didn't meet their preconditions.
+summary: >-
+  A tool that explains its refusal teaches its own model. If a precondition
+  isn't met, say so — never quietly no-op, because a no-op with no feedback
+  reads as "broken", which reads as "useless", when the real answer is "not
+  here, and here's why".
+---
+
+# DP-001: No silent refusal
+
+A tool that explains its refusal teaches its own model. If a precondition isn't
+met, the tool *says so* — it never quietly no-ops. A no-op with no feedback
+reads as "broken", which reads as "useless", when the real answer is "not here,
+and here's why".
+
+Applied here: the fragment collector raises when its insert marker is missing
+rather than guessing where entries belong; `luria` prints the command list when
+given a name it doesn't know; a directive that names an unknown region is
+reported, with the known vocabulary named, rather than ignored.
+
+The corollary that costs the most to follow: **a suppression must not become a
+silence.** An acknowledgement that hides a warning is counted in the report, and
+one that has stopped applying is reported in its own right — otherwise the
+mechanism for saying "this is fine" becomes the mechanism for never hearing
+about it again.
+
+
+The reason a silent no-op is worse than a loud one is [DP-015](../record/principles.d/DP-015.md): nothing
+happening and everything working produce the same observation, so the user's
+next move is to conclude the tool is broken rather than to look for the
+precondition.
+
+
+
+---
+File: record/principles.d/DP-002.md
+---
+---
+number: 2
+status: Active
+title: 'A file every contribution must touch is a lock — hand out fragments, generate the view'
+version: 2
+tags:
+- record
+date: '2026-08-03'
+influenced_by:
+- ADR-002
+- ADR-004
+history:
+- version: 1
+  date: '2026-08-03'
+  note: >-
+    Recorded as a decision about one file — the changelog — which is why nobody
+    generalized it when the same conflicts appeared on the narrative log months
+    later.
+- version: 2
+  date: '2026-08-03'
+  note: >-
+    Generalized from "the changelog" to any shared artifact, after the third
+    instance (the decision index) turned out to be the case where generation
+    beats fragments outright.
+origin: >-
+  Fragments assembled into a changelog; then, months later, the identical
+  conflicts recurring on the narrative log; then the decision index.
+summary: >-
+  When contributing requires editing a file everyone else also edits, in the
+  same place, that file is a lock — the conflicts carry no information and every
+  hand-resolution can silently drop somebody's work. Hand out fragments and
+  generate the view; where the content is derivable, generate it outright so
+  there is no collection step to forget.
+---
+
+# DP-002: A file every contribution must touch is a lock — hand out fragments, generate the view
+
+When contributing requires editing a file *everyone else* also edits, in the
+same place, that file is a lock. Concurrent branches serialize on it: every pair
+of contributions conflicts, every rebase re-conflicts, and the conflicts carry
+no information — two changes that share nothing still collide because both
+appended after the last thing.
+
+That is **contention, not carelessness**, so "resolve them carefully" is not the
+fix; each hand-resolution is another chance to silently drop somebody's
+contribution.
+
+The fix is structural: let each contribution own a file nobody else writes, and
+*generate* the shared artifact from those on a cadence. The shared file stops
+being a source and becomes a **view**. Better still, when the shared file's
+content is derivable from the contributions themselves, generate it outright and
+delete the hand-maintained copy — then there is no collection step to forget.
+
+The tell is a file whose diff, in every single contribution, is "+N lines in the
+same place". Notice it before the third instance.
+
+*Version 2 exists because version 1 didn't generalize.* The mechanism was
+written down as a decision about **one file**, so when the same conflicts
+appeared on a second shared document months later, nobody recognized it. A value
+stated about one artifact is a value nobody applies to the next one.
+
+
+
+---
+File: record/principles.d/DP-003.md
+---
+---
+number: 3
+status: Active
+title: 'A hand-maintained projection of a source of truth will drift — derive it'
+version: 2
+tags:
+- craft
+date: '2026-08-03'
+influenced_by:
+- ADR-004
+- ADR-005
+history:
+- version: 1
+  date: '2026-08-03'
+  note: Scoped to one kind of projection — a hardcoded identity union.
+- version: 2
+  date: '2026-08-03'
+  note: >-
+    Generalized to every projection, with the remedy ladder and the failure-
+    polarity vocabulary, after an arc in which five of five converted lists had
+    already drifted.
+origin: >-
+  A hardcoded type union that had drifted to 13 of 21 keys; generalized by a
+  later arc where every one of five converted projections was already wrong.
+summary: >-
+  No hand-maintained parallel copy of what an authoritative source already
+  knows. This is a rate, not a risk — five of five measured projections had
+  already drifted. Remedies, strongest first: derive the projection; guard the
+  property rather than the list; or, if a hand list must remain, choose its
+  failure polarity and say so. Fail-stale is never acceptable and is the naive
+  default.
+---
+
+# DP-003: A hand-maintained projection of a source of truth will drift — derive it
+
+No hand-maintained parallel copy of what an authoritative source already knows.
+The copy is written carefully, by someone looking directly at the source, and it
+drifts anyway: sooner or later an entry is missed, and a missed entry ships
+silently. This is **not a risk but a rate** — when one project converted five
+such lists, five out of five had already drifted.
+
+Three remedies, in order of strength:
+
+1. **Derive the projection from the source.** A registry query, a generated
+   view. Drift becomes impossible; a new entry extends every projection with no
+   edit.
+2. **When it must stay code, guard the property, not the list.** A test that
+   asserts "the list contains these names" is the drifting list in a costume.
+   Assert the invariant — *any change that alters the output must alter the
+   projection* — and fire the guard once to prove it catches
+   ([DP-6](../record/principles.d/DP-006.md)).
+3. **When a hand list must remain, choose its failure polarity** and say so in a
+   comment. Fail-safe (the missed entry still works, suboptimally) and fail-loud
+   (the miss is immediately visible) are both acceptable. **Fail-stale — the
+   miss ships as silently wrong behavior — is never acceptable**, and it is the
+   polarity a naive list has by default.
+
+In this package, the decision index is rung 1 and the reference lint is rung 2.
+
+
+Why fail-stale specifically is the unacceptable polarity, rather than merely
+the worst of three: it is the silent one, and [DP-015](../record/principles.d/DP-015.md) is the general form —
+a missed entry that ships as wrong behaviour is indistinguishable from a
+complete list, so nothing about the system reports the gap.
+
+
+
+---
+File: record/principles.d/DP-004.md
+---
+---
+number: 4
+status: Active
+title: 'One authoritative implementation, read the same way everywhere'
+version: 1
+tags:
+- craft
+date: '2026-08-03'
+influenced_by:
+- ADR-005
+- ADR-006
+origin: >-
+  A tool-icon migration whose bug was precisely a fallback that only one render
+  site preferred, so every other site leaked the legacy value.
+summary: >-
+  Load-bearing logic lives in exactly one tested place and every consumer reads
+  it identically. A second copy — or a fallback each consumer must remember to
+  prefer — is a latent bug. The sharpest instance here: the linter and the fixer
+  share one scanner, so the linter can never demand a rewrite the fixer wouldn't
+  make.
+---
+
+# DP-004: One authoritative implementation, read the same way everywhere
+
+The load-bearing logic of a thing lives in exactly one tested place, and every
+consumer reads it identically. A second copy — or a fallback each consumer must
+*remember* to prefer — is a latent bug: sooner or later one consumer diverges
+and silently ships stale behavior.
+
+The sharpest instance here: **the linter and the fixer share one scanner**, so
+the linter can never demand a rewrite the fixer wouldn't make. Two
+implementations of "what counts as a bare reference" would drift within a month,
+and the failure mode is the worst kind — a CI failure whose suggested remedy
+doesn't work.
+
+The same reasoning rejected threading configuration through every entry point
+([ADR-006](../record/decisions.d/ADR-006.md)): the
+second caller forgets an argument, and the two checks quietly cover different
+files.
+
+"The new thing overrides the old at one site" is the smell; "the new thing
+*replaces* the old everywhere" is the fix.
+
+
+
+---
+File: record/principles.d/DP-005.md
+---
+---
+number: 5
+status: Active
+title: 'Culture must be compiled'
+version: 1
+tags:
+- record
+date: '2026-08-03'
+influenced_by:
+- ADR-003
+- ADR-005
+origin: >-
+  The strata-g project-memory doctrine. The linked-versus-bare reference split
+  was the demonstration: convention written down but unguarded, and the corpus
+  drifted toward random rather than toward wrong.
+summary: >-
+  A stateless collaborator can't be socialized, so a norm that exists only as
+  prose is followed probabilistically. Norms that matter get walked up the
+  ladder — prose, convention, mechanism, guarantee. When you find yourself
+  repeating a correction, that is the signal to walk the norm up a rung.
+---
+
+# DP-005: Culture must be compiled
+
+A stateless collaborator can't be socialized. Half the contributors to a modern
+codebase arrive with no memory, read some pages, work, and vanish — so a norm
+that exists only as prose is followed probabilistically, and the ones that
+matter get walked up the ladder:
+
+> prose → convention (file layout) → mechanism (a glob, a fragment directory) →
+> guarantee (types, CI, a lint)
+
+When you find yourself repeating a correction, that is the signal to walk the
+norm up a rung. This package is one set of norms at rung four, and every check
+in it started as a paragraph somebody kept having to repeat.
+
+The demonstration is worth keeping: with the "cite by link" convention written
+down but unguarded, one corpus drifted not toward *unlinked* but toward
+**random** — the same reference linked sixty times and bare thirty more.
+Randomness is worse than a uniform mistake, because a reader can't learn the
+convention from the corpus and stops trying.
+
+
+
+---
+File: record/principles.d/DP-006.md
+---
+---
+number: 6
+status: Active
+title: 'Fire before trusting'
+version: 1
+tags:
+- craft
+date: '2026-08-03'
+influenced_by:
+- ADR-007
+origin: >-
+  Two inert mechanisms in strata-g — an alert shape that could never fire, and a
+  CI fast path whose fail-safe polarity made a month of inertness invisible.
+  Both were discovered by accident rather than by the thing they guarded.
+summary: >-
+  Every guard, alert and CI gate gets one deliberate sabotage run to prove it
+  catches, before anyone relies on it. Provisioned is not working. Even a
+  fail-safe guard needs firing once, or it silently never delivers the benefit
+  it exists for — and the run belongs in the record, or the next person re-tests
+  it.
+---
+
+<!-- inactive-ok-file: ADR-007 — the evidence trail predates the supersession; ADR-035 carries the doctrine -->
+# DP-006: Fire before trusting
+
+Every guard, alert, and CI gate gets one deliberate sabotage run to prove it
+catches, before anyone relies on it. **Provisioned is not working.**
+
+One project has been bitten twice by mechanisms that sat green and inert: an
+alert shape that could never fire, and a CI fast path whose *fail-safe* polarity
+made a month of inertness invisible. Neither was found by the thing it guarded;
+both were found by accident.
+
+Even a fail-safe guard needs firing once, or it silently never delivers the
+benefit it exists for.
+
+**Say so in the record.** A devlog entry naming the sabotage run — what was
+broken, what the guard printed, what it printed after the repair — is the
+difference between a guard someone trusts and a guard someone re-tests from
+scratch because they can't tell whether it works.
+
+
+The general case is [DP-015](../record/principles.d/DP-015.md). An unfired guard emits exactly what a guard
+with nothing to catch emits, so "no findings" is not evidence of a clean tree
+until something has proved the instrument can speak.
+
+
+
+---
+File: record/principles.d/DP-007.md
+---
+---
+number: 7
+status: Active
+title: 'No private brains'
+version: 1
+tags:
+- record
+date: '2026-08-03'
+influenced_by: []
+origin: The strata-g project-memory doctrine.
+summary: >-
+  Knowledge is shared across collaborators regardless of species. Agent files
+  are legitimate as bootloaders — pointers to the shared record, plus harness
+  mechanics no human needs — never as knowledge stores. The test: would a new
+  human hire need this? Then it belongs in the shared docs.
+---
+
+# DP-007: No private brains
+
+Knowledge is shared across collaborators regardless of species. Agent files
+(`CLAUDE.md` and kin) are legitimate as **bootloaders** — pointers to the shared
+record, plus harness mechanics no human needs — never as knowledge stores.
+
+A private memory is a document that skipped review: it conditions one class of
+collaborator while drifting uncontested, and nobody can correct what they can't
+see.
+
+The decision test: *would a new human hire need this?* Then it belongs in the
+shared docs, and the agent file links to it.
+
+
+
+---
+File: record/principles.d/DP-008.md
+---
+---
+number: 8
+status: Active
+title: 'File it in the same contribution as the work'
+version: 1
+tags:
+- record
+date: '2026-08-03'
+influenced_by:
+- ADR-002
+origin: >-
+  The reason the fragment convention exists at all — the changelog was being
+  reconstructed retroactively from git log, badly.
+summary: >-
+  "Later" is a euphemism for never. A fact filed while its context is loaded
+  costs a paragraph; re-derived cold it costs a session — the rediscovery tax,
+  paid per collaborator, forever. Which is why the paperwork loop has to be
+  cheap: any friction here is repaid in re-derivation at a much worse rate.
+---
+
+# DP-008: File it in the same contribution as the work
+
+"Later" is a euphemism for never. A fact filed while its context is loaded costs
+a paragraph; re-derived cold, it costs a session — the **rediscovery tax**, paid
+per collaborator, forever.
+
+This is why the paperwork loop has to be cheap: a fragment is one new file, the
+index is generated, and the lint tells you exactly what is missing. Any friction
+here is paid back in re-derivation, at a much worse rate.
+
+The corollary that people skip: **record the wrong theories.** The approach that
+failed on Tuesday leaves no commit, appears in no diff, and is the single most
+expensive thing for the next person to rediscover.
+
+
+
+---
+File: record/principles.d/DP-009.md
+---
+---
+number: 9
+status: Active
+title: 'Structure is read before text — spend affordances deliberately'
+version: 2
+tags:
+- record
+- craft
+date: '2026-08-04'
+history:
+- version: 1
+  date: '2026-08-04'
+  note: >-
+    Three jobs for a deliberate affordance — shaping attention, enabling
+    discovery, diagnosis — plus two disciplines.
+- version: 2
+  date: '2026-09-05'
+  note: >-
+    The diagnosis job moved out to DP-016. It had never been cited in either
+    direction, which is DP-012's own symptom for a document carrying two
+    things, and the reading it describes turned out to hold for the citation
+    graph as well as the tree — a substrate this principle does not cover, and
+    should not have to.
+influenced_by:
+- ADR-012
+- ADR-013
+- ADR-021
+origin: >-
+  An inventory of one repository's layout found the same rules expressed
+  structurally in some places and not at all in others — two source containers
+  marked `.d` and two unmarked, a generated document beside its own sources,
+  an index buried under the things it indexes, and `README.md` meaning "edit
+  me" in one directory and "never edit me" in the next. The layout had been
+  shaping attention the whole time; nobody had been steering it.
+summary: >-
+  Names, placement, prominence and suffixes are read before any file is
+  opened, so an artifact tree communicates through its affordances whether
+  anyone designs them or not — the only choice is deliberate or accidental.
+  Spend them on three things: shaping attention (what wandering lands on is
+  what gets read; prominence is a budget), enabling discovery (a rule
+  expressible as a path convention is findable by anyone, one living in prose
+  only by whoever reads it), and diagnosis (an affordance that feels
+  inconsistent — same shape, opposite rules; a file whose neighbours are the
+  wrong kind — is a smell to read, not just an untidiness to tolerate). A
+  structural signal beats a documentary one: a comment is read after landing
+  in the wrong place; a name is read before.
+---
+
+# DP-009: Structure is read before text — spend affordances deliberately
+
+An artifact tree — a repository, a directory, a document set — is an interface,
+and it is read before any file is opened. Names, placement, sort order,
+prominence, a suffix: these reach a visitor ahead of every sentence, and they
+are doing work whether or not anyone designed them. The only choice available
+is *deliberate or accidental*.
+
+Spent deliberately, affordances do three jobs:
+
+**Shaping attention.** What wandering lands on is what gets read, so prominence
+is a budget. Entrypoints and summaries belong front-and-center; archives,
+machinery and ground truth belong a step removed, reachable on purpose. The
+polarity runs both ways: burying an entrypoint quietly reclassifies it (a log
+whose newest page sits two clicks deep reads as an archive, whatever it says),
+and exposing internals taxes every visitor with a decision they shouldn't have
+to make.
+
+**Enabling discovery.** Structure answers *where would X be?* before anyone
+greps. Consistent marks and mirrors make locations predictable — what you read
+at one path, you file at its counterpart — and predictability compounds: a
+rule expressible as a path convention is discoverable by every visitor,
+human or stateless; a rule living only in prose is discoverable by whoever
+happens to read that prose.
+
+**Diagnosis.** Affordance inconsistency is a smell to *read*, not an
+untidiness to tolerate — the same shape carrying opposite rules, a file whose
+neighbours are the wrong kind. That reading turned out not to be about
+affordances at all: the citation graph reports the same class of fault the
+same way, so it is now [DP-016](../record/principles.d/DP-016.md), and this is the tree half of it.
+
+Two disciplines keep the spend honest. **Structural beats documentary**: a
+comment saying "GENERATED — do not edit" is read after landing in the wrong
+place and enforces nothing; a directory name is read before, and a linter can
+hold it. And where the structure encodes a checkable property, walk it up
+[DP-5](../record/principles.d/DP-005.md)'s ladder — the read/write boundary
+([ADR-021](../record/decisions.d/ADR-021.md)) is this principle's worked
+application, and its payoff rung is a lint: a view directory holds only what
+the generator wrote, so a hand edit there fails with the polarity
+[DP-3](../record/principles.d/DP-003.md) demands.
+
+<!-- url-ok-block: SG-DP-18 — the construction reaches the right document, but strata-g's legacy anchors are heading-derived and no template can produce the slug -->
+
+The sibling claim, from the pilot:
+[SG-DP-18](https://github.com/dmarx/strata-g/blob/main/docs/design-principles.md#18-the-affordance-is-the-contract),
+"the affordance is the contract" — an affordance must not *lie*; what a
+control suggests is what the action does, verified from the same inputs. That
+principle binds affordances to the truth. This one is its complement about
+*reach*: affordances are the widest channel an artifact has — spend them,
+don't merely avoid falsifying them.
+
+
+
+---
+File: record/principles.d/DP-010.md
+---
+---
+number: 10
+status: Active
+title: 'Defaults follow the failure mode: guards opt out, disclosures opt in'
+version: 1
+tags:
+- craft
+- record
+date: '2026-08-08'
+influenced_by:
+- ADR-035
+summary: >-
+  When a feature's failure mode is missing something — a check, a lint, a
+  staleness guard — it defaults ON, and turning it off is a visible, sited
+  act the tooling can count. When its failure mode is exposing or imposing
+  something — provenance identifiers, external coupling, anything that
+  travels beyond the repo — it defaults OFF, and turning it on is a config
+  line. Both directions share one requirement: the deviation is written
+  down where it applies, never ambient. Asking "should this be opt-in?" is
+  answered by asking what the silent default costs and who pays it.
+---
+
+# DP-010: Defaults follow the failure mode: guards opt out, disclosures opt in
+
+Every switch has a silent position — the behavior a project gets when nobody
+reads the docs. The silent position should be the one whose failure is
+cheapest, and the two families of feature fail in opposite directions:
+
+**A guard that is off costs you what it would have caught.** Checks, lints,
+staleness detection, reference resolution: their failure mode is *missing
+something*, and the miss is silent by nature — nobody notices the warning
+that didn't fire. So guards default **on**, and disabling one is opt-out:
+sited, spelled out, and countable (`unresolved-ok:` on the line it excuses,
+`unlinted-file` in the file it exempts). The escalation dial works the same
+way — a new warning class arrives warning-by-default, and a project *opts
+into* failing on it ([ADR-035](../record/decisions.d/ADR-035.md)) — because the
+guard being visible is the default that costs nothing, while the guard
+failing CI on day one costs adoption.
+
+**A disclosure that is on costs you what it revealed.** Provenance
+identifiers, session URLs, anything that couples the record to a system
+beyond the repo or publishes more than the author reviewed: their failure
+mode is *exposing or imposing something*, and that failure is irreversible
+in a way a missed warning is not — a secret unshipped is recoverable, a
+secret shipped is not. So disclosures default **off**, and enabling one is
+opt-in: a config line that names what starts flowing.
+
+The shared requirement is that the deviation is **written down where it
+applies** — a directive comment at the site, a key in the config — never
+ambient state, never a flag someone passed once. A default you departed
+from silently is a trap for the next reader in either direction.
+
+The test, when a new switch appears: *what does the silent position cost,
+and who pays?* If the project pays in missed defects, on-by-default. If
+the author pays in unwanted exposure, off-by-default. A switch where both
+answers feel true is usually two switches wearing one name — split it.
+
+
+Both halves of the rule descend from [DP-015](../record/principles.d/DP-015.md). A default is the position that
+ships when nobody reads the docs, and its failure is silent by construction —
+so the polarity question is really "which direction can announce itself?", and
+the answer sets the default.
+
+
+
+---
+File: record/principles.d/DP-011.md
+---
+---
+number: 11
+status: Active
+formerly:
+- DP-tmp6o4c5
+title: "It's not mine, but I'll pick it up anyway"
+version: 1
+tags:
+- craft
+date: '2026-08-15'
+influenced_by: []
+origin: >-
+  Carried in from strata-g, luria's first consumer, after a stretch in which
+  almost every repair here was found by tripping over an unrelated one.
+summary: >-
+  Fix the debt you encounter, whether or not it belongs to the thing you came
+  for — debt survives because every individual encounter with it was,
+  reasonably, someone else's problem. Bounded by two rules: repair rather than
+  redesign, and say in the commit what you picked up.
+---
+
+# DP-011: It's not mine, but I'll pick it up anyway
+
+When you encounter debt — a stale comment, a drifted convention, a dead test, a
+number that collides, a guard nobody wired up — **fix it**, whether or not it
+belongs to the thing you came here for. Leaving the shared space tidier than you
+found it takes precedence over staying inside your task's boundary or worrying
+about stepping on someone's toes.
+
+The principle exists because the *default* is the opposite, and the default is
+expensive. Debt survives not because anyone decided to keep it but because every
+individual encounter with it was, reasonably, someone else's problem — so the
+cost is paid over and over in small amounts by people who each correctly
+concluded it wasn't theirs to fix. *If not me, then who? If not now, then when?*
+is the whole argument, and the answers are usually *nobody* and *never*.
+
+Two rules keep this from becoming license to sprawl:
+
+- **Repair, don't redesign.** Picking up litter is not remodelling the building.
+  If the tidy-up turns out to be a decision rather than a repair — it needs a
+  decision record, or it changes behaviour someone relies on — stop and file it
+  rather than smuggling it in. A drive-by refactor inside an unrelated change is
+  its own kind of mess.
+- **Say what you picked up.** An unexplained unrelated change in a diff reads as
+  noise, or worse as a mistake. One line in the commit message turns it into a
+  gift.
+
+Applied here — three repairs, none of them the task at hand:
+
+- Porting the migration machinery surfaced a `legacy-spellings` class that
+  `status_sections` emitted but `FAILABLE` never listed, so the enforcement dial
+  rejected a notch it was already reporting on ([#81](https://github.com/dmarx/luria/pull/81)). Nothing to do
+  with migrations; one word, plus the test that should have caught it.
+- Declaring a third scheme in a downstream project surfaced that every
+  `_template.md` here still told the reader to copy it by hand, long after
+  `luria new` replaced that workflow ([#82](https://github.com/dmarx/luria/pull/82)) — six files, across the
+  shipped scaffold and this record both.
+- Filing *this* principle surfaced that the `DP` scheme never took
+  `allocate = "merge"` while the decisions did, so two concurrent branches could
+  each claim the same principle number — precisely the collision
+  [ADR-049](../record/decisions.d/ADR-049.md) exists to prevent, and one that had
+  already happened. This document is the first filed under the fix.
+
+The corollary, and the expensive half: a record's own machinery is both the
+easiest place to apply this and the easiest place to over-apply it. Every repair
+above arrived with a test or a measurement attached. None of them redesigned
+anything, and that restraint is what keeps the licence worth having.
+
+
+
+---
+File: record/principles.d/DP-012.md
+---
+---
+number: 12
+status: Active
+formerly:
+- DP-tmpprjho
+title: 'One document, one thing'
+version: 2
+tags:
+- craft
+date: '2026-08-16'
+influenced_by:
+- ADR-035
+- ADR-056
+- ADR-060
+- ADR-071
+history:
+- version: 1
+  date: '2026-08-16'
+  note: >-
+    Stated about decisions — "one decision, one thing" — after three splits in
+    one session. Its test was already general, but nothing in the wording said
+    so, and a record of practices or claims would not have read itself as
+    covered.
+- version: 2
+  date: '2026-09-05'
+  note: >-
+    Generalized to any cited document, and given a second test. The a-priori
+    one ("could these have been decided differently?") only fires while an
+    author stops to ask. Typed edges supply a second that arrives as friction:
+    an edge whose prose has to name which clause of its target it bears on is
+    reporting that the target is two documents. Found in a record with no
+    decisions in it at all, and it exposed a second edge that did not hold.
+origin: >-
+  Three splits in one session, each made for the same reason and none of them
+  by rule: a lint check separated from the vocabulary it reads, two scheme
+  audits written as two decisions rather than one, and a status feature split
+  from the report that would have caught the bug motivating it. Then, in a
+  record of practices rather than decisions, an `overrides` edge whose prose had
+  to name which clause of its target it argued with — the same defect, arriving
+  as a relation instead of as a bundle.
+summary: >-
+  A document records one thing, so a future reader can cite it, revisit it, or
+  supersede it without dragging something unrelated along. Two tests find the
+  bundles: could the halves have been decided differently, and does an edge
+  into this document have to name which part of it applies. The second is the
+  one that fires without being asked.
+---
+
+# DP-012: One document, one thing
+
+**A document with two unrelated halves is one nobody can cite half of.**
+
+Bundling is always cheaper at writing time. One record, one review, one merge —
+and the second half arrives free, because it was going to be written anyway.
+The cost lands later and never goes away.
+
+This was first written about decisions, and it is not about decisions. It holds
+for any document a reader is expected to name: a decision, a principle, a
+practice in a record of practices, a claim in an anthology. The unit is
+whatever gets cited.
+
+## What it costs
+
+**The second half has no code.** A citation is how a record is used: an
+argument names its premise, a module names the decision it implements, a lint
+message names the rule it enforces. Half a document cannot be named, so the
+half that was cheap to add is the half nothing can point at — and a rule
+nothing points at is a rule nobody knows applies to them.
+
+**Superseding withdraws more than intended.** A document that changes gets
+superseded whole. If two things share a record, retiring the one that aged out
+silently retires the one that did not, and the record now says nothing about a
+question it had answered. That is the failure the status vocabulary exists to
+prevent, reintroduced at a coarser grain.
+
+**Alternatives stop being reconstructable.** For a decision, the alternatives
+section is the highest-value part, and it only works when it is the
+alternatives to *one* choice. Two choices produce a cross-product, or — far
+more often — an alternatives section that silently covers whichever half the
+author found more interesting.
+
+## Two tests
+
+**Could the halves have been decided differently?** If a project could adopt
+one and reject the other, they are two documents, however naturally they
+arrived together.
+
+That one only fires while writing, and it depends on the author asking. Typed
+edges ([ADR-071](../record/decisions.d/ADR-071.md), [ADR-060](../record/decisions.d/ADR-060.md))
+make a second test possible, and this one fires afterwards, mechanically:
+
+**Does an edge into this document have to name which *part* of it applies?**
+If stating what a relation asserts requires pointing at one clause of its
+target, the target is two documents.
+
+Note what this test is not. An `overrides` edge already means *where both bear,
+this one wins* — the overlap is decided by the two documents' contents, so an
+edge is not over-claiming merely by being silent about scope. The tell is
+narrower and shows up in the prose beside the edge: a body that has to explain
+which sentence of the target it is arguing with.
+
+The worked case is a record of an assistant's operating constitution, which
+contains no decisions at all. A boundary — *never infer a person's pronouns
+from their name* — declares that it `overrides` a practice titled *deliver the
+whole requested scope; state assumptions rather than narrowing*. But the
+boundary's body does not argue with delivering the whole scope. It argues with
+a different claim the same document happens to carry: *make the routine
+judgment call yourself rather than escalating it*. The override had to say so
+in prose, because the code it names covers both.
+
+Applying the first test confirms it. *Deliver the whole scope* and *make the
+routine call yourself* could be adopted separately — a project could want one
+and reject the other — so they were always two practices. They had simply
+arrived in the same paragraph of the source. Splitting them let each override
+name what it actually beats, and immediately exposed a second error: one of the
+two edges, checked against the narrower practice, turned out not to hold at all.
+
+That is the useful property. The a-priori test needs an author to stop and ask.
+This one arrives as friction while writing something else, which is when a
+granularity defect is cheapest to notice and most likely to be noticed at all.
+
+The general form is [DP-016](../record/principles.d/DP-016.md) — an awkward structure is reporting a
+distinction the model has stopped expressing — and this is its granularity
+case. What that principle adds is the instruction not to resolve the
+awkwardness with a clarifying sentence, which is always available and always
+leaves the model wrong.
+
+## Why not just qualify the edge
+
+Because a condition on a relation is unfalsifiable in exactly the way this
+record's machinery exists to prevent. `overrides` is checked — the code must
+resolve, to a document of the declared scheme, that actually exists. A `when:`
+beside it is prose in a data field: nothing evaluates it, nothing notices when
+it stops being true, and nothing tells a reader whether the qualifier or the
+edge governs their case. It is escalating emphasis in a new costume, one level
+up, and the graph it produces is worse than no graph because it looks checked.
+
+This is why [#141](https://github.com/dmarx/luria/issues/141) puts `when`
+expressions among its non-goals, and why it refuses precedence between
+configuration surfaces — a conflict there is an error rather than something a
+tie-break rule resolves. Same move: **decline the qualifier, and remove what
+made it necessary.**
+
+## What this is not
+
+Not an argument for small documents. A document covering one thing can be long,
+and usually should be — the context, the alternatives and the consequences of a
+single claim are most of what makes a record worth keeping.
+
+Nor is it an argument against related documents landing together. Ship them in
+one contribution if that is honest; give them separate codes so each can be
+cited, revisited, and retired on its own evidence.
+
+And it is not a licence to split on sight. The second test is the discipline
+that keeps it honest: split when something *points* at a part rather than the
+whole, not whenever a document could conceivably be subdivided. A record of
+maximally small documents has the same problem in reverse — every claim needs
+five citations to state, and none of them means anything alone.
+
+
+
+---
+File: record/principles.d/DP-013.md
+---
+---
+number: 13
+status: Active
+formerly:
+- DP-tmpqu8fy
+title: Exempting a ledger from one matcher exempts it from none of the others
+version: 1
+tags:
+- mechanism
+- craft
+date: '2026-08-25'
+influenced_by:
+- ADR-040
+- ADR-049
+origin: >-
+  The first migration's first live day: three subsystems attacked the
+  `formerly:` stamps the migration had just written, independently, and each
+  was found separately because fixing one taught nothing about the others.
+summary: >-
+  A mechanism that rewrites instances of a pattern usually records what it
+  rewrote, and that record is written in the pattern's own spelling — so
+  every matcher for that pattern also matches its own ledger. The exemptions
+  do not transfer: each matcher matches independently, so each needs its own
+  mask, stated where the matching happens and tested. Three subsystems ate
+  the same ledger in one day, and that they were three separate discoveries
+  is the claim rather than an accident of the story.
+---
+
+# DP-013: Exempting a ledger from one matcher exempts it from none of the others
+
+A mechanism that rewrites, flags or retires instances of a pattern usually
+keeps a record of what it did, and that record is written in the pattern's own
+spelling. A migration's `formerly:` field names the old codes. An
+acknowledgement names the code it excuses. To anything matching that pattern,
+the record is indistinguishable from an instance of it.
+
+On the day this record's first migration ran, three subsystems ate the stamps
+it had just written:
+
+- the **sweep** rewrote the `formerly:` values into the new spelling, erasing
+  the map at its source, in the same operation that created it;
+- the **fixer**'s modernize pass did the same from the other side, turning
+  every alias into a self-reference on the live corpus;
+- the **scan** counted each stamp as a citation of the old code, so every
+  migrated document warned about its own former name.
+
+Three separate discoveries, and that is the part worth keeping. Each
+subsystem matched the pattern on its own terms, so finding the first failure
+taught nothing about the second, and fixing the first protected nothing
+else. That is what makes this a principle
+rather than a bug report: **an exemption is a property of the matcher, not of
+the ledger**, and there is no place to put one where every matcher will see
+it.
+
+So the mask belongs to the matcher's definition — written where the matching
+happens, and with a test that has seen it fire, because a guard is trusted
+only once it has been caught working ([DP-6](../record/principles.d/DP-006.md)).
+What does not count is an execution order that happens to write the ledger
+after the sweep, a glob that happens to miss the file, or a format the regex
+happens not to match. Those are real protection today and gone after the next
+refactor, and they fail quietly: a ledger does not complain when it is eaten.
+It stops being true, and everything derived from it degrades into
+self-reference.
+
+Applied here, in a subsystem that got it right. The reference scan blanks the
+span of any acknowledgement before counting citations, because
+`inactive-ok: ADR-012` names the very code the retired-citation check looks
+for —
+without the mask an annotation would excuse itself, and could never go stale.
+The mask matches the *shape* of a directive rather than the parsed directives,
+so that an example of one in the documentation is covered too. A code inside a
+URL gets the same treatment for the same reason. Three masks, one subsystem,
+each written next to the match it protects.
+
+The test, when building anything that matches a pattern: *does this system
+keep a record of what it matched, and is that record spelled the same way?*
+If so, the mask is part of the definition of the match — and if another
+matcher for the same pattern already exists, it needs its own.
+
+
+
+---
+File: record/principles.d/DP-014.md
+---
+---
+number: 14
+status: Active
+formerly:
+- DP-tmp5669r
+title: Meet the project where it is
+version: 1
+tags:
+- craft
+- mechanism
+date: '2026-08-25'
+influenced_by:
+- ADR-064
+origin: >-
+  A Windows user ran `luria init` and then `luria index`, and got a stack
+  trace writing a check mark into a status report. Nothing about their project
+  was unusual. The tool had required a UTF-8-capable platform without ever
+  saying so.
+summary: >-
+  A project picks its language, its platform, its forge and its shape for
+  reasons that have nothing to do with keeping a record; the record arrives
+  afterwards and should fit what it finds. The way to hold that is to be
+  explicit in what the tool writes and forgiving in what it assumes — and to
+  keep asking what has been assumed and never written down, because coupling
+  to an environment rarely arrives as a decision.
+---
+
+# DP-014: Meet the project where it is
+
+Aim to be usable by whatever project has something worth remembering. It
+picked its language, its operating system, its forge and its file layout for
+reasons that had nothing to do with keeping a record, and it made those
+choices long before this tool showed up. The record is the guest.
+
+That is an aspiration rather than a rule, because it is never finished — but
+it is a testable one, and here is where it has been tested so far:
+
+- **Language.** Source files are scanned for references as text, with no
+  parser and no list of languages. A code in a Rust comment is a claim about
+  why that code is the way it is, and so is one in a Makefile; the scanner
+  does not need to know which it is holding. Reaching a new language means
+  adding a glob.
+- **Operating system and terminal.** Files are UTF-8 everywhere, because a
+  record gets cloned onto whatever machine the next reader has. The console is left at
+  whatever encoding the platform gave it, and taught to degrade instead of
+  raise.
+- **Forge.** An issue URL is inferred from the origin remote for the hosts
+  whose issue paths are known, and left empty for the rest, so a self-hosted
+  instance gets a record that works and one field to fill in. The shipped CI
+  is a convenience over plain Git.
+- **Storage.** Markdown is what a record looks like today. Identity, standing,
+  declared rules and generated views are the model, and none of them says
+  anything about a file format.
+
+The discipline that keeps this true is a pair:
+
+> **Be explicit in what you write, and forgiving in what you assume.**
+
+Files get an encoding named at every call site, because a file has a reader on
+another machine and has to open there. The console gets `errors="replace"`,
+because it has one reader and guessing wrong should cost a `?` rather than the
+command. An unrecognised forge yields nothing rather than a plausible URL,
+because a wrong guess would put a broken link on every entry that carries an
+issue.
+
+**The aspiration is easy to hold and easy to lose, because coupling rarely
+arrives as a decision.** Nobody chose to require a UTF-8-capable console. The
+package simply never said what it needed, and a hundred call sites inherited
+whatever the platform preferred — which is invisible on the machine where the
+code was written and a stack trace on somebody's first run. So the question
+worth asking is not *which environments do we support*, which gets asked
+during design and answered generously. It is *what have we assumed and never
+written down*, which otherwise gets asked for the first time by a stranger.
+
+What it costs is worth saying plainly, because the bill comes in capability.
+No per-language parsers, so a comment marker inside a string literal is
+matched anyway. No format-specific model, so nothing exploits what markdown
+makes cheap. No guessing at an unknown forge, so a self-hosted instance gets
+no inference at all. Each of those is precision given up in exchange for
+reach — and reach is the point, because the projects that most need a memory
+are rarely the ones that look like yours.
+
+
+
+---
+File: record/principles.d/DP-015.md
+---
+---
+number: 15
+status: Active
+formerly:
+- DP-tmp6fv3m
+title: 'An absence reads exactly like a success — give the silent case a signal'
+version: 1
+tags:
+- craft
+date: '2026-09-05'
+influenced_by: []
+origin: >-
+  Not one episode but an audit. Four principles in this record — [DP-001](../record/principles.d/DP-001.md),
+  [DP-003](../record/principles.d/DP-003.md), [DP-006](../record/principles.d/DP-006.md), [DP-010](../record/principles.d/DP-010.md) — each lean on the word *silent* at the
+  load-bearing moment, and none of them says why silence is the problem. The
+  premise had been re-derived four times without once being written down.
+summary: >-
+  Nothing happening produces the same observable as everything working. A tool
+  that no-ops, a guard that never fires, a list that misses an entry, a default
+  nobody chose — each is indistinguishable from the healthy case from outside,
+  which is why these survive review. The remedy is always the same shape: make
+  the failing case emit something, or make it impossible.
+---
+
+# DP-015: An absence reads exactly like a success — give the silent case a signal
+
+**Nothing happening and everything working produce the same observation.**
+
+This is the premise underneath a family of rules in this record, and it was
+never stated because each rule looks self-evidently right on its own. Written
+down, it explains why they are the *same* rule wearing four coats, and it
+predicts where the fifth will be.
+
+| the silent thing | what it looks like from outside |
+|---|---|
+| a tool that no-ops on an input it can't handle | a tool that ran and found nothing to do |
+| a guard nobody has ever fired | a guard that has never had cause to fire |
+| a hand list missing one entry | a hand list that is complete |
+| a default nobody chose | a default someone chose |
+| a measurement of nothing | a measurement of no change |
+
+Every row is a real bug shape, and every one passes review, because review looks
+at the output and the output is *correct-looking*. That is the whole mechanism:
+these failures are not hard to fix, they are hard to **see**, and the thing that
+hides them is the same thing in each case — the failing path emits nothing, and
+nothing is what success emits too.
+
+## What follows from it
+
+Each of these already exists here as its own principle, and each stays its own
+principle because the *remedies* differ. What they share is this diagnosis:
+
+- [DP-001](../record/principles.d/DP-001.md) — a refusal that says nothing reads as a broken tool. Remedy: the
+  refusal explains itself.
+- [DP-003](../record/principles.d/DP-003.md) — rung three is the polarity rule, and fail-stale is singled out as
+  the never-acceptable one precisely because it is the silent polarity. Remedy:
+  derive, or guard the property, or choose a polarity that is not silence.
+- [DP-006](../record/principles.d/DP-006.md) — provisioned is not working; an unfired guard reports what a
+  working one reports. Remedy: sabotage it once, and record that you did.
+- [DP-010](../record/principles.d/DP-010.md) — the silent position of a switch is the one that ships, so it
+  should be the position whose failure is visible. Remedy: guards default on,
+  disclosures default off.
+
+Four different remedies for one diagnosis, which is why folding them together
+would lose more than it saved: a merged principle's advice section would be a
+disjunction, and a reader arriving with a concrete problem would have to guess
+which arm applies.
+
+## The corollary
+
+**A test can have this shape too, and then the safety net has the bug.** An
+assertion that cannot fail passes exactly as loudly as one that can, so a suite
+can grow a hole that reports itself green — the same defect one level up, where
+it is least likely to be looked for. The strata-g record states this as its own
+principle, arrived at independently
+([SG-DP-022](https://github.com/dmarx/strata-g/blob/main/docs/design-principles.md#dp-22)): before believing a comparison,
+require a non-zero count of whatever was counted, and perturb something the
+measurement should detect to confirm the reading moves.
+
+That is the general form of the remedy, and it is worth stating as an
+instruction rather than an observation: **for any silent path, either make it
+emit, or make the emitting case the only reachable one.** Counting the deviations
+is the second-best option and is what [DP-010](../record/principles.d/DP-010.md) settles for; it works because a
+count of zero is itself a signal.
+
+
+
+---
+File: record/principles.d/DP-016.md
+---
+---
+number: 16
+status: Active
+formerly:
+- DP-tmpcgay6
+title: 'An awkward structure is reporting a distinction the model has stopped expressing'
+version: 1
+tags:
+- craft
+date: '2026-09-05'
+influenced_by:
+- ADR-060
+- ADR-071
+origin: >-
+  Extracted from [DP-009](../record/principles.d/DP-009.md), where it had been the third of three jobs and had
+  never once been cited — the symptom [DP-012](../record/principles.d/DP-012.md) names. Promoted on its second
+  substrate: [DP-009](../record/principles.d/DP-009.md) found it in the file tree (a `.stub` beside the page it
+  feeds, two `README.md` files with opposite rules), and a typed `overrides`
+  edge found it again in the citation graph, where the edge's prose had to name
+  which clause of its target it argued with.
+summary: >-
+  The structures a record maintains — its tree and its graph — are instruments,
+  not just outputs. When one is awkward to state, the awkwardness is a reading:
+  something the model used to distinguish, or should, is no longer expressible,
+  so it has moved into prose or into somebody's memory. Read the discomfort
+  before absorbing it.
+---
+
+# DP-016: An awkward structure is reporting a distinction the model has stopped expressing
+
+**A structure that is hard to state cleanly is telling you something about the
+model, not about your prose.**
+
+A record maintains two structures, and both are derived from the same
+decisions about what counts as a thing. The **tree** — names, placement,
+neighbours — and the **graph** — the typed edges between documents. Neither is
+merely output. Both are instruments, and both report the same class of fault:
+a distinction that the model has stopped expressing has to live *somewhere*,
+and where it goes is prose, or a comment, or nobody's notes at all.
+
+The tell is friction while writing something else. Not a review finding, not a
+lint failure — the small awkwardness of having to explain, in a sentence,
+something the structure should have carried.
+
+## In the tree
+
+Two files with the same shape and opposite rules — one `README.md` you must
+edit and one you must not. A marked container beside an unmarked sibling doing
+the same job. An authored `.stub` filed among the generated pages it feeds.
+Each is a rule that has moved out of the layout and into somebody's memory,
+and each announces itself as mild untidiness rather than as a defect.
+
+## In the graph
+
+A typed edge is a claim, and it can be awkward in the same way. The instance
+that promoted this: a boundary declared `overrides` against a practice, and its
+body then had to say *which sentence* of that practice it argued with — because
+the target carried two claims under one code. The edge was correct and the
+prose beside it was doing work the graph could not. Splitting the target let
+the edge name what it actually beat, and immediately exposed a second edge that
+did not hold at all ([DP-012](../record/principles.d/DP-012.md) has the worked case).
+
+The same reading applies to an edge nobody can state without a condition, to a
+required reference that had to be filled with the nearest available document,
+and to a relation that needs three sentences of context to be intelligible.
+
+## What to do with the reading
+
+**Read it before absorbing it.** The instinct is to write the clarifying
+sentence and move on; the sentence is cheap and the model stays wrong. Ask
+instead which boundary the awkwardness is straddling — the answer is usually
+a distinction that was real and is no longer represented.
+
+**Then fix the model, not the prose.** Split the document, retype the field,
+move the file, add the vocabulary. The clarifying sentence is what you write
+when you have decided the distinction is not worth representing — which is a
+legitimate answer, and a different one from not having noticed.
+
+**Do not add a qualifier to the relation.** That is the failure mode specific
+to the graph half: a condition beside a checked reference is prose in a data
+field, so nothing evaluates it and nothing notices when it stops holding, while
+the edge keeps looking checked. It is escalating emphasis one rung up — which
+is why [#141](https://github.com/dmarx/luria/issues/141) puts `when` expressions among its non-goals and refuses
+precedence between configuration surfaces.
+
+## The corollary
+
+**This only works if the structures are load-bearing.** A tree nobody navigates
+and a graph nobody reads generate no friction, so they report nothing — the
+instrument has to be used to be an instrument. That is the practical argument
+for typed edges over a general "mentions" relation ([ADR-071](../record/decisions.d/ADR-071.md), [ADR-060](../record/decisions.d/ADR-060.md)),
+and for a layout the lint holds ([ADR-021](../record/decisions.d/ADR-021.md)): the checking is what makes the
+awkwardness surface at authoring time instead of at the reader's expense, a
+year later.
+
+
+
+---
+File: record/principles.d/DP-017.md
+---
+---
+number: 17
+status: Active
+formerly:
+- DP-tmpm6jp4
+title: 'A record states what is true now — git already keeps what was written then'
+version: 1
+tags:
+- record
+date: '2026-09-07'
+influenced_by:
+- ADR-040
+- ADR-049
+origin: >-
+  Concretization renumbered a practice, and the curation entry explaining what
+  the temporary code had hidden was left holding the old spelling. The reflex
+  was to keep the stale characters and staple a directive to them; [ADR-040](../record/decisions.d/ADR-040.md) had
+  already decided the other way for migrations, and the belief underneath that
+  decision had never been written down.
+summary: >-
+  A record document is not a ledger entry. Its job is to be true and
+  resolvable today, so when a code is renumbered or a fact is superseded the
+  entry is rewritten — the journals and devlogs that describe the change
+  included. The immutable history already exists and is called git; a record
+  that tries to be one as well duplicates it badly and stops being checkable
+  in the process. What has to survive a rewrite is the claim, not the
+  characters that expressed it. The corollary is the expensive half:
+  substitution is not rewriting.
+---
+
+# DP-017: A record states what is true now — git already keeps what was written then
+
+**Rewrite the record to keep it true. The characters are not the deliverable;
+the claim is.**
+
+Record documents accumulate a ledger's manners. A journal entry is dated, a
+devlog describes a day, a curation entry reports what was found — and all
+three read as testimony, so the instinct when one goes stale is to leave it
+alone and annotate around it. *It was true when it was written.* The entry
+becomes a fossil with a note attached, and the note is doing the work the
+entry used to do.
+
+That instinct is importing a guarantee the record was never asked to provide.
+
+## Git is the ledger
+
+The append-only, tamper-evident, "what did this file say on the 5th" store
+exists already, it is underneath every record, and it is better at the job
+than prose will ever be. Nothing is lost by rewriting a document, because
+nothing was ever being kept by *not* rewriting it.
+
+What the record provides instead is the thing git cannot: a statement that is
+true now, resolvable now, and checkable now. Those are the properties the lint
+enforces, and they are properties of the current text only. A code that no
+longer resolves is a dead link whatever its provenance, and "this was correct
+in September" does not make it navigable in March.
+
+[ADR-040](../record/decisions.d/ADR-040.md) already decided this for migrations, and stated the reason in
+passing: a rewrite covers **historical journals included**, because a code
+matching no configured scheme is invisible to the linter, and git guards the
+true history anyway. It explicitly rejected preserving old spellings in
+historical files as a half-measure that leaves history unwatched. That is
+this principle, applied once, to one mechanism. [ADR-049](../record/decisions.d/ADR-049.md) then produced the
+same situation on a shorter clock: every merge renames codes, so every record
+using merge-allocation generates stale spellings continuously, in exactly the
+entries whose subject is the renaming.
+
+## The claim is what survives, not the characters
+
+The unit being preserved is the information content. A curation entry that
+says *this finding could not surface until the merge concretized the codes* is
+making a claim about visibility and timing. Which five characters the
+temporary code happened to carry is not part of it — a temp tail is random by
+construction, and no reader has ever needed the specific one.
+
+So the honest question at a stale site is not "may I change this?" but "what
+is this sentence claiming?" — and then write the sentence that claims it,
+today, in today's vocabulary. Usually that is a substitution. Sometimes it is
+a different sentence. Both are ordinary edits.
+
+## The corollary: substitution is not rewriting
+
+This is the half that costs something, and it is why the licence to rewrite
+cannot be handed to a fixer and forgotten.
+
+`luria link --fix` upgrades an old spelling by replacing it. That is correct
+wherever the code is being *used* — cited, referenced, pointed at. It is wrong
+wherever the code is being *mentioned*: quoted as text, shown as a shape, used
+as the example in an argument about the codes themselves. The worked case is
+one sentence away from this principle's own origin — an entry explaining that
+a regex required digits, and giving a temp-tailed code as the string that
+therefore failed to match. Substituting the concretized number produces a
+grammatical sentence that is false, because the number has digits.
+
+The fix there was still a rewrite. It just was not a substitution: the
+sentence keeps the regex, drops the specific code, and says "a temp-tailed
+code" — which is what it was always arguing about. Nothing was acknowledged
+and nothing was preserved that mattered.
+
+This is why the class stays failable and has no acknowledgement directive.
+An acknowledgement would be a claim that some stale spelling is load-bearing,
+and the mention case is not an example of that — it is an example of a
+substitution being wrong, which is a different thing, and its remedy is to
+write the sentence properly rather than to keep the wrong one on file.
+
+## Where literal history belongs
+
+Occasionally the old spelling *is* the content: a document's own former
+identity, which other repositories and old branches still cite. That is
+structured data, not prose, and it has a field — `formerly:`, which the
+resolver honours forever and the reference checker does not scan.
+
+The division is the whole principle in one line. History that must be
+preserved verbatim goes in a field, where it is data and nothing pretends it
+is a current statement. Everything else is prose, and prose is maintained.
+
+
+
+---
+File: record/principles.d/_template.md
+---
+---
+# Don't copy this file by hand — run `luria new dp`, which assigns the identity
+# and fills in the fields a machine can compute. WHICH identity depends on the
+# scheme's `allocate` mode: `filing` (the default) takes the next free number
+# on the spot, `merge` mints a temporary code that `luria concretize` numbers
+# where merges serialize (ADR-049).
+#
+# Numbering is sequential and permanent: a principle is cited by number ("per
+# DP-3"), so a number can be retired but never reused. The filename is the code
+# and nothing else; the title goes in `title:` below, where a revision costs an
+# edit rather than a rename plus every link (ADR-013) — which matters more here
+# than for a decision, because principles are expected to be reworded.
+#
+# This frontmatter is the ONLY place these facts live. `docs/design-principles.md`
+# is generated from it (ADR-012) — never edit that file by hand; run
+# `luria index`.
+
+# Same vocabulary as a decision (ADR-003): Active | Proposed | Deferred |
+# Superseded | Rejected; a qualifying note goes in `status_note:`. A principle that stops being
+# believed is Superseded, not deleted — something out there cites it.
+status: Active
+
+# The claim, as it appears in the rendered document. Repeat it as the body's
+# `# DP-NNN:` heading; `luria lint` checks that the two agree.
+#
+# Voice: ask whether this can be PARTLY met. If it can, it is a value — write
+# it as an aspiration ("meet the project where it is"), or as an observation
+# with the remedy attached ("a hand-maintained projection will drift — derive
+# it"). If the only two states are satisfied and violated, it is a rule, and
+# the constraining voice is correct for it ("no silent refusal"). Stating a
+# value as a prohibition deletes the state it spends most of its life in;
+# softening a real rule into an aspiration makes a hard line look negotiable.
+# ADR-065.
+title: The principle, stated as a claim you can disagree with
+
+# Principles are LIVING DOCUMENTS. Bump this whenever the principle's scope or
+# claim changes, and add a `history:` entry saying what changed. A principle
+# stated about one artifact is a principle nobody applies to the next one, and
+# the version is how the next reader can tell that already happened once.
+version: 1
+
+# Browsing categories, shared with the decisions (see decisions/tags.yaml).
+tags:
+- craft
+
+date: '2026-01-01'
+
+# The decisions whose experience produced this principle — the inverse of the
+# usual direction, in which decisions cite principles. Rendered as followable
+# backlinks under the principle, and they are the evidence that stops it reading
+# as taste. List them as full codes, one per line. Empty is honest for a
+# principle carried in from elsewhere.
+influenced_by: []
+
+# Optional, and only once there IS a version 2. One entry per version, oldest
+# first, each saying what changed and why — the revision is usually the most
+# useful thing the principle teaches.
+# history:
+# - version: 1
+#   date: '2026-01-01'
+#   note: >-
+#     Stated narrowly, about one artifact.
+# - version: 2
+#   date: '2026-02-01'
+#   note: >-
+#     Generalized, after the second instance made the narrow statement useless.
+
+# Where this came from: the concrete episode that made it a principle, not a
+# preference. One sentence, rendered at the end of the principle's metadata
+# line — so it is read every time the principle is. Prose, like `summary:`:
+# references here are linked by `luria link --fix` and checked by the lint,
+# because the value is rendered as markdown. (The rest of the frontmatter is
+# data, read by value, and stays plain.)
+origin: >-
+  The specific thing that happened twice.
+
+# Optional. Not rendered in the document — the principle's own text is right
+# there — but it is what a `render = "index"` scheme would show, and what a
+# reader of the frontmatter alone gets.
+summary: >-
+  The principle in two or three sentences, stated as a claim rather than a topic.
+---
+
+# DP-NNN: The principle, stated as a claim you can disagree with
+
+The claim, in the imperative or the declarative — never as a topic heading. A
+reader should be able to hold the first sentence in their head and apply it.
+
+Why it is true: the mechanism, not the vibe. What goes wrong when it is ignored,
+concretely enough that someone can recognize the situation from the description.
+
+Applied here: two or three places in *this* codebase where the principle is
+visibly in force. This section is what makes a principle citable instead of
+decorative — it shows the reader what compliance looks like.
+
+The corollary people skip, if there is one. Most principles have a second-order
+consequence that is the actually expensive part to follow, and naming it is
+worth more than restating the claim.
+
+

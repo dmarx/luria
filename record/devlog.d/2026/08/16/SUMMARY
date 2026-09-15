@@ -1,0 +1,338 @@
+---
+File: record/devlog.d/2026/08/16/165105.md
+---
+---
+title: 'Ninety-nine dead links behind eleven clean lints'
+created: '2026-08-16T16:51:05'
+tags: [lint, directives, scaffold]
+---
+
+A downstream project had been hand-writing markdown link targets in its
+reading-journal entries since its first commit —
+`[CLM-007](../../../../record/claims.d/CLM-007.md)`, five directories counted
+carefully from the entry's own location up to the repo root.
+
+Careful and wrong. The entry renders into `docs/reading/2026-08-16.md`, so the
+target a reader follows is `../../record/…`. The hand-written form pointed two
+levels above the root, from both the source directory and the view. Ninety-nine
+of them, over eleven commits, each of which ran `luria lint` and got `docs lint
+clean`.
+
+## Why it was invisible
+
+Every reference check we have is about the **code**. `unresolved-codes` asks
+whether `CLM-007` names a document; `retired-citations` asks its status;
+`legacy-spellings` asks how it is spelled. All three were satisfied — the codes
+were real and current. Nobody asked about the path wrapped around them.
+
+`link_base` has known the right answer the whole time; `luria link --fix`
+cannot spell a target without it. The gap was that we only ever *wrote* through
+that authority, never *read* through it.
+
+## Firing it before trusting it ([DP-6](../../record/principles.d/DP-006.md))
+
+Pointed at the downstream repo at the commit before the repair: 99 findings, 88
+of them journal entries, and 11 that were not — which is where it got
+interesting.
+
+Two of those eleven were in this repo's shipped scaffold.
+`template/record/decisions.d/README.stub` links to `[_template.md](_template.md)`
+and `[design-principles.md](../design-principles.md)`, both written relative to
+the stub's own directory. The stub renders at `docs/decisions/README.md`, where
+neither exists — so **every project `luria init` has ever created starts with
+two dead links.** Our own copy of that stub has correct targets, because
+`luria link --fix` repaired it at some point and the template never got the
+same treatment. That divergence is precisely what made it invisible: the file
+looks right in the only place anyone reads it.
+
+Same shape as the template fixture codes. The scaffold is prose nobody
+re-reads, so a defect in it survives indefinitely and ships to everyone.
+
+After fixing the stub and the template, `luria init` in an empty directory now
+lints clean under the new class. That was the acceptance check.
+
+## Two false positives, and what they taught
+
+The first pass on this repo reported two. Both were worth having.
+
+**`ADR-024:53` — `\d{4,5}`.** An indented config example containing
+`uid = "(\\d{4})[.:](\\d{4,5})"`, which the link regex reads as
+`[.:](\d{4,5})`. The tempting fix is to teach `code_spans` about indented code
+blocks, and I did not, because markdown makes four-space indentation ambiguous
+inside a list item — a wrong answer there would silence real prose in every
+other check too, which is a much worse trade than one false positive here.
+Screened on metacharacters instead: a target containing `{}\\|()[]*?<>` is a
+pattern, not a path. Cruder, states its own limit, one line.
+
+**`_template.md:21` — `[ADR-NNN](ADR-NNN.md)`.** A genuine placeholder. My
+first instinct was a `target-ok:` directive, which failed twice and taught me
+something: directives in a `.md` file are read only from HTML comments, and
+this placeholder lives in a YAML comment inside frontmatter, where `<!-- -->`
+is not valid. The second attempt (`target-ok-block:`) failed for the same
+reason and I nearly concluded the block-scope resolution was broken.
+
+The actual fix was better than the directive: the line two below it already
+writes its placeholder as `` `# ADR-NNN:` ``, a code span, because it is a
+specimen rather than a citation. Making the supersession example match is what
+the file was already doing everywhere else. **The escape hatch I reached for
+first was hiding that the markup was simply wrong** — worth remembering the
+next time a directive seems like the answer.
+
+## The rule this closes over
+
+`CLAUDE.md`'s third ground rule already said all of this — *only the fixer
+knows that frame*, *a hand-written target that looks right here is wrong
+somewhere*. Documented, with a working affordance, and no guard. By the fourth
+ground rule that is a bug report about the workflow rather than a lesson for
+whoever broke it: the arithmetic feels checkable, which is exactly why people
+do it by hand, and feeling checkable is a property of the hazard rather than of
+the person.
+
+What it still does not catch: a hand-written target that resolves to the
+*wrong existing file*. The check knows a target is not anything, never what it
+should have been. That residual is still carried by the ground rule alone.
+
+
+
+---
+File: record/devlog.d/2026/08/16/182420.md
+---
+---
+title: 'The five words held; what they mean drifted'
+created: '2026-08-16T18:24:20'
+tags: [lint, schemes, config]
+---
+
+[ADR-003](../../record/decisions.d/ADR-003.md) is the most cited decision in this record and its finding is the one
+this package keeps re-deriving: *every documentation surface guarded by an
+executable check had held; every surface governed by prose convention alone had
+drifted*. It closed the status vocabulary to five words, put a lint behind
+them, and the words have held ever since.
+
+The layer above them was never covered. **A status means something different in
+every scheme**, and that meaning lives in a `_template.md` comment — prose,
+unchecked, and read exactly once by whoever mints a record.
+
+## The downstream evidence
+
+A project using six schemes over a corpus of arguments wrote three decisions
+pinning its status semantics. Twice the record was doing something else.
+
+**Fifty-one of fifty-one records at the in-force status.** Extraction defaults
+to `Active` and nothing contradicted it, so nothing was ever retired —
+including twenty-three records whose own bodies exhibited a counterexample and
+two that said "It is false as stated" in as many words. That project's
+`fail_on` names `retired-citations`, which makes a retired premise a build
+failure in every argument resting on it. With nothing retired, the enforcement
+it adopted luria *for* could not fire, and thirteen green builds meant only
+that nobody had judged anything.
+
+**A template contradicting nine records.** A sibling scheme's template said
+status carried validity; a `tag_groups` axis was carrying validity; nine
+arguments sat at `Active` tagged `invalid`.
+
+Both were found by a person re-reading. That is precisely what [ADR-003](../../record/decisions.d/ADR-003.md) exists
+to stop relying on.
+
+## What I built, and what I deliberately did not
+
+`statuses.yaml` beside `tags.yaml`, same shape, same split: vocabulary in YAML
+with the records, rules in `luria.toml`. A scheme declares which of the five it
+uses and what each means; an undeclared status fails the lint; the meanings
+render above the index table.
+
+**The words stay closed.** This was the fork worth getting right. "Make status
+configurable" reads naturally as "let a scheme add words", and that hands back
+exactly what [ADR-003](../../record/decisions.d/ADR-003.md) bought — thirty forms across 121 records is what the open
+vocabulary produced, and per-scheme openness is the same thing with more places
+to do it. A project wanting a sixth distinction already has tags, which are
+open by design.
+
+**No stub placeholder.** `{categories}` and `{table}` set the precedent and I
+followed it for about ten minutes before noticing it fails the one job: a
+project that adds `statuses.yaml` and forgets the placeholder gets no legend
+and no complaint — a config file that looks like it is working. Rendering
+automatically means adopting the file is enough.
+
+## The check I did not write, which is the one with teeth
+
+Neither downstream failure would have been *caught* by this. The meaning was
+already in the template, in capitals, saying READ THIS BEFORE SETTING IT, and
+it was read and got wrong anyway. Moving prose to a better location is a
+discoverability win, not an enforcement one, and it is worth being honest that
+this feature is the former.
+
+What would have caught both: **a scheme whose status never varies**. Fifty-one
+of fifty-one at one value; twenty-three of twenty-four; thirteen of thirteen on
+a third scheme in the same project, still unexamined. A field where every
+record agrees carries no information, and that is mechanically detectable in
+three lines.
+
+It is a separate unit of work and it is filed as one. Recording it here because
+the temptation while building this was to bolt it on, and a decision with two
+unrelated halves is one nobody can cite half of.
+
+## Fired once before trusting it ([DP-6](../../record/principles.d/DP-006.md))
+
+Six tests, and the load-bearing one is that declaring nothing changes nothing —
+an absent file must not read as an empty vocabulary, or every record in every
+existing project fails at once. That is the refactor most likely to be made
+later by someone tidying `declared()`, so it is pinned with its reason.
+
+The trailing-note case is the second: [ADR-003](../../record/decisions.d/ADR-003.md) allows `Superseded — by X`, and
+comparing the whole string would reject every annotated status a project
+declared. Found by writing the test, not by writing the code.
+
+
+
+---
+File: record/devlog.d/2026/08/16/190210.md
+---
+---
+title: 'The field was green because nobody was judging'
+created: '2026-08-16T19:02:10'
+tags: [lint, schemes, enforcement]
+---
+
+The half of [#102](https://github.com/dmarx/luria/issues/102) with teeth, split out as [#104](https://github.com/dmarx/luria/issues/104) and built here.
+
+`statuses.yaml` moves a status's *meaning* somewhere a reader will find it.
+This asks a different question: **is the field doing anything at all?**
+
+## Why uniformity is the signal
+
+A status where every record agrees is indistinguishable from no status. That
+would be cosmetic if nothing read it — but `active` decides what counts as
+retired, and `retired-citations` fires off that. So a scheme in this state has
+an enforcement mechanism that *cannot fire*, and nothing says so. The build is
+green **because** nothing is being judged.
+
+The downstream case is exact and expensive. `mathematics-of-meaning` names
+`retired-citations` in `fail_on` — that is the reason it adopted luria at all.
+Extraction files a claim `Active`, nothing contradicted it, and fifty-one of
+fifty-one claims sat there. Twenty-three had a counterexample in their own
+body. Two said "It is false as stated" in as many words. Thirteen documents,
+thirteen green builds, and the machinery it adopted us for had never run once.
+
+## What I got wrong first
+
+My first cut compared whole status strings. `Superseded — by ADR-010` and
+`Superseded — by ADR-012` are two strings and one status, so a scheme with no
+variety at all would have looked varied. [ADR-003](../../record/decisions.d/ADR-003.md) allows that trailing note and
+this is the second feature this week to trip on it — the `statuses.yaml` check
+had the same bug, found the same way. Both now split on ` — ` before
+comparing, and both have a test that says why.
+
+Worth noticing as a pattern rather than twice-bad-luck: **the note is part of
+the field and not part of the word**, and any new code touching status has to
+know that. If a third thing trips on it, the fix is a parser rather than a
+third `split`.
+
+## Three exemptions, and one of them is interesting
+
+Below ten records — uniformity in a young scheme is evidence of nothing. A
+`render = "document"` scheme — a design-principles page where everything is in
+force is the expected state, since principles move by `version:`.
+
+The third came out of [#102](https://github.com/dmarx/luria/issues/102) landing first: **a scheme that declares exactly one
+status has answered the question.** Reporting it would be telling a project off
+for configuring correctly. That interaction did not exist a day ago, and it
+only showed up because the two halves were built in order rather than together.
+
+## Fired before trusting ([DP-6](../../record/principles.d/DP-006.md))
+
+Nothing on this repo: `ADR` has variety, `DP` is document-rendered. Which is
+the right first result — a check whose first act is to accuse its own project
+usually has the threshold wrong.
+
+Downstream, two schemes. `CON` at 13/13 is the one worth reporting: that
+project's own decision record had already written, in prose, that its concept
+scheme was "either correct or the next instance of this". The check's first act
+was to turn a written suspicion into a standing finding, which is the whole
+argument for compiling culture rather than describing it.
+
+`ADR` at 12/12 is a true observation nobody will act on — a young decision
+record with nothing superseded yet, dismissed in two seconds. That is what a
+report is for, and it is why this is not an error: there is no correct
+proportion of retired records, and inventing a threshold would nag a project
+whose claims genuinely all survive.
+
+
+
+---
+File: record/devlog.d/2026/08/16/193000.md
+---
+---
+title: 'Four descriptions and no name'
+created: '2026-08-16T19:30:00'
+tags: [docs, positioning]
+---
+
+The README carried four self-descriptions — project memory framework,
+priorities accumulator, reference linter, evidence accumulator — each true of
+some part. The repository description takes three clauses. Asked directly, I
+produced three more metaphors: epistemic linter, compiler for culture, build
+system for beliefs.
+
+Seven descriptions is not a writing problem. It is what happens when a category
+is assumed to be new.
+
+## It isn't
+
+The mechanism is a **truth maintenance system**. Doyle, 1979: beliefs plus the
+justifications linking them, each node IN or OUT, retraction propagating to
+everything whose justification depended on it.
+
+That is not an analogy. Downstream, twenty-three claims moved to `Rejected` and
+twenty-seven dependent justifications surfaced across files nobody had touched.
+Same data structure, same operation.
+
+Naming it costs nothing and buys the reader everything — and the coinages were
+actively expensive, because anyone who knows the literature would spend their
+first hour working out whether we knew it too.
+
+## What's actually ours, stated narrowly
+
+Three things, none of them the mechanism: the nodes are human prose rather than
+inference-engine output; propagation halts at a finding because a bad argument
+for P is not a defeater for P; and acknowledgement is a first-class move, which
+a TMS has no way to express.
+
+That last one is load-bearing and I nearly under-sold it. In the downstream
+project's first wave, forty-two of seventy findings were *correct* citations of
+retired material. Without `inactive-ok:`, the only path to a green build would
+have been to un-retire things — which is the one move that must never be how a
+build goes green.
+
+So: truth maintenance plus suppression semantics, applied to prose, in CI. A
+recombination of three existing things, useful because nobody had combined them.
+Not a new category, and saying otherwise would have been the expensive mistake.
+
+## Writing the docs found two bugs in the docs
+
+**The README hand-wrote a link target.** I wrote
+`[ADR-058](record/decisions.d/ADR-058.md)` in the same paragraph that
+tells readers never to do that. The `broken-targets` check did not catch it
+because it happened to resolve; the *rule* still forbids it, and the fix was to
+write the bare code and let the fixer spell it.
+
+**The quickstart's tutorial codes tried to link to real decisions.** `ADR-001`
+and `ADR-002` are illustrative in a tutorial and live records in this repo, so
+the fixer wanted to point them at our actual first two decisions. Backticks —
+a specimen, not a citation — which is the same idiom the templates use.
+
+Both are the general hazard of documenting a tool inside the record it manages,
+and both were caught by the tool. Which is the argument for eating one's own
+cooking, made without me having to make it.
+
+## Verified rather than asserted
+
+I walked the quickstart end to end in a scratch repo: init, two decisions, a
+citation, `link --fix`, `index`, then retracting the first record. The output in
+the document is what the commands actually print, including the finding at the
+end. Every console block in the quickstart is real.
+
+Worth doing because a tutorial that has drifted is worse than none — it teaches
+someone that the tool is broken when the document is.
+
+

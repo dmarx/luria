@@ -1,0 +1,337 @@
+---
+File: .github/workflows/ci.yml
+---
+# Luria runs its own machinery on its own record (ADR-009), so this workflow is
+# both the package's CI and the worked example the docs point at — including
+# the docs jobs, which use the SAME composite actions adopters get
+# (actions/generate, actions/lint), referenced by local path so a change to an
+# action is exercised by the pull request that makes it (ADR-029). The
+# template workflow `luria init` scaffolds is this shape with the actions
+# pinned remotely.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    # Weekly fragment collection. The only wrong cadence is "every merge" — a
+    # per-merge bot commit races in-flight rebases (ADR-002).
+    - cron: "0 9 * * 1"
+  workflow_dispatch:
+
+jobs:
+  # Where merges serialize, the sources are repaired, the views regenerated,
+  # and both committed and pushed as the bot; the lint then reads that
+  # commit (ADR-029). Generated views are committed on main only (the
+  # amendment to ADR-029 on where views land): a pull request pushes its
+  # source repairs onto the branch and lints its sources in the same job,
+  # writing no view — so branches never carry the decision index or the
+  # devlog book, and two branches cannot conflict on them.
+  docs-generate:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      sha: ${{ steps.generate.outputs.sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - id: generate
+        uses: ./actions/generate
+        with:
+          pip-spec: -e .
+          # Concretize only where merges serialize (ADR-049).
+          concretize: "true"
+
+  # `needs:` + the sha output is the load-bearing handoff: a push made with
+  # GITHUB_TOKEN does not retrigger workflows, so a lint reading any other
+  # commit would fail on staleness the bot just repaired — or, worse, never
+  # re-run to clear it.
+  docs-lint:
+    if: github.event_name == 'push'
+    needs: docs-generate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.docs-generate.outputs.sha }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: ./actions/lint
+        with:
+          pip-spec: -e .
+
+  # The pull-request shape: repair the sources, push the repair onto the
+  # branch, and lint the sources in the same job. A repair touches only what
+  # the branch authored, so the review reads the repaired source and the
+  # author's next pull carries it; no view is written here, and the lint
+  # needs none.
+  docs-check:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Same-repo PR: the head branch, so a repair has somewhere to land.
+          # Fork PR: that branch only exists in the fork — naming it fails
+          # the checkout before any push guard runs — so fall back to the
+          # default merge-commit checkout (empty ref); the action warns
+          # instead of pushing.
+          ref: ${{ github.event.pull_request.head.repo.full_name == github.repository && github.head_ref || '' }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: ./actions/generate
+        with:
+          pip-spec: -e .
+          views: "false"
+      - uses: ./actions/lint
+        with:
+          pip-spec: ""
+
+  test:
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e ".[dev]"
+      - run: python -m pytest tests -q
+
+  collect:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e .
+      - run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+      - run: luria collect --commit
+      - run: git push
+
+
+
+---
+File: .github/workflows/llamero.yaml
+---
+name: Llamero - Repo Map For LLM
+on:
+#  push:
+    # branches:
+    #   - main
+    # paths:
+    #   - '.github/workflows/generate-summaries.yml'
+    #   - 'src/summary_generator/**'
+    #   - 'pyproject.toml'
+  workflow_dispatch:
+
+jobs:
+  generate-summaries:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        
+    - name: Create dummy requirements.txt for next step
+      run: touch requirements.txt
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        cache: 'pip'
+
+    - name: Install project
+      run: pip install llamero
+
+    - name: Generate summaries
+      run: llamero summarize all
+
+
+
+---
+File: .github/workflows/pages.yml
+---
+# Luria publishes its own record (ADR-009, ADR-042), using the same composite
+# action adopters get — referenced by local path so a change to the action is
+# exercised by the pull request that makes it (ADR-029).
+#
+# The site is built from the committed views, so it builds after the job that
+# commits them: `workflow_run` fires when the CI workflow completes on the
+# default branch, by which time the generation job has pushed the regenerated
+# views, and the checkout is the head of the default branch — that commit.
+# Triggering on `push` instead would build the merge commit, one bot commit
+# behind, and never see the bot's push at all (a push made with GITHUB_TOKEN
+# triggers no workflow). A pull request builds nothing: a branch carries no
+# views of its own (ADR-068), so a preview there would render the default
+# branch's views under the branch's sources. Deploy is a separate job because
+# it is the only one that needs `pages: write`, and the smallest surface that
+# can publish is the right one (the same reasoning as the PyPI split in
+# publish.yml).
+#
+# One repository setting is required and cannot live here: Settings → Pages →
+# Source must be "GitHub Actions". Until it is, `deploy` fails with "Pages is
+# not enabled" while `build` stays green.
+name: Pages
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+# A published page is the whole repository's markdown rendered; nothing in the
+# build needs to write anything back.
+permissions:
+  contents: read
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    # A CI run that failed has no regenerated views to publish.
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - id: site
+        uses: ./actions/site
+        with:
+          pip-spec: -e .
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: ${{ steps.site.outputs.path }}
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@v4
+
+
+
+---
+File: .github/workflows/publish.yml
+---
+# Publish to PyPI via trusted publishing (ADR-027): no token lives anywhere —
+# the `pypi` environment's OIDC identity is the credential, which is why the
+# publish job carries `id-token: write` and nothing else.
+#
+# Build and publish are separate jobs on purpose: the artifact that ships is
+# the artifact that passed the smoke test, handed over via upload/download,
+# and the environment gate applies to the smallest possible surface.
+name: Publish
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Tags, not just the tip: the version comes from `git describe`.
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install build twine
+      - run: python -m build
+      - run: twine check dist/*
+      # The version is written in two places — `pyproject.toml` and the git
+      # tag — and nothing made them agree. They drifted at the first
+      # opportunity: 0.4.0 was tagged and released against a tree still
+      # saying 0.3.0, so `python -m build` produced a 0.3.0 wheel and PyPI
+      # rejected it as a duplicate AFTER the release was already published.
+      # `twine check` passes such a wheel happily; it validates metadata, not
+      # identity. This is the hand-maintained projection DP-5 warns about.
+      #
+      # Rung 1 has since landed: the version is derived from the tag by
+      # `hatch-vcs`, so there is one source rather than two, and the checkout
+      # above fetches tags for `git describe`. This assertion stays as rung 2 —
+      # deriving prevents the drift, the guard is what makes a recurrence loud
+      # rather than a PyPI rejection reached after the environment gate.
+      - name: The built version is the released version
+        if: github.event_name == 'release'
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          built=$(ls dist/*.whl | head -1 | sed -E 's/.*luria-([^-]+)-py3.*/\1/')
+          echo "tag=$TAG built=$built"
+          if [ "$built" != "${TAG#v}" ]; then
+            echo "::error::release tag $TAG but built luria-$built — the checkout is probably shallow, so git describe saw no tag" >&2
+            exit 1
+          fi
+      # The wheel is smoke-tested the way a user meets it: installed cold,
+      # scaffolding a project end to end. This is the guard against shipping
+      # a `luria init` that only works from a checkout — the template's
+      # location differs between the two (ADR-027), and only an installed
+      # wheel exercises the packaged path.
+      - name: Smoke-test the wheel
+        run: |
+          python -m venv /tmp/smoke
+          /tmp/smoke/bin/pip install dist/*.whl
+          mkdir /tmp/proj && cd /tmp/proj
+          export LURIA_ROOT=/tmp/proj
+          /tmp/smoke/bin/luria init --issue-url https://example.test/issues
+          /tmp/smoke/bin/luria index
+          /tmp/smoke/bin/luria new --title "Smoke test entry"
+          /tmp/smoke/bin/luria index
+          /tmp/smoke/bin/luria lint
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - uses: pypa/gh-action-pypi-publish@release/v1
+
+

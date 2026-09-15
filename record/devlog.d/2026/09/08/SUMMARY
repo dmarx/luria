@@ -1,0 +1,379 @@
+---
+File: record/devlog.d/2026/09/08/154929.md
+---
+---
+title: 'A relation asserts an invariant; the check asks which field names it'
+created: '2026-09-08T15:49:29'
+tags: [lint, ontology]
+---
+
+Shipped for [#214](https://github.com/dmarx/luria/issues/214), which arrived as a much narrower idea and got better twice
+in the thread.
+
+**The first framing was wrong.** I proposed reporting a lineage that *crosses
+a topic boundary* — members holding different values. The consumer project
+pointed out that this treats overlapping membership as a defect when it is
+the feature: a document legitimately in two areas is the vocabulary working.
+
+**The second framing was right and the third was better.** What a relation
+actually asserts is that its documents have something in common, so the
+finding is the *absence of a unifier*, not the presence of divergence. Then:
+a relation is an assertion that an invariant exists, and a field can name the
+invariant property. That generalises past topics — the same check over
+`status` asks whether a succession keeps a document in force.
+
+Two findings, and they are genuinely two rather than one with a knob. Edge
+findings are a strict subset of path findings, but a path can be unbound while
+every edge in it is bound: `A∩B = {x}`, `B∩C = {y}`, `A∩B∩C = ∅`. There is a
+test for exactly that, because it is the whole argument for the second check
+existing.
+
+**The path finding is the weaker one and says so.** A component's
+intersection shrinks monotonically as the component grows, so one distant
+member can unbind a line that is locally coherent at every step. That is a
+property of the operation, not of any record, and it is why this is a report
+rather than a lint failure — the reader has to look at the whole line.
+
+**Why it is opt-in, with a number.** Before writing anything I measured what
+would happen if the check ran over a relation that never implied an
+invariant. In the consumer record, `source:` joins a practice to its paper
+across two vocabularies a decision had *deliberately* separated: 48 of 235
+edges become findings, and every one is a cross-domain citation that decision
+was written to permit. A check that fires on a project for doing the thing it
+decided to do is worse than no check. So nothing is checked until a chain
+names a field, and `invariant` is validated eagerly against the scheme's
+declared fields — a chain asserting a shared value in a field nothing holds
+would report every line and mean nothing.
+
+**Cardinality is not configured.** A list-valued field compares by non-empty
+intersection, a single-valued one by equality — and those are the same
+operation once a scalar is read as a set of one. Worth stating because "the
+field contains a value preserved across the relation" reads naturally as
+equality, and for `tags` that would demand identical tag sets.
+
+**Fired once on a real case, as the working agreement requires.** Declared
+`invariant = "tags"` on the consumer record's practice chain, temporarily, and
+ran it against 189 practices and 23 relation edges: one edge finding and one
+path finding, `SOTA-085` (use flash attention) against `SOTA-161` (keep the
+attention output in FP32 *because* flash attention). Attention technique and
+numerical stability, genuinely both, with nothing yet naming what they share.
+That matches a scratchpad computation done independently before any of this
+code existed, which is the agreement that made me trust it.
+
+**Deferred: the acknowledgement directive.** A record will eventually want to
+say "these two genuinely have nothing nameable in common" and keep the
+finding quiet. Not built, on a trigger rather than a feeling: build it when a
+finding survives two passes with nobody willing to add a tag. Designing the
+annotation before seeing which findings people decline to fix risks designing
+for the wrong residue — and under this framing there is usually a real fix,
+which is to name the thing they share.
+
+
+
+---
+File: record/devlog.d/2026/09/08/165929.md
+---
+---
+title: 'Derived fields, and the ADR-066 rule they invert'
+created: '2026-09-08T16:59:29'
+tags: []
+---
+
+The feature is small; the two things worth writing down are why it did not
+need to be bigger, and the one rule it inverts.
+
+**It composes instead of adding.** Two properties of code already here made
+the whole thing about 150 lines:
+
+- `fields` is already documented as "the table a field's shape and type are
+  declared in", so `derive` is a key in a table that exists, and a derived
+  field inherits `vocabulary` with no plumbing. That pairing is where the
+  eligibility check comes from: declare `vocabulary = "tags"` beside
+  `derive = "first:tags"` and `_vocabulary_violations` reports a first tag
+  that is not a real topic. **No new check was written for the thing the
+  feature is mainly for.**
+- Frontmatter edits are text surgery, never a YAML round-trip (`field_edit`
+  says so in its own docstring, and says why). So list order survives every
+  tool luria has, and order-as-semantics is safe by construction. I checked
+  this before designing anything, because if any tool sorted tags the whole
+  idea would fail silently and late.
+
+**The seam is `Adr.__init__` and `contract.violations`.** Resolving
+derivations onto `meta` in the constructor means every downstream reader —
+invariants, facets, reports, the site — meets an ordinary field and needs to
+know nothing. That is only safe because nothing writes a document back
+through `Adr`; if anything ever does, a derived value would get persisted and
+this becomes a bug. `contract.violations` does the read-only check on the raw
+meta *first*, then derives, so both callers get it without either knowing.
+
+**The inverted rule.** [ADR-066](../../record/decisions.d/ADR-066.md) says a
+declaration beats a derivation for a remote's URIs; this says a declaration is
+a finding. Both are right for their case and the distinction is worth holding
+onto: a URI template is a second *source* for a fact luria cannot compute, and
+a written `primary_topic:` is a second *copy* of a fact it can. Override where
+you would otherwise be guessing; refuse where you would otherwise be
+duplicating.
+
+**Fired on the real case, twice, per the agreement.** The consuming record:
+406 documents, every one already carrying a real topic in first position, so
+adoption is a no-op and the lint stayed at its exact baseline (six warnings,
+exit 0). Then both guards, made to fire on real documents rather than on
+fixtures — a `primary_topic:` line added to a practice, and a `tiny-models`
+secondary moved to first position on another. The second is the one I would
+have got wrong from a fixture alone: my first attempt tested it against a tag
+that only exists on an unmerged branch, so the check silently did nothing and
+looked like it passed.
+
+
+
+---
+File: record/devlog.d/2026/09/08/185747.md
+---
+---
+title: 'Identity moved into the document'
+created: '2026-09-08T18:57:47'
+tags: []
+---
+
+The change is small because journals had already solved it. `check_journals`
+says the whole thing out loud — *"A journal entry's path is derived from its
+`created:` timestamp, and the two have to agree"* — and `luria repair`
+already back-fills that field from the path. Schemes just never got the same
+treatment, and nothing anywhere says why. So this is less a feature than the
+end of an inconsistency, and the implementation is mostly the journal's,
+copied one directory over.
+
+**Three things made it cheap, all of them already paid for.**
+
+- `Scheme.documents()` is *"the one place a scheme directory is read"* —
+  [DP-4](../../record/principles.d/DP-004.md) consolidated five copies of that glob for unrelated reasons. Twenty-odd
+  callers read identity, and exactly one of them touches the filesystem, so
+  moving the source of truth is a one-function change.
+- `number_of()` is already tolerant of a trailing slug: `adr-010-some-title.md`
+  parses today. luria can already *read* expressive filenames; it has only
+  ever *written* the short form.
+- `journal.populate_created()` is the back-fill, working, with a slot beside
+  it in `repair.apply()`.
+
+**The caching decision is the one I would get wrong next time.** Reading
+`number:` costs a parse, on the hot path, so it has to be cached — and the
+obvious cache is a module dict with an explicit `reset()`, the way
+`aliases.py` does it. That would have been a bug generator: `concretize`
+writes a document and immediately re-reads it, `repair` writes 400, and every
+future writer would have to remember. Keyed on the file's `(mtime, size)`
+instead, so a write invalidates its own entry and no caller has to know the
+cache exists.
+
+**Why a disagreement is a violation and not a repair.** The tempting move is
+to rename the file to match the field, since the field is the truth. But
+which of the two is right is genuinely unknowable — someone may have renamed
+the file deliberately, or fat-fingered the field — and renaming on a guess
+moves identity and orphans every link. An *absent* field has a witness (the
+path) and is repaired; a *contradicted* one has two witnesses and is
+reported.
+
+**Fired on both records, per the agreement.** 436 documents in the anthology
+and 103 here. Lint held its exact baseline in both, and every generated view
+came out byte-identical except `reference-status.md`, whose citation line
+numbers shift down by one — because the field adds one line, which is the
+answer you want that check to give. Then the guard itself, on a real
+document rather than a fixture: `number:` edited to disagree with the filename,
+reported, reverted.
+
+**One thing to watch.** My new test suite tripped the reference checker
+twice — `ADR-007` is Superseded here, and `ADR-tmpabcde` resolves to
+nothing — because a suite about how codes are read has to write codes down.
+`tests/test_migrations.py` hit this before me and carries the same
+`unlinted-file:` directive. Two files is not a pattern yet; three would be,
+and the fix then is for the scanners to know that a test fixture is a quote,
+not an address.
+
+
+
+---
+File: record/devlog.d/2026/09/08/210139.md
+---
+---
+title: 'Alias inference, and the map that was never wired up'
+created: '2026-09-08T21:01:39'
+tags: []
+---
+
+The plan for this step said "aliases join the resolver's map." Checking that
+before writing against it turned out to be the useful hour.
+
+**`aliases.alias_map()` had no production caller.** Two tests, and nothing
+else in the package:
+
+    $ grep -rn "alias_map(" --include=*.py .
+    ./luria/aliases.py:41       # the definition
+    ./tests/test_migrations.py:47, :216
+
+Tested, documented, described in prose as the thing references resolve
+through — and dead. The live path was `doc_refs.alias_number`, scanning every
+document's `formerly:` on demand. The module's other functions (`canon`,
+`split`, `reset`) are live; `migrate.py` uses them. It was the map
+specifically that never got connected.
+
+**And its docstring explained why it didn't matter, in a way that stopped
+being true here.** `alias_number` says it doesn't cache because "this path
+only runs for a temp code with no live document, which is rare." Sound — for
+temporary codes, which nobody writes on purpose. A spelling people *choose*
+to cite makes that path hot, so the dead function turned out to be exactly
+the shape the feature needed, sitting one wire away. Wiring it up was the
+change; extending it was the easy part.
+
+**The precision rule is where this could have gone wrong.** An alias tail has
+to be loose — words, digits, hyphens — and a loose pattern in a reference
+scanner matches prose. `SOTA-based` would become a citation. The defence was
+already written down, in `legacy_spellings`: *"a temp-shaped string that
+resolves to no document is not a legacy spelling."* Same rule, and here it is
+load-bearing rather than a nicety: the map decides what is a reference, the
+pattern only decides what to look up. That makes the cache correctness, not
+just speed.
+
+**Two measurements changed the design.**
+
+- I checked whether the anthology's notes carry the fields the motivating
+  template needs, probed for `authors:`, got zero, and nearly reported that
+  the feature could not be used on the record it was built for. The field is
+  `first_author:`, and 218 of 218 notes have it. Reading one real file
+  instead of trusting my own probe is what caught it.
+- The filter vocabulary I had planned — slugify, truncation — is mostly
+  unnecessary. `str.format`'s spec language already truncates a *string*, so
+  `{published:.4}` turns `2022-05-01` into `2022`. (It raises on an int,
+  which is why the earlier probe with `{year:.2}` failed and made me think a
+  filter set was required.) The motivating case needs no filters at all.
+
+**Fired on the real record.** 218 notes, `LIT-Dao-2022-074` for
+FlashAttention, no collisions — the pre-migration `MLR-2014-Kingma001`
+shape recovered, which is the whole point of the exercise.
+
+**Two things the guards caught, both worth writing down.**
+
+`inactive-ok:` governs *its own line and the next line*. I wrote a
+three-line wrapped comment above the citation, and the scope ran out before
+reaching it — reported as a stale directive rather than as an unacknowledged
+citation, which is the right message and took a moment to read that way. A
+wrapped comment silently loses scope; single-line, or `-block:`.
+
+And this suite is the **third** file to need `unlinted-file:`, after
+`test_migrations.py` and `test_number.py`. On [#220](https://github.com/dmarx/luria/issues/220) I said two was not a
+pattern and three would be. It is three: every one is a test suite that has
+to write codes down in order to test how codes are read. Filed as its own
+issue rather than a fourth directive.
+
+**Still to do:** `luria repair` moving a superseded alias into `formerly:`
+when its source field changes. Without it an alias is safe to resolve but
+not yet safe to *write down durably*, since correcting an author silently
+breaks citations written the old way. That is the next piece, not this one.
+
+
+
+---
+File: record/devlog.d/2026/09/08/230434.md
+---
+---
+title: 'One template vocabulary, and the take grammar that went away'
+created: '2026-09-08T23:04:34'
+tags: []
+---
+
+The last step of the identity work, and mostly a deletion: `derive`'s
+`take:field` grammar becomes a `str.format` template, so luria has one
+template language rather than one per feature.
+
+**What made it cheap was doing it in the wrong order first.** `derive`
+shipped with its own tiny grammar, `alias` shipped with `str.format`, and
+having both side by side for an afternoon is what made the redundancy
+obvious and the merge trivial: `aliases.render` already did the work, so
+`derive` delegates to it and the two share a vocabulary.
+
+**The lone-field rule is the only real design in it.** A template that is
+exactly one replacement field returns the *value*; anything with literal
+text returns a string. That distinction matters because a derived field gets
+compared against a closed vocabulary and intersected with another document's
+tags — `"2014"` and `2014` are not the same value, and a formatter's job is
+to produce the former. The rule reads off the template's shape rather than a
+flag, so nothing has to be declared twice.
+
+**A capability went away and it is worth naming.** `last:tags` has no
+template spelling: `str.format` parses `{tags[-1]}` as the string key `-1`,
+not a negative index, so the take that existed only because it "fell out for
+free" now costs a real extension to keep. Dropped rather than special-cased —
+an extension on top of `str.format` is the second grammar this change
+exists to end. A record wanting the last element names its position.
+
+**My own guard caught my own test, and was right.** I wrote a
+type-preservation test using `derive = "{year}"`, and the scalar-rename check
+refused it: `{year}` under a second name copies a field rather than deriving
+one. The test premise was wrong, not the check. Rewritten against a
+list-valued field, which is where a lone-field derivation is legitimate —
+and the refusal now has a test of its own, since narrowing a rule is exactly
+when you want to pin what survives.
+
+**Fired on the real record, both halves through one vocabulary.** 188 of 188
+practices resolved `primary_topic` from `{tags[0]}`, still a `str` identical
+to its vocabulary member; 218 notes rendered
+`LIT-{first_author}-{published:.4}-{number}` with no collisions.
+
+
+
+---
+File: record/devlog.d/2026/09/08/233041.md
+---
+---
+title: 'A docstring is one block, the way a fence already was'
+created: '2026-09-08T23:30:41'
+tags: []
+---
+
+The scope rule caught me three times in a day, and the third one had no good
+answer: a citation in the third paragraph of a docstring could only be
+acknowledged with `-file`, so I deleted the citation instead. Deleting a
+reference to avoid annotating it is the workflow telling you something.
+
+**The fix was already written down, for a different case.** The rules say
+fenced code counts as one block even when it contains blank lines — a
+syntactic unit is not split by the whitespace inside it. A docstring is the
+same shape, and once that is said the change is four lines: `blocks()` learns
+the file's language and treats docstring spans as atomic, the way it already
+treats fences. The span starts at the `def` line rather than the quotes, so a
+directive written above the definition governs what the definition says.
+
+**Measured before designing.** I tried the four placements on the real case
+rather than reasoning about them:
+
+| placement | before |
+|---|---|
+| no directive | warns (the control) |
+| `-block` above the `def` | reported STALE |
+| `-file` at module top | acknowledged |
+| `inactive-ok:` inside the docstring | warns |
+
+That table is what made the answer obvious, and getting it took two false
+starts worth recording. My first probe reported every case as quiet,
+including the control — the replacement string didn't match, so nothing was
+ever mutated. My second reported every case as acknowledged, including the
+control — `luria lint` writes to stderr and I was capturing only stdout. Both
+times the *control* was the tell: a probe whose control does not reproduce
+the condition is measuring nothing, and it is worth checking that first.
+
+**The last row stays as it is, deliberately.** A directive written inside a
+docstring still does not fire, because a docstring is not a comment — that
+rule exists because prose about the syntax used to invoke it, and a
+docstring example silently annotated its own module. This change does not
+touch it, and there is a test pinning it.
+
+**And I broke the module while documenting it**, by putting a `"""` example
+inside a `"""` docstring. The example now uses `'''`.
+
+Fired on the real case: the `ADR-087` citation I had deleted from
+`derive.value` is back, acknowledged by a `-block` directive above the
+definition, with the lint identical to main's baseline.
+
+**What this does not fix.** The three suites carrying `unlinted-file:` are a
+different problem — fixture codes in string literals and comments, not
+docstring prose. [#222](https://github.com/dmarx/luria/issues/222)'s other options still stand for those.
+
+

@@ -1,0 +1,87 @@
+---
+File: examples/knowledge-base/record/literature.d/LIT-001.md
+---
+---
+status: Active
+title: 'Adam: A Method for Stochastic Optimization'
+version: 1
+tags:
+- optimization
+date: '2026-08-22'
+published: '2014-12-01'
+arxiv: '1412.6980'
+summary: >-
+  Kingma et al. (2014), [ARXIV-1412.6980](https://arxiv.org/abs/1412.6980). Adaptive moment estimation, still
+  the default optimizer a decade later.
+---
+
+# LIT-001: Adam: A Method for Stochastic Optimization
+
+Kingma et al. (2014) — [ARXIV-1412.6980](https://arxiv.org/abs/1412.6980)
+
+`date:` is when this note was filed; `published:` is what the paper is about.
+Luria measures staleness from the former, so putting a publication date in
+`date:` would report every unreviewed note as years overdue.
+
+## Key takeaways
+
+- Combines the advantages of AdaGrad and RMSProp.
+- Corrects bias in the moment estimates.
+
+
+
+---
+File: examples/knowledge-base/record/literature.d/LIT-002.md
+---
+---
+status: Rejected
+status_note: needs per-case tuning, no consistent cross-domain benefit
+title: 'Hard Negative Mining in Contrastive Learning'
+version: 1
+tags:
+- optimization
+date: '2026-08-22'
+published: '2021-04-01'
+arxiv: '2104.08892'
+summary: >-
+  [ARXIV-2104.08892](https://arxiv.org/abs/2104.08892). Atticked: the technique is real, the benefit is not
+  consistent enough to recommend.
+---
+
+# LIT-002: Hard Negative Mining in Contrastive Learning
+
+[ARXIV-2104.08892](https://arxiv.org/abs/2104.08892)
+
+## Standing in the anthology
+
+Retired, not deleted. The body stays because "we used to recommend this, and
+here is why we stopped" is worth more than a clean list — and because
+something may still cite it, which the reference report will surface.
+
+
+
+---
+File: examples/knowledge-base/record/literature.d/LIT-003.md
+---
+---
+status: Active
+title: 'Scaling Data-Parallel Training Past the Communication Wall'
+version: 1
+tags:
+- systems
+date: '2026-08-23'
+published: '2025-02-10'
+url: 'https://example.org/reports/communication-wall'
+summary: >-
+  A lab technical report, never posted to arXiv and without a DOI. Its
+  `url:` is its source, which is all the `source` group asks for.
+---
+
+# LIT-003: Scaling Data-Parallel Training Past the Communication Wall
+
+A technical report published only on its lab's site. It has no arXiv
+identifier and no DOI, and it is a paper all the same: the `source` field
+group accepts its `url:` where a bare `requires = ["arxiv"]` would have
+refused it.
+
+

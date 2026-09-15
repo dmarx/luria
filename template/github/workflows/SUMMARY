@@ -1,0 +1,202 @@
+---
+File: template/.github/workflows/docs.yml
+---
+# The record's own CI, in the recommended shape (LU-ADR-029 and its amendment on where views land).
+# Three jobs on the default branch and pull requests, one on a schedule:
+#
+#   docs-generate  on push to the default branch: repairs the sources
+#                  (reference links, a journal entry's missing `created:`),
+#                  regenerates the derived views (index, tag pages, books,
+#                  README badges) and commits both back as the bot — derived
+#                  documentation is built, not maintained, and a view a human
+#                  has to rebuild by hand will drift.
+#   docs-lint      on push: gates what a generator cannot decide: unresolved
+#                  references, wikilinks that resolve to nothing, a title
+#                  disagreeing with its heading, stray files in a view
+#                  directory. It `needs:` docs-generate and reads the SHA it
+#                  output — a push made with GITHUB_TOKEN does not retrigger
+#                  workflows, so a lint anywhere else would keep a red earned
+#                  from the pre-regeneration commit and never clear it.
+#   docs-check     on a pull request: repairs the sources and pushes the
+#                  repair onto the branch (a repair touches only what the
+#                  branch authored, so the review reads it), then lints the
+#                  sources in the same job. No view is written: generated
+#                  views are committed on the default branch only, so a
+#                  branch never carries them, is not checked for them, and
+#                  two branches cannot conflict on them. On a fork the
+#                  repair cannot be pushed; the action warns and the lint
+#                  still runs on the repaired tree.
+#   collect        assembles changelog fragments on a cadence, never
+#                  per-merge (LU-ADR-002 — a per-merge bot commit races
+#                  in-flight rebases, reintroducing the conflict fragments
+#                  exist to remove).
+#
+# One caution for maintainers: GitHub skips a workflow run when the head
+# commit message carries its skip marker, in the first or last line, in any
+# of its five spellings — so a commit message *describing* the bot's commit
+# format can suppress its own CI run. Name the marker in prose; file contents
+# like this one are unaffected.
+name: Docs
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    # Weekly collection. Adjust to taste; the only wrong answer is "every merge".
+    - cron: "0 9 * * 1"
+  workflow_dispatch:
+
+jobs:
+  docs-generate:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      sha: ${{ steps.generate.outputs.sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - id: generate
+        # Pin a released tag once you depend on this in anger.
+        uses: dmarx/luria/actions/generate@main
+        with:
+          # Assign real numbers to merge-allocated temporary codes
+          # (LU-ADR-049) — only where merges serialize, which this job is.
+          # Harmless if no scheme sets `allocate = "merge"`.
+          concretize: "true"
+
+  docs-lint:
+    if: github.event_name == 'push'
+    needs: docs-generate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.docs-generate.outputs.sha }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: dmarx/luria/actions/lint@main
+
+  docs-check:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Same-repo PR: the head branch, so a repair has somewhere to land.
+          # Fork PR: that branch only exists in the fork — naming it fails
+          # the checkout before any push guard runs — so fall back to the
+          # default merge-commit checkout (empty ref).
+          ref: ${{ github.event.pull_request.head.repo.full_name == github.repository && github.head_ref || '' }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: dmarx/luria/actions/generate@main
+        with:
+          views: "false"
+      - uses: dmarx/luria/actions/lint@main
+        with:
+          pip-spec: ""
+
+  collect:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install luria
+      - run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+      - run: luria collect --commit
+      - run: git push
+
+
+
+---
+File: template/.github/workflows/pages.yml
+---
+# Publish the record as a browsable site on GitHub Pages (LU-ADR-042).
+#
+# `luria site` stages every page the record publishes — the decisions, the
+# principles document, the devlog books, the reports — with paths preserved,
+# so the relative links `luria link --fix` already wrote keep resolving. The
+# composite action builds that vault with a pinned Quartz, which gives the
+# citations a graph and backlinks without anyone maintaining either.
+#
+# The site is built from the committed views, so it builds after the job
+# that commits them: `workflow_run` fires when the Docs workflow completes on
+# the default branch, by which time its generation job has pushed the
+# regenerated views, and the checkout is the head of the default branch. A
+# pull request builds nothing — a branch carries no views of its own
+# (LU-ADR-068). If you rename the Docs workflow, rename it here too.
+#
+# Before the first deploy succeeds, set Settings → Pages → Source to
+# "GitHub Actions". That is a repository setting; no file in the repository
+# can turn it on, and until it is on the `deploy` job fails with "Pages is
+# not enabled" while `build` stays green.
+#
+# Delete this file if you would rather not publish. Nothing else depends on
+# it — `luria site` is a build step, and the record it reads is the record
+# every other command reads.
+name: Pages
+
+on:
+  workflow_run:
+    workflows: [Docs]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    # A Docs run that failed has no regenerated views to publish.
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - id: site
+        # Pin a released tag once you depend on this in anger.
+        uses: dmarx/luria/actions/site@main
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: ${{ steps.site.outputs.path }}
+
+  # Separate from the build because it is the only job that needs to write.
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@v4
+
+

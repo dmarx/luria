@@ -1,0 +1,141 @@
+---
+File: record/devlog.d/2026/09/10/154749.md
+---
+---
+title: 'Firing the reference derivation on 281 real documents'
+created: '2026-09-10T15:47:49'
+tags:
+- mechanism
+---
+
+**`derive` learned to follow a reference (`#233`).** The tests pin the rules;
+this is what the guard did against a real corpus, and the three things the
+implementation taught that the design did not predict.
+
+## The real case
+
+`anthology-of-the-sota`, at the commit that had just backfilled `published:`
+by hand across 281 documents. The trial: declare the derivation, delete every
+stored copy, and see whether the record still knows the dates.
+
+    stripped stored published: from 281 documents
+    practices resolving: 207/207
+    notes resolving:     74/74
+
+Six spot-checks against the hand-computed values, including four of the eight
+that had been **stale**, all correct. Then the negative half — reinstating
+`SOTA-150`'s actual stale value, `2024-01-01`:
+
+    luria: 1 violation(s)
+      record/practices.d/SOTA-150.md: `published:` is written in frontmatter,
+      but SOTA derives it (`{published}` from `source[0]`) — the value has one
+      source and this is not it
+
+Exit 1. That is the defect the feature was written for, not a synthetic one.
+
+The trial also produced a finding nobody asked for and which is **correct**:
+declaring `published` required on `LIT` makes the scheme's own template a
+violation, because the form does not scaffold the field. A record adopting
+this will meet that on day one, and it is the scaffold check doing its job.
+
+## Three things the implementation taught
+
+**The eager check recursed.** `_check_derivations` runs *during* config load,
+and checking a followed template's names against the target scheme meant asking
+for the target scheme — via `current()`, which re-enters the loader. Stack
+exhaustion, no useful traceback. The fix is to thread the schemes dict being
+built through the check rather than reading the config that is still being
+assembled. Anything else added to that pass will hit the same wall.
+
+**Two existing rules were about the same document and had to learn it.**
+`derive` refuses `field` deriving from `field` (a cycle) and refuses a lone
+template reading a single-valued field (a rename under a second name). Both are
+correct *within* one document and both are wrong across a reference —
+`published` from its source's `published` is a cycle in the first reading and
+the entire point in the second. Neither would have shown up as a test failure
+in the new file; they showed up as the new feature's own valid config being
+refused at load.
+
+**The motivating field was not declared.** The anthology's `published:` on
+`LIT` was convention, never a declaration. So the first draft of the eager
+check — the target's fields must be nameable — rejected the exact case the
+feature existed for. That is the decision `ADR-092` records: require the
+declaration anyway, because the alternative is a typo that resolves to nothing
+on every document and reads like a clean record.
+
+## What is deliberately not here
+
+Chaining. A followed template reads **written** frontmatter, so a target's own
+derivations are invisible. That is what makes cycles impossible by construction
+instead of by detection, and it means no evaluation order over schemes has to
+be defined or maintained. A project that wants a chain will see nothing resolve
+rather than a diagnostic — worth knowing, and worth revisiting when something
+actually needs one.
+
+
+
+---
+File: record/devlog.d/2026/09/10/221041.md
+---
+---
+title: 'Grouping the pending report, and being caught twice by the specimen-code hazard'
+created: '2026-09-10T22:10:41'
+tags:
+- mechanism
+---
+
+**`#230`, which is a small rendering change, and the thing that actually cost
+the time.**
+
+## The change
+
+`pending()` collects undecided documents from every scheme on purpose. The
+report rendered them as one table. Splitting the *presentation* by scheme is
+the whole fix; the collector, the badge and the lint headline are untouched,
+and a test pins that the published counts do not move.
+
+Two judgements worth having written down:
+
+- **Sections, not files.** One file per scheme breaks existing links,
+  multiplies what a reader visits, and removes the only place a cross-scheme
+  total can live — and that total is what the badge publishes.
+- **Grouped only when there is something to group.** A single-scheme record
+  gets the old flat table. A heading naming the only family a project has is
+  nesting that carries no information, and this record is that case: every one
+  of its undecided documents is a decision.
+
+Verified on the adopting record rather than only on fixtures: 37 undecided,
+rendering as 33 / 2 / 2 across three sections in declaration order, with the
+fourth declared scheme correctly absent.
+
+## What actually cost the time
+
+**The suite caught me with `#231`, twice.**
+
+The first draft's fixture used this record's own scheme prefix and filed a
+specimen numbered like a real decision. The reference scanner read it as a
+citation; the decision it named is Superseded; the lint gained a
+retired-citation warning that had nothing to do with the change. That is
+`#231` exactly — a suite writes codes down because that is what it tests.
+
+The fix was **not** a fourth `unlinted-file:` beside the three that issue is
+already about. The fixture now declares prefixes this record does not use, so
+nothing in the file is a code the scanner recognises and no directive is
+needed.
+
+Then the comment explaining all of that spelled the offending code out, and
+**re-earned the same warning**. Same lesson, ten lines later: the mitigation is
+not writing it down.
+
+## The part worth carrying to `#231`
+
+The escape hatch I used does not generalise, and it would be easy to mistake
+it for a fix.
+
+It works here only because this record declares two schemes, leaving every
+other prefix invisible to the scanner. **A project that declared `RFC` and
+`SPEC` would have no free prefix to test with** — its suite would be back to
+directives, which is the state `#231` is about. "Use a prefix you don't
+declare" is a property of this repository, not a technique.
+
+

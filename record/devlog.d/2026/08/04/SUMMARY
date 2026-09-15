@@ -1,0 +1,548 @@
+---
+File: record/devlog.d/2026/08/04/032711.md
+---
+---
+title: 'A decision cited as a principle'
+created: '2026-08-04T03:27:11'
+tags: []
+---
+
+**Got a decision's rationale wrong, and the fix turned out to need a rule that didn't exist yet.** [ADR-018](../../record/decisions.d/ADR-018.md) rejected the endpoint-badge alternative by invoking [ADR-002](../../record/decisions.d/ADR-002.md): keeping a committed JSON file current means a bot commit per merge, and per-merge bot commits race in-flight rebases. Correct about [ADR-002](../../record/decisions.d/ADR-002.md), wrong about this case. That hazard is specific and I'd flattened it into a slogan: `CHANGELOG.md` is **appended to at a marker** and its entries carry **assigned numbers**, so a bot commit forces in-flight branches to rebase into a conflict exactly where their own content goes, and a careless resolution silently drops somebody's entry. A derived badge file has neither property — it is a wholesale rewrite of a computed value, and a conflict in it is resolved by regenerating. Nothing is lost, nothing is numbered, nothing is appended.
+
+Worth naming the failure mode, because it is the one this whole package exists to prevent in *documentation* and I committed it in *reasoning*: **a decision cited as a principle**. [ADR-002](../../record/decisions.d/ADR-002.md) records a choice made against a particular file's shape. Quoting it as "bot commits are bad" strips the conditions that made it true, and a rule with its conditions stripped is exactly what gets misapplied to the next problem. The record has a separate layer for standing values, and the fact that a claim didn't earn a place there is information.
+
+The decision itself survives, for a reason I hadn't written down: **a baked-in URL is correct per commit.** Open a pull request that adds a `Proposed` decision and that branch's README already says `needs decision: 1`, in the diff, where a reviewer is looking. An endpoint badge always reports the default branch — so the one moment the number is most worth seeing, while deciding whether to merge the thing that moves it, is the moment it can't. Needing no CI and no second file is the smaller half of the argument, and I'd led with it.
+
+**Then: how do you correct that?** The record says *never rewrite a decision's body*. Read literally, the only remedy is supersession — retiring a decision that is still in force, repointing its citations at a near-identical replacement, and telling every future reader that the choice changed when only an argument did. Do that a few times and `Superseded` stops meaning anything, which defeats the closed status vocabulary ([ADR-003](../../record/decisions.d/ADR-003.md)).
+
+So [ADR-019](../../record/decisions.d/ADR-019.md) splits the two cases: a changed **choice** is superseded, a wrong **reason** is corrected in place with a `version` bump and a `history:` entry saying what the old version claimed and why it was wrong. The insight that makes it safe is that "never rewrite a body" is objecting to *silent* revision — and a version bump plus a history note is the opposite of silent. The test for the ambiguous case: *would a reader who acted on the old version have done something different?* If yes, supersede; if they'd have done the same thing for a worse reason, correct in place.
+
+Pleasingly, this is the first thing the `version` field has had to display for a decision. [ADR-016](../../record/decisions.d/ADR-016.md) added it on the argument that a decision whose scope widens is a revision, which was speculative — this is a real second occasion, and it arrived within a day.
+
+**A cascade worth recording.** Creating [ADR-019](../../record/decisions.d/ADR-019.md) made `ADR-019` a real code — and it had been serving as a *fixture* number in `doc_refs.py` and `test_doc_refs.py`, covered by `unresolved-ok` annotations. The inverted check fired immediately: `annotation names ADR-019, which does resolve here`. Better still, because a malformed annotation excuses nothing, the *other* code in the same annotation (`ADR-163`) fell out of cover too and got reported. Two levels of consequence from one new file, both surfaced automatically. Fixture codes now live at 900+ where nothing will collide.
+
+**Then came the part that mattered more than the rule: the docs were still telling everyone the record was frozen.** [ADR-019](../../record/decisions.d/ADR-019.md) settled *what* to do, but "never rewrite a decision's body" was written in six places — the traffic rules in [ADR-001](../../record/decisions.d/ADR-001.md), the doctrine page, both index stubs, both decision templates, `CLAUDE.md` — and every one of them stated it absolutely. A rule stated absolutely in six places and refined in one is a rule that will be applied absolutely, because nobody reads all seven.
+
+Worth noticing *why* the absolute phrasing was so sticky: it is genuinely the right instinct, and the failure it prevents (a record quietly revising what it used to think) is much worse than the failure it causes (a wrong paragraph nobody dares fix). Softening it needed the softer version to be equally memorable, which is why every site now says the same sentence — **the objection is to silent revision, not to editing** — rather than each hedging in its own words.
+
+**[ADR-001](../../record/decisions.d/ADR-001.md) went to `v2`, which is the mechanism proving itself on the document that states it.** Its clause now says *supersede when the choice changes*, with a `history:` entry recording that version 1 read as "documents are frozen". That is the cleanest possible demonstration: the decision whose over-broad wording created the problem was fixed by exactly the procedure the fix introduces, and a reader can see both versions. Superseding [ADR-001](../../record/decisions.d/ADR-001.md) would have been absurd — it is a four-layer taxonomy, and only one clause of one bullet was wrong.
+
+**The examples section is the real deliverable.** Abstract permission ("documents may be revised") changes nobody's behaviour; a list of things that already happened does. Every shape had already occurred here without being collected in one place: [ADR-010](../../record/decisions.d/ADR-010.md) → [ADR-011](../../record/decisions.d/ADR-011.md) and [ADR-015](../../record/decisions.d/ADR-015.md) → [ADR-016](../../record/decisions.d/ADR-016.md) for changed choices, [ADR-018](../../record/decisions.d/ADR-018.md) `v2` for a wrong reason, [DP-2](../../record/principles.d/DP-002.md) and [DP-3](../../record/principles.d/DP-003.md) `v2` for reworded values, and — the one I had to go looking for — [ADR-016](../../record/decisions.d/ADR-016.md)'s consequence being falsified by [ADR-017](../../record/decisions.d/ADR-017.md) while its decision stayed correct. That fourth shape had no name before writing this section, and it is distinct: a *consequence* is an observation, and observations expire without the decision they sit under being wrong.
+
+**One tell that the section was needed.** Writing it produced two unacknowledged citations of retired decisions — because naming [ADR-010](../../record/decisions.d/ADR-010.md) and [ADR-015](../../record/decisions.d/ADR-015.md) *as the supersession examples* is exactly the case `inactive-ok` exists for, and the report said so immediately. Then the `-block` scope turned out to cover the heading rather than the bullet list under it, so it had to widen to `-file`. Fixing that changed the `cited but retired` badge from amber back to green in the same `luria index` run — the whole loop, from writing a paragraph to a number on the front page moving, inside one command.
+
+
+
+---
+File: record/devlog.d/2026/08/04/034408.md
+---
+---
+title: "The devlog becomes a journal, and the migration's timestamps came from the commits"
+created: '2026-08-04T03:44:08'
+tags: []
+---
+
+**The devlog looked like a changelog and was mechanised like one, which cost it
+three properties nobody had noticed it was missing.** Both were fragment
+directories collected into a file at a marker, fragments deleted. That is right
+for a changelog — an entry is a claim about a release, and once it is in
+`CHANGELOG.md` the fragment has served its purpose — and wrong for a devlog,
+where an entry is a **dated observation**: true when written, and still true.
+Consuming it throws away the only copy of something that never expires. The
+distinction was already in the repo; [ADR-012](../../record/decisions.d/ADR-012.md) drew it
+for the principles document and then cited the devlog as an example of the
+*other* side. So the fix was applying a distinction we already had to the case
+that had motivated writing it down.
+
+The three costs were: a shared insertion point (every branch appends at the same
+marker, [DP-2](../../record/principles.d/DP-002.md)), ordering that came from commit
+order rather than from the record — so a rebase could reorder history — and
+unbounded growth in a file that can only be appended to and never rebuilt.
+Identity is now the authoring timestamp: `devlog.d/2026/08/03/211926.md`, path
+derived from `created:`, lint checking the two agree. Nothing to allocate,
+nothing to collide on, and sorting is a pure function of the tree
+([ADR-020](../../record/decisions.d/ADR-020.md)).
+
+**A dated file per period was already on the record as rejected, in the pilot,
+and finding that was the point of the archaeology.** The half-memory being
+chased was of a strata-g devlog system where fragments persisted and built into
+smaller books. It never existed. One hit across every ref, dangling commit and a
+400-commit `git grep`: `adr-157-devlog-fragments.md:92`, listing "append to a
+dated file per month" as a **rejected** alternative — "narrows the conflict
+window without closing it; two PRs in the same month still collide, which is
+most of them." Fragments were unlinked from the first commit onward, and
+`docs/devlog.md`'s line count was strictly monotonic across its whole history,
+so nothing had ever been nuked. The likely source of the memory is
+[SG-ADR-158](https://github.com/dmarx/strata-g/blob/main/docs/decisions/ADR-158.md)'s
+generated per-tag pages, which shipped the same day and *are* persisting sources
+split into smaller generated books. Worth the hour: the rejected alternative is
+the one this design had to beat, and it named the exact failure — per-period
+files still share an insertion point. Per-*entry* files don't.
+
+**Book granularity is configured because the right size is a measurement.** The
+pilot wrote 8,281 devlog lines over a 40-day span — about 200 lines a day, which
+makes a monthly book 3,600–7,200 lines. That number is empirical and specific to
+one project, so `granularity` is `year | month | day` in config rather than a
+constant in the renderer. It is also a correction: I had estimated that corpus
+at "roughly a year" of work from nothing but its size. An LLM has no
+chronoception; passage of time is an empirical claim, and there are real clocks
+in the file mtimes and the git history. `git log` said 40 days.
+
+**The back catalogue kept its real timestamps, from
+`git log --diff-filter=A --format=%aI -1 -- <path>`.** Stamping seven entries
+with the migration date would have made the log's first page a lie about a
+record whose entire purpose is being trustworthy about when things were thought.
+Two traps in doing it. Timestamps come out in the committer's offset, and one
+fragment was authored at `-07:00` — normalising to UTC moved it from third-oldest
+to newest, which is the order it was actually written in, and sorting the raw
+strings would have silently got that wrong. And the bodies' relative links were
+written for `docs/devlog.md`, so they resolved from `docs/`; the books sit one
+level deeper. Rebasing them is a bulk regex, and the regex is where the second
+trap sprang.
+
+**A naive rewrite corrupted three quotations, and the guard that caught it did
+not exist for this.** Two entries *quote* broken links inside backticks —
+`[ADR-123](adr-123-adr-status-vocabulary-docs-lint.md)`, written with backticks
+around it, is a specimen of exactly the defect that motivated the
+dangling-reference check. Rewriting every `](…)` in the file rewrote the
+specimens too, turning a faithful quotation into a doctored one. What caught it
+was `test_every_generated_relative_link_resolves`, which had never seen the
+devlog before, because a collected view isn't in `outputs()` and so has no
+rendered form to check. Making the devlog generated put it under a guard written
+for something else. The test then needed the same masking the hyperlink lint
+already uses — a link in backticks is quoted, not asserted — which was one call
+to `doc_refs.code_spans`, not a new rule.
+
+**`Config.is_historical` replaced a set-membership test that couldn't see nested
+files.** Excluding dated records from the retired-reference report was
+`path.parent in {fragment dirs}`, which is fine when fragments are flat and
+silently wrong when they are `devlog.d/2026/08/03/`. It would have failed open —
+seven entries' worth of permanently unactionable warnings, drowning the signal
+the report exists for. Now one method decides it, and it covers the rendered
+books too.
+
+All four new guards were fired before being trusted
+([DP-6](../../record/principles.d/DP-006.md)): an entry moved off its timestamp, an
+entry with its title removed, a hand-edited book, and a `version:` bumped
+without a `history:` entry. Each produced exactly one violation naming the file
+and what to do about it. The scaffold was also run end to end into an empty
+directory — `luria init`, `index`, `journal new`, `index`, `lint` — because a
+journal that only works in the repo that grew it is not a feature of the
+package.
+
+
+
+---
+File: record/devlog.d/2026/08/04/153748.md
+---
+---
+title: 'The read/write boundary: record/ for filing, docs/ for reading'
+created: '2026-08-04T15:37:48'
+tags: []
+---
+
+**The layout got restructured along the axis a first attempt missed, and the
+closed PR is the interesting part.** The first slice at "this repo is
+overwhelming to visit" moved Luria's own record into a `meta/` directory —
+segregating by *whose* content it was. It worked, was reviewed, and was closed
+unmerged, because thinking out loud about what actually grated produced a
+better diagnosis: two of four source containers marked `.d` and two not, a
+generated document sitting beside its own sources, the decisions index buried
+under the `ADR-` sort with its `.stub` next to it, and `README.md` meaning
+"edit me" in one directory and "never edit me" in the next. None of that is
+ours-vs-theirs. It is sources-vs-views — read-vs-write — and the `meta/` move
+would have left it intact inside both halves. The failed approach was not
+wasted: it proved the mechanics (a record that moves *together* keeps every
+internal link; only boundary-crossers rewrite) and its measurement — the
+scaffold is 16 files / 28.6 KB against a ~300 KB record — killed the
+token-deadweight framing that had motivated the wrong axis.
+[ADR-021](../../record/decisions.d/ADR-021.md) records the layout;
+[DP-9](../../record/principles.d/DP-009.md) is the value under it — generalized, on
+review, from "the read/write boundary" to the philosophy the boundary applies:
+structure is read before text, so affordances are spent deliberately, on
+attention, on discovery, and as smells to read when they turn inconsistent.
+The pilot's
+[SG-DP-18](https://github.com/dmarx/strata-g/blob/main/docs/design-principles.md#18-the-affordance-is-the-contract),
+"the affordance is the contract", is the named sibling: that one binds
+affordances to the truth, this one is about their reach.
+
+**One mechanism change carried the whole restructure: a scheme's `output`
+split from its `dir`.** Everything else was configuration and moves. The index
+and tag pages now render into `docs/decisions/` while sources sit in
+`record/decisions.d/`, with the rebase prefix computed by `os.path.relpath`
+instead of the hardcoded `""` / `"../"` pair — and `prefix_for` returns `""`
+when view and sources coincide, so a project on the old collocated layout
+renders byte-identically and adoption never begins with a move.
+
+**The stub was the subtle case, and it produced a third link base.** Sources
+resolve from where they sit; fragments resolve from where they collect;
+and now a stub — authored beside the sources, rendered in the view — resolves
+from where the index *renders*. Getting this wrong was visible immediately:
+the freshly rendered index's own prose pointed `_template.md` and two ADR
+links at the view directory, where none of them live. The general lesson filed
+before under [ADR-005](../../record/decisions.d/ADR-005.md) holds a
+third time: every piece of authored text has exactly one place it renders, and
+its links belong to that place, not to its file.
+
+**The payoff check is "a view directory holds only what the generator
+wrote."** With the stub and `tags.yaml` moved to the source side, nothing
+hand-written legitimately remains in a view directory, so the old
+orphaned-tag-page check generalized into `adr_index.orphans()` across every
+view dir — scheme views, tag dirs, journal outputs. That single property is
+what upgrades "GENERATED — do not edit" from a comment someone reads after
+landing in the wrong place into a build failure with the right polarity. It
+also quietly fixes a real gap: a journal book stranded by a granularity change
+(`2020-01.md` after switching to yearly) was previously nobody's problem.
+
+**Fixture paths bit again, in the predicted place.** `tests/_scheme.decision`
+spelled `docs/decisions`, so under the new defaults every test that filed a
+decision passed its assertions against an *empty* corpus — 33 failures, all
+really one. It now asks `current().schemes["ADR"].dir`, and the badge tests
+had to move their config-writes *before* their filings, since where a fixture
+files now depends on which config is in force. Path assertions in
+`test_doc_refs` are derived from config for the same reason: they assert
+resolution rules, not current addresses, so the next layout change — if any —
+is a config edit.
+
+**Two smaller things worth keeping.** The journal's front page now inlines the
+current book's contents (newest first) above the shelf — the "looks like an
+archive" complaint was about attention, not structure, and one renderer change
+fixed it. And the badges' link default had been restating a configured path
+(`docs/decisions/README.md` as a literal); it survived this move by
+coincidence, and now derives from `current().index` so it stops being a
+projection waiting to drift.
+
+All guards fired before trusting
+([DP-6](../../record/principles.d/DP-006.md)): a stray file in each kind of
+view dir, a hand edit to a generated index, and a bare reference in a
+`record/` source — each one violation, each naming the file and the remedy.
+610 relative links re-resolved from their render bases; the one "broken" is
+the `ADR-NNN.md` placeholder in the decision template. A fresh `luria init`
+into an empty directory files its first journal entry under `record/devlog.d/`
+and lints clean.
+
+
+
+---
+File: record/devlog.d/2026/08/04/170921.md
+---
+---
+title: 'A remote learns its schemes, and the url-ok loop closes on schedule'
+created: '2026-08-04T17:09:21'
+tags: []
+---
+
+**The feature was specified by an escape hatch, which is the part worth
+remembering.** [ADR-022](../../record/decisions.d/ADR-022.md) scoped `url-ok`
+one review earlier and predicted that its accumulated reasons would describe
+gaps in remote config; the very first reason — "strata-g's principles are
+sections of one document" — was the recurring shape, surfaced by the
+maintainer's challenge that a hand URL looks like the same anti-pattern in
+both namespaces. It doesn't, but the challenge exposed that the real gap was
+the remote model assuming one directory of code-named files. Strata-g is a
+Luria project on a legacy layout; foreignness was never the issue.
+[ADR-023](../../record/decisions.d/ADR-023.md) records the fix:
+`[luria.remotes.X.schemes.Y]` maps a code family to `dir`, `document` +
+`anchor`, or a `url` template, with per-scheme config winning over the
+remote-level settings that keep serving unconfigured prefixes.
+
+**The subtle rule was lockfile jurisdiction.** "Discovery, once done, is
+authoritative" says a code absent from a lockfile names no document — but
+discovery reads directory listings, and a *section* of an assembled page
+never appears in one. Left alone, a lockfile on a remote with a document
+scheme would have vetoed every DP construction: absence-of-file read as
+absence-of-document, for a document that was never going to be a file. The
+authority is now scoped to what discovery can actually see — file-per-code
+codes stay under it, anchor and template constructions never consult it —
+and the test that pins this (`lockfile_authority_does_not_cover_document_schemes`)
+asserts both halves, because the failure would have been the quiet kind.
+
+**Zero-config prefix magic was the tempting wrong default.** Mapping `DP`
+codes to `docs/design-principles.md#dp-N` with no config at all would have
+made the demo sparkle and been confidently wrong for exactly the remote in
+front of us: strata-g's legacy anchors are heading-derived, and GitHub lands
+a missing anchor silently at the top of the page — a wrong link that *looks*
+like it worked. The rule that runs through this subsystem held: a default is
+a guess about the remote, config is a claim by the user. One `document` line
+is the honest price, and the anchor template's default (`dp-{number}`, the
+stable shape our own document render emits) makes that line sufficient for
+any remote on current conventions.
+
+**The retirement loop fired, in both directions.** With
+`[luria.remotes.SG.schemes.DP]` configured, `SG-DP-18` constructs to the
+right document with the wrong legacy anchor — so the `url-ok` in
+[DP-9](../../record/principles.d/DP-009.md) survives with a narrower reason,
+excusing only the anchor. And the fixture test walks the full loop
+[ADR-022](../../record/decisions.d/ADR-022.md) promised: configure the
+scheme, replace the hand URL with the construction, and the leftover
+acknowledgement reports itself stale. `luria remotes` now labels which rung
+answered per code ("a document anchor, per the scheme"), and the live
+`--check` verified every LU construction against the real repository while
+reporting SG honestly unverifiable.
+
+**The scaffold caught the last leak.** The directive-example table in
+CLAUDE.md quotes `url-ok: SG-DP-18 …`, and in a fresh scaffold — where `SG`
+is not a configured remote — the tail read as a dangling local `DP-18`,
+because the shaped-text mask that treats directive syntax as syntax only knew
+the first two vocabulary words. `url-ok` joined the set. Found by running
+`luria init` into an empty directory and linting, which is the only place
+that combination exists; the dogfooding repo could never have shown it,
+because here `SG` resolves.
+
+The remote-level `dir` default also moved to `record/decisions.d`, trailing
+the read/write boundary — the defaults are Luria's conventions, and the
+conventions moved. The five tests that noticed were asserting the default's
+*address* rather than its *rule*; same lesson as the fixture paths one entry
+ago, one layer further out.
+
+
+
+---
+File: record/devlog.d/2026/08/04/172947.md
+---
+---
+title: "Numbers were the special case: uid remotes and one parser for a code's anatomy"
+created: '2026-08-04T17:29:47'
+tags: []
+---
+
+**The review question was "why is the tail a number?", and the answer was
+"only by accumulation."** Per-scheme mappings had just generalized *where* a
+remote's documents live; the follow-up poke was at *what a reference is
+allowed to look like* — the motivating case being arxiv, where the machinery
+that already scans, fixes, lints and `url-ok`s foreign codes is obviously the
+right tool for `ARXIV-2403.05530`, except the tail had to match `\d{1,4}`.
+[ADR-024](../../record/decisions.d/ADR-024.md) records the generalization: a
+remote can declare `uid` (a regex for the tail) and `delim` (the separator,
+for uids whose own alphabet contains hyphens), and its `url` template indexes
+the uid's capture groups by position — `{1}.{2}` restructures `1234:5678`
+into `1234.5678`.
+
+**The number assumption turned out to be five assumptions, and counting them
+was the real work.** The composed-code regex, `normalise`, `Remote.link`, the
+annotation-argument parser and the `url-ok` label matcher each spelled the
+hyphen and the digit shape independently — five copies of one fact, the
+[DP-4](../../record/principles.d/DP-004.md) drift that stays harmless exactly as
+long as the fact never changes, which is the assumption this feature breaks.
+The fix replaced the one combined regex with per-remote patterns behind two
+functions: `references(text)` for scanning (longer prefixes claim their spans
+first) and `parse_code(text)` for exact parsing. Every consumer now goes
+through them, so the delimiter is spelled in one place — and `_exists`, which
+had been splitting composed codes on a literal `"-"`, got caught by the same
+sweep before a `delim = ":"` remote could silently break it.
+
+**Two rules kept the generalization honest.** A uid is *exact* — `ADR-32` and
+`ADR-032` are one document, but zero-padding an arxiv id would quietly cite a
+different paper, so `canon` passes uids through untouched. And a uid remote
+has exactly one rung: the template. No lockfile (it maps filenames; a uid
+remote has none), no code-only fallback (there is no convention to fall back
+on), and a uid remote without a template constructs *nothing*, so ref-status
+reports the citation as dangling instead of the tool inventing a URL — the
+same no-guessing polarity the discovery rule set.
+
+The whole pipeline worked end to end on the first smoke test — bare
+`ARXIV-2403.05530` in prose linkified through the template, `JIRA:PROJ-42`
+with a colon delimiter and a hyphen-bearing uid scanned correctly beside
+scheme-shaped codes — which is what the [DP-4](../../record/principles.d/DP-004.md) consolidation buys: when a
+code's anatomy is read in one place, a new anatomy is one field, not a
+five-site sweep. Wikilink-style *insertion* (`[[ARXIV-…]]`) was deliberately
+left unbundled; the reference shape is now general, and how references are
+typed is its own issue.
+
+
+
+---
+File: record/devlog.d/2026/08/04/181244.md
+---
+---
+title: 'Wikilinks: the brackets are consent, and typing them flips the rules'
+created: '2026-08-04T18:12:44'
+tags: []
+---
+
+**The design question was already answered by the scanner's own
+conservatism.** The prose heuristics exist because a confidently wrong link
+is worse than a bare code — low `#N` needs a cue word, `DP-3` without a `#`
+is never taken, unregistered prefixes never match. All correct, and all of it
+leaves the author no way to *assert* a reference the heuristics pass over.
+`[[CODE]]` is that assertion ([ADR-025](../../record/decisions.d/ADR-025.md)),
+and the insight worth keeping is the symmetry: consent flips the rules on
+*both* sides. Inside the brackets, no heuristics — `[[#10]]` needs no cue,
+because the brackets are the cue. Outside them, no silence — an unresolvable
+wikilink is a lint violation the fixer cannot clear, the one deliberate
+exception to "the lint never demands what `--fix` won't do", because an
+explicit request deserves an explicit refusal
+([DP-1](../../record/principles.d/DP-001.md)).
+
+**Consumed, not rendered, and the layout decided it.** The tempting design
+leaves `[[…]]` in sources and expands at view-generation time. But the
+read/write boundary's own rule is that a source arrived at by link *is* the
+reading experience — decisions and journal entries are read in place, and
+GitHub renders wikilinks as literal brackets. So `luria link --fix` consumes
+them into plain markdown (an `<a href>` inside raw-HTML blocks), and the
+committed corpus never contains the syntax.
+
+**One masking line prevented a double demand.** Without it, `[[ADR-013]]`
+would be reported twice — once by the wikilink check, once by the prose
+scanner reading the bare code out of the middle. The wikilink span is masked
+from the prose scanner, so each typed reference is exactly one obligation
+with one remedy.
+
+Fired on the real corpus before trusting
+([DP-6](../../record/principles.d/DP-006.md)): a resolvable and an unresolvable
+wikilink dropped into a live page produced the two distinct verdicts, the
+fixer cleared exactly the resolvable one into
+`[ADR-013](../record/decisions.d/ADR-013.md)`, and the unresolvable one kept
+failing with its three-cause message. Twelve fixture tests cover the shapes:
+local codes, labels, document-scheme anchors, remote and uid-remote codes,
+quoted specimens, idempotence.
+
+
+
+---
+File: record/devlog.d/2026/08/04/181814.md
+---
+---
+title: 'Parallelism measured first: the probes were the win, the rest is seams'
+created: '2026-08-04T18:18:14'
+tags: []
+---
+
+**Measured before deciding, and the measurement wrote the ADR.** The issue
+([#7](https://github.com/dmarx/luria/issues/7)) asked for parallelism now,
+strategy open, on the argument that seams are cheap early. Baselines on this
+repo: `index` 0.92s, `lint` 2.68s, `remotes --check` 6.59s. That last number
+is twenty serial network round-trips, and it named the strategy by itself:
+the win is I/O overlap, so threads; asyncio would demand an async signature
+on every caller between the CLI and one HEAD request for the same overlap,
+and processes would add pickling for work that isn't CPU-bound where it
+matters. [ADR-026](../../record/decisions.d/ADR-026.md) records it.
+
+**The primitive is one function, and its contract is the decision.**
+`parallel.pmap(fn, items)` is `list(map(...))` with a pool inside — results
+in input order, exceptions propagating as they would serially. Ordered
+rather than as-completed because the two big consumers are a staleness check
+that diffs rendered text and a lint that prints a report: both must read
+identically at any width, or parallelism trades determinism for
+milliseconds. Applied at three seams — render units in `outputs()`, per-file
+scans in the bare-reference lint, per-URL probes in `--check` — and going
+wide at each was genuinely a one-word change, which was the design goal.
+
+**The honest half of the after-measurement: two of the three seams bought
+nothing today, and one was briefly *slower*.** Probes: 6.59s → 2.86s, the
+real win. But lint's median went 2.74s serial → 2.89s wide, because
+scanning is regex-CPU and the GIL means thread-width buys CPU work nothing
+while charging pool overhead. First instinct was to revert that seam;
+second thought kept it, stated plainly: it is structure at ~5% of a
+three-second command, the issue explicitly asked for structure ahead of
+cardinality, and the `pmap` seam is exactly where a process pool (or
+free-threaded Python) swaps in when render units measure in seconds. What
+would have been dishonest is the version of this entry that claimed all
+three seams sped things up.
+
+**One requirement got promoted from habit to contract.** Renderers and
+scanners were already effectively pure — reads of the config cache and the
+tree — but nothing had ever *depended* on it. Now width does: a future
+renderer that mutates shared state will fail intermittently at width 8 and
+deterministically at `LURIA_JOBS=1`, which is why the escape hatch is an
+environment variable rather than an edit — a concurrency suspicion should
+cost one shell prefix to rule in or out. The determinism test pins the
+other side: `outputs()` byte-identical serial and wide.
+
+
+
+---
+File: record/devlog.d/2026/08/04/184404.md
+---
+---
+title: 'Shipping: the wheel that worked was working by accident'
+created: '2026-08-04T18:44:04'
+tags: []
+---
+
+**The pre-publish check found a wheel that passed its smoke test for the
+wrong reason.** The setuptools config declared the scaffold as
+parent-relative package data (`luria = ["../template/**/*"]`), and building
+the wheel showed where that lands: `template/` at the wheel root, installed
+as a bare unnamespaced directory straight into `site-packages`. `luria init`
+then *worked* — because `Path(__file__).parent.parent` from inside
+site-packages happens to be site-packages, so the fallback found the leaked
+directory. Green smoke test, collision-prone packaging: the first neighbour
+package shipping its own `template/` directory would fight over the same
+files. The lesson is the old one about polarity — a test that passes for the
+wrong reason is worse than one that fails — and the fix is recorded in
+[ADR-027](../../record/decisions.d/ADR-027.md): hatchling `force-include`
+maps the top-level `template/` to `luria/template/` in the wheel, so the
+repo keeps its browsing surface ([ADR-021](../../record/decisions.d/ADR-021.md))
+and the install keeps to its namespace, with `init._template_dir()` trying
+the packaged location first.
+
+**The cold-install smoke test is the only place one class of bug can
+appear, and it caught one immediately.** A checkout always has the top-level
+template fallback, so the dogfooding repo structurally cannot exercise the
+packaged path — `pip install dist/*.whl` into a fresh venv, then
+`init → index → journal new → lint` in an empty directory, is the
+configuration that can. Run by hand before writing the workflow, it turned
+up the scaffolded CLAUDE.md's illustrative wikilinks (`[[ADR-013]]`,
+`[[SG-DP-18]]`) leaking as day-one dangling-code warnings in a fresh
+project — the third instance of the example-leak pattern (stale strata-g
+docstrings, then the `url-ok` directive example, now this), each caught by
+the same move: run the scaffold where the examples' codes don't resolve. An
+`unresolved-ok-block` above the examples fixed it; the smoke test is now a
+release gate in `publish.yml`, so the wheel that ships is the wheel that
+scaffolded a clean project.
+
+**Trusted publishing means the credential is an identity, not a secret.**
+The publish job runs in the `pypi` environment with `id-token: write` and
+nothing else; build and publish are separate jobs so the environment gate
+covers the smallest surface and the artifact that ships is byte-identical
+to the one tested. No token to leak, rotate, or forget — the failure mode
+that killed every "just put it in a secret" alternative.
+
+
+
+---
+File: record/devlog.d/2026/08/04/200509.md
+---
+---
+title: "The collector grew the changelog shape, for strata-g's scriv retirement"
+created: '2026-08-04T20:05:09'
+tags: []
+---
+
+**The last foreign moving part in strata-g's doc machinery was scriv, kept
+for one property.** Retiring it (the port's phase two) exposed what that
+property actually was: not categories, not versioning — *reading order*. A
+changelog reads newest-first, and this collector had only the narrative
+shape, bodies oldest-first at a marker that stays at the end of the file.
+[ADR-012](../../record/decisions.d/ADR-012.md) had said "point a
+categorised changelog at scriv"; with everything else on Luria that
+delegation made the memory machinery a two-package install for one
+insertion order. [ADR-028](../../record/decisions.d/ADR-028.md) makes the
+shape configuration: `style = "changelog"` on the fragment mapping inserts
+one dated batch right after the marker, newest batch first, fragments
+newest-first within it.
+
+**The batch rule fixed a documented scriv caveat for free.** strata-g's
+CLAUDE.md carried a warning: a collection round of only
+no-user-facing-changes stubs left a bare `## <date>` heading in
+CHANGELOG.md that someone had to revert by hand. Here a stub-only batch
+emits nothing — the date heading only exists if something real sits under
+it — and the caveat paragraph gets deleted rather than ported.
+
+**What was deliberately not built: scriv's category merging.** A fragment's
+`### Added`/`### Fixed` sections stay in its body, per-contribution within
+the batch, instead of being merged across fragments under one date.
+Merging earns its complexity in a versioned-release changelog; a per-merge
+project log reads fine with each contribution's sections intact — and the
+un-merged form preserves which contribution claimed what, which the merged
+form erases.
+
+**Config compatibility is the string-or-table pattern.** A fragment mapping
+value that is a string still means the append style, so no existing
+`luria.toml` changes meaning; the table form (`file` + `style`) is the
+opt-in. Luria's own changelog switched — its marker was already sitting
+after the header, where a changelog-style marker belongs, so the dogfood
+cost nothing but the config lines.
+
+

@@ -1,0 +1,74 @@
+---
+File: examples/world-bible/record/scenes.d/SCENE-001.md
+---
+---
+status: Active
+title: 'The envoy arrives'
+version: 1
+tags:
+- court
+date: '2026-08-01'
+summary: >-
+  The envoy from the north reaches the capital. In every trajectory but the
+  long winter she arrives before the harvest.
+---
+
+# SCENE-001: The envoy arrives
+
+The envoy reaches the capital at dusk. No `worlds:` here, so the scene sits
+in the main line by default — the record page says so, and nothing rewrote
+this file to make it true.
+
+
+
+---
+File: examples/world-bible/record/scenes.d/SCENE-002.md
+---
+---
+status: Active
+title: 'The treaty is signed'
+version: 1
+tags:
+- court
+date: '2026-08-02'
+follows:
+- SCENE-001
+worlds:
+- A
+summary: >-
+  Only in the unbroken line is the treaty signed at all.
+---
+
+# SCENE-002: The treaty is signed
+
+Follows [SCENE-001](SCENE-001.md). Set only in world A: the signing is what
+makes that trajectory the unbroken one.
+
+
+
+---
+File: examples/world-bible/record/scenes.d/SCENE-003.md
+---
+---
+status: Active
+title: 'The road north freezes'
+version: 1
+tags:
+- road
+date: '2026-08-03'
+follows:
+- SCENE-001
+- SCENE-002
+worlds:
+- B
+- C
+summary: >-
+  The envoy's return is cut off. Shared by the main line and the long winter.
+---
+
+# SCENE-003: The road north freezes
+
+Follows [SCENE-001](SCENE-001.md) and [SCENE-002](SCENE-002.md) — a plural
+reference, every element checked. Set in worlds B and C.
+
+

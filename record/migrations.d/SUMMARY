@@ -1,0 +1,13 @@
+---
+File: record/migrations.d/0001-promote.yaml
+---
+title: promote
+operations:
+- op: move_doc
+  doc: DP-017
+  to: PC
+- op: move_doc
+  doc: DP-019
+  to: PC
+
+

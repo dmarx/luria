@@ -1,0 +1,176 @@
+---
+File: record/devlog.d/2026/09/15/003050.md
+---
+---
+title: "The lint's time was in re-reading, not reading"
+created: '2026-09-15T00:30:50'
+tags:
+- performance
+- lint
+- method
+---
+
+`luria lint` over this repository took 33 seconds, and a profile said the time
+was in `tokenize` and `ast.walk` over luria's own Python sources. That much was
+already known. What it does not say — and what matters — is *why* a linter
+tokenizes the same 451 files enough times to spend 30 seconds doing it.
+
+## The number that located the fix
+
+The profile ranks functions by time, which tells you where to look and not what
+is wrong. The question worth asking of a pure function near the top is how many
+*distinct* inputs it saw. Wrapping the two scans under `directives._parse` with
+a counter keyed on their arguments answered it:
+
+> `blocks`: 11,142 calls over 451 distinct inputs
+> `comment_fragments`: 11,142 calls over 451 distinct inputs
+
+About **25 readings of every file**. Nothing was slow. Everything was done
+twenty-five times.
+
+The reason is structural, not accidental. `_parse` re-derives a file's
+blank-line blocks and its comment fragments on every directive lookup, and
+lookups are per *check* — `ref_status`, `anchors`, `doc_refs`, the staleness
+pass — not per document. Each check walks the same corpus and each walk pays
+the full tokenizer bill again.
+
+Both scans are pure functions of `(path, text)`, so the fix is a dict. 33s →
+10.6s, byte-identical output.
+
+## Key on the content, not on a stat
+
+The caches already here — `_DOCUMENT_CACHE`, `_NUMBER_CACHE`, `_LISTING_CACHE`
+— key on `(mtime_ns, size)`, and they have to: they read the file themselves,
+and `field_edit` and `repair` rewrite documents mid-run. A cache that did not
+expire would hand back what the file said before the repair.
+
+That hazard does not exist here, and it is worth saying why rather than copying
+the stat key out of habit. `_parse` is *handed* the text. New content is a
+different key. There is no window in which an entry is wrong, and so there is
+nothing for a caller to remember to drop. `forget_scans()` exists for tests
+that count how often a scan runs, not for correctness.
+
+## The trap: cProfile only sees the thread it is on
+
+The first profile reported 5,468 calls to `_parse`. The counter reported
+11,142. Both were right. `parallel.pmap` runs checks on a thread pool and
+`cProfile` profiles only the calling thread, so **half this program's work is
+invisible to a default profile** — and the invisible half is the parallel half,
+which is to say the expensive one.
+
+Profile this codebase with `LURIA_JOBS=1`. The existing note in `config.py`
+about the listing cache quotes serial numbers for the same reason; that
+convention is load-bearing, not incidental.
+
+## Left on the table
+
+Serially profiled, the remaining 10.6s is mostly `ref_status.scan`. One thing
+under it looks like the same shape of bug: `Scheme.pattern` and
+`Scheme.temp_pattern` are properties that rebuild an f-string and call
+`re.compile` on **911,410 accesses**. `re` memoizes internally so this is not
+911,410 compilations, but it is that many string formats and cache probes.
+Not touched here — it is a different file with its own question about whether a
+scheme's prefix is stable across a run — but it is the next thread.
+
+
+
+---
+File: record/devlog.d/2026/09/15/010659.md
+---
+---
+title: "A frozen dataclass that cannot be hashed, and a test that cited three ghosts"
+created: '2026-09-15T01:06:59'
+tags:
+- performance
+- lint
+- method
+---
+
+Following the thread the previous entry left: `Scheme.pattern` and
+`Scheme.temp_pattern` were properties rebuilding an f-string and calling
+`re.compile` on 1.8M accesses between them. Compiled once per prefix now.
+11.0s → 10.3s.
+
+That is a **6% win on a 1.8M-call hot spot**, and the smallness is the useful
+part. `re` keeps its own compiled-pattern cache, so the accesses were never
+compilations — they were interpolations and dict probes. The previous entry
+predicted this in as many words; recording it because the shape recurs. A
+six-figure call count is an invitation to look, not evidence of a big win. The
+directive-scan cache was 3.1× because the work behind it was *real* work
+(tokenizing, walking an AST). This one was overhead behind an existing cache.
+
+## Two things the tests found that reading would not have
+
+**`Scheme` is frozen but not hashable.** The obvious implementation is
+`@lru_cache` keyed on the scheme, and it raises `TypeError: unhashable type:
+'dict'` the first time it is called — `frozen=True` gives you `__setattr__`
+protection and a generated `__hash__`, but a dict field makes that `__hash__`
+raise anyway. A test asserting the opposite is what surfaced it. The cache is
+keyed on the prefix string.
+
+**`cached_property` works on a frozen dataclass, and is still the wrong
+answer here.** It writes straight into `__dict__`, around the blocked
+`__setattr__`, so `frozen=True` does not stop it — I checked, expecting it to
+fail. What stops it is Python 3.11, which this package supports and which
+takes a per-attribute lock in `cached_property`. This path runs inside
+`parallel.pmap`'s thread pool, so the "optimization" could have serialized it.
+The lock was removed in 3.12; supporting 3.11 means not relying on that.
+
+## The guard caught me twice in four minutes
+
+The new test file needed strings shaped like codes to feed the regex, and I
+spelled them with this record's own prefix. `luria lint` immediately reported
+**three new codes resolving to no document** — my fixtures, read as real
+citations. I fixed the fixtures; the lint then reported one more, this time
+from the prose I had just written *explaining the fix*, which had a sample code
+in it. In backticks, which does not matter: the reference check is deliberately
+unmasked, because a code in a comment is still a claim.
+
+Per the working agreement, a guard that catches you twice is a bug report about
+the workflow rather than a net doing its job. The fix is generative rather than
+another acknowledgement: **spell fixture codes with a prefix that is not a
+scheme.** `ZZZ-1234` cannot be a dangling citation because nothing claims the
+`ZZZ` family. This is a third option beside the two already documented —
+`unresolved-ok:` and the reserved `FX` remote — and it is the cheapest of the
+three for a unit test, which wants an arbitrary prefix anyway. A test of
+`Scheme.pattern` that hardcodes `ADR` is quietly testing the wrong thing: the
+whole point is that the prefix is configuration ([ADR-006](../../record/decisions.d/ADR-006.md)).
+
+## Where the remaining time is
+
+`ref_status.scan` is still most of it, and it is called **36 times per lint,
+18 of those with no arguments at all** — identical full-corpus scans, fanned
+out through `reports.outputs` and `adr_pending.pending`.
+
+A cache keyed on a `(path, mtime_ns, size)` fingerprint of the corpus is worth
+**about 2.5 seconds, 24%**: 10.4s → 7.9s, output identical. Done, in the commit
+after this one. That puts the lint at **7.9s from 33.1s across the three
+changes — 4.2×**.
+
+The number is worth recording for how I nearly got it wrong. My first
+measurement of the same prototype said **0.6s**, and I had already written that
+into this entry as the reason *not* to bother. It was one run against one
+baseline, taken while an unrelated edit was still in the tree. Three runs of
+each put it near 2.9s, and the committed version measures 2.5s. A single timing
+of a ten-second command is not a measurement — the earlier entries in this file
+quote medians for a reason, and I should not have made a keep-or-drop decision
+on one sample.
+
+Unlike the directive scans, this cache reads the files itself, so there is no
+text handed in to key on and the fingerprint has to be the filesystem's own
+stamps. That is the bargain `_LISTING_CACHE` and `_DOCUMENT_CACHE` already
+take, and here it is load-bearing rather than incidental: `repair`,
+`field_edit` and `migrate` all rewrite documents mid-run and read them back.
+The test that matters is the one that rewrites a file between two scans.
+
+The `Scan` is shared rather than copied, as `_LISTING_CACHE` shares its dicts.
+That is safe only because no caller mutates one — checked, every use reads —
+and it is also what keeps `Scan.used`'s identity comparison meaningful across
+callers. Copying would have cost more than the scan it saves.
+
+The structural question stands even with the cache in: **why does one lint need
+36 scans of the same corpus?** Memoizing makes the repeats cheap without
+answering it, and the answer lives in how `reports` and `lint` share work
+rather than in a dict.
+
+

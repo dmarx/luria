@@ -1,0 +1,72 @@
+---
+File: record/devlog.d/2026/08/28/043016.md
+---
+---
+title: 'Endorsements travel through a rename'
+created: '2026-08-28T04:30:16'
+tags:
+- mechanism
+---
+
+[ADR-066](../../record/decisions.d/ADR-066.md) v1 said a migration leaves the whole lockfile to be re-derived, and
+building the actual mechanism showed that posture quietly defeats the
+feature for pins. Re-deriving a pin is prune-and-re-endorse, and a bare
+`luria remotes --pin` run right after a migration would mint fresh
+endorsements of whatever upstream serves at that moment — including drift
+nobody had reviewed. The sweep's no-laundering rule exists precisely so a
+bulk command cannot move an `endorsed` hash past a change; a migration that
+forced the prune path was that rule's back door.
+
+So the two lockfile sections part ways in `pins.migrate_endorsements`,
+because they make different kinds of claim. A pin is a *human's* claim about
+content, and a rename moves the address while the content stands — the pin
+is re-keyed with both hashes intact, drifted `seen` included. A filename map
+is a *machine's* observation whose keys and values both spell the old world;
+re-keying it would leave old filenames under new keys, and keeping it would
+be worse — an authoritative map with only old keys resolves every new-spelled
+reference to "absent from the remote". It is dropped, which honestly means
+"code-only convention until `--refresh` re-discovers".
+
+The end state closes cleanly: when the mirrored upstream executes its own
+rename, the pinned documents' bytes will have changed (their citations were
+swept there too), and the next `--refresh` reports exactly that as ordinary
+`remote-drift` — the human review the two-hash design forces, arriving
+through the front door.
+
+
+
+---
+File: record/devlog.d/2026/08/28/053142.md
+---
+---
+title: 'The regex that parsed its own output'
+created: '2026-08-28T05:31:42'
+tags:
+- mechanism
+---
+
+The named-URI unification ([ADR-067](../../record/decisions.d/ADR-067.md)) started from a smell worth naming
+for the next refactor of this kind: `_github_raw` built a blob URL out of
+parts the program held in its hands, then ran a regex over the rendered
+string to get the parts back and assemble a second URL. Any time code
+parses its own output, the abstraction boundary is one step upstream of
+where it was drawn — the two URLs were always siblings derived from the
+same parts, and the fix was to let them both be templates over those parts.
+
+Two design points earned their keep in testing. Choose-then-render: an
+early draft fell through to the next precedence rung when a template could
+not fill a variable, which made a misspelled {flename} silently resolve by
+the code-only convention — a typo hidden behind a working guess. Picking
+the template first and letting it render "" keeps the breakage visible as
+a dangling reference. And the veto-as-variable: porting "an authoritative
+map's silence means no file" into "then {filename} is unavailable" made the
+lockfile's contract reach custom templates for free, where the old control
+flow only guarded the built-in construction.
+
+The honest cost: one deliberate behavior change. The regex used to grant
+bytes to any URL that happened to render blob-shaped, template-produced
+ones included. That was a guess wearing a construction's confidence, and
+the whole prior suite passing unchanged everywhere else made it easy to
+pin the new refusal with its own test.
+
+

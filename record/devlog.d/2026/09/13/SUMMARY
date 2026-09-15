@@ -1,0 +1,244 @@
+---
+File: record/devlog.d/2026/09/13/195343.md
+---
+---
+title: 'The record was parsed twenty-three times per document per lint'
+created: '2026-09-13T19:53:43'
+tags:
+- performance
+- method
+---
+
+**`luria lint` on a 729-document record takes 95 seconds, and a profile says
+where it goes:**
+
+    101.4s  lint.status_sections          (of 170.6s under the profiler)
+     75.7s    adr_index.load_scheme       ← 43 calls
+     75.3s      Adr.__init__              ← 7,694 constructions
+     70.5s        yaml.safe_load          ← 16,872 parses
+
+729 files, 16,872 parses. **Each document's frontmatter was parsed about 23
+times per run**, because `load_scheme` rebuilds every `Adr` from disk on each
+call and the schemes are loaded once per *consumer* — the status sections, the
+pending report, the reference walk — rather than once per run.
+
+## The cache the codebase already argues for
+
+`Scheme.number_of` had the answer written down two years ago:
+
+> Cached on (mtime, size) rather than reset by hand: every writer of a
+> document bumps its mtime, so the cache invalidates itself and no caller has
+> to remember.
+
+That property is not a convenience here, it is the whole safety argument.
+`field_edit` and `repair` write documents *mid-run* and read them back; a
+cache anyone has to remember to drop would be wrong within a release. So
+`read_document()` takes the same key and `Adr.__init__` goes through it.
+
+The one trap: `Adr` folds derived fields into the mapping it is handed, so a
+shared dict lets one reading's derivation leak into the next — which is the
+failure the per-`Adr` resolver in `Adr.__init__` exists to avoid ([#233](https://github.com/dmarx/luria/issues/233)),
+reintroduced one layer down. The cache hands out a deep copy. There is a test
+for it, because the bug it prevents would be invisible until a derived field
+disagreed with itself.
+
+## What the profiler was lying about
+
+The profile said 70.5s of YAML, so the fix should have bought ~70s. It bought
+**17** (95s → 78s). cProfile's own overhead inflated the run from 95s to 170s,
+and it inflates *unevenly* — millions of cheap calls (the YAML scanner is
+3.1M `reader.forward` calls) pay far more instrumentation per unit of real
+work than a few expensive ones. **A profile ranks; it does not measure.** The
+number that matters came from `time`, before and after, on the same record.
+
+## Tried and reverted: the vocabulary files
+
+`statuses.declared()` re-reads and re-parses `statuses.yaml` on every call,
+and `Adr.status` resolves through it — so the same handful of small files are
+parsed tens of thousands of times per run. Same defect, same fix, and it is
+the obvious next thing to cache.
+
+**It made no measurable difference** (78.6s → 78.0s, inside the noise), so it
+came back out. Keeping it would have been a change to a hot-path module with
+no evidence behind it, in a performance patch, which is how a codebase
+accumulates caches nobody can remove later. Recorded here rather than shipped,
+so the next person does not re-derive it.
+
+## What is actually left
+
+After the cache, sorted by self time:
+
+    46.8s  {method 'acquire' of '_thread.lock'}   ← the `pmap` pool
+     7.7s  pathlib.Path.__lt__                    ← 6.4M comparisons
+     5.9s  posix.stat                             ← 954K calls
+    28.6s  (cumulative) yaml.scanner.check_token
+
+The lock time is the thread pool: cProfile does not follow into workers, so
+that is real work, unattributed, not waiting. The `pathlib` cost is
+`sorted(self.dir.glob("*.md"))` in `documents()` and `temp_documents()`,
+which run uncached on every call — **Path comparison is expensive and this
+sorts the same directory listing hundreds of times.** That is the next
+candidate, and it wants a different key: a directory's mtime moves on create
+and delete, not on a write to a file inside it, and that is exactly the right
+invalidation for a listing. The trap is that directory mtime resolution is
+coarse on some filesystems, so `luria new` creating a file and reading it back
+within the same second is the case to test before trusting it.
+
+
+
+---
+File: record/devlog.d/2026/09/13/195853.md
+---
+---
+title: 'The retries were paying nine seconds an identifier to learn nothing'
+created: '2026-09-13T19:58:53'
+tags:
+- performance
+- method
+---
+
+Found from the outside, in a consuming project: adding one paper to a record
+made `luria lint` slow and unpredictable, and the command that would have
+fixed it — `luria remotes --resolve` — was one nobody could afford to finish.
+
+## Three things, and only one of them was the obvious one
+
+**The retry schedule.** `ATTEMPTS = 3`, sleeping `COURTESY` then double. Under
+a sustained rate limit that is 9 seconds per identifier to arrive at the same
+answer the first request already gave, because **a rate limit is a property of
+the window, not of the request.** `ADR-096` has the decision.
+
+**`Retry-After` was parsed and thrown away.** `_retry_after(error)` computed
+the seconds the host asked for, `_once` put them in the `detail` string, and
+`_fetch` then slept its own `COURTESY`-doubling schedule and ignored the
+number it had just been handed. The one scheduling fact a throttle actually
+carries, formatted into a message.
+
+**`--resolve` could not accumulate.** It walked every identifier in the
+record's own order, settled or not, at 3 seconds each — an 11-minute floor on
+225 identifiers — and called `write_lock` once, after the loop. So a run that
+was throttled or killed partway wrote **nothing**, and the next one started
+from the same place and died in the same place. The fix is not speed: ask
+about what the lockfile cannot answer *first*, and checkpoint.
+
+## The trap in the ordering fix
+
+The instinct is to skip settled identifiers entirely, which would make
+`--resolve` fast. It also quietly changes what the command means — re-verifying
+a title is how an upstream revision gets noticed, which is the entire point of
+the check ([#166](https://github.com/dmarx/luria/issues/166)). Ordering gets the benefit and keeps the guarantee.
+
+The shuffle within each group is deliberately unseeded, and that is not
+arbitrariness for its own sake: with a fixed order, one identifier that always
+errors sits at the head of the queue every single run and spends the window on
+itself. The test asserts the order varies, which is the only way to state that
+property mechanically.
+
+## What was rejected and why it is the interesting one
+
+Persisting the refusal into the lockfile so the next run skips the remote
+outright. It is the tidy version and it is wrong: **the lockfile is committed**,
+so a refusal would travel to CI and to other contributors as a fact about the
+world when it is a fact about one machine's last five minutes. The next run is
+a new window.
+
+Nothing durable is lost by not persisting it, and noticing why took a minute:
+the unsettled queue already carries the only part worth keeping — *which
+identifiers still have no answer* — and the lockfile has recorded that all
+along, by their absence.
+
+## A note on what found this
+
+Nothing in the test suite could have. Every test here mocks the socket, which
+is correct — and it means the cost of a policy that only bites under a real
+throttle is invisible to CI by construction. This arrived as a user report
+from a project with 225 identifiers and a throttling upstream, which is the
+only place it exists.
+
+
+
+---
+File: record/devlog.d/2026/09/13/203524.md
+---
+---
+title: 'The same-scheme converse rule was an assumption, not a constraint'
+created: '2026-09-13T20:35:24'
+tags:
+- mechanism
+- method
+---
+
+Raised in review on a consuming record: a practice had gained `introduced_by:`,
+naming the paper that first stated the recommendation, and the reviewer asked
+for `introduces` on the paper. Reasonable, obvious, and not expressible.
+
+## Where the rule came from
+
+Nowhere, is the short answer. `_checked_converses(prefix, refs)` was called
+from `_references(prefix, raw)`, which reads **one TOML table at a time** — so
+the only reference table it could see was the declaring scheme's own, and the
+only converse it could resolve was a sibling field. The same-scheme rule is not
+a decision anybody made about relations. It is the shape of the function that
+happened to validate them.
+
+It then got written down as though it were a constraint, in `luria.toml`'s
+comment on `NOTE.paper` — *"Luria's converse must be same-scheme and this
+crosses"* — which is how an implementation detail becomes a rule: somebody
+documents it accurately.
+
+## The check had a home already
+
+`_schemes` opens with *"Every declared scheme, with the cross-scheme checks
+that need them all"* and already validates that a reference names a scheme that
+exists, for exactly the reason this needed moving. So the fix was to move the
+validation there, not to invent a place for it.
+
+Ordering matters and is easy to get backwards: the converse check runs *after*
+the existing does-this-scheme-exist loop, so a converse naming an undeclared
+scheme reports the missing scheme rather than a missing field on a scheme that
+is not there.
+
+## The part that took the thinking
+
+Not the validation — the completion. Every function downstream assumed one
+document set, because both ends of a pair had always been in it:
+
+    if a not in docs or b not in docs: continue
+    repairs.append(Repair(docs[b].path, back, a, "add"))
+
+That is four functions (`_held`, `_intents`, `_committed`, `relation_spans`)
+each holding the same assumption in a slightly different way, plus `_blocked`,
+which was reading the contract from the *relation's* near scheme when a repair
+can now land in either end's. The contract belongs to the file being written,
+and that was only ever coincidentally the same thing.
+
+The invariant that made this safe to do at all: **for a non-crossing relation
+the near and far document sets are the same object.** Not equal — the same
+object, `far_docs = near_docs if far == prefix else _documents(far)`. So the
+existing path is unchanged by construction rather than by care, and 1118
+existing tests passing is evidence rather than luck.
+
+## Two things that fall out, and one that does not
+
+A crossing relation cannot express a cycle: every edge runs from a document of
+one scheme to a document of another, so the reversed edge is never in the set,
+and `_contradictions` and `both_ways` go empty on their own. **I guarded them
+on the scheme anyway.** "It happens not to match" and "it cannot match" read
+identically in a set comprehension, and only the second is a reason not to
+check — leaving it implicit means the next person has to re-derive it.
+
+What does not fall out is a rule about which end to write on. A crossing pair
+is exactly where "which document owns this fact?" is a real question, and the
+config still answers it in a comment. That is [#254](https://github.com/dmarx/luria/issues/254).
+
+## Where a test setup went wrong, twice
+
+Two of the new negative tests failed, and both times the *config I wrote* was
+defective in more than one way, so a different — also correct — error fired
+first. Asserting on the message is what caught it; asserting `pytest.raises`
+alone would have passed and tested nothing. The fix was to build each bad
+config so that the defect under test is the **only** one, which for the
+wrong-direction case meant giving the far scheme a self-consistent pair of its
+own so that nothing else could be the first complaint.
+
+

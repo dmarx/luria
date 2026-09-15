@@ -1,0 +1,854 @@
+---
+File: template/.github/workflows/docs.yml
+---
+# The record's own CI, in the recommended shape (LU-ADR-029 and its amendment on where views land).
+# Three jobs on the default branch and pull requests, one on a schedule:
+#
+#   docs-generate  on push to the default branch: repairs the sources
+#                  (reference links, a journal entry's missing `created:`),
+#                  regenerates the derived views (index, tag pages, books,
+#                  README badges) and commits both back as the bot — derived
+#                  documentation is built, not maintained, and a view a human
+#                  has to rebuild by hand will drift.
+#   docs-lint      on push: gates what a generator cannot decide: unresolved
+#                  references, wikilinks that resolve to nothing, a title
+#                  disagreeing with its heading, stray files in a view
+#                  directory. It `needs:` docs-generate and reads the SHA it
+#                  output — a push made with GITHUB_TOKEN does not retrigger
+#                  workflows, so a lint anywhere else would keep a red earned
+#                  from the pre-regeneration commit and never clear it.
+#   docs-check     on a pull request: repairs the sources and pushes the
+#                  repair onto the branch (a repair touches only what the
+#                  branch authored, so the review reads it), then lints the
+#                  sources in the same job. No view is written: generated
+#                  views are committed on the default branch only, so a
+#                  branch never carries them, is not checked for them, and
+#                  two branches cannot conflict on them. On a fork the
+#                  repair cannot be pushed; the action warns and the lint
+#                  still runs on the repaired tree.
+#   collect        assembles changelog fragments on a cadence, never
+#                  per-merge (LU-ADR-002 — a per-merge bot commit races
+#                  in-flight rebases, reintroducing the conflict fragments
+#                  exist to remove).
+#
+# One caution for maintainers: GitHub skips a workflow run when the head
+# commit message carries its skip marker, in the first or last line, in any
+# of its five spellings — so a commit message *describing* the bot's commit
+# format can suppress its own CI run. Name the marker in prose; file contents
+# like this one are unaffected.
+name: Docs
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    # Weekly collection. Adjust to taste; the only wrong answer is "every merge".
+    - cron: "0 9 * * 1"
+  workflow_dispatch:
+
+jobs:
+  docs-generate:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      sha: ${{ steps.generate.outputs.sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - id: generate
+        # Pin a released tag once you depend on this in anger.
+        uses: dmarx/luria/actions/generate@main
+        with:
+          # Assign real numbers to merge-allocated temporary codes
+          # (LU-ADR-049) — only where merges serialize, which this job is.
+          # Harmless if no scheme sets `allocate = "merge"`.
+          concretize: "true"
+
+  docs-lint:
+    if: github.event_name == 'push'
+    needs: docs-generate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.docs-generate.outputs.sha }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: dmarx/luria/actions/lint@main
+
+  docs-check:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Same-repo PR: the head branch, so a repair has somewhere to land.
+          # Fork PR: that branch only exists in the fork — naming it fails
+          # the checkout before any push guard runs — so fall back to the
+          # default merge-commit checkout (empty ref).
+          ref: ${{ github.event.pull_request.head.repo.full_name == github.repository && github.head_ref || '' }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: dmarx/luria/actions/generate@main
+        with:
+          views: "false"
+      - uses: dmarx/luria/actions/lint@main
+        with:
+          pip-spec: ""
+
+  collect:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install luria
+      - run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+      - run: luria collect --commit
+      - run: git push
+
+
+
+---
+File: template/.github/workflows/pages.yml
+---
+# Publish the record as a browsable site on GitHub Pages (LU-ADR-042).
+#
+# `luria site` stages every page the record publishes — the decisions, the
+# principles document, the devlog books, the reports — with paths preserved,
+# so the relative links `luria link --fix` already wrote keep resolving. The
+# composite action builds that vault with a pinned Quartz, which gives the
+# citations a graph and backlinks without anyone maintaining either.
+#
+# The site is built from the committed views, so it builds after the job
+# that commits them: `workflow_run` fires when the Docs workflow completes on
+# the default branch, by which time its generation job has pushed the
+# regenerated views, and the checkout is the head of the default branch. A
+# pull request builds nothing — a branch carries no views of its own
+# (LU-ADR-068). If you rename the Docs workflow, rename it here too.
+#
+# Before the first deploy succeeds, set Settings → Pages → Source to
+# "GitHub Actions". That is a repository setting; no file in the repository
+# can turn it on, and until it is on the `deploy` job fails with "Pages is
+# not enabled" while `build` stays green.
+#
+# Delete this file if you would rather not publish. Nothing else depends on
+# it — `luria site` is a build step, and the record it reads is the record
+# every other command reads.
+name: Pages
+
+on:
+  workflow_run:
+    workflows: [Docs]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    # A Docs run that failed has no regenerated views to publish.
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - id: site
+        # Pin a released tag once you depend on this in anger.
+        uses: dmarx/luria/actions/site@main
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: ${{ steps.site.outputs.path }}
+
+  # Separate from the build because it is the only job that needs to write.
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@v4
+
+
+
+---
+File: template/CLAUDE.md
+---
+# CLAUDE.md
+
+**Before anything else, read
+[the design principles](docs/design-principles.md) in full.** They are the
+standing values every choice in this project is judged against; the rest of
+this file, and the record itself, assume you hold them. Read them
+immediately after finishing this file, before any other code or
+documentation in this repository.
+
+This project keeps its memory in a Luria record — decisions, principles, a
+changelog and a devlog — scaffolded, generated and linted by the `luria`
+CLI. This file is a map, not a copy
+([LU-ADR-037](https://github.com/dmarx/luria/blob/main/record/decisions.d/ADR-037.md)):
+the doctrine lives one link away and the current command surface lives in
+`luria --help`. When this file disagrees with either, this file is the one
+that's wrong.
+
+- **Run `luria --help`** for what the CLI does today; every command takes
+  `--help`.
+- [This project's docs](docs/README.md) — the generated views: the decision
+  record, the principles, the devlog books, the status reports.
+- [Project memory: how a repo thinks](https://github.com/dmarx/luria/blob/main/docs/project-memory.md)
+  — the doctrine behind the layout: the four layers, what files where, how
+  the record is revised.
+- [Comment directives](https://github.com/dmarx/luria/blob/main/docs/directives.md)
+  — the acknowledgement vocabulary (`inactive-ok:` and friends), wikilinks,
+  and fixture codes.
+- [Configuration](https://github.com/dmarx/luria/blob/main/docs/configuration.md)
+  — every `luria.toml` key, generated from Luria's own schema. Read this
+  before assuming the record can only hold decisions: schemes, fragment
+  directories, journals and remotes are families this project names, and
+  `luria.toml` is where its shape is decided.
+
+Four ground rules, terse enough to restate:
+
+- **Work goes to a branch and a pull request, never straight to the default
+  branch** — the record is the deliverable, and it needs a chance to be read
+  before it becomes what the project believes.
+- **File the fragment in the same contribution as the work** (`luria new`):
+  a fact filed while its context is loaded costs a paragraph; re-derived
+  cold, it costs a session.
+- **Never hand-write a link target.** Write the bare code and let `luria
+  link --fix` spell the target: record prose is rendered into views in
+  *other directories*, so a target has to resolve from where the text
+  lands, not where it lives — only the fixer knows that frame. Want prose
+  as the label? That's `[[FX-ADR-001|a labeled wikilink]]`, still the fixer's
+  job. A hand-written target that looks right here is wrong somewhere.
+- **A guard that keeps catching you is a bug report about the workflow.**
+  One catch is the net working; the same catch again means the hazard is
+  upstream — a practice, a missing affordance, an undocumented rule — and
+  the fix is to remove what *generates* the mistake, not to keep thanking
+  the net. Quiet guards are the goal; a busy one is compensating for
+  something.
+
+
+
+---
+File: template/docs/README.md
+---
+# Docs
+
+{views}
+
+Each of these is **generated** — run `luria index`. The list above is
+[written by `luria init` from this project's own
+`luria.toml`](https://github.com/dmarx/luria/blob/main/record/decisions.d/ADR-048.md),
+so it names the views this record actually renders; edit it freely
+afterwards, it is yours. This directory is for
+*reading*; filing happens in `record/`, whose `.d`-suffixed containers hold
+the sources ([LU-ADR-021](https://github.com/dmarx/luria/blob/main/record/decisions.d/ADR-021.md)).
+Never edit an assembled page — the lint refuses hand edits, and anything in a
+view directory the generator didn't write is an error.
+
+Every other page in this directory must be linked from here; `luria lint`
+fails otherwise, because an index that silently stops covering the directory
+is worse than no index. View directories are exempt: they carry their own
+generated indexes.
+
+
+
+---
+File: template/luria.yaml
+---
+vocabularies:
+  # The words this record's documents may use, and what each means.
+  #
+  # A DEFAULT, not a law: rename these, drop the ones you do not want,
+  # add your own. Every check reads this. The one rule is that a
+  # scheme's `active` word has to appear here — it is how everything
+  # decides what is in force, so a vocabulary without it means no
+  # document ever is.
+  #
+  # Named once and referenced by every scheme that uses it, so two
+  # schemes sharing a vocabulary cannot drift apart (ADR-tmp8hp25).
+  statuses:
+    Active:
+      blurb: in force — the current answer, and what a citation should normally point at
+    Proposed:
+      blurb: not in force yet — an open question, so citing it as settled is the thing the report catches
+    Deferred:
+      blurb: not in force and not being worked on; the question is real and the answer is waiting on something
+    Superseded:
+      blurb: no longer in force because something replaced it; the successor is named in the field, not the prose
+    Rejected:
+      blurb: no longer in force and nothing replaced it — kept because a rejection is worth being able to point at
+  adr-tags:
+    record:
+      label: The record
+      blurb: what the four layers hold, and the rules between them
+    mechanism:
+      label: Mechanism
+      blurb: collectors, generators, the lint, the directive vocabulary
+    process:
+      label: Process
+      blurb: how the machinery is adopted, run, and reported on
+issue_url: ''
+paths:
+  docs: docs
+  decisions: record/decisions.d
+  design_principles: docs/design-principles.md
+  reports: docs/reports
+fragments:
+  record/changelog.d: CHANGELOG.md
+journals:
+  devlog:
+    dir: record/devlog.d
+    output: docs/devlog
+    granularity: month
+    title: Development log
+code:
+  globs: []
+  historical:
+  - CHANGELOG.md
+schemes:
+  ADR:
+    dir: record/decisions.d
+    output: docs/decisions
+    active: Active
+    render: index
+    successor: superseded_by
+    retires_on: Superseded
+    fields:
+      status:
+        vocabulary: statuses
+      tags:
+        vocabulary: adr-tags
+        many: true
+        required: true
+        closed: false
+    axis: tags
+  DP:
+    dir: record/principles.d
+    active: Active
+    render: document
+    output: docs/design-principles.md
+    successor: superseded_by
+    retires_on: Superseded
+    fields:
+      status:
+        vocabulary: statuses
+      tags:
+        many: true
+        required: true
+        closed: false
+    axis: tags
+remotes:
+  LU:
+    name: luria
+    repo: dmarx/luria
+    ref: main
+    dir: record/decisions.d
+    schemes:
+      DP:
+        document: docs/design-principles.md
+  FX:
+    name: fixtures
+    url: https://github.com/dmarx/luria/blob/main/docs/directives.md#fixture-codes
+lint:
+  fail_on:
+  - workflow-temp-codes
+
+
+
+---
+File: template/record/changelog.d/_template.md
+---
+<!-- One fragment per contribution, named for its filing moment — `luria new
+     changelog` stamps it, the way the devlog stamps entries. Keep
+     only the headings that apply; delete the rest. Collected into CHANGELOG.md
+     on a cadence, never on every merge (ADR-002).
+
+     No user-facing changes? Replace everything with a single HTML comment
+     saying why. A stub collects to nothing, which keeps "every contribution
+     files a fragment" enforceable without inventing an entry. -->
+
+### Added
+
+-
+
+### Fixed
+
+-
+
+### Changed
+
+-
+
+### Removed
+
+-
+
+### Documentation
+
+-
+
+
+
+---
+File: template/record/decisions.d/_template.md
+---
+---
+# Don't copy this file by hand — run `luria new adr`, which assigns the
+# identity and fills in the fields a machine can compute. WHICH identity
+# depends on the scheme's `allocate` mode: `filing` (the default) takes the
+# next free number on the spot, `merge` mints a temporary code that
+# `luria concretize` numbers where merges serialize (FX-ADR-049). The kinds are the
+# config: every scheme, fragment directory and journal in luria.toml is one, so
+# `luria new <kind>` works for a scheme the moment it is declared.
+#
+# Numbering is sequential and carries information (it's the order decisions were
+# made). The filename is the code and nothing else; the title goes in `title:`
+# below, where correcting it costs an edit rather than a rename plus every link.
+#   Why: LU-ADR-013.
+#
+# This frontmatter is the ONLY place these facts live. The index and the per-tag
+# pages are generated from it — never edit them by hand; run `luria index`.
+# Why: LU-ADR-004.
+
+# Active | Proposed | Deferred | Superseded | Rejected. Supersede when the
+# CHOICE changes: set the old one to `status: Superseded`, name the successor
+# in `superseded_by: ADR-NNN` (a reference field: checked, resolved, an edge
+# the index and the site render), and leave its body intact. A qualifying
+# note for anything the field cannot say goes in `status_note:` — prose,
+# like `summary:`, so a code in it is a citation. When the
+# choice stands and only a REASON was wrong, correct this body in place and
+# bump `version:` below — the rule objects to silent revision, not to editing.
+status: Proposed
+
+# What the index shows in place of the code. Repeat it as the body's `# ADR-NNN:`
+# heading — someone reading the file alone needs one — and `luria lint` checks
+# that the two agree, because two copies of a string is a projection that drifts.
+title: Decision, stated as the thing you did
+
+# Which revision of this decision's claim you are reading. Standard frontmatter
+# for every scheme, and it moves rarely here: a decision that CHANGES is
+# superseded by a new one, not edited. Bump it when the same choice is restated
+# more broadly — scope widened, wording generalized — and say what changed in a
+# `history:` entry. Shown in the index only when it is not 1.
+version: 1
+
+# Browsing categories, pushed down onto the decision itself. One is normal; more
+# than one is fine. A tag not listed in tags.yaml still works.
+tags:
+- record
+
+date: '2026-01-01'
+
+# Optional. The issue(s) this decision came from: '#123'.
+issue: '#000'
+
+# Optional but wanted: the one-blob description the index table shows. Without
+# it the table falls back to the title, which is usually too terse to browse by.
+# Say what was decided AND what was rejected — the index is read far more often
+# than the decision, and "why not the obvious thing" is what people come for.
+# This field is prose, so it carries links like any other prose; the rest of the
+# frontmatter is data and stays plain.
+summary: >-
+  One-paragraph description of the decision, the cost that motivated it, and the
+  alternatives that lost. Written to be read in a table row.
+---
+
+# ADR-NNN: Decision, stated as the thing you did
+
+## Context
+
+What was true that made this a question. The forces: the cost being paid, the
+constraint that can't move, the thing that broke. Enough that someone who wasn't
+there can reconstruct why this needed deciding — and enough that a future reader
+can tell whether the context still holds.
+
+## Decision
+
+What was decided, in the active voice. Then the non-obvious parts: the detail
+that looks like an implementation choice but is load-bearing, the invariant a
+future change must not break.
+
+## Alternatives considered
+
+- **The obvious one** — why it lost. This section is the record's highest-value
+  part: it's what stops the decision being re-litigated, and what tells a future
+  reader whether their new idea is actually new.
+- **The one that looks right and isn't** — worth recording precisely because it
+  looks right.
+- **Status quo** — always a real alternative; say what doing nothing would cost.
+
+## Consequences
+
+What this buys, and what it costs. Include what is now harder, the follow-up it
+implies, and anything it obliges future work to keep doing. Measured numbers
+beat adjectives — if it was verified, say how.
+
+
+
+---
+File: template/record/devlog.d/_template.md
+---
+<!-- The shape of a journal entry. Don't copy this file by hand — run
+
+         luria new
+
+     which files an entry at devlog.d/yyyy/mm/dd/hhmmss.md, the path derived from the
+     timestamp so nothing has a number to assign and nothing has a name to
+     collide on. `luria lint` checks the path and the `created:` field agree —
+     and when the field is empty in an entry filed by hand, `luria repair`
+     populates it from the path, since the path already says it (#33).
+
+     Entries persist. A journal entry is a dated observation — true when it was
+     written, and still true — so unlike a changelog fragment it is never
+     consumed. `docs/devlog/` is generated from these and can be rebuilt from
+     scratch (LU-ADR-020).
+
+     The devlog is narrative, not a changelog: what problem was solved, what the
+     fix was, and what was found along the way — root-cause archaeology, failed
+     approaches, verification details, the traps the next person would otherwise
+     rediscover. **Record the wrong theories and why they were wrong.** They are
+     the expensive part and the part that never appears in a commit message.
+
+     `title:` is what the book's contents list shows, so make it say what
+     happened rather than which files moved. The rendered heading is the title,
+     so the body starts at prose.
+
+     No entry is required — the devlog covers significant work, not every
+     contribution. -->
+
+---
+title: 'A sentence-shaped title'
+created: '2026-01-01T00:00:00'
+tags: []
+---
+
+**Short lead naming the work (#issue).** What was reported, what it actually
+turned out to be, how it was verified, and what surprised you.
+
+
+
+---
+File: template/record/principles.d/DP-001.md
+---
+---
+status: Active
+title: 'A file every contribution must touch is a lock — hand out fragments, generate the view'
+version: 1
+tags:
+- record
+date: '2026-01-01'
+influenced_by: []
+origin: >-
+  Seeded from Luria. Replace this note with your own first instance.
+summary: >-
+  When contributing requires editing a file everyone else also edits, in the
+  same place, that file is a lock — the conflicts carry no information. Hand out
+  fragments and generate the shared artifact from them.
+---
+
+# DP-001: A file every contribution must touch is a lock — hand out fragments, generate the view
+
+When contributing requires editing a file *everyone else* also edits, in the
+same place, that file is a lock. Concurrent branches serialize on it, and the
+conflicts carry no information — two changes that share nothing still collide
+because both appended after the last thing. That is contention, not
+carelessness, so "resolve them carefully" is not the fix.
+
+Let each contribution own a file nobody else writes, and *generate* the shared
+artifact from those. When the shared file's content is derivable, generate it
+outright — then there is no collection step to forget.
+
+
+
+---
+File: template/record/principles.d/DP-002.md
+---
+---
+status: Active
+title: 'A hand-maintained projection of a source of truth will drift — derive it'
+version: 1
+tags:
+- record
+date: '2026-01-01'
+influenced_by: []
+origin: >-
+  Seeded from Luria. Replace this note with your own first instance.
+summary: >-
+  A hand-maintained parallel copy of what an authoritative source already knows
+  will drift, and a missed entry ships silently. Derive the projection; failing
+  that, guard the property rather than the list; failing that, choose the
+  failure polarity deliberately and say so.
+---
+
+# DP-002: A hand-maintained projection of a source of truth will drift — derive it
+
+No hand-maintained parallel copy of what an authoritative source already knows.
+The copy is written carefully and drifts anyway; a missed entry ships silently.
+
+Remedies, strongest first: **derive** the projection; or **guard the property,
+not the list** (a test asserting "the list contains these names" is the drifting
+list in a costume); or, if a hand list must remain, **choose its failure
+polarity** and say so in a comment. Fail-stale — the miss ships as silently
+wrong behavior — is never acceptable, and is the naive default.
+
+
+
+---
+File: template/record/principles.d/DP-003.md
+---
+---
+status: Active
+title: 'Culture must be compiled'
+version: 1
+tags:
+- process
+date: '2026-01-01'
+influenced_by: []
+origin: >-
+  Seeded from Luria. Replace this note with your own first instance.
+summary: >-
+  A stateless collaborator can't be socialized, so a norm that exists only as
+  prose is followed probabilistically. Walk the ones that matter up the ladder:
+  prose, convention, mechanism, guarantee.
+---
+
+# DP-003: Culture must be compiled
+
+A stateless collaborator can't be socialized, so a norm that exists only as
+prose is followed probabilistically. Norms that matter get walked up the ladder
+*prose → convention → mechanism → guarantee*. When you find yourself repeating a
+correction, that is the signal to walk the norm up a rung.
+
+
+
+---
+File: template/record/principles.d/DP-004.md
+---
+---
+status: Active
+title: 'Fire before trusting'
+version: 1
+tags:
+- process
+date: '2026-01-01'
+influenced_by: []
+origin: >-
+  Seeded from Luria. Replace this note with your own first instance.
+summary: >-
+  Every guard, alert and CI gate gets one deliberate sabotage run to prove it
+  catches, before anyone relies on it. Provisioned is not working.
+---
+
+# DP-004: Fire before trusting
+
+Every guard, alert and CI gate gets one deliberate sabotage run to prove it
+catches, before anyone relies on it. **Provisioned is not working.** Even a
+fail-safe guard needs firing once, or it silently never delivers the benefit it
+exists for. Say so in the record when you fire one.
+
+
+
+---
+File: template/record/principles.d/DP-005.md
+---
+---
+status: Active
+title: 'No private brains'
+version: 1
+tags:
+- record
+date: '2026-01-01'
+influenced_by: []
+origin: >-
+  Seeded from Luria. Replace this note with your own first instance.
+summary: >-
+  Knowledge is shared across collaborators regardless of species. Agent files
+  are bootloaders — pointers to the shared record — never knowledge stores.
+---
+
+# DP-005: No private brains
+
+Knowledge is shared across collaborators regardless of species. Agent files are
+legitimate as **bootloaders** — pointers to the shared record — never as
+knowledge stores. The test: *would a new human hire need this?* Then it belongs
+in the shared docs.
+
+
+
+---
+File: template/record/principles.d/DP-006.md
+---
+---
+status: Active
+title: "It's not mine, but I'll pick it up anyway"
+version: 1
+tags:
+- craft
+date: '2026-01-01'
+influenced_by: []
+origin: >-
+  Seeded from Luria. Replace this note with your own first instance.
+summary: >-
+  Fix the debt you encounter, whether or not it belongs to the thing you came
+  for — debt survives because every individual encounter with it was,
+  reasonably, someone else's problem. Bounded by two rules: repair rather than
+  redesign, and say in the commit what you picked up.
+---
+
+# DP-006: It's not mine, but I'll pick it up anyway
+
+When you encounter debt — a stale comment, a drifted convention, a dead test, a
+number that collides, a guard nobody wired up — **fix it**, whether or not it
+belongs to the thing you came here for. Leaving the shared space tidier than you
+found it takes precedence over staying inside your task's boundary.
+
+The principle exists because the *default* is the opposite, and the default is
+expensive. Debt survives not because anyone decided to keep it but because every
+individual encounter with it was, reasonably, someone else's problem — so the
+cost is paid over and over in small amounts by people who each correctly
+concluded it wasn't theirs to fix. *If not me, then who? If not now, then when?*
+is the whole argument, and the answers are usually *nobody* and *never*.
+
+This matters most in a **record**, because a record's debt is invisible while
+the machinery still runs. An instruction that stopped being true, a citation to
+a document that moved, a status nobody flipped — none of it fails a build, and
+all of it costs the next reader.
+
+Two rules keep it from becoming license to sprawl:
+
+- **Repair, don't redesign.** Picking up litter is not remodelling the building.
+  If the tidy-up turns out to be a decision rather than a repair — it needs a
+  decision record, or it changes behaviour someone relies on — file it rather
+  than smuggling it in.
+- **Say what you picked up.** An unexplained unrelated change in a diff reads as
+  noise, or worse as a mistake. One line in the commit message turns it into a
+  gift.
+
+
+
+---
+File: template/record/principles.d/_template.md
+---
+---
+# Don't copy this file by hand — run `luria new dp`, which assigns the identity
+# and fills in the fields a machine can compute. WHICH identity depends on the
+# scheme's `allocate` mode: `filing` (the default) takes the next free number
+# on the spot, `merge` mints a temporary code that `luria concretize` numbers
+# where merges serialize (FX-ADR-049).
+#
+# Numbering is sequential and permanent: a principle is cited by number ("per
+# DP-3"), so a number can be retired but never reused. The filename is the code
+# and nothing else; the title goes in `title:` below, where a revision costs an
+# edit rather than a rename plus every link — which matters more here than for
+# a decision, because principles are expected to be reworded. Why: LU-ADR-013.
+#
+# This frontmatter is the ONLY place these facts live. `docs/design-principles.md`
+# is generated from it — never edit that file by hand; run `luria index`.
+# Why: LU-ADR-012.
+
+# Same vocabulary as a decision: Active | Proposed | Deferred |
+# Superseded | Rejected; a qualifying note goes in `status_note:`. A principle that stops being
+# believed is Superseded, not deleted — something out there cites it.
+status: Active
+
+# The claim, as it appears in the rendered document. Repeat it as the body's
+# `# DP-NNN:` heading; `luria lint` checks that the two agree.
+title: The principle, stated as a claim you can disagree with
+
+# Principles are LIVING DOCUMENTS. Bump this whenever the principle's scope or
+# claim changes, and add a `history:` entry saying what changed. A principle
+# stated about one artifact is a principle nobody applies to the next one, and
+# the version is how the next reader can tell that already happened once.
+version: 1
+
+# Browsing categories, shared with the decisions (see decisions/tags.yaml).
+tags:
+- craft
+
+date: '2026-01-01'
+
+# The decisions whose experience produced this principle — the inverse of the
+# usual direction, in which decisions cite principles. Rendered as followable
+# backlinks under the principle, and they are the evidence that stops it reading
+# as taste. List them as full codes, one per line. Empty is honest for a
+# principle carried in from elsewhere.
+influenced_by: []
+
+# Optional, and only once there IS a version 2. One entry per version, oldest
+# first, each saying what changed and why — the revision is usually the most
+# useful thing the principle teaches.
+# history:
+# - version: 1
+#   date: '2026-01-01'
+#   note: >-
+#     Stated narrowly, about one artifact.
+# - version: 2
+#   date: '2026-02-01'
+#   note: >-
+#     Generalized, after the second instance made the narrow statement useless.
+
+# Where this came from: the concrete episode that made it a principle, not a
+# preference. One sentence, rendered at the end of the principle's metadata
+# line — so it is read every time the principle is. Prose, like `summary:`:
+# references here are linked by `luria link --fix` and checked by the lint,
+# because the value is rendered as markdown. (The rest of the frontmatter is
+# data, read by value, and stays plain.)
+origin: >-
+  The specific thing that happened twice.
+
+# Optional. Not rendered in the document — the principle's own text is right
+# there — but it is what a `render = "index"` scheme would show, and what a
+# reader of the frontmatter alone gets.
+summary: >-
+  The principle in two or three sentences, stated as a claim rather than a topic.
+---
+
+# DP-NNN: The principle, stated as a claim you can disagree with
+
+The claim, in the imperative or the declarative — never as a topic heading. A
+reader should be able to hold the first sentence in their head and apply it.
+
+Why it is true: the mechanism, not the vibe. What goes wrong when it is ignored,
+concretely enough that someone can recognize the situation from the description.
+
+Applied here: two or three places in *this* codebase where the principle is
+visibly in force. This section is what makes a principle citable instead of
+decorative — it shows the reader what compliance looks like.
+
+The corollary people skip, if there is one. Most principles have a second-order
+consequence that is the actually expensive part to follow, and naming it is
+worth more than restating the claim.
+
+
