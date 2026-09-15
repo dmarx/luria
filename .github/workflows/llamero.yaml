@@ -31,7 +31,7 @@ jobs:
         cache: 'pip'
 
     - name: Install project
-      run: pip install -e .
+      run: pip install llamero
 
     - name: Generate summaries
       run: llamero summarize all
