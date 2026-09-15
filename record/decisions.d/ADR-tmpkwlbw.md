@@ -1,0 +1,170 @@
+---
+# Don't copy this file by hand — run `luria new adr`, which assigns the
+# identity and fills in the fields a machine can compute. WHICH identity
+# depends on the scheme's `allocate` mode: `filing` (the default) takes the
+# next free number on the spot, `merge` mints a temporary code that
+# `luria concretize` numbers where merges serialize (ADR-049). The kinds are the
+# config: every scheme, fragment directory and journal in luria.toml is one, so
+# `luria new <kind>` works for a scheme the moment it is declared.
+#
+# Numbering is sequential and carries information (it's the order decisions were
+# made). The filename is the code and nothing else; the title goes in `title:`
+# below, where correcting it costs an edit rather than a rename plus every link
+# (ADR-013).
+#
+# This frontmatter is the ONLY place these facts live. The index and the per-tag
+# pages are generated from it (ADR-004) — never edit them by hand; run
+# `luria index`.
+
+# Active | Proposed | Deferred | Superseded | Rejected. Supersede when the
+# CHOICE changes: set the old one to `status: Superseded`, name the successor
+# in `superseded_by: ADR-tmpkwlbw` (a reference field: checked, resolved, an edge
+# the index and the site render), and leave its body intact. A qualifying
+# note for anything the field cannot say goes in `status_note:` — prose,
+# like `summary:`, so a code in it is a citation. When the
+# choice stands and only a REASON was wrong, correct this body in place and
+# bump `version:` below — the rule objects to silent revision, not to editing.
+status: Proposed
+
+# What the index shows in place of the code. Repeat it as the body's `# ADR-tmpkwlbw:`
+# heading — someone reading the file alone needs one — and `luria lint` checks
+# that the two agree, because two copies of a string is a projection that drifts.
+title: 'One reader for a document, and the listing it comes from'
+
+# Which revision of this decision's claim you are reading. Standard frontmatter
+# for every scheme, and it moves rarely here: a decision that CHANGES is
+# superseded by a new one, not edited. Bump it when the same choice is restated
+# more broadly — scope widened, wording generalized — and say what changed in a
+# `history:` entry. Shown in the index only when it is not 1.
+version: 1
+
+# Browsing categories, pushed down onto the decision itself. One is normal; more
+# than one is fine. A tag not listed in tags.yaml still works.
+tags:
+- mechanism
+
+date: '2026-09-14'
+
+# Optional. The issue(s) this decision came from: '#123'.
+
+# Optional but wanted: the one-blob description the index table shows. Without
+# it the table falls back to the title, which is usually too terse to browse by.
+# Say what was decided AND what was rejected — the index is read far more often
+# than the decision, and "why not the obvious thing" is what people come for.
+# This field is prose, so it carries links like any other prose; the rest of the
+# frontmatter is data and stays plain. (`origin:` on a principle is
+# prose for the same reason — the generator renders it.)
+summary: >-
+  `read_document` caches a document's parse and expires it when the file's
+  mtime moves — the bargain that lets `repair` write mid-run and read back.
+  Eleven call sites did not take it, opening and parsing documents for
+  themselves, so `forget_documents()` cleared a cache half the readers were
+  not using. All eleven now ask `read_document`, and a test over the sources
+  keeps it that way. Separately, `Scheme.documents()` re-globbed and
+  re-sorted its directory on every one of 24,960 calls per lint; it and
+  `temp_documents()` now share one walk cached on the directory's mtime.
+  Anthology lint 127.6s to 20.4s, output byte-identical. Rejected: a
+  `--only` flag, which can report clean because it did not look.
+---
+
+# ADR-tmpkwlbw: One reader for a document, and the listing it comes from
+
+## Context
+
+`read_document` caches a document's parse on `(mtime_ns, size)`, and the
+comment above the cache says what makes that safe: "every writer of a
+document bumps its mtime, so the cache invalidates itself and no caller has
+to remember to drop it. That property is what makes a cache safe here at
+all — `field_edit` and `repair` write documents mid-run and then read them
+back."
+
+Eleven call sites did not take that bargain. Each composed
+`parse_frontmatter(path.read_text(...))` and so opened and parsed a document
+for itself, in `lint`, `aliases`, `journal`, `relations`, `statuses`,
+`templates`, `referents`, and `adr_index` itself.
+
+Two consequences, and the smaller one is the one usually noticed. The larger
+one is that `forget_documents()` — which exists for a writer that outruns
+mtime resolution — cleared a cache that half the readers were not using.
+An escape hatch that silently covers one of two paths is worse than none,
+because the caller believes the cache is gone. A second reader can also see a
+different revision than every other caller inside one run: the window is
+narrow, since `st_mtime_ns` is nanosecond-resolution and the size must also
+be unchanged, and no case has been observed — but nothing bounds it, which is
+the objection.
+
+A separate reading of the same directory had the same shape one level up.
+`Scheme.documents()` globbed and sorted its scheme's directory on every call.
+`number_of` was already cached on `(mtime, size)` and its docstring says why —
+"this is the hot path, `documents()` runs on every lint, index and link
+pass" — so the inner call was cached while the walk and the sort around it
+were not. `documents()` and `temp_documents()` each walked the same directory
+separately.
+
+## Decision
+
+**One reader, and one walk.**
+
+Every site that opened a document now asks `read_document`. What remains of
+`parse_frontmatter` is the parser applied to text a caller already holds —
+content being written, a rendered alias, a template body — which is not a
+second reader and is not the thing being closed.
+
+**`Scheme.documents()` and `temp_documents()` share one cached walk**, keyed on
+the directory's `(mtime_ns, size)`. That is the bargain `_NUMBER_CACHE` takes,
+a directory up, and it holds for the same reason: a document added, removed or
+renamed moves its directory's mtime, and that is exactly when the *set* of
+documents changes. A rewrite that leaves the set alone does not move it and
+does not need to, because the number itself is cached on the file's own mtime.
+`forget_documents()` drops the listings, and `reset()` calls it so a fixture
+switch cannot see a stale one.
+
+The shape is pinned by a test that reads the sources, not by discipline.
+[DP-4](../principles.d/DP-004.md) drift is not a thing fixed once: `documents()`'s own docstring records
+five copies of one glob accumulating, "harmless only for as long as the
+filename shape never changed".
+
+## Alternatives considered
+
+- **A `--only`/`--skip` flag on the lint**, so a diagnose loop could run one
+  check. This was the first thing proposed, and it answers the symptom. It is
+  also strictly worse than making the work cheap: a filter can report clean
+  because it did not look, while an mtime-validated cache cannot. Worth having
+  eventually for a different reason — running one check while writing it — but
+  not as the answer to "the lint is slow".
+- **`--last-failed`**, by analogy with a test runner. Rejected on the record's
+  own terms: findings here are relational, and fixing one document creates
+  findings in others. Superseding one decision in a recent contribution
+  created eight findings across three files that contribution had not
+  touched. A last-failed pass would have reported clean.
+- **Leave the second readers and cache only the listing.** This captures the
+  measured win — the listing is where the time was — and leaves the escape
+  hatch half-covering. The speedup was never the argument for the reader.
+
+## Consequences
+
+Measured on two records, same machine, same session, output compared rather
+than assumed:
+
+| | before | after |
+|---|---|---|
+| `anthology-of-the-sota` lint | 127.6s | **20.4s** |
+| this record's lint | 29.0s | 29.2s |
+
+Lint output is byte-identical on both. The test suite also fell from about
+173s to 114s, which nothing was asked to do.
+
+**This record does not get faster, and the reason is worth writing down.**
+Its lint spends its time in `tokenize` and `ast`, scanning its own Python
+sources for directives and citations — 5.5M tokenizer calls in one profiled
+run. That is a different bottleneck, untouched here, and the obvious next
+question.
+
+**How this was measured matters more than the numbers.** The first diagnosis
+was wrong: a profile taken without `LURIA_JOBS=1` samples only the main
+thread, and `pmap` puts the work in a pool, so the expensive functions did not
+appear and the ones that did were misread. `parallel.py` documents that
+variable for exactly this — "profiling is honest" — and reading it first would
+have saved a wrong fix. The before/after comparison is run from a worktree at
+`main` rather than by stashing, so the working tree is never part of the
+experiment.

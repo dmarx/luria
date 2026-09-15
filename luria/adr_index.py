@@ -394,7 +394,7 @@ def render_document(scheme, docs: list[Adr]) -> str:
     base = scheme.output.parent if scheme.output else scheme.dir
     parts = []
     for doc in docs:
-        body = parse_frontmatter(doc.path.read_text(encoding="utf-8"))[1].strip()
+        body = read_document(doc.path)[1].strip()
         # Demote the fragment's own H1 to the assembled document's H2, and
         # renumber it into the reader's numbering rather than the file's code.
         label = doc.number if doc.number is not None else doc.code

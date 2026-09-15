@@ -25,6 +25,10 @@ import pytest  # noqa: E402
 
 from luria import config  # noqa: E402
 
+# unresolved-ok-file: ADR-tmpabcde — a fixture code, deliberately not real:
+# these tests file temporary documents to watch the listing pick them up, and
+# to watch `concretize`'s rename land.
+
 CONFIG = """\
 issue_url: https://example.test/{n}
 schemes:
@@ -112,12 +116,14 @@ def test_a_removed_document_is_seen(scheme_dir):
 def test_a_rename_is_seen(scheme_dir):
     """`luria concretize` renames a temporary document into its number."""
     scheme, d = scheme_dir
-    _doc(d / "ADR-tmpabcde.md", 7)
+    _doc(d / "ADR-tmpabcde.md", 919)
     config.forget_documents()
     assert set(scheme.temp_documents()) == {"tmpabcde"}
 
-    (d / "ADR-tmpabcde.md").rename(d / "ADR-007.md")
-    assert set(scheme.documents()) == {7}
+    # A high number on purpose: a fixture that lands on a low one names a
+    # real document, and naming one is citing it.
+    (d / "ADR-tmpabcde.md").rename(d / "ADR-919.md")
+    assert set(scheme.documents()) == {919}
     assert scheme.temp_documents() == {}
 
 

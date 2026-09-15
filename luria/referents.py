@@ -48,12 +48,18 @@ class Lookup:
 
 
 def _read(code: str) -> dict:
-    """Through `read_document`, not around it.
+    """Through `read_document`, not around it (DP-4).
 
-    Derivation runs per `Adr`, and this opened and parsed the file itself —
-    so the parse cache (#249) was bypassed on the hottest path in the lint.
-    One profiled run over a 726-document record spent 36% of its wall clock
-    here, re-parsing documents the process had already parsed."""
+    This opened and parsed the file itself, which made it a second reader of
+    a document — and a second reader does not take the bargain that makes the
+    cache safe. `read_document` expires an entry when the file's mtime moves,
+    so `field_edit` and `repair` can write mid-run and read back; a reader
+    outside that cannot be dropped by `forget_documents()` and can see a
+    different revision than every other caller in the same run.
+
+    Not a speedup: measured on two records, routing this through the cache
+    costs and saves nothing detectable. The cost that mattered was a
+    directory glob, not a parse."""
     from .adr_index import read_document
     path = path_of(code)
     if path is None:

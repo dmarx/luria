@@ -175,7 +175,7 @@ def check_form_text(errors: list[str]) -> None:
     for scheme in cfg.schemes.values():
         for path in [*scheme.documents().values(),
                      *scheme.temp_documents().values()]:
-            meta, _ = builder.parse_frontmatter(path.read_text(encoding="utf-8"))
+            meta, _ = builder.read_document(path)
             for key in templates.form_text(scheme, meta or {}):
                 fallback = (" — the index falls back to the title"
                             if key == "summary" else "")
@@ -264,7 +264,7 @@ def check_contracts(errors: list[str]) -> None:
                 known[field.reference] = contract.resolvable(field.reference)
         for path in [*scheme.documents().values(),
                      *scheme.temp_documents().values()]:
-            meta, _ = builder.parse_frontmatter(path.read_text(encoding="utf-8"))
+            meta, _ = builder.read_document(path)
             if not meta:
                 continue          # check_frontmatter already said so
             # A `status:` still carrying its note is one mistake with one
@@ -324,7 +324,7 @@ def check_alias_collisions(errors: list[str]) -> None:
             continue
         rendered: dict[str, list[int]] = {}
         for number, path in scheme.documents().items():
-            meta, _ = builder.parse_frontmatter(path.read_text(encoding="utf-8"))
+            meta, _ = builder.read_document(path)
             spelling = aliases_mod.render(scheme.alias, meta, scheme, number)
             if spelling:
                 rendered.setdefault(spelling, []).append(number)
@@ -349,7 +349,7 @@ def check_journals(errors: list[str]) -> None:
             if path.name == "_template.md":
                 continue
             rel = cfg.rel(path)
-            meta, _ = builder.parse_frontmatter(path.read_text(encoding="utf-8"))
+            meta, _ = builder.read_document(path)
             created = journal.parse_created(meta.get("created"))
             if created is None:
                 # An inferrable field names its own remedy (#33); one with no
@@ -381,7 +381,7 @@ def check_version_history(errors: list[str]) -> None:
     cfg = current()
     for scheme in cfg.schemes.values():
         for path in scheme.documents().values():
-            meta, _ = builder.parse_frontmatter(path.read_text(encoding="utf-8"))
+            meta, _ = builder.read_document(path)
             version = int(meta.get("version", 1) or 1)
             history = meta.get("history") or []
             rel = cfg.rel(path)
