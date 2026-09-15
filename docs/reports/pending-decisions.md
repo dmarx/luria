@@ -5,7 +5,12 @@
 
 `Proposed` and `Deferred` both describe an open question. Neither says *since when*, and that is the signal: a decision proposed last week is pending; the same one a year later was either overdue or settled in code and never written back.
 
-**0 document(s) awaiting a decision.**
+**2 document(s) awaiting a decision.**
+
+| Open since | Status | Code | Cited | Unack. | Title |
+|---|---|---|--:|--:|---|
+| 2026-09-11 | Proposed | [ADR-tmpronup](../../record/decisions.d/ADR-tmpronup.md) | 2 | 2 | A document's typed lineage is drawn on its page, beside Quartz's graph |
+| 2026-09-12 | Proposed | [ADR-tmp0hx52](../../record/decisions.d/ADR-tmp0hx52.md) | 2 | 2 | A project can show a graph it designed in place of Quartz's |
 
 The citation count is the second axis, and it flips the priority: an old proposal nothing references is a stalled idea worth closing, while an old proposal many files cite is a decision the codebase has already made and hasn't written down.
 

@@ -4,7 +4,7 @@
 
 **The record** — what the four layers hold, and the rules between them.
 
-52 of 105 decisions. Back to the [full index](../README.md).
+54 of 107 decisions. Back to the [full index](../README.md).
 
 | # | Title | Summary | Status |
 |---|---|---|---|
@@ -60,3 +60,5 @@
 | [ADR-102](../../../record/decisions.d/ADR-102.md) | The TOML crossing carries comments, because a comment is not a value | `luria upgrade yaml` parsed a TOML config with `tomllib` and wrote the values, which is right — a regex in a `uid` does not survive a byte copy. But a config is documented in its comments, and `tomllib` never sees them: the crossing dropped 273 comment lines in one record and 85 in another, and reported only what it had folded. Comments are now carried to the key they documented, the vocabulary files are round-tripped rather than re-parsed, and the handful whose key does not exist on the far side are printed in full. Rejected: leaving them in git history, which is not where anyone reads a config. | Active |
 | [ADR-104](../../../record/decisions.d/ADR-104.md) | A directive's argument list is syntax; its reason is prose |  | Active |
 | [ADR-105](../../../record/decisions.d/ADR-105.md) | A mention is not a citation, and says nothing about status |  | Active |
+| [ADR-tmpronup](../../../record/decisions.d/ADR-tmpronup.md) | A document's typed lineage is drawn on its page, beside Quartz's graph | `luria site` renders each document's typed edges as an interactive graph at the foot of its page, using strata-g's vendored export viewer. Rejected: replacing Quartz's `Component.Graph` with it, which was the first plan — measured, the typed-edge graph reaches 47% of scheme documents and none of the journal entries, so the swap would have left most pages with an empty box where a neighbourhood used to be. | Proposed |
+| [ADR-tmp0hx52](../../../record/decisions.d/ADR-tmp0hx52.md) | A project can show a graph it designed in place of Quartz's | `[luria.site] graph` points at a strata-g `Canvas — graph data (JSON)` export; set, that one curated picture replaces Quartz's own graph plugin on every page. Opt-in, and the inverse of the generated lineage graph: one graph the project laid out, everywhere, rather than a neighbourhood computed per page. Rejected: a Quartz component that fetches the data (needs a network request and a viewer change), and base64 in the file (opaque for no gain). | Proposed |
