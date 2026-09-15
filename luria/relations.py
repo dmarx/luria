@@ -41,7 +41,7 @@ import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
-from .adr_index import Adr, load_scheme, parse_frontmatter
+from .adr_index import Adr, load_scheme, parse_frontmatter, read_document
 from .config import current
 from .contract import (ANY_SCHEME, for_scheme, resolvable, values_of,
                        violations)
@@ -371,7 +371,7 @@ def _blocked(prefix: str, docs: dict, repairs: list[Repair]
         known = {f.reference: resolvable(f.reference) for f in contract.fields
                  if f.reference and f.reference != ANY_SCHEME}
         rel = current().rel(path)
-        meta = parse_frontmatter(path.read_text(encoding="utf-8"))[0]
+        meta = read_document(path)[0]
         was = set(violations(contract, rel, meta, known))
         now = violations(contract, rel, _applied(meta, entries), known)
         fresh = [v for v in now if v not in was]

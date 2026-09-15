@@ -56,7 +56,7 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
-from .adr_index import parse_frontmatter
+from .adr_index import parse_frontmatter, read_document
 from . import slugs
 from .config import Journal, current
 
@@ -104,7 +104,7 @@ class Entry:
 
 
 def read(path: Path) -> Entry | None:
-    meta, body = parse_frontmatter(path.read_text(encoding="utf-8"))
+    meta, body = read_document(path)
     created = parse_created(meta.get("created")) or created_from_path(path)
     if created is None:
         return None

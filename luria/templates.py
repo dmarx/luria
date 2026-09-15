@@ -45,7 +45,7 @@ from __future__ import annotations
 
 import re
 
-from .adr_index import parse_frontmatter
+from .adr_index import parse_frontmatter, read_document
 from .config import current
 from .contract import _cite, for_scheme
 from .doc_refs import PROSE_KEYS
@@ -116,7 +116,7 @@ def placeholders(scheme) -> dict[str, str]:
     path = scheme.dir / TEMPLATE_NAME
     if not path.exists():
         return {}
-    meta, _ = parse_frontmatter(path.read_text(encoding="utf-8"))
+    meta, _ = read_document(path)
     return {k: _squash(meta[k]) for k in PROSE_KEYS
             if meta and _squash(meta.get(k))}
 

@@ -352,7 +352,7 @@ def _observed(scheme) -> list[str]:
     from . import adr_index
     found: list[str] = []
     for path in [*scheme.documents().values(), *scheme.temp_documents().values()]:
-        meta, _ = adr_index.parse_frontmatter(path.read_text(encoding="utf-8"))
+        meta, _ = adr_index.read_document(path)
         if status := of(meta).value:
             found.append(status)
     return found

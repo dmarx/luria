@@ -38,7 +38,7 @@ import re
 import subprocess
 from dataclasses import dataclass
 
-from .adr_index import parse_frontmatter
+from .adr_index import parse_frontmatter, read_document
 from .config import Config, current
 
 CODE_RE = re.compile(r"^([A-Za-z]{2,10})[- ]0*(\d{1,4})$")
@@ -113,7 +113,7 @@ def alias_map(cfg: Config | None = None) -> dict[str, Alias]:
     out: dict[str, Alias] = {}
     for scheme in cfg.schemes.values():
         for number, path in scheme.documents().items():
-            meta, _ = parse_frontmatter(path.read_text(encoding="utf-8"))
+            meta, _ = read_document(path)
             code = scheme.code(number)
             if scheme.alias:
                 spelling = render(scheme.alias, meta, scheme, number)
