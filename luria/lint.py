@@ -72,6 +72,7 @@ from __future__ import annotations
 import datetime as dt
 import re
 import sys
+from pathlib import Path
 
 from . import adr_index as builder
 from . import (adr_pending, badges, chains, ci, contract, directives, doc_refs,
@@ -398,7 +399,8 @@ def check_version_history(errors: list[str]) -> None:
                         f"document says {version}")
 
 
-def check_view_dirs(errors: list[str]) -> None:
+def check_view_dirs(errors: list[str],
+                    rendered: dict[Path, str] | None = None) -> None:
     """A view directory holds only generated files (ADR-021), so a
     hand-written file inside one is a violation — computed against what the
     generator would write, in memory, so the check reads sources and writes
@@ -413,7 +415,7 @@ def check_view_dirs(errors: list[str]) -> None:
     generator no longer writes, which `luria index` deletes and `--check`
     reports, not something a person wrote."""
     cfg = current()
-    for path in builder.staleness().orphaned:
+    for path in builder.staleness(rendered).orphaned:
         if "luria index" in path.read_text(encoding="utf-8"):
             continue
         errors.append(f"{cfg.rel(path)}: not something the generator wrote — "
@@ -462,7 +464,8 @@ def check_wikilinks(errors: list[str]) -> None:
                               "link — run `luria link --fix`")
 
 
-def check_anchors(errors: list[str]) -> None:
+def check_anchors(errors: list[str],
+                  rendered: dict[Path, str] | None = None) -> None:
     """A fragment link that does not reach what it names.
 
     Two shapes. `<a name=>` alone is addressable in the repository and on
@@ -477,7 +480,7 @@ def check_anchors(errors: list[str]) -> None:
     Read against the RENDER, not the committed tree — see
     `anchors.documents`."""
     cfg = current()
-    for f in anchors_mod.scan(anchors_mod.documents(), cfg.is_generated,
+    for f in anchors_mod.scan(anchors_mod.documents(rendered), cfg.is_generated,
                               cfg.link_base):
         where = (f"{cfg.rel(f.source)}:{f.line}: `#{f.fragment}` "
                  f"in {cfg.rel(f.target)}")
@@ -971,14 +974,21 @@ def run() -> None:
     check_status_vocabulary(errors)
     check_reserved_prefix(errors)
     check_contracts(errors)
-    check_view_dirs(errors)
+    # One render, two readers. `check_view_dirs` compares the committed tree
+    # against what the generator would write, and `check_anchors` reads links
+    # out of the same pages — and each used to render it for itself, so a lint
+    # rendered every view of every nested record (ADR-078) twice, re-scanning
+    # every corpus for the reports in each pass. Both have taken a `rendered`
+    # argument since they were written; nothing had ever passed one.
+    rendered = builder.outputs()
+    check_view_dirs(errors, rendered)
     check_numbers(errors)
     check_alias_collisions(errors)
     check_journals(errors)
     check_version_history(errors)
     check_bare_refs(errors)
     check_wikilinks(errors)
-    check_anchors(errors)
+    check_anchors(errors, rendered)
     report_warnings(errors)
     if errors:
         print(f"luria: {len(errors)} violation(s)", file=sys.stderr)

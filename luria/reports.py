@@ -59,7 +59,11 @@ def _site(c, base: Path) -> str:
 def reference_status(base: Path | None = None) -> str:
     base = current().reports if base is None else base
     docs = ref_status.load_docs()
-    result = ref_status.scan(docs=docs)
+    # `scan()` rather than `scan(docs=docs)`: `docs` here IS what the scan
+    # fills in when handed nothing, so naming it changed no result and only
+    # put the call outside the corpus-scan cache — which meant every record
+    # scanned itself once for this table and again for the pending one.
+    result = ref_status.scan()
     rows = ref_status.flagged(result, docs)
     excused = ref_status.acknowledged_count(result, docs)
 
