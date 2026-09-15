@@ -511,6 +511,41 @@ def dangling_acknowledged_count(result: Scan | None = None,
                for c in sites if c.excused_by is not None)
 
 
+def _unexcused_under(result: "Scan", ann: Annotation,
+                     docs: dict[str, Doc]) -> dict[str, int]:
+    """Code → how many citations this annotation covers but could not excuse.
+
+    `scan` drops an annotation with a `problem` whole — `usable = [a for a in
+    anns if not a.problem]` — so every citation it names and covers is left
+    unacknowledged, including the ones whose codes are still perfectly good.
+    One stale code in a multi-code acknowledgement therefore un-acknowledges
+    the others, which is the part the finding could not say: the citations
+    surface as unaccounted for in a different section, with nothing tying them
+    to the annotation that stopped covering them.
+
+    Scoped by path and by the directive's own reach, because an annotation is
+    only ever responsible for what it actually covered."""
+    loose = ann.kind == DANGLING_DIRECTIVE
+    pool = result.dangling if loose else result.cited
+    out: dict[str, int] = {}
+    for code, sites in pool.items():
+        if code not in ann.codes:
+            continue
+        if not loose:
+            doc = docs.get(code)
+            # Citing a document that is in force was never a finding, so
+            # losing an excuse for it costs nothing.
+            if doc is None or doc.active:
+                continue
+        n = sum(1 for c in sites
+                if c.excused_by is None
+                and c.path == ann.directive.path
+                and ann.covers(c.line))
+        if n:
+            out[code] = n
+    return out
+
+
 def stale_annotations(result: Scan | None = None,
                       docs: dict[str, Doc] | None = None) -> list[str]:
     """Annotations that no longer excuse anything — the document went Active,
@@ -521,7 +556,19 @@ def stale_annotations(result: Scan | None = None,
     out = []
     for ann in result.annotations:
         if ann.problem:
-            out.append(f"{ann}: annotation {ann.problem}")
+            line = f"{ann}: annotation {ann.problem}"
+            # What the problem cost. A malformed annotation excuses nothing at
+            # all, so the codes beside the bad one lose their acknowledgement
+            # with it — say so here rather than leaving it to be found by
+            # diffing two reports.
+            lost = _unexcused_under(result, ann, docs)
+            if lost:
+                named = ", ".join(
+                    f"{code} ({n} site{'' if n == 1 else 's'})"
+                    for code, n in sorted(lost.items()))
+                line += (f" — so it excuses nothing, leaving {named} "
+                         "unacknowledged")
+            out.append(line)
         elif not result.used(ann):
             named = ", ".join(sorted(ann.codes))
             if ann.kind == DANGLING_DIRECTIVE:
