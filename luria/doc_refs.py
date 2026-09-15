@@ -35,10 +35,6 @@ renders into `docs/devlog/` (ADR-020). `link_base()` maps a path to the
 directory its links must resolve from.
 """
 
-# inactive-ok-file: ADR-099 — Proposed. Every mention names it as the
-# decision this file implements or is written against; the citation is to
-# the reasoning, not a claim the decision is settled.
-
 # unresolved-ok-file: ADR-919, ADR-157, DP-017, DP-018 — illustrative codes in
 # this module's prose. The DP pair became visible once scheme references were
 # found by pattern rather than by hardcoded kind; they were always here.

@@ -21,9 +21,6 @@
 # ship as ordinary dependencies, so `npm ci` installs them and the `prebuild`
 # hook only matters to a project adding its own.
 #
-# inactive-ok-file: ADR-101 — Proposed. Named as the decision this
-# action's Quartz pin and copy step were rewritten against; the citation
-# is to its reasoning, not a claim it is settled.
 name: luria site build
 description: >-
   Stage the record with `luria site` and build it with a pinned Quartz, into a

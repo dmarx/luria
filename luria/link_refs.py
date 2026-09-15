@@ -18,10 +18,6 @@ with `--fix` instead of hand-editing (ADR-005).
 behaviour, for a run that must touch nothing but link text.
 """
 
-# inactive-ok-file: ADR-099 — Proposed. Every mention names it as the
-# decision this file implements or is written against; the citation is to
-# the reasoning, not a claim the decision is settled.
-
 from __future__ import annotations
 
 from pathlib import Path

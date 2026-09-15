@@ -18,9 +18,6 @@ Both failures are silent (ADR-098).
 the commands need and the only place that knows how a config is edited.
 """
 
-# inactive-ok-file: ADR-098 — Proposed. Named as the decision this module
-# implements; the citation is to the reasoning, not a claim it is settled.
-
 from __future__ import annotations
 
 import io

@@ -7,9 +7,6 @@ said "exactly one strength tag" and whose fourth argument shipped with none,
 four documents before anyone counted.
 """
 
-# inactive-ok-file: ADR-098 — Proposed. Every mention names it as the
-# decision this file implements or is written against; the citation is to the
-# reasoning, not a claim the decision is settled.
 from _config import merged
 from pathlib import Path
 

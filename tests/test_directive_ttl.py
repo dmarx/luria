@@ -1,4 +1,5 @@
-"""`until <date>` — an acknowledgement that stops excusing things on a date (#58).
+"""`until <date>` — an acknowledgement that stops excusing things on a date
+(ADR-095, #58).
 
 An acknowledgement is a promise about the future: *this reference to a Proposed
 decision is deliberate, I know what I am doing.* Promises about the future go

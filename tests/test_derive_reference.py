@@ -1,4 +1,4 @@
-"""A field derived from a document this one references (#233).
+"""A field derived from a document this one references (ADR-092, #233).
 
 `derive` computes a field from the document's own frontmatter. These tests
 pin the second source: `from = "source[0]"` renders the same template against

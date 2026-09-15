@@ -18,14 +18,6 @@ would look for the bug.
 keeps a hand-written anchor from reintroducing it (ADR-099).
 """
 
-# inactive-ok-file: ADR-100 — Proposed. Every mention names it as
-# the decision this file implements or is written against; the citation
-# is to the reasoning, not a claim the decision is settled.
-
-# inactive-ok-file: ADR-099 — Proposed. Every mention names it as the
-# decision this file implements or is written against; the citation is to
-# the reasoning, not a claim the decision is settled.
-
 from __future__ import annotations
 
 from _config import merged

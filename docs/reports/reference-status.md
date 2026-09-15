@@ -9,7 +9,7 @@ Every reference in the record is a claim — "this is why things are the way the
 
 Only an `Active` document is in force. `Proposed` and `Deferred` mean *not in force yet* — an open question, being cited as if it were settled — while `Superseded` and `Rejected` mean *no longer in force*, which is often a perfectly good thing to cite: history, or a rejection worth pointing at. Either way the citation should be deliberate, and this section lists the ones nobody has vouched for yet.
 
-**0 documents cited without acknowledgement.** Not listed: 164 citations someone has already vouched for with an `inactive-ok:` comment at the citing site.
+**0 documents cited without acknowledgement.** Not listed: 55 citations someone has already vouched for with an `inactive-ok:` comment at the citing site.
 
 To vouch for one, put the reason where the citation is — `inactive-ok:` covers its own line and the line below it, `inactive-ok-block:` its paragraph, `inactive-ok-file:` the whole page:
 
@@ -27,9 +27,9 @@ A reference the reader cannot follow: the code names no document in this record.
 
 ### ADR-919 — resolves to nothing (4 unmarked sites · 5 other mentions marked deliberate)
 
-- [`luria/doc_refs.py:418`](../../luria/doc_refs.py)
-- [`luria/doc_refs.py:961`](../../luria/doc_refs.py)
-- [`luria/doc_refs.py:963`](../../luria/doc_refs.py)
+- [`luria/doc_refs.py:414`](../../luria/doc_refs.py)
+- [`luria/doc_refs.py:957`](../../luria/doc_refs.py)
+- [`luria/doc_refs.py:959`](../../luria/doc_refs.py)
 - [`tests/test_documents_cache.py:125`](../../tests/test_documents_cache.py)
 
 ### ADR-000 — resolves to nothing (1 unmarked site · 2 other mentions marked deliberate)
@@ -38,7 +38,7 @@ A reference the reader cannot follow: the code names no document in this record.
 
 ### ADR-157 — resolves to nothing (1 unmarked site · 2 other mentions marked deliberate)
 
-- [`luria/doc_refs.py:353`](../../luria/doc_refs.py)
+- [`luria/doc_refs.py:349`](../../luria/doc_refs.py)
 
 ## Files that opt out of reference checking
 
@@ -48,6 +48,6 @@ None. Every scanned file is checked. ✅
 
 ## Directives that no longer apply
 
-- luria/doc_refs.py:42: annotation names DP-017, which does resolve here
+- luria/doc_refs.py:38: annotation names DP-017, which does resolve here
 - luria/migrate.py:58: annotation names DP-017, which does resolve here
 - record/decisions.d/ADR-046.md:51: annotation names DP-017, which does resolve here

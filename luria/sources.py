@@ -163,7 +163,7 @@ COURTESY = 3.0
 # is asking the same host the same question it just declined. The retries this
 # replaces cost 9 seconds per identifier and changed the outcome in none of the
 # cases that motivated them, because a rate limit is a property of the window,
-# not of the request (#250). `Retry-After` is the one exception — when a host
+# not of the request (ADR-096, #250). `Retry-After` is the one exception — when a host
 # says how long, waiting that long is the request it asked for — and it is
 # honoured up to `RETRY_AFTER_CAP`, beyond which the run stops rather than
 # blocks for minutes on a courtesy API.

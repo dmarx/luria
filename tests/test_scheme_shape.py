@@ -7,10 +7,6 @@ restated by hand — four copies of one vocabulary, and a citation rule that
 turned out to check only that a field was not blank.
 """
 
-# inactive-ok-file: ADR-098 — Proposed. Named as the decision these
-# fixtures are shaped by; the citation is to the reasoning, not a claim
-# the decision is settled.
-
 import yaml
 from _config import merged
 from pathlib import Path

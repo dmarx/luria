@@ -19,10 +19,6 @@ the config the new version refuses to load, so a command that needed it
 would be unrunnable in exactly the situation it exists for.
 """
 
-# inactive-ok-file: ADR-098 — Proposed. Every mention names it as the decision
-# this module implements; the citation is to the reasoning, not a claim the
-# decision is settled.
-
 from __future__ import annotations
 
 import tomllib
@@ -157,7 +153,7 @@ def _prose(text: str, name: str,
     """Take a vocabulary file's comments off it, recording where each goes.
 
     Returns the text with nothing but values left, so what ruamel loads has
-    no comment carrying a column from a file it is no longer in."""
+    no comment carrying a column from a file it is no longer in (ADR-102)."""
     header, per_key = comment_carry.yaml_blocks(text)
     if header:
         into.append((("vocabularies", name), header))

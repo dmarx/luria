@@ -44,10 +44,6 @@ The contract compiles the field (`contract.for_scheme`) and the lint checks
 it; the config validates the declaration at load, eagerly, like a group.
 """
 
-# inactive-ok-file: ADR-098 — Proposed. Every mention names it as the decision
-# this module implements; the citation is to the reasoning, not a claim the
-# decision is settled.
-
 from __future__ import annotations
 
 from pathlib import Path

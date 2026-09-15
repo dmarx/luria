@@ -35,10 +35,6 @@ one config's shape while a different config governs the record would build
 directories the project's own machinery doesn't know about.
 """
 
-# inactive-ok-file: ADR-098 — Proposed. Every mention names it as the decision
-# this module implements; the citation is to the reasoning, not a claim the
-# decision is settled.
-
 from __future__ import annotations
 
 import re

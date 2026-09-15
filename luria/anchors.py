@@ -26,10 +26,6 @@ the TARGET — the link is spelled correctly and the thing it names cannot be
 found.
 """
 
-# inactive-ok-file: ADR-100 — Proposed. Every mention names it as
-# the decision this file implements or is written against; the citation
-# is to the reasoning, not a claim the decision is settled.
-
 from __future__ import annotations
 
 import os

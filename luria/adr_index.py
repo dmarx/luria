@@ -37,14 +37,6 @@ the same problem for a brainstorming repo: prose lives in a `.stub`, the
 generator substitutes `{placeholders}`, and tags get their own generated pages.
 """
 
-# inactive-ok-file: ADR-099 — Proposed. Every mention names it as the
-# decision this file implements or is written against; the citation is to
-# the reasoning, not a claim the decision is settled.
-
-# inactive-ok-file: ADR-098 — Proposed. Every mention names it as the
-# decision this file implements or is written against; the citation is to the
-# reasoning, not a claim the decision is settled.
-
 from __future__ import annotations
 
 import copy
@@ -184,7 +176,7 @@ def read_document(path: Path) -> tuple[dict, str]:
     Every `Adr` construction parsed the file it names, and the schemes are
     loaded once per consumer rather than once per run: a 729-document record
     parsed 16,872 frontmatter blocks on one `luria lint`, about 23 per
-    document, and the YAML was 70 of its 95 seconds (#249).
+    document, and the YAML was 70 of its 95 seconds (ADR-103, #249).
 
     The returned mapping is copied per caller. `Adr` folds derived fields into
     the dict it is handed, and a shared mapping would let one reading's
