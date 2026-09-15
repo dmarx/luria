@@ -4,8 +4,8 @@
 
 **Proposed** — not in force yet — an open question, so citing it as settled is what the reference report catches.
 
-0 of 105 decisions. Back to the [full index](../README.md).
+1 of 106 decisions. Back to the [full index](../README.md).
 
 | # | Title | Summary | Status |
 |---|---|---|---|
-
+| [ADR-tmp6u7tx](../../../record/decisions.d/ADR-tmp6u7tx.md) | Register the directive vocabulary, and report a near-miss |  | Proposed |
