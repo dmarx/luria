@@ -1,5 +1,5 @@
 # tests/test_mention_ok.py
-"""`mention-ok:` — a code is named, not cited (ADR-tmphuvta).
+"""`mention-ok:` — a code is named, not cited (ADR-105).
 
 Every other acknowledgement asserts something about a code's state, and so
 retires correctly when that state changes: `inactive-ok` says the document is

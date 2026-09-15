@@ -120,7 +120,7 @@ outlive what they excuse.
 |---|---|---|
 | `inactive-ok:` | a citation of a document that is not in force (`retired-citations`) | the code(s) |
 | `unresolved-ok:` | a code that resolves to no document, kept deliberately (`unresolved-codes`) | the code(s) |
-| `mention-ok:` | a code that is *named, not cited* — the text makes no claim about the document's state, so this covers both findings above and does not retire when that state changes ([ADR-tmphuvta](../record/decisions.d/ADR-tmphuvta.md)) | the code(s) |
+| `mention-ok:` | a code that is *named, not cited* — the text makes no claim about the document's state, so this covers both findings above and does not retire when that state changes ([ADR-105](../record/decisions.d/ADR-105.md)) | the code(s) |
 | `url-ok:` | a remote code linked to a hand-written URL instead of the constructed one (`hand-written-urls`) | the code(s) |
 | `target-ok:` | a relative link target that resolves to nothing from where the prose renders (`broken-targets`) | the exact target |
 | `source-ok:` | an identifier whose upstream title is not the one recorded (`source-mismatch`) — a preferred nickname, a trimmed subtitle, a title that changed between versions | the identifier(s) |

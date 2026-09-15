@@ -146,7 +146,7 @@ DIRECTIVE = "inactive-ok"
 # A fixture number in a test, or another project's decision cited as history.
 DANGLING_DIRECTIVE = "unresolved-ok"
 # The third kind, and the one that asserts nothing about the record: this code
-# is NAMED, not cited (ADR-tmphuvta). A specimen quoted as evidence, prose about a
+# is NAMED, not cited (ADR-105). A specimen quoted as evidence, prose about a
 # code's literal spelling, a demonstration of a moved address. The other two
 # retire when the state they claim stops holding, which is right for them; this
 # one must survive that, because its claim was never about state.
@@ -271,7 +271,7 @@ class Scan:
         holding — which is how they retire. A `mention-ok` is used when the
         code it names is cited in its scope at all, in either pool, whatever
         the document's state: its claim is about the text, and rotting it on a
-        status change is the failure it exists to prevent (ADR-tmphuvta)."""
+        status change is the failure it exists to prevent (ADR-105)."""
         if ann.kind == MENTION_DIRECTIVE:
             pools = (self.cited, self.dangling)
         elif ann.kind == DANGLING_DIRECTIVE:
@@ -381,7 +381,7 @@ def _scan(files: list[Path] | None = None, docs: dict[str, Doc] | None = None) -
         def mention_for(code: str, where: int):
             """The `mention-ok` covering this site, if any. Tried wherever a
             finding could arise, because a mention claims nothing and so
-            answers both questions at once (ADR-tmphuvta)."""
+            answers both questions at once (ADR-105)."""
             return next((a for a in usable_mentions
                          if code in a.codes and a.covers(where)), None)
         # Naming a code in a directive is not citing it — true of a live
