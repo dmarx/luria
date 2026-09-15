@@ -6,6 +6,7 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 
 ## Currently — [September 2026](2026-09.md)
 
+- [15 Sep 03:08 — One stale code silently un-acknowledged four others](2026-09.md#one-stale-code-silently-un-acknowledged-four-others)
 - [15 Sep 02:46 — The report said so for seven days: eleven decisions the merge never flipped](2026-09.md#the-report-said-so-for-seven-days-eleven-decisions-the-merge-never-flipped)
 - [15 Sep 02:23 — The 36 scans were 8 corpora and one render done twice](2026-09.md#the-36-scans-were-8-corpora-and-one-render-done-twice)
 - [15 Sep 01:06 — A frozen dataclass that cannot be hashed, and a test that cited three ghosts](2026-09.md#a-frozen-dataclass-that-cannot-be-hashed-and-a-test-that-cited-three-ghosts)
@@ -72,9 +73,9 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 
 ## All books
 
-109 entries across 2 books, newest first.
+110 entries across 2 books, newest first.
 
 | Book | Entries | First | Last |
 |---|--:|---|---|
-| [2026-09](2026-09.md) | 63 | 2026-09-03 | 2026-09-15 |
+| [2026-09](2026-09.md) | 64 | 2026-09-03 | 2026-09-15 |
 | [2026-08](2026-08.md) | 46 | 2026-08-03 | 2026-08-28 |

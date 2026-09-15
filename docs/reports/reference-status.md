@@ -22,23 +22,16 @@ Nothing unacknowledged. ✅
 
 A reference the reader cannot follow: the code names no document in this record. A typo, a number carried in from another project, and an illustrative code in an example all look identical from here — telling them apart takes a human, so this is a report, not an error.
 
-**3 codes unaccounted for.** Not listed: 83 mentions marked deliberate with an `unresolved-ok:` comment (same syntax and scopes as `inactive-ok:` above).
+**2 codes unaccounted for.** Not listed: 88 mentions marked deliberate with an `unresolved-ok:` comment (same syntax and scopes as `inactive-ok:` above).
 
-
-### ADR-919 — resolves to nothing (4 unmarked sites · 5 other mentions marked deliberate)
-
-- [`luria/doc_refs.py:414`](../../luria/doc_refs.py)
-- [`luria/doc_refs.py:957`](../../luria/doc_refs.py)
-- [`luria/doc_refs.py:959`](../../luria/doc_refs.py)
-- [`tests/test_documents_cache.py:125`](../../tests/test_documents_cache.py)
 
 ### ADR-000 — resolves to nothing (1 unmarked site · 2 other mentions marked deliberate)
 
 - [`tests/test_lint.py:467`](../../tests/test_lint.py)
 
-### ADR-157 — resolves to nothing (1 unmarked site · 2 other mentions marked deliberate)
+### ADR-919 — resolves to nothing (1 unmarked site · 8 other mentions marked deliberate)
 
-- [`luria/doc_refs.py:349`](../../luria/doc_refs.py)
+- [`tests/test_documents_cache.py:125`](../../tests/test_documents_cache.py)
 
 ## Files that opt out of reference checking
 
@@ -48,6 +41,4 @@ None. Every scanned file is checked. ✅
 
 ## Directives that no longer apply
 
-- luria/doc_refs.py:38: annotation names DP-017, which does resolve here
-- luria/migrate.py:58: annotation names DP-017, which does resolve here
-- record/decisions.d/ADR-046.md:51: annotation names DP-017, which does resolve here
+None. Every annotation still governs something. ✅
