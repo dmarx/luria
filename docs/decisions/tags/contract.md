@@ -4,7 +4,7 @@
 
 **contract**.
 
-1 of 103 decisions. Back to the [full index](../README.md).
+1 of 104 decisions. Back to the [full index](../README.md).
 
 | # | Title | Summary | Status |
 |---|---|---|---|

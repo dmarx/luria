@@ -4,7 +4,7 @@
 
 **The record** — what the four layers hold, and the rules between them.
 
-50 of 103 decisions. Back to the [full index](../README.md).
+51 of 104 decisions. Back to the [full index](../README.md).
 
 | # | Title | Summary | Status |
 |---|---|---|---|
@@ -58,3 +58,4 @@
 | [ADR-099](../../../record/decisions.d/ADR-099.md) | An anchor is an id, and a fragment link is checked against one | The generator anchored assembled documents and journal entries with `<a name="x">`. That is reachable on a real navigation and nowhere else, so every one of those links worked in the repository and on GitHub and landed at the top of the page on the published site — 89 of the 100 fragment links in this repository. Emits `id` instead, and adds a check with a `--fix`, so the next hand-written anchor cannot put it back. Corrects ADR-094, whose measurement was right and whose stated cause was not. | Active |
 | [ADR-100](../../../record/decisions.d/ADR-100.md) | A generated link uses the anchor the page offers, and luria owns the slug | A journal entry had two addresses: luria's durable `<a id="{timestamp}">`, which its contents list linked, and the heading's own slug, which is what the published page puts on the ¶ anchor and in Quartz's sidebar. Both resolve; only one is what a reader copies. The generated links switch to the heading, which means luria now has to compute `github-slugger`'s slug itself — validated against 288 headings the site actually published, and guarded by a check that every generated fragment resolves. Rejected: putting the timestamp on the heading, which breaks Quartz's sidebar entirely. | Active |
 | [ADR-102](../../../record/decisions.d/ADR-102.md) | The TOML crossing carries comments, because a comment is not a value | `luria upgrade yaml` parsed a TOML config with `tomllib` and wrote the values, which is right — a regex in a `uid` does not survive a byte copy. But a config is documented in its comments, and `tomllib` never sees them: the crossing dropped 273 comment lines in one record and 85 in another, and reported only what it had folded. Comments are now carried to the key they documented, the vocabulary files are round-tripped rather than re-parsed, and the handful whose key does not exist on the far side are printed in full. Rejected: leaving them in git history, which is not where anyone reads a config. | Active |
+| [ADR-tmphuvta](../../../record/decisions.d/ADR-tmphuvta.md) | A mention is not a citation, and says nothing about status |  | Active |
