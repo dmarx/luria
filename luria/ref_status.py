@@ -267,7 +267,65 @@ def scanned_files() -> list[Path]:
     return docs + sorted(set(code))
 
 
+# The scan of the whole corpus, with the fingerprint it was taken at:
+# ((path, mtime_ns, size) per scanned file) → Scan. One `luria lint` calls
+# `scan()` 36 times and 18 of those pass no arguments — identical full-corpus
+# scans, fanned out through `reports.outputs` and `adr_pending.pending`, each
+# re-reading and re-regexing every file in the record (#265).
+#
+# Keyed on a stat fingerprint rather than on content, because unlike the
+# directive scans this one opens the files itself — there is no text handed in
+# to key on. That makes it the same bargain `_LISTING_CACHE` and
+# `_DOCUMENT_CACHE` take, and it has to be: `repair`, `field_edit` and
+# `migrate` rewrite documents mid-run and read them back, so the entry must
+# expire when a writer moves an mtime. The fingerprint covers the whole set, so
+# a document appearing or disappearing is a different corpus too.
+#
+# The `Scan` is shared, not copied, as `_LISTING_CACHE` shares its dicts. No
+# caller mutates one — every use reads `cited`, `dangling`, `annotations` and
+# `unlinted` — and sharing is what keeps `Scan.used`'s identity comparison
+# meaningful across callers. Copying would cost more than the scan it saves.
+_SCAN_CACHE: dict[tuple, Scan] = {}
+
+
+def forget_scan() -> None:
+    """Drop the corpus scan — for a writer that outruns mtime resolution, and
+    for tests that count how often the corpus is scanned."""
+    _SCAN_CACHE.clear()
+
+
+def _fingerprint() -> tuple:
+    out = []
+    for path in scanned_files():
+        try:
+            st = path.stat()
+            out.append((str(path), st.st_mtime_ns, st.st_size))
+        except OSError:
+            out.append((str(path), 0, 0))
+    return tuple(out)
+
+
 def scan(files: list[Path] | None = None, docs: dict[str, Doc] | None = None) -> Scan:
+    """Every citation and every annotation — see `_scan`.
+
+    The no-argument call, which asks about the whole record, is served from a
+    cache keyed on the corpus's stat fingerprint. A call that names its own
+    `files` or `docs` is asking about a corpus the fingerprint does not
+    describe, so it is computed every time.
+
+    The returned `Scan` is shared between callers and must be treated as
+    read-only."""
+    if files is not None or docs is not None:
+        return _scan(files, docs)
+    key = _fingerprint()
+    hit = _SCAN_CACHE.get(key)
+    if hit is None:
+        hit = _scan(files, docs)
+        _SCAN_CACHE[key] = hit
+    return hit
+
+
+def _scan(files: list[Path] | None = None, docs: dict[str, Doc] | None = None) -> Scan:
     """Every citation and every annotation, with each citation pointing at the
     annotation that excuses it (if any).
 
