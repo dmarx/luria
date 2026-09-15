@@ -120,6 +120,7 @@ outlive what they excuse.
 |---|---|---|
 | `inactive-ok:` | a citation of a document that is not in force (`retired-citations`) | the code(s) |
 | `unresolved-ok:` | a code that resolves to no document, kept deliberately (`unresolved-codes`) | the code(s) |
+| `mention-ok:` | a code that is *named, not cited* — the text makes no claim about the document's state, so this covers both findings above and does not retire when that state changes ([ADR-tmphuvta](../record/decisions.d/ADR-tmphuvta.md)) | the code(s) |
 | `url-ok:` | a remote code linked to a hand-written URL instead of the constructed one (`hand-written-urls`) | the code(s) |
 | `target-ok:` | a relative link target that resolves to nothing from where the prose renders (`broken-targets`) | the exact target |
 | `source-ok:` | an identifier whose upstream title is not the one recorded (`source-mismatch`) — a preferred nickname, a trimmed subtitle, a title that changed between versions | the identifier(s) |
@@ -165,6 +166,23 @@ documentation (including this page) shows codes as *syntax*. A directive is
 for the cases where the code should stay bare prose and still be excused.
 
 ## Fixture codes
+
+A mention is not a citation. Some references name a code without asserting
+anything about it — a specimen quoted as evidence, prose about a code's literal
+spelling, a demonstration of what a moved address looks like. `mention-ok:` is
+the word for those, and the reason it exists is that the others retire on a
+change it should survive: `unresolved-ok` claims the code resolves to nothing,
+which stops being true the day somebody allocates that number, and the
+annotation then goes stale for a reason that has nothing to do with why it was
+written.
+
+It is used while the code it names is cited in its scope, whatever the
+document's state, and reported stale the one way that is still about the
+annotation: when nothing in scope names the code any more.
+
+Prefer the `FX` prefix below where you control the spelling — it needs no
+acknowledgement at all. Reach for `mention-ok:` when the spelling is the point,
+as in prose *about* a code that a regex once failed to match.
 
 Documentation and tests need example codes that look real but
 deliberately resolve to nothing in this record. Rather than sprinkle

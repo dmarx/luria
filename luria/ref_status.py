@@ -145,6 +145,12 @@ DIRECTIVE = "inactive-ok"
 # The mirror-image acknowledgement: this code names nothing here *on purpose*.
 # A fixture number in a test, or another project's decision cited as history.
 DANGLING_DIRECTIVE = "unresolved-ok"
+# The third kind, and the one that asserts nothing about the record: this code
+# is NAMED, not cited (ADR-tmphuvta). A specimen quoted as evidence, prose about a
+# code's literal spelling, a demonstration of a moved address. The other two
+# retire when the state they claim stops holding, which is right for them; this
+# one must survive that, because its claim was never about state.
+MENTION_DIRECTIVE = "mention-ok"
 
 
 def _codes(spec: str) -> tuple[set[str], str]:
@@ -204,6 +210,7 @@ def annotations(path: Path, text: str, known: set[str],
     `unresolved-ok` must name one that doesn't (else there is nothing to
     excuse). Same check, opposite sign."""
     resolvable = directive != DANGLING_DIRECTIVE
+    mention = directive == MENTION_DIRECTIVE
     found = []
     for d in directives.find(path, text, {directive}):
         spec = " ".join(d.args)
@@ -214,6 +221,11 @@ def annotations(path: Path, text: str, known: set[str],
         elif BARE_NUMBER_RE.search(CODE_RE.sub("", spec)):
             example = f"{next(iter(schemes()), 'ADR')}-012"
             problem = f"has a bare number — write the full code (e.g. {example})"
+        elif mention:
+            # Named, not cited: whether the document exists or is in force is a
+            # fact about the record, and this annotation claims neither. It
+            # still has to name a code, which the two checks above enforce.
+            pass
         elif resolvable and (unknown := sorted(
                 c for c in codes if not _exists(c, known))):
             problem = f"names unknown document(s): {', '.join(unknown)}"
@@ -252,8 +264,22 @@ class Scan:
     unlinted: list[Path] = field(default_factory=list)
 
     def used(self, ann: Annotation) -> bool:
-        pool = self.dangling if ann.kind == DANGLING_DIRECTIVE else self.cited
-        return any(c.excused_by is ann for sites in pool.values() for c in sites)
+        """Whether this annotation is still doing its job.
+
+        For the two state-asserting kinds that means it suppressed a finding,
+        so each falls out of use exactly when the state it claims stops
+        holding — which is how they retire. A `mention-ok` is used when the
+        code it names is cited in its scope at all, in either pool, whatever
+        the document's state: its claim is about the text, and rotting it on a
+        status change is the failure it exists to prevent (ADR-tmphuvta)."""
+        if ann.kind == MENTION_DIRECTIVE:
+            pools = (self.cited, self.dangling)
+        elif ann.kind == DANGLING_DIRECTIVE:
+            pools = (self.dangling,)
+        else:
+            pools = (self.cited,)
+        return any(c.excused_by is ann
+                   for pool in pools for sites in pool.values() for c in sites)
 
 
 def scanned_files() -> list[Path]:
@@ -346,9 +372,18 @@ def _scan(files: list[Path] | None = None, docs: dict[str, Doc] | None = None) -
             continue
         anns = annotations(path, text, known)
         dangling_anns = annotations(path, text, known, DANGLING_DIRECTIVE)
-        result.annotations += anns + dangling_anns
+        mention_anns = annotations(path, text, known, MENTION_DIRECTIVE)
+        result.annotations += anns + dangling_anns + mention_anns
         usable = [a for a in anns if not a.problem]
         usable_dangling = [a for a in dangling_anns if not a.problem]
+        usable_mentions = [a for a in mention_anns if not a.problem]
+
+        def mention_for(code: str, where: int):
+            """The `mention-ok` covering this site, if any. Tried wherever a
+            finding could arise, because a mention claims nothing and so
+            answers both questions at once (ADR-tmphuvta)."""
+            return next((a for a in usable_mentions
+                         if code in a.codes and a.covers(where)), None)
         # Naming a code in a directive is not citing it — true of a live
         # annotation and of an example of one alike, which is why this matches
         # the *shape* rather than the parsed directives. Without it an
@@ -356,7 +391,8 @@ def _scan(files: list[Path] | None = None, docs: dict[str, Doc] | None = None) -
         # the syntax would inflate the report.
         from . import remotes as _remotes
         text = _blank(text, directives.shaped_spans(
-            text, {DIRECTIVE, DANGLING_DIRECTIVE, _remotes.URL_OK}))
+            text, {DIRECTIVE, DANGLING_DIRECTIVE, MENTION_DIRECTIVE,
+                   _remotes.URL_OK}))
         # A code inside a URL is part of an address, not a citation. Linking
         # out to another project's ADR-013 is the *correct* way to name a
         # foreign document (ADR-009), and counting it as a local reference
@@ -388,7 +424,8 @@ def _scan(files: list[Path] | None = None, docs: dict[str, Doc] | None = None) -
                     code = ref.composed
                     where = text.count("\n", 0, ref.start) + 1
                     excuse = next((a for a in usable_dangling
-                                   if code in a.codes and a.covers(where)), None)
+                                   if code in a.codes and a.covers(where)),
+                                  None) or mention_for(code, where)
                     result.dangling.setdefault(code, []).append(
                         Citation(path, where, code, excuse))
             text = _blank(text, spans)
@@ -407,7 +444,8 @@ def _scan(files: list[Path] | None = None, docs: dict[str, Doc] | None = None) -
                     continue
                 if code not in docs:
                     excuse = next((a for a in usable_dangling
-                                   if code in a.codes and a.covers(line_no)), None)
+                                   if code in a.codes and a.covers(line_no)),
+                                  None) or mention_for(code, line_no)
                     result.dangling.setdefault(code, []).append(
                         Citation(path, line_no, code, excuse))
                     continue
@@ -415,9 +453,15 @@ def _scan(files: list[Path] | None = None, docs: dict[str, Doc] | None = None) -
                 # in-force one means nothing, and counting it as "used" would
                 # keep the annotation alive after its document went Active —
                 # which is precisely when it should be reported as stale.
-                excuse = None if docs[code].active else next(
-                    (a for a in usable
-                     if code in a.codes and a.covers(line_no)), None)
+                # A mention is recorded against an in-force document too. There
+                # is no finding to suppress there — `flagged` skips active
+                # documents and `acknowledged_count` does not count them — but
+                # it is what keeps the annotation `used` when the document it
+                # names goes Active, which is the moment it exists to survive.
+                excuse = mention_for(code, line_no) if docs[code].active else (
+                    next((a for a in usable
+                          if code in a.codes and a.covers(line_no)), None)
+                    or mention_for(code, line_no))
                 result.cited.setdefault(code, []).append(
                     Citation(path, line_no, code, excuse))
     for pool in (result.cited, result.dangling):
@@ -525,10 +569,12 @@ def _unexcused_under(result: "Scan", ann: Annotation,
 
     Scoped by path and by the directive's own reach, because an annotation is
     only ever responsible for what it actually covered."""
-    loose = ann.kind == DANGLING_DIRECTIVE
-    pool = result.dangling if loose else result.cited
+    loose = ann.kind in (DANGLING_DIRECTIVE, MENTION_DIRECTIVE)
+    pools = ((result.cited, result.dangling)
+             if ann.kind == MENTION_DIRECTIVE else
+             (result.dangling,) if loose else (result.cited,))
     out: dict[str, int] = {}
-    for code, sites in pool.items():
+    for code, sites in [kv for pool in pools for kv in pool.items()]:
         if code not in ann.codes:
             continue
         if not loose:
@@ -571,7 +617,7 @@ def stale_annotations(result: Scan | None = None,
             out.append(line)
         elif not result.used(ann):
             named = ", ".join(sorted(ann.codes))
-            if ann.kind == DANGLING_DIRECTIVE:
+            if ann.kind in (DANGLING_DIRECTIVE, MENTION_DIRECTIVE):
                 why = f"nothing in scope cites {named}"
             else:
                 active = sorted(c for c in ann.codes

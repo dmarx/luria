@@ -35,11 +35,12 @@ renders into `docs/devlog/` (ADR-020). `link_base()` maps a path to the
 directory its links must resolve from.
 """
 
-# unresolved-ok-file: ADR-919, ADR-157, DP-018 — illustrative codes in this
-# module's prose. DP-018 became visible once scheme references were found by
-# pattern rather than by hardcoded kind; it was always here. DP-017 left this
-# list when a principle took that number: the mention resolves now, so there is
-# nothing to acknowledge.
+# unresolved-ok-file: ADR-919, ADR-157 — illustrative codes in this module's
+# prose. Two codes have left this list: DP-017, when a principle took that
+# number and the mention resolved; and the DP code beside it, which never had
+# a citation here at all — the composed remote spelling on the wikilink line
+# is blanked before the local pattern reads it, so there was nothing to
+# acknowledge. Naming it in this sentence would put one back.
 from __future__ import annotations
 
 import re

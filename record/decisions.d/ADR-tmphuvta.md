@@ -1,0 +1,146 @@
+---
+# Don't copy this file by hand — run `luria new adr`, which assigns the
+# identity and fills in the fields a machine can compute. WHICH identity
+# depends on the scheme's `allocate` mode: `filing` (the default) takes the
+# next free number on the spot, `merge` mints a temporary code that
+# `luria concretize` numbers where merges serialize (ADR-049). The kinds are the
+# config: every scheme, fragment directory and journal in luria.toml is one, so
+# `luria new <kind>` works for a scheme the moment it is declared.
+#
+# Numbering is sequential and carries information (it's the order decisions were
+# made). The filename is the code and nothing else; the title goes in `title:`
+# below, where correcting it costs an edit rather than a rename plus every link
+# (ADR-013).
+#
+# This frontmatter is the ONLY place these facts live. The index and the per-tag
+# pages are generated from it (ADR-004) — never edit them by hand; run
+# `luria index`.
+
+# Active | Proposed | Deferred | Superseded | Rejected. Supersede when the
+# CHOICE changes: set the old one to `status: Superseded`, name the successor
+# in `superseded_by: ADR-tmphuvta` (a reference field: checked, resolved, an edge
+# the index and the site render), and leave its body intact. A qualifying
+# note for anything the field cannot say goes in `status_note:` — prose,
+# like `summary:`, so a code in it is a citation. When the
+# choice stands and only a REASON was wrong, correct this body in place and
+# bump `version:` below — the rule objects to silent revision, not to editing.
+status: Active
+
+# What the index shows in place of the code. Repeat it as the body's `# ADR-tmphuvta:`
+# heading — someone reading the file alone needs one — and `luria lint` checks
+# that the two agree, because two copies of a string is a projection that drifts.
+title: 'A mention is not a citation, and says nothing about status'
+
+# Which revision of this decision's claim you are reading. Standard frontmatter
+# for every scheme, and it moves rarely here: a decision that CHANGES is
+# superseded by a new one, not edited. Bump it when the same choice is restated
+# more broadly — scope widened, wording generalized — and say what changed in a
+# `history:` entry. Shown in the index only when it is not 1.
+version: 1
+
+# Browsing categories, pushed down onto the decision itself. One is normal; more
+# than one is fine. A tag not listed in tags.yaml still works.
+tags:
+- record
+- mechanism
+
+date: '2026-09-15'
+
+# Optional. The issue(s) this decision came from: '#123'.
+issue: '#270'
+
+# Optional but wanted: the one-blob description the index table shows. Without
+# it the table falls back to the title, which is usually too terse to browse by.
+# Say what was decided AND what was rejected — the index is read far more often
+# than the decision, and "why not the obvious thing" is what people come for.
+# This field is prose, so it carries links like any other prose; the rest of the
+# frontmatter is data and stays plain. (`origin:` on a principle is
+# prose for the same reason — the generator renders it.)
+---
+
+<!-- mention-ok-file: DP-018 — the next principle number, used as this decision's worked example. Named, not cited: nothing here claims it resolves or does not -->
+
+# ADR-tmphuvta: A mention is not a citation, and says nothing about status
+
+## Context
+
+Every acknowledgement luria has asserts something about a code's *state*.
+`inactive-ok` says the document is not in force; `unresolved-ok` says the code
+resolves to nothing. That is deliberate and it is why they retire correctly: the
+state changes, the claim stops being true, and `luria lint` reports the
+annotation as no longer applying.
+
+But some references name a code without claiming anything about it. [ADR-093](ADR-093.md)
+quotes three codes as *specimens* — evidence for a decision about fixture
+namespaces. [ADR-046](ADR-046.md)'s prose is about the literal spelling `DP-17` and the regex
+branch that did not match it. `migrate.py` uses a code to demonstrate what a
+moved document's old address looks like. None of these asserts that the document
+is retired, or absent, or anything else. They are mentions.
+
+Today they are written as `unresolved-ok`, which is the closest available word
+and is false: it claims the code resolves to nothing, which is true only until
+somebody writes that document. Then the acknowledgement goes stale for a reason
+that has nothing to do with why it was written, and — because `scan` drops an
+annotation with a `problem` whole — takes every other code in the same
+annotation down with it.
+
+This is not hypothetical. The DP scheme is at 17; `DP-018` is the next number
+and two acknowledgements name it today. `DP-017` already did exactly this: the
+principle was written, three acknowledgements went stale, and one of them
+silently stopped excusing four unrelated citations until it was noticed a week
+later.
+
+## Decision
+
+A third acknowledgement, `mention-ok:`, says a code is **named, not cited** —
+the text makes no claim about the document's state. It suppresses both the
+retired-citation and the unresolved-code finding at its sites.
+
+The load-bearing part is what "still applies" means for it. Every other
+acknowledgement is used when it suppresses a finding, so it falls out of use
+exactly when the state it asserts stops holding — which is correct for them and
+would be fatal here. A `mention-ok` counts as used when **the code it names is
+cited within its scope, whatever the document's state**. Its claim is about the
+text, and the text does not change when the record does.
+
+It still goes stale the one way that matters: when nothing in its scope cites
+the code at all, because then the mention it describes is gone. That is the
+signal worth keeping, and it is the only one that was ever about this
+annotation rather than about the document.
+
+## Alternatives
+
+- **Respell illustrative codes with the reserved `FX` prefix ([ADR-093](ADR-093.md)).** The
+  right answer when you control the spelling, and it stays the first choice.
+  It fails when the spelling *is* the point: [ADR-046](ADR-046.md) describes a bug about
+  `DP-17` being the code spelling a regex missed, and respelling it would
+  falsify the thing being described.
+- **Exempt code spans and backticks from the reference scan.** Rejected before
+  and still rejected: the scan is unmasked on purpose, because a reference in a
+  comment or a fenced block is still a claim about why the code is the way it
+  is. "In backticks" is not the same as "makes no claim" — most backticked
+  codes in this record are ordinary citations.
+- **Keep using `unresolved-ok` and absorb the churn.** This is the status quo
+  and its cost is now measured: every such acknowledgement is a scheduled
+  failure, firing on the day someone allocates that number, at a moment
+  unrelated to the work that trips it. `DP-018` is one `luria new dp` away.
+- **Give the acknowledgement an expiry (`until`, [ADR-095](ADR-095.md)).** Wrong axis. The
+  problem is not that the claim ages; it is that the claim was about the wrong
+  thing.
+
+## Consequences
+
+A mention now has a word that stays true, so the annotation stops being a
+liability that fires on an unrelated event. The `DP-018` failure does not
+happen, and the acknowledgements that survive a status change are the ones that
+were never about status.
+
+The cost is a suppression that does not expire, which is the thing this record
+is most suspicious of. Two things hold it down. It is counted in the reports
+like every other acknowledgement — a suppression nobody counts is a suppression
+nobody notices — and it still reports as stale when nothing in scope cites the
+code. What it cannot do is tell you that a mention *should* have been a
+citation; that is a judgement, and this stays a report rather than a check.
+
+`FX` remains the better tool where it applies. This is for the mentions whose
+spelling cannot move.
