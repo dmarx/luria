@@ -24,10 +24,6 @@ today's config cannot bind it to two schemes. When a second source of
 obligations exists, a contradiction is a configuration error, never a winner.
 """
 
-# inactive-ok-file: ADR-098 — Proposed. Every mention names it as the
-# decision this file implements or is written against; the citation is to the
-# reasoning, not a claim the decision is settled.
-
 from __future__ import annotations
 
 import re
@@ -489,7 +485,7 @@ def violations(contract: Contract, rel: str, meta: dict,
     A derived field (#216) is read off the document before anything else runs,
     so every check below sees one field whether it was computed or written —
     with one exception, taken first: writing a derived field down is itself
-    the finding."""
+    the finding (ADR-089)."""
     out: list[str] = []
     for name in derive.written(meta, contract.derived):
         rule = next(r for r in contract.derived if r.field == name)

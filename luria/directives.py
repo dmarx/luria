@@ -55,7 +55,7 @@ defaults to remember:
 Expiry
 ------
 `until <YYYY-MM-DD>` anywhere in the arguments gives a directive a deadline
-(#58). After it passes, `find` does not return the directive at all, so every
+(ADR-095, #58). After it passes, `find` does not return the directive at all, so every
 check behaves as if it were never written — uniform for the same reason the
 scopes are, because this is the one place directives are read. The date is
 inclusive: `until 2026-10-01` is the last day it holds.
@@ -158,7 +158,7 @@ class Directive:
     line: int                 # 1-based, where the comment starts
     span: tuple[int, int]     # char offsets of the whole comment in the text
     lines: frozenset[int]     # every line this directive governs
-    # `until <YYYY-MM-DD>` (#58), lifted out of `args` so the tokens that
+    # `until <YYYY-MM-DD>` (ADR-095, #58), lifted out of `args` so the tokens that
     # remain are the ones the directive is ABOUT. None when no expiry was
     # written — and also None when one was written and could not be read,
     # which `problems` says out loud rather than letting a typo mean "forever".

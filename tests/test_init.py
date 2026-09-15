@@ -1,9 +1,5 @@
 """`luria init` never overwrites, and says something useful when it skips
 the one file an agent reads first (ADR-037)."""
-# inactive-ok-file: ADR-098 — Proposed. Named as the decision these
-# fixtures are shaped by; the citation is to the reasoning, not a claim
-# the decision is settled.
-
 from pathlib import Path
 
 from luria import init

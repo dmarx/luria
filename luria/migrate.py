@@ -58,10 +58,6 @@ it is the one artifact whose job is to remember them.
 # unresolved-ok-file: DP-017 — a demonstration code in the comments below,
 # standing in for a moved document's old address
 
-# inactive-ok-file: ADR-098 — Proposed. Every mention names it as the decision
-# this module implements; the citation is to the reasoning, not a claim the
-# decision is settled.
-
 from __future__ import annotations
 
 import re

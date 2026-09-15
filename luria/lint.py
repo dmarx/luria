@@ -51,22 +51,6 @@ one so only the unconsidered ones stay listed — acknowledged rows never fail.
 Exit 0 when clean; exit 1 with one line per violation.
 """
 
-# inactive-ok-file: ADR-100 — Proposed. Every mention names it as
-# the decision this file implements or is written against; the citation
-# is to the reasoning, not a claim the decision is settled.
-
-# inactive-ok-file: ADR-094 — Proposed. Named as the decision whose two
-# halves this check keeps together; the citation is to its measurement,
-# not a claim it is settled.
-
-# inactive-ok-file: ADR-099 — Proposed. Every mention names it as the
-# decision this file implements or is written against; the citation is to
-# the reasoning, not a claim the decision is settled.
-
-# inactive-ok-file: ADR-098 — Proposed. Every mention names it as the
-# decision this file implements or is written against; the citation is to the
-# reasoning, not a claim the decision is settled.
-
 from __future__ import annotations
 
 import datetime as dt

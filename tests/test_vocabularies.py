@@ -8,10 +8,6 @@ reference, not a tag, not a status. Declared explicitly, closed, with a
 default that is an effective value and never a rewrite.
 """
 
-# inactive-ok-file: ADR-098 — Proposed. Every mention names it as the
-# decision this file implements or is written against; the citation is to the
-# reasoning, not a claim the decision is settled.
-
 from __future__ import annotations
 
 import yaml

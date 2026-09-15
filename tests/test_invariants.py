@@ -6,10 +6,6 @@ names that something, the record made the claim and never said what it meant
 was wrong.
 """
 
-# inactive-ok-file: ADR-098 — Proposed. Every mention names it as the
-# decision this file implements or is written against; the citation is to the
-# reasoning, not a claim the decision is settled.
-
 from __future__ import annotations
 
 from _config import merged

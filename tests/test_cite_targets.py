@@ -14,14 +14,6 @@ to 195.
 only on purpose now — which is exactly when it needs saying (ADR-100).
 """
 
-# inactive-ok-file: ADR-100 — Proposed. Every mention names it as
-# the decision this file implements or is written against; the citation
-# is to the reasoning, not a claim the decision is settled.
-
-# inactive-ok-file: ADR-094 — Proposed. Named as the decision whose two
-# halves this check keeps together; the citation is to its measurement,
-# not a claim it is settled.
-
 from __future__ import annotations
 
 from pathlib import Path

@@ -15,10 +15,6 @@ borrows a live sequence's prefix is the hazard that rule exists for.
 """
 
 
-# inactive-ok-file: ADR-098 — Proposed. Named as the decision these
-# fixtures are shaped by; the citation is to the reasoning, not a claim
-# the decision is settled.
-
 from __future__ import annotations
 
 from _config import merged

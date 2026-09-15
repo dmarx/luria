@@ -10,7 +10,7 @@ above the key it was written about.
 `tomllib` returns values. A config's *documentation* is its comments, and the
 first version of `luria upgrade yaml` parsed the one and dropped the other
 without saying so — 273 lines of reasoning in one record, 85 in another, gone
-in a command that reported only what it folded.
+in a command that reported only what it folded (ADR-102).
 
 Values have to be re-encoded rather than copied: a regex in a `uid` escapes
 differently in the two formats, which is why `convert_config` goes through a

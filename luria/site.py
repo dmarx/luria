@@ -48,10 +48,6 @@ was mentioned. The line is composed with wikilinks and expanded by the same
 resolver the record uses everywhere else.
 """
 
-# inactive-ok-file: ADR-101 — Proposed. Named as the decision this
-# module was rewritten to implement; the citation is to its reasoning, not a
-# claim it is settled.
-
 from __future__ import annotations
 
 import fnmatch

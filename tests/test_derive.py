@@ -5,10 +5,6 @@ the derivation resolves everywhere a field is read, writing it down is a
 finding, and a declaration that could never resolve is refused at load.
 """
 
-# inactive-ok-file: ADR-098 — Proposed. Every mention names it as the
-# decision this file implements or is written against; the citation is to the
-# reasoning, not a claim the decision is settled.
-
 from __future__ import annotations
 
 import yaml

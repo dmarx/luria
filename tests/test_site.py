@@ -17,10 +17,6 @@ from luria.config import current, load, rooted
 
 from _scheme import decision
 
-# inactive-ok-file: ADR-101 — Proposed. Named as the decision these
-# assertions were rewritten against; the citation is to its reasoning, not a
-# claim it is settled.
-
 # unresolved-ok-file: ADR-919 — a fixture code, deliberately not real: the
 # point of the test it appears in is that it resolves to nothing.
 

@@ -11,13 +11,6 @@ arrives from a different direction: the fragments live one directory *below*
 the page they assemble into.
 """
 
-# inactive-ok-file: ADR-099 — Proposed. Every mention names it as the
-# decision this file implements or is written against; the citation is to
-# the reasoning, not a claim the decision is settled.
-
-# inactive-ok-file: ADR-098 — Proposed. Every mention names it as the
-# decision this file is written against; the citation is to the reasoning,
-# not a claim the decision is settled.
 import re
 import sys
 from pathlib import Path

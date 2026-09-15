@@ -22,7 +22,7 @@ had ("in the order the index shows them").
 explicit declaration over a derivation, because a template is a genuine second
 source for something luria cannot otherwise know. A written `primary_topic:`
 is not that: it is the same fact as `tags[0]`, stored twice and free to
-disagree. So writing a derived field is a finding, not an override.
+disagree. So writing a derived field is a finding, not an override (ADR-089).
 
 **One template vocabulary, two variable sources (#219).** The spelling is
 `str.format` — the engine `Remote.uri` already renders URLs through, fed here
@@ -31,7 +31,7 @@ is one template language in luria, not a second grammar per feature, and
 `{tags[0]}`, `{first_author}`, `{published:.4}` all mean what they mean
 everywhere else.
 
-**Across a reference (#233).** A second declaration says which document to
+**Across a reference (ADR-092, #233).** A second declaration says which document to
 render against:
 
     schemes:

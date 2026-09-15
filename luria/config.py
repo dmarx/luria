@@ -59,14 +59,6 @@ which files they cover — the exact class of bug ADR-002 exists to prevent. One
 config object, resolved once from disk.
 """
 
-# inactive-ok-file: ADR-099 — Proposed. Every mention names it as the
-# decision this file implements or is written against; the citation is to
-# the reasoning, not a claim the decision is settled.
-
-# inactive-ok-file: ADR-098 — Proposed. Every mention names it as the decision
-# this module implements; the citation is to the reasoning, not a claim the
-# decision is settled.
-
 from __future__ import annotations
 
 import os
@@ -464,7 +456,9 @@ _NUMBER_CACHE: dict[Path, tuple[tuple[int, int], int | None]] = {}
 # `documents()` runs on every lint, index and link pass", and the inner call
 # was cached while the walk and sort around it were not. Profiled serially
 # (`LURIA_JOBS=1`), one lint over a 726-document record called `documents()`
-# 24,960 times and spent 161 of 239 seconds inside it.
+# 24,960 times and spent 161 of 239 seconds inside it. The listing is the
+# second half of ADR-103: one reader for a document, and one walk for the
+# directory it came from.
 _LISTING_CACHE: dict[Path, tuple[tuple[int, int],
                                  dict[int, Path], dict[str, Path]]] = {}
 

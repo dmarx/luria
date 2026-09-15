@@ -1,5 +1,5 @@
 # tests/test_one_reader.py
-"""One reader for a document, read the same way everywhere (DP-4).
+"""One reader for a document, read the same way everywhere (ADR-103, DP-4).
 
 `read_document` is the cache, and its invalidation is the bargain that makes
 caching safe here at all: a writer bumps the file's mtime, so the entry

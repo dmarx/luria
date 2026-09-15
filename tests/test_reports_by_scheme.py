@@ -11,10 +11,6 @@ headline read `pending()`, never the rendered file, and these tests pin that
 the counts they publish do not move.
 """
 
-# inactive-ok-file: ADR-098 — Proposed. Named as the decision these
-# fixtures are shaped by; the citation is to the reasoning, not a claim
-# the decision is settled.
-
 from __future__ import annotations
 
 import yaml

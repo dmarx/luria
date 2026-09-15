@@ -41,7 +41,7 @@ the 1st, gone on the 2nd — because somebody writing `until 2026-10-01` means
 the last day it holds, not the first day it does not.
 
 `until <date>` works on every directive, not just `inactive-ok`; it is part of
-the shape, like the scope suffix. An ISO date and nothing else — a duration
+the shape, like the scope suffix ([ADR-095](../record/decisions.d/ADR-095.md)). An ISO date and nothing else — a duration
 ("two weeks") would need an anchor the file does not carry, and the date *is*
 that anchor, written down.
 
