@@ -503,6 +503,31 @@ def _declared_number(path: Path) -> int | None:
     return int(m.group(1)) if m else None
 
 
+# prefix → the regex that reads its codes. `ref_status.scan` asks a scheme for
+# both of these once per line, per scheme, per file: one `luria lint` over this
+# repository touched `pattern` 911,410 times and `temp_pattern` 912,206. They
+# were properties that rebuilt an f-string and called `re.compile` on each of
+# those accesses. `re` memoizes internally so it was not 1.8M compilations, but
+# it was that many interpolations and cache probes on the lint's hottest loop.
+#
+# Cached here rather than on the instance, deliberately. `Scheme` is frozen and
+# `functools.cached_property` does work on a frozen dataclass — it writes
+# straight into `__dict__`, around the blocked `__setattr__` — but on Python
+# 3.11, which this package still supports, it takes a per-attribute lock, and
+# this is read from `parallel.pmap`'s thread pool. A module-level `lru_cache` is
+# lock-free on the fast path. It is also keyed on the prefix rather than the
+# scheme because `Scheme` is frozen but NOT hashable: it carries dict fields, so
+# an `lru_cache` over the instance would raise the first time it was called.
+@lru_cache(maxsize=None)
+def _code_pattern(prefix: str) -> re.Pattern:
+    return re.compile(rf"\b{prefix}[- ](?P<num>\d{{1,4}})\b")
+
+
+@lru_cache(maxsize=None)
+def _temp_pattern(prefix: str, tail: str) -> re.Pattern:
+    return re.compile(rf"\b{prefix}-(?P<tail>{tail})\b")
+
+
 @dataclass(frozen=True)
 class Scheme:
     """A family of referable documents — `ADR-012`, `RFC-7`, `SPEC-3`.
@@ -741,7 +766,7 @@ class Scheme:
 
     @property
     def pattern(self):
-        return re.compile(rf"\b{self.prefix}[- ](?P<num>\d{{1,4}})\b")
+        return _code_pattern(self.prefix)
 
     # Kept as a class attribute because every regex here composes it with a
     # prefix; the definition and the predicate both live at module level.
@@ -749,7 +774,7 @@ class Scheme:
 
     @property
     def temp_pattern(self):
-        return re.compile(rf"\b{self.prefix}-(?P<tail>{self.TEMP_TAIL})\b")
+        return _temp_pattern(self.prefix, self.TEMP_TAIL)
 
     def temp_of(self, path: Path) -> str | None:
         """The temporary tail a filename carries, or None if it isn't one."""
