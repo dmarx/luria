@@ -334,6 +334,13 @@ class PlainField:
     required: bool = False
     many: bool = False
     required_when: RequiredWhen | None = None
+    # No two documents in the scheme hold one value here (ADR-tmp92495, #165).
+    # A type like the others: `many` says the field holds a list, `unique`
+    # says its values are identifiers rather than descriptions. Opt-in for
+    # the reason `invariant` is — a record that has not said its identifiers
+    # are unique has not said they are, and a check over every field would
+    # report a finding on `status` for every document in the corpus.
+    unique: bool = False
     # What the field is for (#279). A plain field has no vocabulary to carry
     # the explanation, so without this there is nowhere at all to say what
     # `stage:` or `consensus:` means — the case with the least description
@@ -362,6 +369,12 @@ class FieldGroup:
     name: str
     fields: tuple[str, ...]
     require: str = "at-least-one"
+    # Every field in the group is unique, said once (ADR-tmp92495, #165). It is
+    # sugar and deliberately nothing more: each field is checked on its own,
+    # so an `arxiv` and a `doi` that happen to be the same string do not
+    # collide. Recognising one paper under two KINDS of identifier is
+    # normalisation, which #165 separates out and does not ask for.
+    unique: bool = False
     # What the group is, at rest (#279). `source` on LIT means *a citable
     # identifier*, which is the thing `arxiv`/`doi`/`url` have in common and
     # which none of the three names on its own.
@@ -1450,6 +1463,7 @@ def _field_groups(prefix: str, raw: dict) -> tuple[FieldGroup, ...]:
                 f"luria.yaml: schemes.{prefix}.field_groups.{name} lists no "
                 f"fields, so it constrains nothing")
         groups.append(FieldGroup(name=str(name), fields=fields, require=rule,
+                                 unique=bool(spec.get("unique", False)),
                                  label=str(spec.get("label", "")).strip(),
                                  blurb=str(spec.get("blurb", "")).strip()))
     return tuple(groups)
@@ -1657,6 +1671,18 @@ def _fields(prefix: str, raw: dict, scheme_dir: Path, root: Path,
             rules.append(rule)
         name = spec.get("vocabulary")
         declares_groups = bool(spec.get("groups"))
+        unique = bool(spec.get("unique", False))
+        if unique and name:
+            # A closed vocabulary exists to be shared: `topics` has thirteen
+            # terms and hundreds of documents. Unique over it caps the scheme
+            # at one document per term, which is never what a project means —
+            # so this is a refusal rather than a check nobody would trip
+            # (ADR-tmp92495, #165).
+            raise ValueError(
+                f"{where}: `unique` over a field drawn from vocabulary "
+                f"{str(name)!r} would allow one document per term — a closed "
+                f"vocabulary is shared by design; drop `vocabulary` if these "
+                f"values are identifiers")
         if not name:
             required = bool(spec.get("required", False))
             many = bool(spec.get("many", False))
@@ -1666,16 +1692,18 @@ def _fields(prefix: str, raw: dict, scheme_dir: Path, root: Path,
             # the record page something to print. That is exactly what being
             # built in used to say about `tags` (ADR-098).
             if (when is None and not required and rule is None
-                    and not declares_groups and not many):
+                    and not declares_groups and not many and not unique):
                 raise ValueError(f"{where}: declares no type — `vocabulary = "
                                  f"\"NAME\"` types the field, `derive` says "
                                  f"where its value comes from, `many` says it "
-                                 f"holds a list, `required_when` says when it "
-                                 f"applies, `groups` says which of its values "
-                                 f"combine, and a table with none of them "
-                                 f"constrains nothing")
+                                 f"holds a list, `unique` says no two "
+                                 f"documents share a value, `required_when` "
+                                 f"says when it applies, `groups` says which "
+                                 f"of its values combine, and a table with "
+                                 f"none of them constrains nothing")
             plain.append(PlainField(field=str(field), required=required,
                                     many=many, required_when=when,
+                                    unique=unique,
                                     label=str(spec.get("label", "")).strip(),
                                     blurb=str(spec.get("blurb", "")).strip()))
             # No vocabulary to derive membership from, so every group here
