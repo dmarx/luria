@@ -4,8 +4,8 @@
 
 **Proposed** — not in force yet — an open question, so citing it as settled is what the reference report catches.
 
-0 of 105 decisions. Back to the [full index](../README.md).
+1 of 106 decisions. Back to the [full index](../README.md).
 
 | # | Title | Summary | Status |
 |---|---|---|---|
-
+| [ADR-106](../../../record/decisions.d/ADR-106.md) | An invariant is a property of the relation, not of the chain that walks it | `invariant` becomes a key on a declared reference, so the assertion that two related documents share a field holds without a chain to walk it and may cross schemes. Chains stay within one scheme and are refused at load when they do not, in place of the KeyError they used to raise. Rejected: teaching the chain walker to carry far-scheme nodes, and making a chain's `output` optional so an invariant could be declared with no view. | Proposed |

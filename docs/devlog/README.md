@@ -6,6 +6,7 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 
 ## Currently — [September 2026](2026-09.md)
 
+- [16 Sep 04:27 — A crash in the chain walker was the wrong feature in the right place](2026-09.md#a-crash-in-the-chain-walker-was-the-wrong-feature-in-the-right-place)
 - [15 Sep 05:26 — Naming a code in the reason is how you create the citation you are excusing](2026-09.md#naming-a-code-in-the-reason-is-how-you-create-the-citation-you-are-excusing)
 - [15 Sep 03:30 — Firing the new guard on the case that motivated it](2026-09.md#firing-the-new-guard-on-the-case-that-motivated-it)
 - [15 Sep 03:08 — One stale code silently un-acknowledged four others](2026-09.md#one-stale-code-silently-un-acknowledged-four-others)
@@ -75,9 +76,9 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 
 ## All books
 
-112 entries across 2 books, newest first.
+113 entries across 2 books, newest first.
 
 | Book | Entries | First | Last |
 |---|--:|---|---|
-| [2026-09](2026-09.md) | 66 | 2026-09-03 | 2026-09-15 |
+| [2026-09](2026-09.md) | 67 | 2026-09-03 | 2026-09-16 |
 | [2026-08](2026-08.md) | 46 | 2026-08-03 | 2026-08-28 |
