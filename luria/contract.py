@@ -71,7 +71,7 @@ class Field:
     # The vocabulary's own prose, printed after a closed-set violation
     # (#273). Carried on the field because that is what a check has in hand;
     # declared on the vocabulary, because that is what it is about.
-    note: str = ""
+    alert: str = ""
     because: tuple[str, ...] = ()
 
 
@@ -226,7 +226,7 @@ def for_scheme(scheme) -> Contract:
             required=vocab.required or (prior is not None and prior.required),
             many=vocab.many, vocabulary=vocab.name, closed=vocab.closed,
             values=tuple(declared(vocab.values_by_name)), default=vocab.default,
-            required_when=vocab.required_when, note=vocab.note,
+            required_when=vocab.required_when, alert=vocab.alert,
             because=because)
     for plain in scheme.plain_fields:
         prior = fields.get(plain.field)
@@ -565,7 +565,7 @@ def violations(contract: Contract, rel: str, meta: dict,
         present = sorted(tags & group.tags)
         shown = ", ".join(sorted(group.tags))
         cite = group_because(contract, group)
-        tail = f"\n    ↳ {group.note}" if group.note else ""
+        tail = f"\n    ↳ {group.alert}" if group.alert else ""
         if group.require == "exactly-one" and len(present) != 1:
             out.append(f"{rel}: `{group.name}` wants exactly one of {shown} "
                        f"— has {', '.join(present) or 'none'} {cite}{tail}")
@@ -602,7 +602,7 @@ def _vocabulary_violations(contract: Contract, field: Field, rel: str,
         return []
     file = next((b.split(": ", 1)[0] for b in field.because
                  if b.endswith(": values")), "")
-    tail = f"\n    ↳ {field.note}" if field.note else ""
+    tail = f"\n    ↳ {field.alert}" if field.alert else ""
     return [f"{rel}: `{field.name}: {value}` is not in the `{field.vocabulary}` "
             f"vocabulary ({file}) — the values are {', '.join(field.values)}"
             f"{tail}"

@@ -129,10 +129,10 @@ def test_a_group_with_no_tags_is_a_config_error(tmp_path, monkeypatch):
         config.current()
 
 
-NOTED = CONFIG.replace(
+ALERTED = CONFIG.replace(
     "            require: exactly-one\n",
     "            require: exactly-one\n"
-    "            note: >-\n"
+    "            alert: >-\n"
     "              Exactly one because strength is an axis, not a pile. If an\n"
     "              argument needs a word these three cannot say, add it here.\n",
     1)
@@ -140,21 +140,21 @@ NOTED = CONFIG.replace(
 
 def test_a_group_can_print_its_own_advice(tmp_path, monkeypatch):
     """The rule is mechanical and the reason for it is not (#273). A group
-    has exactly one `require`, so one note needs no per-rule key."""
-    errors = errors_for(tmp_path, monkeypatch, "gap", cfg=NOTED)
+    has exactly one `require`, so one alert needs no per-rule key."""
+    errors = errors_for(tmp_path, monkeypatch, "gap", cfg=ALERTED)
     assert len(errors) == 1
     assert "wants exactly one of" in errors[0]
     assert "Exactly one because strength is an axis, not a pile." in errors[0]
-    assert "\n    \u21b3 " in errors[0], "the note continues the finding rather than being a second one"
+    assert "\n    \u21b3 " in errors[0], "the alert continues the finding rather than being a second one"
 
 
-def test_a_group_note_reaches_the_excluded_by_finding_of_the_SAME_group(
+def test_a_group_alert_reaches_the_excluded_by_finding_of_the_SAME_group(
         tmp_path, monkeypatch):
     """`excluded_by` is that group's rule stated from the other side, so it
-    carries that group's note — and not a different group's."""
+    carries that group's alert — and not a different group's."""
     cfg = CONFIG.replace(
         "            excluded_by:\n",
-        "            note: >-\n"
+        "            alert: >-\n"
         "              A failure mode is how the argument breaks; `sound` says\n"
         "              it does not.\n"
         "            excluded_by:\n", 1)
@@ -164,15 +164,15 @@ def test_a_group_note_reaches_the_excluded_by_finding_of_the_SAME_group(
     assert "A failure mode is how the argument breaks" in hit[0]
 
 
-def test_one_group_s_note_does_not_leak_onto_another_s_finding(
+def test_one_group_s_alert_does_not_leak_onto_another_s_finding(
         tmp_path, monkeypatch):
-    """The note rides its own group. `strength` carrying one says nothing
+    """The alert rides its own group. `strength` carrying one says nothing
     about a `failure` violation."""
-    errors = errors_for(tmp_path, monkeypatch, "sound", "gap", cfg=NOTED)
+    errors = errors_for(tmp_path, monkeypatch, "sound", "gap", cfg=ALERTED)
     hit = [e for e in errors if "excludes `failure`" in e]
     assert hit and "\u21b3" not in hit[0], hit
 
 
-def test_a_group_without_a_note_is_unchanged(tmp_path, monkeypatch):
+def test_a_group_without_an_alert_is_unchanged(tmp_path, monkeypatch):
     errors = errors_for(tmp_path, monkeypatch, "gap")
     assert len(errors) == 1 and "\u21b3" not in errors[0]

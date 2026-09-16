@@ -1,6 +1,6 @@
 ---
 status: Proposed
-title: "A rule carries its own note, on the thing the rule belongs to"
+title: "A rule carries its own alert, on the thing the rule belongs to"
 version: 1
 tags:
 - mechanism
@@ -11,13 +11,23 @@ summary: >-
   finished or merely short is a fact only the record knows, and it had
   nowhere to say it — so the message reads as "pick one of these", which is
   how a vocabulary stops growing. `Vocabulary` and `TagGroup` each gain a
-  `note:`, printed as a continuation of their own violation. Rejected: the
-  per-rule keys the issue proposed (`closed_note`, `required_note`), which
-  turn out to be unnecessary once the note rides the carrier rather than the
+  `alert:`, printed as a continuation of their own violation. Rejected: the
+  per-rule keys the issue proposed (`closed_alert`, `required_alert`), which
+  turn out to be unnecessary once the alert rides the carrier rather than the
   field.
 ---
 
-# ADR-tmppr2mz: A rule carries its own note, on the thing the rule belongs to
+# ADR-tmppr2mz: A rule carries its own alert, on the thing the rule belongs to
+
+## The name
+
+`alert`, after review. It was `note` while the feature was being built, and
+`warning` was the other candidate — but luria already grades findings as
+warnings and violations, and `lint.fail_on` promotes one to the other. A key
+called `warning:` on a vocabulary would read as a severity dial. What this
+holds is the sentence printed *when the rule fires*, and the finding it rides
+is a violation, so naming it for a severity it does not set would be wrong
+twice over.
 
 ## Context
 
@@ -45,19 +55,19 @@ the project knows which it has.
 
 ## Decision
 
-**`Vocabulary` and `TagGroup` each take an optional `note:`**, printed after
+**`Vocabulary` and `TagGroup` each take an optional `alert:`**, printed after
 their own finding, indented under it:
 
     fields:
       tags:
         vocabulary: topics
         closed: true
-        note: >-
+        alert: >-
           Closed so every tag is one somebody chose, not because the list is
           finished — add a value here rather than reaching for the nearest
           wrong one.
 
-A `TagGroup`'s note prints on its `require` findings and on `excluded_by`,
+A `TagGroup`'s alert prints on its `require` findings and on `excluded_by`,
 which is the same rule stated from the other side.
 
 Opt-in, and inert when absent: a vocabulary or group without one produces
@@ -65,31 +75,31 @@ byte-identical messages to before.
 
 ## The carrier, not the field
 
-The issue proposed per-rule keys on the field — `closed_note:`,
-`required_note:`. That is rejected, and the reason is the thing worth
+The issue proposed per-rule keys on the field — `closed_alert:`,
+`required_alert:`. That is rejected, and the reason is the thing worth
 recording.
 
 A **field** can fail several ways: absent, wrong shape, outside the closed
-set. One note on the field would print *"add a value to the vocabulary"* on a
-missing-field error, where it is simply wrong — so a field-level note needs a
+set. One alert on the field would print *"add a value to the vocabulary"* on a
+missing-field error, where it is simply wrong — so a field-level alert needs a
 per-rule key to be correct at all, and then there is one key per rule for
 every rule a field can carry.
 
 A **vocabulary** has one thing to explain: its values, and whether the set is
-closed. A **group** has one `require`. Attaching the note to those gives each
+closed. A **group** has one `require`. Attaching the alert to those gives each
 one exactly one failure to explain, and the per-rule spelling disappears —
-`note:` is unambiguous on a carrier that owns a single rule.
+`alert:` is unambiguous on a carrier that owns a single rule.
 
-The general form: **a note belongs with the rule, and a rule belongs to
+The general form: **an alert belongs with the rule, and a rule belongs to
 something smaller than a field.**
 
 ## Consequences
 
 **Findings can now be two lines.** Anything parsing lint output by line is
 affected. The continuation is indented and prefixed, so it is
-distinguishable from a second finding, and no note means no second line.
+distinguishable from a second finding, and no alert means no second line.
 
-**An older luria ignores the key**, so a record can adopt `note:` before the
+**An older luria ignores the key**, so a record can adopt `alert:` before the
 release that reads it, and get the old message meanwhile rather than a config
 error. Checked against 0.22.0 rather than assumed.
 
@@ -103,7 +113,7 @@ field.
 
 **Per-rule keys on the field** — the issue's proposal. Above.
 
-**One `note:` on the field, printed on every violation it produces.** Simpler
+**One `alert:` on the field, printed on every violation it produces.** Simpler
 to implement and wrong for the missing-field case, which is the most common
 violation a required field has.
 

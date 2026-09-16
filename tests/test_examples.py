@@ -382,14 +382,14 @@ def test_a_world_the_file_does_not_name_is_a_finding(example):
 
 def test_a_closed_vocabulary_can_print_its_own_advice(example):
     """A closed set says what is allowed; only the record knows whether the
-    list is finished or merely short (#273). Without the note the message
+    list is finished or merely short (#273). Without the alert the message
     reads as "pick one of these", which is how a vocabulary stops growing."""
     root = example("world-bible")
     cfg = root / "luria.yaml"
     cfg.write_text(cfg.read_text().replace(
         "      worlds:\n        vocabulary: worlds\n",
         "      worlds:\n        vocabulary: worlds\n"
-        "        note: >-\n"
+        "        alert: >-\n"
         "          Closed so every trajectory is one somebody plotted. A new\n"
         "          one is an edit to this table, not a workaround.\n"))
     config.reset()
@@ -400,11 +400,11 @@ def test_a_closed_vocabulary_can_print_its_own_advice(example):
     found = [e for e in errors if "`worlds: Z` is not in the `worlds`" in e]
     assert found, errors
     assert "Closed so every trajectory is one somebody plotted." in found[0]
-    assert "\n    \u21b3 " in found[0], "the note reads as a continuation, not a second finding"
+    assert "\n    \u21b3 " in found[0], "the alert reads as a continuation, not a second finding"
 
 
-def test_a_vocabulary_without_a_note_says_exactly_what_it_did_before(example):
-    """The note is opt-in, and its absence changes no message."""
+def test_a_vocabulary_without_an_alert_says_exactly_what_it_did_before(example):
+    """The alert is opt-in, and its absence changes no message."""
     root = example("world-bible")
     doc = root / "record" / "scenes.d" / "SCENE-002.md"
     doc.write_text(doc.read_text().replace("worlds:\n- A\n", "worlds:\n- Z\n"))
