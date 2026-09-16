@@ -384,12 +384,24 @@ class Reference:
     a list was stringified and its first code checked, the rest ignored —
     structured input coerced to prose and half-read, with no finding. A
     scalar field given a list is now a finding; a plural field checks and
-    resolves every element, and each becomes an edge (#141)."""
+    resolves every element, and each becomes an edge (#141).
+
+    `invariant` names the field both ends of the relation must share a value
+    in — the assertion `A extends B` makes and never spells out. It lives
+    here, on the relation, rather than only on a chain, because the assertion
+    is a property of the relation itself: a chain adds transitivity and a
+    rendered page, neither of which a relation needs in order to mean
+    something. Declaring it here is also the only way to assert it over a
+    relation that crosses schemes, since a chain may not (#272)."""
     field: str
     scheme: str
     required: bool = True
     many: bool = False
     converse: str = ""
+    # The field both ends must hold a value in — see the class docstring.
+    # Unset asserts nothing, which is the default because most relations
+    # assert no shared field.
+    invariant: str = ""
     # What a relation IS, as data rather than as a TOML comment nothing could
     # render, quote or scaffold from (#254). The same two keys a vocabulary
     # value carries, for the same reason: `label` is what a view calls it,
@@ -1377,6 +1389,7 @@ def _references(prefix: str, raw: dict) -> tuple[Reference, ...]:
                                converse=str(spec.get("converse", "")),
                                label=str(spec.get("label", "")),
                                blurb=str(spec.get("blurb", "")),
+                               invariant=str(spec.get("invariant", "")).strip(),
                                required_when=_required_when(where, spec,
                                                             required)))
     return tuple(found)
@@ -1619,11 +1632,19 @@ class Chain:
     # the word outlived what it described.
     facet_by: tuple[str, ...] = ("status",)
     # The field a step in this chain asserts it shares with its neighbours
-    # (#214). Unset means the chain asserts nothing about any field, which is
-    # the default because most relations do not: `source:` joins a practice to
-    # its paper across two vocabularies that were separated on purpose, and a
-    # check assuming otherwise fires on every cross-domain citation a record
-    # was designed to allow.
+    # (#214) — both with the neighbour directly, and with every other member
+    # of the line it lands in, which is the part only a chain can assert.
+    #
+    # Unset asserts nothing, and that is the default because a relation with
+    # no shared field is the ordinary case rather than the careless one: what
+    # two documents have in common is often the thing the relation itself
+    # names, and no other field repeats it. A check with no such field to read
+    # would report every line, and a report that fires on everything ranks
+    # nothing (DP-15).
+    #
+    # The edge half of this is also declarable on the relation, where it
+    # applies whether or not a chain walks the field, and where it may cross
+    # schemes — see `Reference.invariant` (#272).
     invariant: str = ""
 
 
@@ -2068,6 +2089,20 @@ def load(root: Path | None = None, text: str | None = None,
     )
 
 
+def nameable(scheme) -> set[str]:
+    """Every field a scheme can hold, whatever table declares it.
+
+    One set rather than four, because every consumer that has to say "this
+    names a field the scheme does not declare" wants the same four tables:
+    `requires`, `references`, `vocabularies` and the plain `fields`. Since
+    ADR-098 `tags` arrives through `vocabularies` like any other; `status`
+    stays nameable undeclared because it alone has a default vocabulary."""
+    return ({v.field for v in scheme.vocabularies}
+            | {f.field for f in scheme.plain_fields}
+            | {r.field for r in scheme.references}
+            | set(scheme.requires) | {"status"})
+
+
 def _chains(raw: dict, schemes: dict, root: Path) -> dict[str, Chain]:
     """Every declared chain, checked against the schemes it walks.
 
@@ -2086,14 +2121,7 @@ def _chains(raw: dict, schemes: dict, root: Path) -> dict[str, Chain]:
         raw_facets = spec.get("facet_by", ("status",))
         facet_by = tuple(str(f) for f in (
             [raw_facets] if isinstance(raw_facets, str) else raw_facets))
-        # Every axis is a declared field now — `status` and `tags` both
-        # arrive through `vocabularies` like any other (ADR-098).
-        # `status` stays nameable undeclared because it has a default
-        # vocabulary; nothing else does.
-        known = ({v.field for v in schemes[prefix].vocabularies}
-                 | {f.field for f in schemes[prefix].plain_fields}
-                 | set(schemes[prefix].requires) | declared
-                 | {"status"})
+        known = nameable(schemes[prefix])
         for field in facet_by:
             if field not in known:
                 raise ValueError(
@@ -2115,6 +2143,20 @@ def _chains(raw: dict, schemes: dict, root: Path) -> dict[str, Chain]:
                         f"nothing types walks no edges and renders an empty "
                         f"page (declared: "
                         f"{', '.join(sorted(declared)) or 'none'})")
+                # A chain is a sequence within one scheme. Walking a relation
+                # that leaves it used to reach a target the walker had never
+                # loaded and raise `KeyError` mid-render (#272); refusing here
+                # says which key is wrong, and where the assertion belongs.
+                far = next(r.scheme for r in schemes[prefix].references
+                           if r.field == field)
+                if far != prefix:
+                    raise ValueError(
+                        f"{where}: `{key}` names {field!r}, which points at "
+                        f"{far} rather than {prefix} — a chain is a sequence "
+                        f"within one scheme, so there is no line to walk "
+                        f"across the boundary. To assert a shared field over "
+                        f"this relation, declare `invariant` on "
+                        f"schemes.{prefix}.references.{field} instead")
         if not spec.get("output"):
             raise ValueError(f"{where}: needs an `output` — the page the "
                              f"sequences render to")
@@ -2162,19 +2204,16 @@ def _check_conditions(prefix: str, scheme) -> None:
     from .statuses import vocabulary as status_words
     from .vocabularies import declared as declared_values
 
-    nameable = {*BUILT_IN_CONDITION_FIELDS, *scheme.requires,
-                *(r.field for r in scheme.references),
-                *(v.field for v in scheme.vocabularies),
-                *(f.field for f in scheme.plain_fields)}
+    known = nameable(scheme)
     vocab_of = {v.field: v for v in scheme.vocabularies}
 
     for field, when in _conditions(scheme):
         where = f"luria.yaml: schemes.{prefix}.fields.{field}.required_when"
-        if when.on not in nameable:
+        if when.on not in known:
             raise ValueError(
                 f"{where}: `{when.on}` is not a field {prefix} declares, so "
                 f"the condition can never hold and `{field}` is never "
-                f"required (nameable: {', '.join(sorted(nameable))})")
+                f"required (nameable: {', '.join(sorted(known))})")
         allowed: tuple[str, ...] | None = None
         if when.on == "status":
             allowed = status_words(scheme)
@@ -2188,6 +2227,31 @@ def _check_conditions(prefix: str, scheme) -> None:
                 f"`{when.on}` takes, so the condition can never hold and "
                 f"`{field}` is never required "
                 f"(values: {', '.join(allowed)})")
+
+
+def _check_invariants(prefix: str, scheme, schemes: dict) -> None:
+    """Every `references.<field>.invariant` against both ends of the relation.
+
+    Both ends, because the assertion is symmetric: `invariant = "tags"` says
+    the two documents share a tag, and a far scheme that cannot hold `tags` at
+    all makes every single edge a finding. That is the same failure the chain
+    check refuses — a declaration that reports everything says nothing — and
+    it is easier to make here, where the near scheme holding the field looks
+    like enough."""
+    for ref in scheme.references:
+        if not ref.invariant:
+            continue
+        where = (f"luria.yaml: schemes.{prefix}.references.{ref.field}"
+                 f".invariant")
+        for end, target in ((prefix, scheme), (ref.scheme, schemes[ref.scheme])):
+            known = nameable(target)
+            if ref.invariant not in known:
+                raise ValueError(
+                    f"{where}: names {ref.invariant!r}, which {end} does not "
+                    f"declare — a relation asserting a shared value in a "
+                    f"field one end cannot hold reports every edge and means "
+                    f"nothing (nameable on {end}: "
+                    f"{', '.join(sorted(known))})")
 
 
 def _check_derivations(prefix: str, scheme, schemes=None) -> None:
@@ -2425,6 +2489,7 @@ def _schemes(raw: dict, root: Path, scaffolding: bool = False,
     # reported as the missing scheme rather than as a missing field on it.
     for prefix, scheme in schemes.items():
         _checked_converses(prefix, scheme.references, schemes)
+        _check_invariants(prefix, scheme, schemes)
     return schemes
 
 
