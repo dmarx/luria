@@ -299,3 +299,91 @@ def test_a_malformed_from_says_so(tmp_path, monkeypatch):
     root = project(tmp_path, monkeypatch, FOLLOW.replace("from: source[0]", "from: source[]"))
     with pytest.raises(ValueError, match="is not a reference"):
         config.current()
+
+
+# --- a whole field derives what the source holds, a list included (#276) -----
+
+# `tags` on LIT, plural, and a SOTA field that takes the whole of it.
+PLURAL = """
+schemes:
+  LIT:
+    axis: tags
+    fields:
+      tags:
+        many: true
+  SOTA:
+    axis: tags
+    fields:
+      tags:
+        derive: '{tags}'
+        from: paper
+        many: true
+"""
+
+
+def test_a_whole_field_derives_the_source_list(tmp_path, monkeypatch):
+    """`{tags[0]}` picks one element; `{tags}` is the field itself, so the
+    derived field holds what the source holds."""
+    root = project(tmp_path, monkeypatch, PLURAL)
+    paper(root, 1, extra="tags:\n- optimizers\n- stability")
+    path = practice(root, 1, source=["LIT-001"], paper_code="LIT-001")
+    assert meta_of(path)["tags"] == ["optimizers", "stability"]
+
+
+def test_the_derived_list_reads_as_values_rather_than_as_none(
+        tmp_path, monkeypatch):
+    """The failure this exists to prevent. A list against a contract saying
+    one value is read as *no* values, so every view grouping by the field
+    stops being written — silently, because nothing fails."""
+    root = project(tmp_path, monkeypatch, PLURAL)
+    paper(root, 1, extra="tags:\n- optimizers")
+    practice(root, 1, source=["LIT-001"], paper_code="LIT-001")
+    field = next(f for f in contract.for_scheme(sota()).fields
+                 if f.name == "tags")
+    assert field.many
+    assert contract.values_of(field, ["optimizers"]) == ["optimizers"]
+
+
+def test_the_tag_pages_of_a_derived_axis_are_written(tmp_path, monkeypatch):
+    """What the scalar reading emptied: a scheme whose axis is derived still
+    gets a page per value."""
+    from luria import vocabularies
+    root = project(tmp_path, monkeypatch, PLURAL)
+    paper(root, 1, extra="tags:\n- optimizers\n- stability")
+    practice(root, 1, source=["LIT-001"], paper_code="LIT-001")
+    pages = vocabularies.pages(sota(), adr_index.load_scheme(sota()))
+    assert {p.name for p in pages} == {"optimizers.md", "stability.md"}
+
+
+def test_a_plural_source_read_whole_without_many_is_refused(
+        tmp_path, monkeypatch):
+    """Eagerly, because the alternative was silent."""
+    project(tmp_path, monkeypatch, PLURAL.replace("""        derive: '{tags}'
+        from: paper
+        many: true""", """        derive: '{tags}'
+        from: paper"""))
+    with pytest.raises(ValueError, match="holds a list too — declare `many`"):
+        config.current()
+
+
+def test_many_against_a_single_valued_source_is_refused(tmp_path, monkeypatch):
+    """The other direction, named from the source rather than from here."""
+    project(tmp_path, monkeypatch, merged(FOLLOW, {"schemes": {"SOTA": {
+        "fields": {"published": {"many": True}}}}}))
+    with pytest.raises(ValueError, match="holds one value and"):
+        config.current()
+
+
+def test_an_indexed_derivation_still_refuses_many(tmp_path, monkeypatch):
+    """`{tags[0]}` picks one element out of a list however plural the source
+    is, so `many` is a contradiction rather than a cardinality question."""
+    project(tmp_path, monkeypatch, PLURAL.replace("'{tags}'", "'{tags[0]}'"))
+    with pytest.raises(ValueError, match="renders one value"):
+        config.current()
+
+
+def test_a_template_with_text_around_it_still_refuses_many(
+        tmp_path, monkeypatch):
+    project(tmp_path, monkeypatch, PLURAL.replace("'{tags}'", "'about {tags}'"))
+    with pytest.raises(ValueError, match="builds a string"):
+        config.current()

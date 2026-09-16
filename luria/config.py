@@ -1464,17 +1464,19 @@ def _fields(prefix: str, raw: dict, scheme_dir: Path, root: Path,
                 f"says what to read off it — `from` alone renders nothing")
         rule = None
         if spec.get("derive") is not None:
-            from .derive import parse_follow
+            from .derive import parse_follow, whole_field
             follow = (parse_follow(f"{where}.from", spec["from"])
                       if spec.get("from") is not None else None)
             rule = parse_derivation(where, str(field), spec["derive"], follow)
-            if spec.get("many"):
+            if spec.get("many") and not whole_field(rule.template):
                 raise ValueError(
                     # `template`, not `spec`: this message quotes the literal
                     # `derive =` value, and `spec` also names the followed
                     # reference, which was written on its own line (#233).
-                    f"{where}: `derive = \"{rule.template}\"` reads one value off "
-                    f"a list, so the field holds one — drop `many`")
+                    f"{where}: `derive = \"{rule.template}\"` renders one value "
+                    f"— an indexed field picks one element out of a list and a "
+                    f"template with text around it builds a string, so the "
+                    f"field holds one — drop `many`")
             if spec.get("required"):
                 raise ValueError(
                     f"{where}: a derived field is present exactly when "
@@ -2267,9 +2269,7 @@ def _check_derivations(prefix: str, scheme, schemes=None) -> None:
     single value is that value, so a derivation off a scalar is a rename
     wearing a derivation's clothes, and renames belong in the frontmatter."""
     from .derive import lone_field
-    plural = {*(v.field for v in scheme.vocabularies if v.many),
-              *(r.field for r in scheme.references if r.many),
-              *(f.field for f in scheme.plain_fields if f.many)}
+    plural = plural_fields(scheme)
     nameable = {*BUILT_IN_CONDITION_FIELDS, "number", *scheme.requires,
                 *(r.field for r in scheme.references),
                 *(v.field for v in scheme.vocabularies),
@@ -2299,7 +2299,8 @@ def _check_derivations(prefix: str, scheme, schemes=None) -> None:
                     f"{where}: `{rule.follow.field}` holds one reference, so "
                     f"`from = \"{rule.follow}\"` indexes something that is not "
                     f"a list — write `{rule.follow.field}`")
-            _check_target_fields(where, rule, ref, schemes)
+            _check_target_fields(where, rule, ref, schemes,
+                                 many=rule.field in plural)
             continue
         for name in rule.sources:
             if name not in nameable:
@@ -2321,9 +2322,54 @@ def _check_derivations(prefix: str, scheme, schemes=None) -> None:
                 f"{where}: `{rule.template}` is just `{rule.sources[0]}` under "
                 f"another name — a template that reads one single-valued field "
                 f"and nothing else renames a field rather than deriving one")
+        _check_cardinality(where, rule, plural, rule.field in plural, prefix)
 
 
-def _check_target_fields(where: str, rule, ref, schemes) -> None:
+def _check_cardinality(where: str, rule, source_plural: set, declared_many: bool,
+                       owner: str) -> None:
+    """A whole-field derivation holds exactly what its source holds.
+
+    Checked rather than inferred, and the reason is the loader: a followed
+    derivation reads a field on another scheme, which may not be assembled
+    when this one's fields are compiled. So `many` is written down and both
+    ways of disagreeing with the source are refused here, where every scheme
+    exists.
+
+    Refusing both directions is the point. A missing `many` used to be
+    accepted and was silent: the field resolved to a list, `contract.values_of`
+    read a list on a scalar field as no values at all, and every page the
+    scheme groups by that field stopped being written — nothing failed, the
+    directory just emptied (#276)."""
+    from .derive import whole_field
+    if not whole_field(rule.template):
+        return
+    source = rule.sources[0]
+    if source in source_plural and not declared_many:
+        raise ValueError(
+            f"{where}: `{source}` on {owner} holds a list and "
+            f"`{rule.template}` reads the whole field, so `{rule.field}` "
+            f"holds a list too — declare `many`. Without it the value "
+            f"resolves as a list against a contract that says one value, "
+            f"which reads as no values at all and quietly empties every view "
+            f"that groups by the field")
+    if declared_many and source not in source_plural:
+        raise ValueError(
+            # The literal `derive =` value, never `rule.spec` — that also
+            # names the followed reference, which was written on its own
+            # line, and quoting it prints backticks inside a quoted string.
+            f"{where}: `many` says `{rule.field}` holds a list, but "
+            f"`{source}` on {owner} holds one value and "
+            f"`derive = \"{rule.template}\"` reads it whole — drop `many`")
+
+
+def plural_fields(scheme) -> set[str]:
+    """Every field of a scheme that holds a list, whatever table declares it."""
+    return {*(v.field for v in scheme.vocabularies if v.many),
+            *(r.field for r in scheme.references if r.many),
+            *(f.field for f in scheme.plain_fields if f.many)}
+
+
+def _check_target_fields(where: str, rule, ref, schemes, many: bool = False) -> None:
     """A followed template against the scheme it actually renders against.
 
     Takes the schemes being built rather than reading `current()`: this runs
@@ -2348,6 +2394,10 @@ def _check_target_fields(where: str, rule, ref, schemes) -> None:
                 f"`from = \"{rule.follow}\"` reads a {ref.scheme} document — "
                 f"so `{rule.field}` resolves to nothing on every document "
                 f"(nameable: {', '.join(sorted(nameable))})")
+    # Against the TARGET's cardinality, which is the whole reason this is a
+    # declaration rather than an inference: the scheme holding the source is
+    # not this one, and is not necessarily assembled yet when it is compiled.
+    _check_cardinality(where, rule, plural_fields(target), many, ref.scheme)
 
 
 def _alias_template(prefix: str, raw) -> str:
