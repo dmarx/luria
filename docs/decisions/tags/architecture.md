@@ -4,7 +4,7 @@
 
 **architecture**.
 
-4 of 106 decisions. Back to the [full index](../README.md).
+4 of 107 decisions. Back to the [full index](../README.md).
 
 | # | Title | Summary | Status |
 |---|---|---|---|

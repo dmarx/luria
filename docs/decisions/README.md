@@ -39,13 +39,13 @@ un-silently revisable, and this record has worked examples of both
 **[ci](tags/ci.md)** (1):
 [069](../../record/decisions.d/ADR-069.md)
 
-**[config](tags/config.md)** (1):
-[082](../../record/decisions.d/ADR-082.md)
+**[config](tags/config.md)** (2):
+[082](../../record/decisions.d/ADR-082.md) · [107](../../record/decisions.d/ADR-107.md)
 
-**[contract](tags/contract.md)** (1):
-[082](../../record/decisions.d/ADR-082.md)
+**[contract](tags/contract.md)** (2):
+[082](../../record/decisions.d/ADR-082.md) · [107](../../record/decisions.d/ADR-107.md)
 
-**By status:** [Active](status/Active.md) (101) · [Proposed](status/Proposed.md) (1) · [Deferred](status/Deferred.md) (0) · [Superseded](status/Superseded.md) (3) · [Rejected](status/Rejected.md) (1)
+**By status:** [Active](status/Active.md) (101) · [Proposed](status/Proposed.md) (2) · [Deferred](status/Deferred.md) (0) · [Superseded](status/Superseded.md) (3) · [Rejected](status/Rejected.md) (1)
 
 ## Chronological
 
@@ -167,4 +167,5 @@ What the status column means in this scheme — the words are luria's, the meani
 | [ADR-104](../../record/decisions.d/ADR-104.md) | A directive's argument list is syntax; its reason is prose |  | Active |
 | [ADR-105](../../record/decisions.d/ADR-105.md) | A mention is not a citation, and says nothing about status |  | Active |
 | [ADR-106](../../record/decisions.d/ADR-106.md) | An invariant is a property of the relation, not of the chain that walks it | `invariant` becomes a key on a declared reference, so the assertion that two related documents share a field holds without a chain to walk it and may cross schemes. Chains stay within one scheme and are refused at load when they do not, in place of the KeyError they used to raise. Rejected: teaching the chain walker to carry far-scheme nodes, and making a chain's `output` optional so an invariant could be declared with no view. | Proposed |
+| [ADR-107](../../record/decisions.d/ADR-107.md) | A whole-field derivation holds what its source holds | `derive = "{tags}"` off a plural source derives a plural field. `many` says so and is checked against the source's scheme rather than inferred, because a followed derivation reads a scheme the loader has not finished assembling. Both directions of disagreement are refused eagerly — the one that was possible before was silent, emptying every tag page of the scheme with nothing failing. Rejected: inferring `many` from the template, and leaving the blanket refusal in place. | Proposed |
 

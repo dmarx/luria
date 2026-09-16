@@ -4,8 +4,9 @@
 
 **contract**.
 
-1 of 106 decisions. Back to the [full index](../README.md).
+2 of 107 decisions. Back to the [full index](../README.md).
 
 | # | Title | Summary | Status |
 |---|---|---|---|
 | [ADR-082](../../../record/decisions.d/ADR-082.md) | A field can be required by another field's value | A record can state what it believes and had no way to state what would change its mind, so provisional documents accumulate with nothing saying what they are provisional pending. `required_when` demands a field only while another field holds one of a listed set of values — one field, one set, no expression language, because the value of the rule is that it is legible in the line that declares it. | Active |
+| [ADR-107](../../../record/decisions.d/ADR-107.md) | A whole-field derivation holds what its source holds | `derive = "{tags}"` off a plural source derives a plural field. `many` says so and is checked against the source's scheme rather than inferred, because a followed derivation reads a scheme the loader has not finished assembling. Both directions of disagreement are refused eagerly — the one that was possible before was silent, emptying every tag page of the scheme with nothing failing. Rejected: inferring `many` from the template, and leaving the blanket refusal in place. | Proposed |
