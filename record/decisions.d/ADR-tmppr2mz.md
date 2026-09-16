@@ -1,0 +1,124 @@
+---
+status: Proposed
+title: "A rule carries its own alert, on the thing the rule belongs to"
+version: 1
+tags:
+- mechanism
+date: '2026-09-16'
+issue: '#273'
+summary: >-
+  A closed vocabulary's finding says what is allowed. Whether the list is
+  finished or merely short is a fact only the record knows, and it had
+  nowhere to say it — so the message reads as "pick one of these", which is
+  how a vocabulary stops growing. `Vocabulary` and `TagGroup` each gain a
+  `alert:`, printed as a continuation of their own violation. Rejected: the
+  per-rule keys the issue proposed (`closed_alert`, `required_alert`), which
+  turn out to be unnecessary once the alert rides the carrier rather than the
+  field.
+---
+
+# ADR-tmppr2mz: A rule carries its own alert, on the thing the rule belongs to
+
+## The name
+
+`alert`, after review. It was `note` while the feature was being built, and
+`warning` was the other candidate — but luria already grades findings as
+warnings and violations, and `lint.fail_on` promotes one to the other. A key
+called `warning:` on a vocabulary would read as a severity dial. What this
+holds is the sentence printed *when the rule fires*, and the finding it rides
+is a violation, so naming it for a severity it does not set would be wrong
+twice over.
+
+## Context
+
+A downstream record closed its tag vocabulary and its owner asked for
+something this library could not give:
+
+> I don't mind setting the vocabulary closed as an enforcement mechanism to
+> move new tags into the official structured vocabulary, but I'm concerned
+> that the enforcement mechanism will mainly discourage the addition of new
+> tags.
+
+The rule was right. The message was the problem:
+
+    `tags: kv-cache-paging` is not in the `topics` vocabulary — the values
+    are training-optimization, systems-optimization, …
+
+Correct, and it sets up *pick the nearest of these* as the path of least
+resistance. In that record it is the failure they had just spent a week
+repairing: eight papers filed under the nearest available word because the
+right topic did not exist when they were filed.
+
+Luria cannot tell the two cases apart and should not try. A list that is
+finished and a list that is merely short produce the same violation, and only
+the project knows which it has.
+
+## Decision
+
+**`Vocabulary` and `TagGroup` each take an optional `alert:`**, printed after
+their own finding, indented under it:
+
+    fields:
+      tags:
+        vocabulary: topics
+        closed: true
+        alert: >-
+          Closed so every tag is one somebody chose, not because the list is
+          finished — add a value here rather than reaching for the nearest
+          wrong one.
+
+A `TagGroup`'s alert prints on its `require` findings and on `excluded_by`,
+which is the same rule stated from the other side.
+
+Opt-in, and inert when absent: a vocabulary or group without one produces
+byte-identical messages to before.
+
+## The carrier, not the field
+
+The issue proposed per-rule keys on the field — `closed_alert:`,
+`required_alert:`. That is rejected, and the reason is the thing worth
+recording.
+
+A **field** can fail several ways: absent, wrong shape, outside the closed
+set. One alert on the field would print *"add a value to the vocabulary"* on a
+missing-field error, where it is simply wrong — so a field-level alert needs a
+per-rule key to be correct at all, and then there is one key per rule for
+every rule a field can carry.
+
+A **vocabulary** has one thing to explain: its values, and whether the set is
+closed. A **group** has one `require`. Attaching the alert to those gives each
+one exactly one failure to explain, and the per-rule spelling disappears —
+`alert:` is unambiguous on a carrier that owns a single rule.
+
+The general form: **an alert belongs with the rule, and a rule belongs to
+something smaller than a field.**
+
+## Consequences
+
+**Findings can now be two lines.** Anything parsing lint output by line is
+affected. The continuation is indented and prefixed, so it is
+distinguishable from a second finding, and no alert means no second line.
+
+**An older luria ignores the key**, so a record can adopt `alert:` before the
+release that reads it, and get the old message meanwhile rather than a config
+error. Checked against 0.22.0 rather than assumed.
+
+**It does not reach the other places a rule lives.** `FieldGroup.require`,
+`required_when`, and a reference's `required` all still produce messages a
+project cannot annotate. They are not the case that was asked for, and each
+would want the same treatment on the same argument — the carrier, not the
+field.
+
+## Alternatives considered
+
+**Per-rule keys on the field** — the issue's proposal. Above.
+
+**One `alert:` on the field, printed on every violation it produces.** Simpler
+to implement and wrong for the missing-field case, which is the most common
+violation a required field has.
+
+**Make the closed-set message generically friendlier** — "add a value to the
+vocabulary if this one belongs" in every project. It would be right for the
+records whose vocabularies are meant to grow and wrong for the ones whose
+closed sets are genuinely closed, which is the distinction this decision
+exists to let a project draw.
