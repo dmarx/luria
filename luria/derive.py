@@ -59,6 +59,17 @@ it against and to the value another document's tag list intersects with.
 Anything with literal text around it — `"LIT-{first_author}-{number}"` — is
 a string, because that is what it was written to build. The rule is the
 template's shape rather than a flag, so nothing has to be declared twice.
+
+**And a whole field returns the whole value, a list included** (#276).
+`"{tags}"` off a plural source derives a plural field: the source holds a
+list, the template does nothing to it, so the derived field holds that list.
+`many` says so, and is checked against the source rather than inferred —
+the source is usually on another scheme, which the loader has not finished
+assembling when the field is read. Both halves of the disagreement are
+refused, because the one that was possible before was silent: the field
+resolved to a list against a contract saying it held one, `values_of` read
+that as no values at all, and every tag page for the scheme stopped being
+written with nothing failing.
 """
 
 from __future__ import annotations
@@ -141,6 +152,23 @@ def lone_field(template: str) -> bool:
     parts = list(string.Formatter().parse(template))
     return (len(parts) == 1 and parts[0][0] == "" and parts[0][1] is not None
             and not parts[0][2])
+
+
+def whole_field(template: str) -> bool:
+    """Whether the template is one field and nothing done to it — no index,
+    no attribute, no format spec.
+
+    This is the only shape whose cardinality is the SOURCE's rather than one.
+    `{tags}` is the field itself, a list included; `{tags[0]}` picks one
+    element out of a list; `{published:.4}` renders. The distinction matters
+    because a derived field that resolves to a list against a contract saying
+    it holds one is read as no values at all, and every view that groups by
+    the field then skips it without saying so (#276)."""
+    import string
+    if not lone_field(template):
+        return False
+    name = list(string.Formatter().parse(template))[0][1]
+    return bool(name) and name.isidentifier()
 
 
 def render(template: str, values: dict):
