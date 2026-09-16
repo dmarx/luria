@@ -42,6 +42,10 @@ schemes:
         - doi
         - url
         require: at-least-one
+        # No two notes name one paper (ADR-tmp92495). Said once on the group
+        # rather than three times on the fields, because a source is what
+        # the three have in common and uniqueness is a property of it.
+        unique: true
     fields:
       status:
         vocabulary: lit-statuses

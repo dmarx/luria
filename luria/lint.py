@@ -323,6 +323,116 @@ def check_alias_collisions(errors: list[str]) -> None:
                     f"template, or a field that tells them apart")
 
 
+def _unique_domains(scheme) -> list[tuple[str, str]]:
+    """Every (field, declaring key) this scheme says is unique.
+
+    A group contributes each of its fields separately — see `FieldGroup.unique`
+    for why the values are not pooled across them."""
+    domains = [(f.field, f"fields.{f.field}")
+               for f in scheme.plain_fields if f.unique]
+    for group in scheme.field_groups:
+        if group.unique:
+            domains += [(f, f"field_groups.{group.name}") for f in group.fields]
+    return domains
+
+
+def _values(meta: dict, field: str) -> list[tuple[str, str]]:
+    """What this document holds in `field`, as (compared, as written).
+
+    Compared case-folded and stripped: a DOI is case-insensitive by
+    specification and a trailing space is nobody's intent, so treating those
+    as two identifiers would let the duplicate through — which is the whole
+    failure being checked for. Both halves are kept because the report has to
+    quote a spelling somebody can find in a file, and the folded form is one
+    nobody wrote. A scalar reads as a list of one, the same coercion
+    `invariants` makes for cardinality."""
+    held = meta.get(field)
+    if held is None:
+        return []
+    items = held if isinstance(held, (list, tuple)) else [held]
+    written = [str(v).strip() for v in items]
+    return [(w.casefold(), w) for w in written if w]
+
+
+def check_unique_fields(errors: list[str]) -> None:
+    """Two documents holding one value in a field declared unique (#165).
+
+    Every existing check asks whether a pointer resolves. This asks the
+    converse — whether two documents resolve to the SAME place — and nothing
+    did. The case that prompted it: repairing one note's `arxiv:` landed it
+    on an identifier another note had held correctly all along, and the lint
+    stayed clean through a corpus that now held two readings, two statuses
+    and two curation judgements for one paper. Citation repair is exactly the
+    operation that collides two documents onto one source, because the wrong
+    identifier was what kept them apart.
+
+    A violation rather than a warning, and the line is where the finding
+    comes from. The warning classes are what Luria notices on its own —
+    citing a retired document is often correct, so it is reported and left to
+    a person. This is a constraint the PROJECT declared: it said no two
+    documents share this value, and two do.
+
+    Nothing is checked until something says `unique`, for the reason
+    `invariant` is opt-in. DP-10 wants a check ON by default, and the answer
+    is that what gets defaulted here is not the check but WHICH FIELD
+    IDENTIFIES, which Luria cannot infer: over every field this would report
+    a `status` collision for every document in the corpus. The shape that
+    could default on — uniqueness over the fields a remote already resolves
+    — is named in ADR-tmp92495 and deferred, because it would change what a
+    green build means for records that never asked.
+
+    **A duplicate retired into its survivor is not a collision, it is the
+    resolution.** Retire-by-status means the losing document stays, keeping
+    its body and its identifier, so a record that has answered this finding
+    correctly still holds both values — and a check that fired on it would
+    make the answer look like the defect. What clears the pair is the
+    POINTER, not a status: the retired note names the one it lost to, in the
+    field the scheme already uses for succession. A document retired for its
+    own unrelated reasons, naming something else, still collides."""
+    for scheme in current().schemes.values():
+        domains = _unique_domains(scheme)
+        if not domains:
+            continue
+        docs = {n: builder.read_document(p)[0]
+                for n, p in scheme.documents().items()}
+        for field, where in domains:
+            holders: dict[str, list[tuple[int, str]]] = {}
+            for number, meta in docs.items():
+                for compared, written in _values(meta, field):
+                    holders.setdefault(compared, []).append((number, written))
+            for _, held in sorted(holders.items()):
+                if len(held) < 2:
+                    continue
+                sharing = {scheme.code(n) for n, _ in held}
+                # Drop everyone who has already yielded to a fellow holder.
+                left = [(n, w) for n, w in held
+                        if not (sharing - {scheme.code(n)})
+                        & _successors(docs[n], scheme)]
+                if len(left) < 2:
+                    continue
+                codes = ", ".join(scheme.code(n) for n, _ in sorted(left))
+                # Every spelling that matched, so a reader who sees two
+                # values quoted knows the comparison folded case or space
+                # rather than wondering why the check fired.
+                spellings = " / ".join(f"`{w}`" for w in
+                                       dict.fromkeys(w for _, w in left))
+                errors.append(
+                    f"luria.yaml: schemes.{scheme.prefix}.{where} declares "
+                    f"`{field}` unique, and {spellings} is held by {codes} — "
+                    f"one value cannot identify {len(left)} documents; "
+                    f"retire all but one, naming the survivor in "
+                    f"`{scheme.successor}:`")
+
+
+def _successors(meta: dict, scheme) -> set[str]:
+    """The codes this document names as what replaced it, upper-cased."""
+    held = meta.get(scheme.successor)
+    if held is None:
+        return set()
+    items = held if isinstance(held, (list, tuple)) else [held]
+    return {str(v).strip().upper() for v in items}
+
+
 def check_journals(errors: list[str]) -> None:
     """A journal entry's path is derived from its `created:` timestamp, and the
     two have to agree — otherwise the ordering the whole scheme rests on says
@@ -968,6 +1078,7 @@ def run() -> None:
     check_view_dirs(errors, rendered)
     check_numbers(errors)
     check_alias_collisions(errors)
+    check_unique_fields(errors)
     check_journals(errors)
     check_version_history(errors)
     check_bare_refs(errors)
