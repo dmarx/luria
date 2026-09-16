@@ -92,8 +92,14 @@ def _codes(doc: Adr, name: str, contract) -> list[str]:
 def _load(chain) -> tuple[dict[str, Adr], dict[str, list[str]],
                           dict[str, list[str]]]:
     """Every document of the chain's scheme, and its two relations, keyed by
-    code and filtered to codes that land — a reference to something outside
-    the scheme is the contract's finding, not a node here."""
+    code.
+
+    Every target lands, and neither filter here is what makes that true: a
+    reference to a code that does not resolve is dropped by `relations.edges`
+    as the contract's finding rather than an edge, and a relation that leaves
+    the scheme entirely is refused when the chain is declared (#272). This
+    used to claim a filter it did not have, and a cross-scheme chain reached
+    `lines_of` with targets that were never loaded."""
     scheme = current().schemes[chain.scheme]
     docs = {d.code: d for d in load_scheme(scheme)}
     # One spine, spelled by one relation or several (#211). Unioned before

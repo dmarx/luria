@@ -1,0 +1,117 @@
+---
+status: Proposed
+title: 'An invariant is a property of the relation, not of the chain that walks it'
+version: 1
+tags:
+- record
+date: '2026-09-16'
+issue: '#272'
+summary: >-
+  `invariant` becomes a key on a declared reference, so the assertion that two
+  related documents share a field holds without a chain to walk it and may
+  cross schemes. Chains stay within one scheme and are refused at load when
+  they do not, in place of the KeyError they used to raise. Rejected: teaching
+  the chain walker to carry far-scheme nodes, and making a chain's `output`
+  optional so an invariant could be declared with no view.
+---
+
+# ADR-tmpb6gjq: An invariant is a property of the relation, not of the chain that walks it
+
+## Context
+
+`invariant` arrived on `chains` ([#214](https://github.com/dmarx/luria/issues/214)), because a chain was the only place
+that already knew two documents were related and had a rendered page to hang
+the reading on. The check itself never needed the chain: `invariants.held()`
+takes a document and a field name, and the edge test is one intersection.
+
+Declaring a chain over a relation that leaves its scheme crashed. `_load`
+builds `docs` from the chain's scheme and fills the spine from
+`relations.edges()`, which is cross-scheme aware and returns targets in the
+far scheme; `lines_of` then reads `neighbours[other]` for a code that was
+never loaded and raises `KeyError`. `_load`'s own docstring claimed a filter
+that would have prevented it and that did not exist.
+
+The crash is the symptom. The thing the consumer wanted was the assertion, not
+the page: `SOTA source LIT` claims a practice and the paper under it are about
+the same thing, and there is no sequence there to render — one practice, one
+paper, a two-node line per practice, which the practice's own page already
+shows.
+
+## Decision
+
+`invariant` is a key on a declared reference:
+
+    schemes:
+      SOTA:
+        references:
+          source:
+            scheme: LIT
+            invariant: tags
+
+It asserts the **edge**: the two documents this relation joins share a value
+in the named field. It holds whether or not a chain walks the field, and the
+relation may cross schemes.
+
+`chains.<name>.invariant` stays, and asserts the edge **and the line** —
+every member of a connected component holding one value in common. That is
+the part only a chain can assert, because transitivity is what a chain is. A
+relation says something about the pair it joins and nothing about what else
+either end is joined to, so the path check does not follow it.
+
+Declared both ways on one field, they are one assertion and report once,
+attributed to the relation: it is the narrower declaration, and its key is
+the one a reader would change.
+
+Two checks come with it, both eager, both for the reason every other
+declaration in `luria.yaml` is validated eagerly — a declaration that fires on
+everything and one that fires on nothing are equally hard to see:
+
+- The invariant field must be nameable on **both** schemes. The assertion is
+  symmetric, so a far scheme that cannot hold the field at all makes every
+  edge a finding.
+- A chain whose `relation` or `sibling` points at another scheme is refused,
+  naming the key and pointing at `references.<field>.invariant`.
+
+## Alternatives considered
+
+- **Teach the walker to carry far-scheme nodes.** `_load` knows the target
+  scheme from the reference spec and could load it. It buys a rendered page
+  nobody asked for, and it needs a new rule for depth and ordering at a node
+  with no outgoing spine, which a far-scheme leaf always is. A chain would
+  stop being a sequence within one family and become a bipartite graph with
+  sequence vocabulary.
+- **Make `output` optional, so an invariant can be declared with no view.**
+  The cheapest patch, and it was the one this issue guessed at. It leaves the
+  assertion filed under a feature whose whole subject is rendering sequences,
+  so the config would say "walk this as a line, transitively, and render
+  nothing" in order to mean "these two share a tag". The far-scheme crash
+  would also still have to be solved separately.
+- **Filter the spine to codes that land, as `_load`'s docstring promised.**
+  This makes the crash go away by making a cross-scheme chain render an empty
+  page, and an empty page is indistinguishable from a correct one ([DP-15](../principles.d/DP-015.md)).
+  Kept only as the reason the refusal is a refusal.
+- **Status quo.** The assertion stays unavailable for any relation that
+  crosses a scheme, which is most of what joins a claim to its evidence, and
+  the crash stays a crash.
+
+## Consequences
+
+`Unbound.chain` is now `Unbound.declared_by`, holding a chain's name or a
+relation as `SCHEME.field`; the report's `Chain` column follows it. Nothing
+outside this repository read the field.
+
+A project that declares `invariant` on both a chain and the relation it walks
+pays for the redundancy in config only — the finding still appears once.
+
+Fired once on a real case before being trusted, as the working agreement asks:
+`anthology-of-the-sota`, whose `SOTA.source` is a cross-scheme relation and
+was the crash in [#272](https://github.com/dmarx/luria/issues/272). With `invariant: tags` declared on it the report
+renders 67 unbound edges over that record's 220 practices, beside the 22 its
+two same-scheme chains already find. Whether 67 is a record to fix or a
+default to leave alone is that record's call, which is the point: it can now
+be asked.
+
+Left open: the report shows relation findings and chain findings in one table
+distinguished only by the `Declared by` column, and an edge finding and a path
+finding still mean different things to a reader who has not read this
+decision.

@@ -242,22 +242,24 @@ def unbound_lineage(base: Path | None = None) -> str:
     """Relations that assert a shared property no field names (#214)."""
     base = current().reports if base is None else base
     edge_hits, path_hits = invariants.findings()
-    declared = [c for c in current().chains.values() if c.invariant]
+    declared = invariants.declared()
 
     out = ["# Relations with nothing named in common", "", STAMP, ""]
     if not declared:
-        out += ["No chain declares an `invariant`, so nothing is checked.", "",
+        out += ["Nothing declares an `invariant`, so nothing is checked.", "",
                 "A relation asserts that two documents have something in "
                 "common. Naming the field that should say *what* — "
-                "`invariant = \"tags\"` on a chain — turns that assertion "
-                "into something a report can check. It is opt-in because most "
-                "relations assert no shared field: one joining a claim to its "
-                "evidence crosses two vocabularies on purpose, and checking it "
-                "would report every such citation as a defect.", ""]
+                "`invariant = \"tags\"` on the relation, or on a chain that "
+                "walks it — turns that assertion into something a report can "
+                "check. It is opt-in because naming the commonality is often "
+                "the relation's whole job: two papers joined by `extends` "
+                "have succession in common, and `extends` is where that is "
+                "written. Where no other field repeats it, a check reading "
+                "one would report every edge.", ""]
         return "\n".join(out)
 
-    named = ", ".join(f"`{c.name}` on `{c.invariant}`" for c in declared)
-    out += [f"Chains asserting an invariant: {named}.", "",
+    named = ", ".join(f"`{name}` on `{field}`" for name, field in declared)
+    out += [f"Asserting an invariant: {named}.", "",
             "A relation is an assertion that the documents it joins have "
             "something in common. Where no value in the named field is held by "
             "both, the record has made the assertion and not said what it "
@@ -267,13 +269,15 @@ def unbound_lineage(base: Path | None = None) -> str:
     out += [f"**{_n(len(edge_hits), 'unbound relation')}.** Two documents "
             "joined directly, sharing nothing.", ""]
     if edge_hits:
-        out += ["| Chain | Field | Documents | Held |", "|---|---|---|---|"]
+        out += ["| Declared by | Field | Documents | Held |",
+                "|---|---|---|---|"]
         for f in edge_hits:
             docs = " ↔ ".join(f"[{d.code}]({_link(d.path, base)})"
                               for d in f.members)
             holds = " / ".join(", ".join(sorted(invariants.held(d, f.field)))
                                or "(none)" for d in f.members)
-            out.append(f"| {f.chain} | `{f.field}` | {docs} | {holds} |")
+            out.append(f"| {f.declared_by} | `{f.field}` | {docs} "
+                       f"| {holds} |")
         out.append("")
 
     out += [f"**{_n(len(path_hits), 'unbound line')}.** A whole sequence with "
@@ -282,15 +286,15 @@ def unbound_lineage(base: Path | None = None) -> str:
             "shrinks as the component grows. The weaker signal of the two, and "
             "the one to read whole before acting on.", ""]
     if path_hits:
-        out += ["| Chain | Field | Members |", "|---|---|---|"]
+        out += ["| Declared by | Field | Members |", "|---|---|---|"]
         for f in path_hits:
             docs = ", ".join(f"[{d.code}]({_link(d.path, base)})"
                              for d in f.members)
-            out.append(f"| {f.chain} | `{f.field}` | {docs} |")
+            out.append(f"| {f.declared_by} | `{f.field}` | {docs} |")
         out.append("")
     if not edge_hits and not path_hits:
-        out += ["Every relation the declared chains walk is bound by a value "
-                "both ends hold.", ""]
+        out += ["Every relation with an invariant declared is bound by a "
+                "value both ends hold.", ""]
     return "\n".join(out)
 
 
