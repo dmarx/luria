@@ -274,6 +274,11 @@ class TagGroup:
     # is the motivating case: naming how an argument fails contradicts saying
     # it does not.
     excluded_by: frozenset[str] = frozenset()
+    # Prose this group's violations print after the citation (#273), for the
+    # same reason a vocabulary carries one: the rule is mechanical and the
+    # reason for it is not. A group has exactly one `require`, so one note
+    # needs no per-rule key.
+    note: str = ""
     # True when membership came from the vocabulary's `primary_for` keys
     # rather than an inline list. Carried so a reader of the generated record
     # page can tell which file to edit.
@@ -438,6 +443,22 @@ class Vocabulary:
     # for the values a project has an opinion about, and adding a new one
     # stays an edit to a document rather than to the config.
     closed: bool = True
+    # Prose a closed-set violation prints after the values (#273). A closed
+    # vocabulary's message reads as "this value is not allowed", when the
+    # project often means "this value is not declared YET, and declaring it
+    # is the move". Only the record knows which, so only the record can say:
+    #
+    #     vocabulary: topics
+    #     closed: true
+    #     note: >-
+    #       Closed so every tag is one somebody chose, not because the list
+    #       is finished — add a value here rather than reaching for the
+    #       nearest wrong one.
+    #
+    # Attached to the vocabulary rather than the field so it rides the one
+    # rule it describes. A guard whose message teaches the wrong lesson
+    # costs more than the typo it catches.
+    note: str = ""
     # When the requirement applies, if not always (see `RequiredWhen`).
     required_when: RequiredWhen | None = None
 
@@ -1253,6 +1274,7 @@ def _tag_groups(prefix: str, field: str, raw: dict,
                 f"nothing")
         groups.append(TagGroup(
             name=name, tags=tags, field=field, require=rule, derived=derived,
+            note=str(spec.get("note", "")).strip(),
             excluded_by=frozenset(str(x) for x in spec.get("excluded_by", ()))))
     return tuple(groups)
 
@@ -1542,6 +1564,7 @@ def _fields(prefix: str, raw: dict, scheme_dir: Path, root: Path,
                                 many=many, required=required,
                                 default=defaults,
                                 closed=bool(spec.get("closed", True)),
+                                note=str(spec.get("note", "")).strip(),
                                 required_when=_required_when(where, spec,
                                                              required)))
         # A group constrains a subset of THIS field's values, so it is read

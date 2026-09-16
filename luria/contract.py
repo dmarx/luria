@@ -68,6 +68,10 @@ class Field:
     # `required` stays the unconditional flag; this is the other way a field
     # can be demanded, and the two are exclusive by construction in config.
     required_when: object | None = None
+    # The vocabulary's own prose, printed after a closed-set violation
+    # (#273). Carried on the field because that is what a check has in hand;
+    # declared on the vocabulary, because that is what it is about.
+    note: str = ""
     because: tuple[str, ...] = ()
 
 
@@ -222,7 +226,8 @@ def for_scheme(scheme) -> Contract:
             required=vocab.required or (prior is not None and prior.required),
             many=vocab.many, vocabulary=vocab.name, closed=vocab.closed,
             values=tuple(declared(vocab.values_by_name)), default=vocab.default,
-            required_when=vocab.required_when, because=because)
+            required_when=vocab.required_when, note=vocab.note,
+            because=because)
     for plain in scheme.plain_fields:
         prior = fields.get(plain.field)
         because = (f"{where}.fields.{plain.field}",)
@@ -560,15 +565,17 @@ def violations(contract: Contract, rel: str, meta: dict,
         present = sorted(tags & group.tags)
         shown = ", ".join(sorted(group.tags))
         cite = group_because(contract, group)
+        tail = f"\n    ↳ {group.note}" if group.note else ""
         if group.require == "exactly-one" and len(present) != 1:
             out.append(f"{rel}: `{group.name}` wants exactly one of {shown} "
-                       f"— has {', '.join(present) or 'none'} {cite}")
+                       f"— has {', '.join(present) or 'none'} {cite}{tail}")
         elif group.require == "at-most-one" and len(present) > 1:
             out.append(f"{rel}: `{group.name}` wants at most one of {shown} "
-                       f"— has {', '.join(present)} {cite}")
+                       f"— has {', '.join(present)} {cite}{tail}")
         if present and (clash := sorted(tags & group.excluded_by)):
             out.append(f"{rel}: {', '.join(clash)} excludes `{group.name}`, "
-                       f"but the document also has {', '.join(present)} {cite}")
+                       f"but the document also has {', '.join(present)} "
+                       f"{cite}{tail}")
     return out
 
 
@@ -595,6 +602,8 @@ def _vocabulary_violations(contract: Contract, field: Field, rel: str,
         return []
     file = next((b.split(": ", 1)[0] for b in field.because
                  if b.endswith(": values")), "")
+    tail = f"\n    ↳ {field.note}" if field.note else ""
     return [f"{rel}: `{field.name}: {value}` is not in the `{field.vocabulary}` "
             f"vocabulary ({file}) — the values are {', '.join(field.values)}"
+            f"{tail}"
             for value in values if str(value) not in field.values]
