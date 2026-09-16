@@ -69,11 +69,11 @@ class Field:
     # can be demanded, and the two are exclusive by construction in config.
     required_when: object | None = None
     # The vocabulary's own prose, printed after a closed-set violation
-    # (#273). Carried on the field because that is what a check has in hand;
+    # (ADR-108, #273). Carried on the field because that is what a check has in hand;
     # declared on the vocabulary, because that is what it is about.
     alert: str = ""
     # What the field is FOR, carried from whichever table typed it — a
-    # vocabulary, a relation or a plain field (#279). `alert` is what it says
+    # vocabulary, a relation or a plain field (ADR-109, #279). `alert` is what it says
     # when a rule fires; this is what it says at rest, and `describe` prints
     # it so `docs/record.md` can explain a field rather than only constrain
     # one.

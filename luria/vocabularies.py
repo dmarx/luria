@@ -199,7 +199,7 @@ def pages(scheme, docs) -> dict[Path, str]:
             default = (f" — the default when `{name}:` is absent"
                        if field.default and value in field.default else "")
             # The vocabulary's own account of itself, above the value's
-            # (#279). A reader landing on one value's page has the set's
+            # (ADR-109, #279). A reader landing on one value's page has the set's
             # purpose in front of them rather than having to infer the axis
             # from the one member they happened to arrive at.
             about = ""

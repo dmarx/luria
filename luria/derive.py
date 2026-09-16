@@ -60,7 +60,7 @@ Anything with literal text around it — `"LIT-{first_author}-{number}"` — is
 a string, because that is what it was written to build. The rule is the
 template's shape rather than a flag, so nothing has to be declared twice.
 
-**And a whole field returns the whole value, a list included** (#276).
+**And a whole field returns the whole value, a list included** (ADR-107, #276).
 `"{tags}"` off a plural source derives a plural field: the source holds a
 list, the template does nothing to it, so the derived field holds that list.
 `many` says so, and is checked against the source rather than inferred —
