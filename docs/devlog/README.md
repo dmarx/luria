@@ -6,6 +6,7 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 
 ## Currently — [September 2026](2026-09.md)
 
+- [16 Sep 19:00 — The code cited the argument, not the decision](2026-09.md#the-code-cited-the-argument-not-the-decision)
 - [16 Sep 16:05 — The description belongs to the set, and firing it on a real record is what proved it](2026-09.md#the-description-belongs-to-the-set-and-firing-it-on-a-real-record-is-what-proved-it)
 - [16 Sep 05:49 — The bug was not the refusal, it was what happened when you worked around it](2026-09.md#the-bug-was-not-the-refusal-it-was-what-happened-when-you-worked-around-it)
 - [16 Sep 04:27 — A crash in the chain walker was the wrong feature in the right place](2026-09.md#a-crash-in-the-chain-walker-was-the-wrong-feature-in-the-right-place)
@@ -79,9 +80,9 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 
 ## All books
 
-116 entries across 2 books, newest first.
+117 entries across 2 books, newest first.
 
 | Book | Entries | First | Last |
 |---|--:|---|---|
-| [2026-09](2026-09.md) | 70 | 2026-09-03 | 2026-09-16 |
+| [2026-09](2026-09.md) | 71 | 2026-09-03 | 2026-09-16 |
 | [2026-08](2026-08.md) | 46 | 2026-08-03 | 2026-08-28 |

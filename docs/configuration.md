@@ -92,7 +92,7 @@ Luria ships with one, and knowing that one is not built in is the point:
 the annotation vocabulary says `inactive-ok`, not `adr-ok`, and a code
 carries its prefix, so a second scheme is an entry here (ADR-006).
 
-`title` and `blurb` say what the family IS (#279) — `Journal` already
+`title` and `blurb` say what the family IS (ADR-109, #279) — `Journal` already
 carries exactly that pair and a scheme is the same shape of thing, a
 stream of documents with a rendered index. The pairing is deliberate and
 is the rule this repository now follows: a thing that renders its own
