@@ -334,7 +334,7 @@ class PlainField:
     required: bool = False
     many: bool = False
     required_when: RequiredWhen | None = None
-    # No two documents in the scheme hold one value here (ADR-tmp92495, #165).
+    # No two documents in the scheme hold one value here (ADR-111, #165).
     # A type like the others: `many` says the field holds a list, `unique`
     # says its values are identifiers rather than descriptions. Opt-in for
     # the reason `invariant` is — a record that has not said its identifiers
@@ -369,7 +369,7 @@ class FieldGroup:
     name: str
     fields: tuple[str, ...]
     require: str = "at-least-one"
-    # Every field in the group is unique, said once (ADR-tmp92495, #165). It is
+    # Every field in the group is unique, said once (ADR-111, #165). It is
     # sugar and deliberately nothing more: each field is checked on its own,
     # so an `arxiv` and a `doi` that happen to be the same string do not
     # collide. Recognising one paper under two KINDS of identifier is
@@ -1677,7 +1677,7 @@ def _fields(prefix: str, raw: dict, scheme_dir: Path, root: Path,
             # terms and hundreds of documents. Unique over it caps the scheme
             # at one document per term, which is never what a project means —
             # so this is a refusal rather than a check nobody would trip
-            # (ADR-tmp92495, #165).
+            # (ADR-111, #165).
             raise ValueError(
                 f"{where}: `unique` over a field drawn from vocabulary "
                 f"{str(name)!r} would allow one document per term — a closed "

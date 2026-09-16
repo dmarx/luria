@@ -378,7 +378,7 @@ def check_unique_fields(errors: list[str]) -> None:
     IDENTIFIES, which Luria cannot infer: over every field this would report
     a `status` collision for every document in the corpus. The shape that
     could default on — uniqueness over the fields a remote already resolves
-    — is named in ADR-tmp92495 and deferred, because it would change what a
+    — is named in ADR-111 and deferred, because it would change what a
     green build means for records that never asked.
 
     **A duplicate retired into its survivor is not a collision, it is the
