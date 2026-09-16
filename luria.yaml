@@ -74,6 +74,13 @@ code:
   - template/**/*.yml
   - template/**/*.md
   - template/**/*.stub
+  # The example configs cite decisions too, and until now nothing rewrote
+  # them: ADR-111 landed as a live `ADR-tmp92495` in the knowledge-base
+  # example, because `concretize` rewrites the files this list names and
+  # this list did not name them. It resolved, through `formerly:`, which is
+  # why no check complained — a shipped example simply read as though it had
+  # been authored mid-branch.
+  - examples/**/*.yaml
   historical:
   - CHANGELOG.md
 schemes:
