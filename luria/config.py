@@ -279,6 +279,11 @@ class TagGroup:
     # reason for it is not. A group has exactly one `require`, so one alert
     # needs no per-rule key.
     alert: str = ""
+    # What this group is, at rest (#279) — the same pair a vocabulary and a
+    # relation carry. A group's name is a slug; `label` is the phrase a view
+    # uses and `blurb` says what the members have in common.
+    label: str = ""
+    blurb: str = ""
     # True when membership came from the vocabulary's `primary_for` keys
     # rather than an inline list. Carried so a reader of the generated record
     # page can tell which file to edit.
@@ -329,6 +334,12 @@ class PlainField:
     required: bool = False
     many: bool = False
     required_when: RequiredWhen | None = None
+    # What the field is for (#279). A plain field has no vocabulary to carry
+    # the explanation, so without this there is nowhere at all to say what
+    # `stage:` or `consensus:` means — the case with the least description
+    # available had none.
+    label: str = ""
+    blurb: str = ""
 
 
 @dataclass(frozen=True)
@@ -351,6 +362,11 @@ class FieldGroup:
     name: str
     fields: tuple[str, ...]
     require: str = "at-least-one"
+    # What the group is, at rest (#279). `source` on LIT means *a citable
+    # identifier*, which is the thing `arxiv`/`doi`/`url` have in common and
+    # which none of the three names on its own.
+    label: str = ""
+    blurb: str = ""
 
 
 FIELD_RULES = ("at-least-one", "exactly-one", "at-most-one")
@@ -441,6 +457,17 @@ class Vocabulary:
     # Usually the same word; `world:` backed by `worlds.yaml` is the other.
     field: str
     name: str
+    # What this vocabulary IS, as data rather than as a comment nothing could
+    # render (#279). A value already carries `label` and `blurb`, and so does
+    # a relation (#254); the set they belong to carried neither, so a reader
+    # could learn what `training-optimization` means and not what the axis it
+    # sits on is for. `label` is what a view calls it, `blurb` is what it
+    # means — the same pair, for the same reason, one level up.
+    #
+    # Distinct from `alert`, which is what the vocabulary says when a rule
+    # about it FIRES. This is what it is at rest.
+    label: str = ""
+    blurb: str = ""
     # The values, resolved from the central `vocabularies:` table at load.
     # Was a Path to `<name>.yaml` beside the records (ADR-098).
     values_by_name: dict[str, dict] = dcfield(default_factory=dict)
@@ -566,9 +593,20 @@ class Scheme:
 
     Luria ships with one, and knowing that one is not built in is the point:
     the annotation vocabulary says `inactive-ok`, not `adr-ok`, and a code
-    carries its prefix, so a second scheme is an entry here (ADR-006)."""
+    carries its prefix, so a second scheme is an entry here (ADR-006).
+
+    `title` and `blurb` say what the family IS (#279) — `Journal` already
+    carries exactly that pair and a scheme is the same shape of thing, a
+    stream of documents with a rendered index. The pairing is deliberate and
+    is the rule this repository now follows: a thing that renders its own
+    page takes `title` + `blurb`, and a thing named INSIDE a scheme — a
+    vocabulary, a group, a field, a relation — takes `label` + `blurb`.
+    Without it, `docs/record.md` could say a scheme's codes look like
+    `LIT-001` and not what a `LIT` is."""
     prefix: str
     dir: Path
+    title: str = ""
+    blurb: str = ""
     active: str = "Active"
     # The retirement pair, defaults rather than laws (ADR-085). A
     # project whose decisions are `Supplanted` and point at their
@@ -1258,6 +1296,57 @@ def primary_tags(prefix: str, values: dict) -> frozenset[str]:
     return frozenset(found)
 
 
+def _vocabulary_tables(raw: dict) -> tuple[dict, dict]:
+    """The central `vocabularies:` table, split into values and the set's own
+    description (#279).
+
+    Two shapes, and the flat one is unchanged:
+
+        topics:                       # every key is a value
+          alpha: {label: Alpha, blurb: "..."}
+
+        topics:                       # the set describes itself
+          label: Topics
+          blurb: the primary axis of both indexes
+          values:
+            alpha: {label: Alpha, blurb: "..."}
+
+    The nested form is recognised by a `values:` key holding a mapping, which
+    is what makes this additive: every config written before this reads
+    exactly as it did. A vocabulary whose flat table has a VALUE named
+    `values` is the one ambiguous case, and it is refused rather than guessed
+    at — silently reading a project's values as metadata would empty the
+    vocabulary and report it as no violations."""
+    values_by_name, meta = {}, {}
+    for name, table in raw.items():
+        name, table = str(name), dict(table or {})
+        # Nested when the table says ONLY the three things a nested table
+        # says. Testing `isinstance(table["values"], dict)` alone is not
+        # enough: a value named `values` carries `{label, blurb}`, which is
+        # also a mapping, so a flat table holding one would read as nested and
+        # every other value would vanish.
+        #
+        # The single unreachable spelling is a flat vocabulary whose ONLY
+        # value is named `values`, which reads as an empty nested table.
+        # Nothing distinguishes those two from shape, and a one-value
+        # vocabulary named after the key that holds values is not a case
+        # worth a third syntax.
+        nested = (isinstance(table.get("values"), dict)
+                  and set(table) <= {"label", "blurb", "values"})
+        if not nested and "values" in table:
+            raise ValueError(
+                f"luria.yaml: vocabularies.{name} has a value named `values`, "
+                f"which is also the key that holds a nested vocabulary's "
+                f"values — write the whole table in the nested form "
+                f"(`label`, `blurb`, `values:`) so the two cannot be "
+                f"confused")
+        values_by_name[name] = dict(table["values"]) if nested else table
+        if nested:
+            meta[name] = {"label": str(table.get("label", "")).strip(),
+                          "blurb": str(table.get("blurb", "")).strip()}
+    return values_by_name, meta
+
+
 def _tag_groups(prefix: str, field: str, raw: dict,
                 tag_values: dict | None = None) -> tuple[TagGroup, ...]:
     """Read one field's `groups:` tables.
@@ -1292,6 +1381,8 @@ def _tag_groups(prefix: str, field: str, raw: dict,
         groups.append(TagGroup(
             name=name, tags=tags, field=field, require=rule, derived=derived,
             alert=str(spec.get("alert", "")).strip(),
+            label=str(spec.get("label", "")).strip(),
+            blurb=str(spec.get("blurb", "")).strip(),
             excluded_by=frozenset(str(x) for x in spec.get("excluded_by", ()))))
     return tuple(groups)
 
@@ -1312,7 +1403,9 @@ def _field_groups(prefix: str, raw: dict) -> tuple[FieldGroup, ...]:
             raise ValueError(
                 f"luria.yaml: schemes.{prefix}.field_groups.{name} lists no "
                 f"fields, so it constrains nothing")
-        groups.append(FieldGroup(name=str(name), fields=fields, require=rule))
+        groups.append(FieldGroup(name=str(name), fields=fields, require=rule,
+                                 label=str(spec.get("label", "")).strip(),
+                                 blurb=str(spec.get("blurb", "")).strip()))
     return tuple(groups)
 
 
@@ -1454,7 +1547,8 @@ def _required_when(where: str, spec: dict, required: bool) -> RequiredWhen | Non
 
 def _fields(prefix: str, raw: dict, scheme_dir: Path, root: Path,
             references: tuple, scaffolding: bool = False,
-            vocabularies: dict | None = None) -> tuple:
+            vocabularies: dict | None = None,
+            vocabulary_meta: dict | None = None) -> tuple:
     """Read a scheme's `schemes.X.fields` tables, as
     `(vocabularies, plain fields, derivations)`.
 
@@ -1535,7 +1629,9 @@ def _fields(prefix: str, raw: dict, scheme_dir: Path, root: Path,
                                  f"combine, and a table with none of them "
                                  f"constrains nothing")
             plain.append(PlainField(field=str(field), required=required,
-                                    many=many, required_when=when))
+                                    many=many, required_when=when,
+                                    label=str(spec.get("label", "")).strip(),
+                                    blurb=str(spec.get("blurb", "")).strip()))
             # No vocabulary to derive membership from, so every group here
             # lists its own values — which `_tag_groups` already requires.
             groups.extend(_tag_groups(prefix, str(field),
@@ -1549,6 +1645,7 @@ def _fields(prefix: str, raw: dict, scheme_dir: Path, root: Path,
                 f"so that two schemes can share one "
                 f"(declared: {', '.join(sorted(vocabularies)) or 'none'})")
         values = dict(vocabularies.get(name) or {})
+        meta = dict((vocabulary_meta or {}).get(name) or {})
         if not values and not scaffolding:
             # Absent is not the same as empty when a scaffold is being
             # planned: `luria init` reads the config to decide what to
@@ -1585,6 +1682,12 @@ def _fields(prefix: str, raw: dict, scheme_dir: Path, root: Path,
                                 default=defaults,
                                 closed=bool(spec.get("closed", True)),
                                 alert=str(spec.get("alert", "")).strip(),
+                                # From the SET, not this field: a vocabulary
+                                # two schemes share is described once, which
+                                # is the whole reason it is declared centrally
+                                # (#279).
+                                label=meta.get("label", ""),
+                                blurb=meta.get("blurb", ""),
                                 required_when=_required_when(where, spec,
                                                              required)))
         # A group constrains a subset of THIS field's values, so it is read
@@ -1661,6 +1764,9 @@ class Chain:
     # list became the whole content there was nothing left to annotate, and
     # the word outlived what it described.
     facet_by: tuple[str, ...] = ("status",)
+    # The other half of the pair (#279). `title` was already here; a chain
+    # is a rendered page like a journal, so it takes `blurb` too.
+    blurb: str = ""
     # The field a step in this chain asserts it shares with its neighbours
     # (#214) — both with the neighbour directly, and with every other member
     # of the line it lands in, which is the part only a chain can assert.
@@ -1762,6 +1868,11 @@ class Config:
     # that motivated this, ten of thirteen entries had silently drifted apart
     # (ADR-098).
     vocabularies: dict[str, dict]
+    # What each vocabulary IS, keyed by name (#279) — `{label, blurb}`, empty
+    # for one written in the flat form. Kept beside `vocabularies` rather than
+    # inside it so every consumer of the values map reads exactly what it
+    # read before.
+    vocabulary_meta: dict[str, dict]
     issue_url: str
     docs: Path
     decisions: Path
@@ -2048,11 +2159,12 @@ def load(root: Path | None = None, text: str | None = None,
                 raw[family] = parsed[family]
 
     paths = raw["paths"]
-    vocabularies = {str(name): dict(values or {})
-                    for name, values in (raw.get("vocabularies") or {}).items()}
+    vocabularies, vocabulary_meta = _vocabulary_tables(
+        raw.get("vocabularies") or {})
     return Config(
         root=root,
         vocabularies=vocabularies,
+        vocabulary_meta=vocabulary_meta,
         issue_url=raw.get("issue_url", ""),
         docs=root / paths["docs"],
         decisions=root / paths["decisions"],
@@ -2062,7 +2174,7 @@ def load(root: Path | None = None, text: str | None = None,
         code_globs=tuple(raw["code"]["globs"]),
         historical=frozenset(root / p for p in raw["code"]["historical"]),
         schemes=(schemes := _schemes(raw["schemes"], root, scaffolding,
-                                     vocabularies)),
+                                     vocabularies, vocabulary_meta)),
         remotes={
             prefix.upper(): Remote(
                 prefix.upper(),
@@ -2203,6 +2315,7 @@ def _chains(raw: dict, schemes: dict, root: Path) -> dict[str, Chain]:
                           output=root / str(spec["output"]),
                           facet_by=facet_by,
                           invariant=invariant,
+                          blurb=str(spec.get("blurb", "")).strip(),
                           title=str(spec.get("title", "")) or name.title())
     return out
 
@@ -2482,7 +2595,8 @@ def _conditions(scheme):
 
 
 def _schemes(raw: dict, root: Path, scaffolding: bool = False,
-             vocabularies: dict | None = None) -> dict[str, Scheme]:
+             vocabularies: dict | None = None,
+             vocabulary_meta: dict | None = None) -> dict[str, Scheme]:
     """Every declared scheme, with the cross-scheme checks that need them all.
 
     A reference naming a scheme that does not exist is a config error, and it
@@ -2531,6 +2645,8 @@ def _schemes(raw: dict, root: Path, scaffolding: bool = False,
         schemes[prefix] = Scheme(
             prefix=prefix,
             dir=root / spec["dir"],
+            title=str(spec.get("title", "")).strip(),
+            blurb=str(spec.get("blurb", "")).strip(),
             active=spec.get("active", "Active"),
             axis=axis,
             successor=str(spec.get("successor", "superseded_by")),
@@ -2549,7 +2665,8 @@ def _schemes(raw: dict, root: Path, scaffolding: bool = False,
                         "tag_groups"),
                        _fields(prefix, spec.get("fields", {}),
                                root / spec["dir"], root, refs,
-                               scaffolding, vocabularies))),
+                               scaffolding, vocabularies,
+                               vocabulary_meta))),
             field_groups=_field_groups(prefix, spec.get("field_groups", {})),
             uniform_ok=(spec.get("uniform_ok") or None),
             uniform_share=float(spec.get("uniform_share", 1.0)),

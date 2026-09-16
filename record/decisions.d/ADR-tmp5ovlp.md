@@ -1,0 +1,124 @@
+---
+status: Proposed
+title: 'A config object says what it is, and where it says it depends on what it is'
+version: 1
+tags:
+- config
+- contract
+date: '2026-09-16'
+issue: '#279'
+summary: >-
+  `label` + `blurb` for a thing named inside a scheme — a vocabulary, a tag
+  group, a plain field, a field group — matching what a relation already had;
+  `title` + `blurb` for a thing that renders its own page, which is a scheme,
+  a journal and a chain. A vocabulary's pair lives in the central table, not
+  on the field that invokes it, so a set two schemes share is described once.
+  Rejected: putting it on the field, which is where the first implementation
+  put it and where it would have drifted.
+---
+
+# ADR-tmp5ovlp: A config object says what it is, and where it says it depends on what it is
+
+## Context
+
+A vocabulary *value* has carried `label` and `blurb` for as long as there have
+been vocabularies. A relation gained the same pair in [#254](https://github.com/dmarx/luria/issues/254), on an argument
+worth repeating: *"what a relation IS, as data rather than as a TOML comment
+nothing could render, quote or scaffold from."*
+
+The things those belong to had neither. Audited:
+
+| object | `label` | `blurb` |
+|---|---|---|
+| `Reference` | yes | yes ([#254](https://github.com/dmarx/luria/issues/254)) |
+| a vocabulary value | yes | yes |
+| `Journal` | — | yes |
+| `Chain` | `title` | — |
+| `Vocabulary`, `TagGroup`, `PlainField`, `Scheme`, `FieldGroup` | — | — |
+
+So a reader could learn what `training-optimization` means and not what the
+axis it sits on is for. In the consumer that raised this, the `topics`
+vocabulary carried about thirty-five lines of comment explaining the thirteen
+and how to file against them, reachable by no view. A `PlainField` was worse:
+with no vocabulary to carry the explanation there was nowhere at all to say
+what a field meant.
+
+## Decision
+
+**Two pairs, and which one an object takes follows from what it is.**
+
+- **`label` + `blurb`** — a thing *named inside a scheme*: `Vocabulary`,
+  `TagGroup`, `PlainField`, `FieldGroup`, and `Reference`, which already had
+  it. These are members of a scheme, not documents; `label` is what a view
+  calls one and `blurb` is what it means.
+- **`title` + `blurb`** — a thing that *renders its own page*: `Scheme`,
+  `Journal`, which already had it, and `Chain`, which had `title` and now
+  takes `blurb` too.
+
+That resolves the question [#279](https://github.com/dmarx/luria/issues/279) raised about `Scheme`, and it is why `Scheme`
+does not take `label`: it is the same shape of thing as a `Journal`, a stream
+of documents with an index.
+
+**A vocabulary's pair lives on the set, in the central table.**
+
+    vocabularies:
+      topics:
+        label: Topics
+        blurb: the primary axis of both indexes
+        values:
+          alpha: {label: Alpha, blurb: "..."}
+
+The nested form is recognised by a `values:` mapping *and* no other keys
+besides `label` and `blurb`. Every config written before this is flat and
+reads exactly as it did.
+
+**Rendered, or it would be inert.** A scheme's `title`/`blurb` become a new
+`docs/record.md` section; a field's or group's `blurb` is appended to its
+contract line, after the citation; a vocabulary's own description heads every
+one of its value pages, above the value's.
+
+## Alternatives considered
+
+- **Put the vocabulary's pair on the field that invokes it.** This is what the
+  first implementation did, and firing it on the real record is what caught
+  it: written into the central table it parsed as two extra *values*, taking
+  the anthology's thirteen topics to fifteen. The deeper fault is the one
+  [ADR-098](ADR-098.md) already decided — a vocabulary two schemes share is declared once
+  precisely so the copies cannot drift, and ten of thirteen entries had
+  drifted when they were two files. A description per invoking field would
+  have recreated exactly that, one level up.
+- **A reserved key inside the flat table** (`_meta:`). No new nesting, but it
+  collides with a value named `_meta` the same way, reads as a hack, and gives
+  the values table two kinds of entry.
+- **Require the nested form everywhere.** Cleanest to read and it breaks every
+  existing config for no gain to a project that has nothing to say.
+- **`isinstance(table["values"], dict)` alone as the discriminator.** The
+  obvious spelling and wrong: a value *named* `values` carries
+  `{label, blurb}`, which is also a mapping, so a flat table holding one would
+  read as nested and every other value would vanish silently. The rule is
+  keys-are-a-subset, and a flat table with a `values` key is refused rather
+  than guessed at.
+- **Status quo.** A project's most careful prose about its own schema stays in
+  comments, and `docs/record.md` keeps saying what a scheme constrains without
+  ever saying what it is for.
+
+## Consequences
+
+`Config` gains `vocabulary_meta`, kept beside `vocabularies` rather than
+inside it so every consumer of the values map reads what it read before.
+`contract.Field` gains `blurb`, carried from whichever table typed the field,
+and `describe()` routes every line through one `say()` so the suffix cannot be
+added to some lines and not others.
+
+Fired on the real case both ways round, per the working agreement. In
+`anthology-of-the-sota`, moving `topics` to the nested form: 14 values parsed
+(unchanged), one description reaching all three schemes that name it, and the
+blurb rendering above the value's on every tag page. The malformed intermediate
+— a `values:` key with the values left at the old indentation — was refused
+with the message naming the fault, which is the guard working on its author.
+
+Left open: a field that declares only a `blurb` still fails the
+declares-no-type check, because describing a field is not constraining one.
+That is defensible and it is now the likeliest thing to trip someone, since
+wanting to document an unconstrained field is exactly what this key makes
+natural.
