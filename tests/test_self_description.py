@@ -97,7 +97,7 @@ vocabularies:
   topics:
     label: Topics
     blurb: the primary axis, in the order the index shows them
-    values:
+    terms:
       alpha: {label: Alpha, blurb: the first one}
       beta: {label: Beta, blurb: the second one}
 schemes:
@@ -228,7 +228,7 @@ chains:
 
 def test_the_flat_vocabulary_form_is_unchanged(tmp_path, monkeypatch):
     """Every config written before this reads exactly as it did: with no
-    `values:` key the whole table is values, and the set describes nothing."""
+    `terms:` key the whole table is values, and the set describes nothing."""
     project(tmp_path, monkeypatch)
     cfg = config.current()
     assert set(cfg.vocabularies["topics"]) == {"alpha", "beta"}
@@ -265,15 +265,15 @@ def test_one_description_reaches_every_scheme_that_names_it(tmp_path, monkeypatc
                     "SOTA": "the primary axis, in the order the index shows them"}
 
 
-def test_a_value_named_values_is_refused_rather_than_guessed_at(
+def test_a_value_named_terms_is_refused_rather_than_guessed_at(
         tmp_path, monkeypatch):
     """The one ambiguous case. Reading it as metadata would empty the
     vocabulary and report that as no violations."""
     import pytest
     project(tmp_path, monkeypatch, BASE.replace(
         "    alpha: {label: Alpha, blurb: the first one}",
-        "    alpha: {label: Alpha, blurb: the first one}\n    values: {label: V}"))
-    with pytest.raises(ValueError, match="a value named `values`"):
+        "    alpha: {label: Alpha, blurb: the first one}\n    terms: {label: V}"))
+    with pytest.raises(ValueError, match="a value named `terms`"):
         config.current()
 
 
@@ -288,7 +288,7 @@ vocabularies:
     alert: >-
       Closed so every tag is one somebody chose, not because the list is
       finished — add a value rather than reaching for the nearest wrong one.
-    values:
+    terms:
       alpha: {label: Alpha, blurb: the first one}
 schemes:
   LIT:
@@ -338,12 +338,16 @@ def test_one_alert_reaches_every_scheme_that_names_the_vocabulary(
 def test_the_refusal_names_every_key_a_nested_table_may_carry(
         tmp_path, monkeypatch):
     """The message listed three keys while the code allowed four, which is
-    the drift the named constant exists to stop."""
+    the drift the dataclass exists to stop. Read off `VocabularyTable` rather
+    than spelled here, so a fifth key fails this test until the message names
+    it — a hand-written tuple would have passed the whole time."""
     import pytest
+    from luria.config import VocabularyTable
     project(tmp_path, monkeypatch, BASE.replace(
         "    alpha: {label: Alpha, blurb: the first one}",
-        "    alpha: {label: Alpha, blurb: the first one}\n    values: {label: V}"))
+        "    alpha: {label: Alpha, blurb: the first one}\n    terms: {label: V}"))
     with pytest.raises(ValueError) as caught:
         config.current()
-    for key in ("`alert`", "`blurb`", "`label`", "`values`"):
-        assert key in str(caught.value)
+    assert VocabularyTable.KEYS >= {"label", "blurb", "alert", "terms"}
+    for key in VocabularyTable.KEYS:
+        assert f"`{key}`" in str(caught.value)

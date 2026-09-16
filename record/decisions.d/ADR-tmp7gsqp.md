@@ -49,9 +49,22 @@ described a completely different fault.
 **`alert` is read from the central table**, beside `label` and `blurb`. A
 vocabulary three schemes name carries one alert.
 
-**`VOCABULARY_KEYS` is a named constant**, and both the discriminator and the
-refusal message read it. The message now lists whatever the constant holds
-rather than a hand-copied subset of it.
+**The key set is read off a dataclass that mirrors the table.**
+`VocabularyTable` declares `label`, `blurb`, `alert` and the key holding the
+values; `KEYS` is `{f.name for f in fields(VocabularyTable)}`, and both the
+discriminator and the refusal message read it. `_vocabulary_tables` builds one
+and reads its attributes, so the schema is load-bearing rather than
+decorative and a fifth key reaches all three places in one edit.
+
+**The values live under `terms:`, not `values:`.** A controlled vocabulary has
+terms; `values` was the commonest word for the things a vocabulary's own
+entries are called, which is exactly why a project naming one of them `values`
+was plausible enough to need a refusal. Renaming does not remove the
+ambiguity — a vocabulary could name a term `terms` — but it moves the
+collision from a word every such table is about to one that is merely
+possible. 0.25.0 is the only release carrying the old spelling, it is hours
+old, and the sole record using it is on an unmerged branch, so this is a hard
+rename with no alias.
 
 A `TagGroup`'s `alert` stays where it is. A group is declared inline, under
 the field whose values it constrains, and there is no central table for it to
@@ -69,12 +82,23 @@ move to — the two are not inconsistent, they are different shapes of thing.
   project keeps deciding against. Nothing has released a record using the
   field-level spelling — 0.25.0 is hours old — so there is nothing to keep
   working.
-- **Derive the allowed keys from the dataclass** rather than naming a
-  constant. Tempting and wrong here: `Vocabulary` also carries `many`,
-  `required`, `closed`, `default` and `required_when`, all of which are
-  declared per field and genuinely belong there. The set of keys a *table*
-  may carry is a different set from the fields the object has, and writing it
-  down is the honest way to say so.
+- **A named constant, `VOCABULARY_KEYS = frozenset({...})`.** What this PR
+  shipped first, and what review rejected as inelegant — correctly. The
+  argument for it was that `Vocabulary` also carries `many`, `required`,
+  `closed`, `default` and `required_when`, all declared per field, so the keys
+  a *table* may carry are not the fields that object has. That is true and it
+  is an argument against deriving from `Vocabulary`, not against deriving at
+  all: the answer is a second dataclass shaped like the table. Writing the set
+  down by hand was the thing the ADR's own opening paragraph says not to do.
+- **`OmegaConf.structured` for the table**, which omegaconf being already a
+  dependency makes plausible. It works — merging a flat table against a nested
+  schema raises `ConfigKeyError`, so try/except discriminates — and it is
+  still the wrong trade here. It makes exception handling the control flow for
+  an expected, common case; it replaces a message this project wrote and
+  tested with omegaconf's; and `config.py` hand-parses every other object it
+  builds, so one structured table is a local inconsistency rather than a
+  direction. Adopting structured configs across the whole loader is a real
+  question and is filed as its own, not settled by a four-key table.
 - **Status quo.** The composition stays broken, and the message sends the
   next person looking for a value named `values`.
 

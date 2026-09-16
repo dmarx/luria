@@ -396,7 +396,7 @@ def test_a_closed_vocabulary_can_print_its_own_advice(example):
                        "    alert: >-",
                        "      Closed so every trajectory is one somebody plotted. A new",
                        "      one is an edit to this table, not a workaround.",
-                       "    values:"] + ["  " + l if l.strip() else l
+                       "    terms:"] + ["  " + l if l.strip() else l
                                          for l in lines[top + 1:stop]]
     cfg.write_text("\n".join(lines))
     config.reset()

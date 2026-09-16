@@ -64,10 +64,10 @@ from __future__ import annotations
 import os
 import re
 from contextlib import contextmanager
-from dataclasses import dataclass, field as dcfield
+from dataclasses import dataclass, field as dcfield, fields as dcfields
 import yaml
 from functools import lru_cache
-from typing import cast
+from typing import ClassVar, cast
 
 from omegaconf import OmegaConf
 from pathlib import Path
@@ -1296,13 +1296,48 @@ def primary_tags(prefix: str, values: dict) -> frozenset[str]:
     return frozenset(found)
 
 
-# Everything a nested vocabulary table may say about ITSELF, plus the key that
-# holds its values. Named once because the discriminator below tests against
-# it: when `alert` arrived on a vocabulary (#273) and the nested form arrived
-# separately (#279), the first record to use both was refused — the set was
-# spelled inline and nobody updated it. A list that has to be edited in step
-# with a dataclass is one that will not be (#281).
-VOCABULARY_KEYS = frozenset({"label", "blurb", "alert", "values"})
+@dataclass(frozen=True)
+class VocabularyTable:
+    """The nested shape of one entry in the central `vocabularies:` table.
+
+    This exists so the set of keys a nested table may carry is a consequence
+    of the declaration rather than a second list beside it. `alert` arrived on
+    a vocabulary (#273) and the nested form arrived separately (#279); the
+    first record to use both was refused, because the discriminator spelled
+    the keys inline and nobody updated them when the dataclass grew a fourth
+    (#281). A list that has to be edited in step with a dataclass is one that
+    will not be — so there is no list, and `KEYS` below is read off the
+    fields.
+
+    It is a schema, not a carrier: `_vocabulary_tables` builds one and reads
+    its attributes, so a field added here reaches both the discriminator and
+    the metadata in the same edit."""
+    label: str = ""
+    blurb: str = ""
+    # What the vocabulary says when a rule about it FIRES (#273), as against
+    # `blurb`, which is what it is at rest.
+    alert: str = ""
+    # The values. Named `terms` rather than `values` (#282 review): a
+    # controlled vocabulary has terms, and the old spelling collided with the
+    # commonest thing a vocabulary's own values are called, which is what made
+    # the ambiguity below worth a refusal in the first place.
+    terms: dict[str, dict] = dcfield(default_factory=dict)
+
+    KEYS: ClassVar[frozenset[str]]
+    META: ClassVar[frozenset[str]]
+
+    @classmethod
+    def read(cls, table: dict) -> "VocabularyTable":
+        """Build from a table already known to be nested."""
+        return cls(**{k: table[k] for k in cls.KEYS if k in table})
+
+    def meta(self) -> dict[str, str]:
+        """What the set says about itself, which is everything but the terms."""
+        return {k: str(getattr(self, k)).strip() for k in sorted(self.META)}
+
+
+VocabularyTable.KEYS = frozenset(f.name for f in dcfields(VocabularyTable))
+VocabularyTable.META = VocabularyTable.KEYS - {"terms"}
 
 
 def _vocabulary_tables(raw: dict) -> tuple[dict, dict]:
@@ -1317,42 +1352,44 @@ def _vocabulary_tables(raw: dict) -> tuple[dict, dict]:
         topics:                       # the set describes itself
           label: Topics
           blurb: the primary axis of both indexes
-          values:
+          terms:
             alpha: {label: Alpha, blurb: "..."}
 
-    The nested form is recognised by a `values:` key holding a mapping, which
+    The nested form is recognised by a `terms:` key holding a mapping, which
     is what makes this additive: every config written before this reads
     exactly as it did. A vocabulary whose flat table has a VALUE named
-    `values` is the one ambiguous case, and it is refused rather than guessed
+    `terms` is the one ambiguous case, and it is refused rather than guessed
     at — silently reading a project's values as metadata would empty the
     vocabulary and report it as no violations."""
     values_by_name, meta = {}, {}
     for name, table in raw.items():
         name, table = str(name), dict(table or {})
-        # Nested when the table says ONLY the three things a nested table
-        # says. Testing `isinstance(table["values"], dict)` alone is not
-        # enough: a value named `values` carries `{label, blurb}`, which is
-        # also a mapping, so a flat table holding one would read as nested and
-        # every other value would vanish.
+        # Nested when the table says ONLY the things a nested table says.
+        # Testing `isinstance(table["terms"], dict)` alone is not enough: a
+        # value named `terms` carries `{label, blurb}`, which is also a
+        # mapping, so a flat table holding one would read as nested and every
+        # other value would vanish.
         #
         # The single unreachable spelling is a flat vocabulary whose ONLY
-        # value is named `values`, which reads as an empty nested table.
+        # value is named `terms`, which reads as an empty nested table.
         # Nothing distinguishes those two from shape, and a one-value
-        # vocabulary named after the key that holds values is not a case
+        # vocabulary named after the key that holds terms is not a case
         # worth a third syntax.
-        nested = (isinstance(table.get("values"), dict)
-                  and set(table) <= VOCABULARY_KEYS)
-        if not nested and "values" in table:
+        nested = (isinstance(table.get("terms"), dict)
+                  and set(table) <= VocabularyTable.KEYS)
+        if not nested and "terms" in table:
             raise ValueError(
-                f"luria.yaml: vocabularies.{name} has a value named `values`, "
+                f"luria.yaml: vocabularies.{name} has a value named `terms`, "
                 f"which is also the key that holds a nested vocabulary's "
-                f"values — write the whole table in the nested form "
-                f"({', '.join(chr(96) + k + chr(96) for k in sorted(VOCABULARY_KEYS))})"
+                f"terms — write the whole table in the nested form "
+                f"({', '.join(chr(96) + k + chr(96) for k in sorted(VocabularyTable.KEYS))})"
                 f" so the two cannot be confused")
-        values_by_name[name] = dict(table["values"]) if nested else table
         if nested:
-            meta[name] = {k: str(table.get(k, "")).strip()
-                          for k in VOCABULARY_KEYS - {"values"}}
+            declared = VocabularyTable.read(table)
+            values_by_name[name] = dict(declared.terms)
+            meta[name] = declared.meta()
+        else:
+            values_by_name[name] = table
     return values_by_name, meta
 
 
