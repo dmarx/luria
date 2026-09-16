@@ -72,6 +72,12 @@ class Field:
     # (#273). Carried on the field because that is what a check has in hand;
     # declared on the vocabulary, because that is what it is about.
     alert: str = ""
+    # What the field is FOR, carried from whichever table typed it — a
+    # vocabulary, a relation or a plain field (#279). `alert` is what it says
+    # when a rule fires; this is what it says at rest, and `describe` prints
+    # it so `docs/record.md` can explain a field rather than only constrain
+    # one.
+    blurb: str = ""
     because: tuple[str, ...] = ()
 
 
@@ -213,7 +219,8 @@ def for_scheme(scheme) -> Contract:
             ref.field,
             required=ref.required or (prior is not None and prior.required),
             reference=ref.scheme, many=ref.many,
-            required_when=ref.required_when, because=because)
+            required_when=ref.required_when, blurb=ref.blurb,
+            because=because)
     from .vocabularies import declared
     for vocab in scheme.vocabularies:
         prior = fields.get(vocab.field)
@@ -227,7 +234,7 @@ def for_scheme(scheme) -> Contract:
             many=vocab.many, vocabulary=vocab.name, closed=vocab.closed,
             values=tuple(declared(vocab.values_by_name)), default=vocab.default,
             required_when=vocab.required_when, alert=vocab.alert,
-            because=because)
+            blurb=vocab.blurb, because=because)
     for plain in scheme.plain_fields:
         prior = fields.get(plain.field)
         because = (f"{where}.fields.{plain.field}",)
@@ -238,7 +245,8 @@ def for_scheme(scheme) -> Contract:
             required=plain.required or (prior is not None and prior.required),
             many=plain.many or (prior is not None and prior.many),
             reference=prior.reference if prior is not None else None,
-            required_when=plain.required_when, because=because)
+            required_when=plain.required_when, blurb=plain.blurb,
+            because=because)
     for field in built_in(scheme):
         fields.setdefault(field.name, field)
     return Contract(scheme.prefix, tuple(fields.values()), scheme.tag_groups,
@@ -318,8 +326,16 @@ def explain(contract: Contract, field: Field, meta: dict | None = None) -> str:
 def describe(contract: Contract) -> list[str]:
     """The whole contract, one line per obligation, each naming where it was
     declared — the same words a finding cites, from the same place (DP-4).
-    What `docs/record.md` prints under "what an entry must carry"."""
+    What `docs/record.md` prints under "what an entry must carry".
+
+    A field or group that declares a `blurb` has it appended (#279). After
+    the citation rather than before, because the constraint is what the line
+    is for and the explanation is why anyone would accept it — and because
+    that keeps every line the same shape whether or not one was written."""
     lines = []
+
+    def say(line: str, blurb: str) -> None:
+        lines.append(f"{line} — *{blurb}*" if blurb else line)
     for field in contract.fields:
         # Built-ins stay out: this describes what a scheme declares *beyond*
         # the standard fields, and the page says so in as many words. The
@@ -337,7 +353,7 @@ def describe(contract: Contract) -> list[str]:
             if field.vocabulary is not None:
                 what += (", and one of "
                          + ", ".join(f"`{v}`" for v in field.values))
-            lines.append(f"`{field.name}` — {what} {_cite(field.because)}")
+            say(f"`{field.name}` — {what} {_cite(field.because)}", field.blurb)
             continue
         if field.vocabulary is not None:
             members = ", ".join(f"`{v}`" for v in field.values)
@@ -349,7 +365,7 @@ def describe(contract: Contract) -> list[str]:
             what += ("one or more of " if field.many else "one of ") + members
             if field.default:
                 what += "; absent means " + ", ".join(f"`{d}`" for d in field.default)
-            lines.append(f"`{field.name}` — {what} {_cite(field.because)}")
+            say(f"`{field.name}` — {what} {_cite(field.because)}", field.blurb)
             continue
         what = ("required" if field.required else
                 (f"required when `{field.required_when.on}` is "
@@ -360,11 +376,11 @@ def describe(contract: Contract) -> list[str]:
                      else f", a `{field.reference}` code")
             if not field.required:
                 what += " when present"
-        lines.append(f"`{field.name}` — {what} {_cite(field.because)}")
+        say(f"`{field.name}` — {what} {_cite(field.because)}", field.blurb)
     for group in contract.field_groups:
         members = ", ".join(f"`{f}`" for f in group.fields)
-        lines.append(f"`{group.name}` — {_FIELD_RULE_WORDS[group.require]} "
-                     f"{members} {field_group_because(contract, group)}")
+        say(f"`{group.name}` — {_FIELD_RULE_WORDS[group.require]} "
+            f"{members} {field_group_because(contract, group)}", group.blurb)
     for group in contract.groups:
         members = ", ".join(f"`{t}`" for t in sorted(group.tags))
         rule = {"exactly-one": "exactly one of", "at-most-one": "at most one of",
@@ -373,7 +389,8 @@ def describe(contract: Contract) -> list[str]:
         if group.excluded_by:
             banned = ", ".join(f"`{t}`" for t in sorted(group.excluded_by))
             what += f"; none of them alongside {banned}"
-        lines.append(f"`{group.name}` — {what} {group_because(contract, group)}")
+        say(f"`{group.name}` — {what} {group_because(contract, group)}",
+            group.blurb)
     return lines
 
 

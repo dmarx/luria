@@ -108,6 +108,24 @@ def schemes_section(cfg) -> str:
                    "in force when status is"], rows)
 
 
+def families_section(cfg) -> str:
+    """What each scheme IS, where it declares it (#279).
+
+    Separate from the table above, which says where a family's files live and
+    how a code looks. That answers *where*; this answers *what*, and a reader
+    who does not already know what a `LIT` is needs the second one first.
+    Rendered only for schemes that say — a project that declares none gets no
+    section rather than a table of blanks."""
+    said = [(p, s) for p, s in cfg.schemes.items() if s.title or s.blurb]
+    if not said:
+        return ""
+    out = []
+    for prefix, s in said:
+        head = f"**`{prefix}`**" + (f" — {s.title}" if s.title else "")
+        out.append(f"{head}\n\n{s.blurb}\n" if s.blurb else f"{head}\n")
+    return "\n".join(out)
+
+
 def contracts_section(cfg) -> str:
     """What each scheme demands of an entry beyond the standard fields —
     the compiled contract `luria lint` checks (#141), one line per
@@ -246,6 +264,13 @@ SECTIONS = (
      "was never linked; `luria link --fix` writes the link so nobody has to "
      "know where the document renders.",
      schemes_section),
+    ("What each family is",
+     "A scheme's own account of itself, where it gives one — `title` and "
+     "`blurb` on `schemes.X`. The table above says where a family's files "
+     "live and how its codes are spelled; this says what the family is for, "
+     "which is the part a reader needs first and the part a config could "
+     "not previously state (#279).",
+     families_section),
     ("What an entry must carry",
      "Every entry carries `title`, `tags` and `date`, and one standard "
      "field is conditional: a retiring document names its successor — "
