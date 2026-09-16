@@ -36,7 +36,7 @@ reader has to look at the whole line to judge it. A report, never a failure.
   relation joins share a value. It is the relation's own property, so it
   holds whether or not any chain walks the field, and it may cross schemes —
   a practice and the paper it rests on are joined by exactly one relation and
-  sit in no sequence together (#272).
+  sit in no sequence together (ADR-106, #272).
 - `chains.<name>.invariant` asserts the edge *and the line*: every member of
   a component holds one value in common. Only a chain can say that, because
   transitivity is what a chain is.

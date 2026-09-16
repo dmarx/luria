@@ -274,7 +274,7 @@ class TagGroup:
     # is the motivating case: naming how an argument fails contradicts saying
     # it does not.
     excluded_by: frozenset[str] = frozenset()
-    # Prose this group's violations print after the citation (#273), for the
+    # Prose this group's violations print after the citation (ADR-108, #273), for the
     # same reason a vocabulary carries one: the rule is mechanical and the
     # reason for it is not. A group has exactly one `require`, so one alert
     # needs no per-rule key.
@@ -413,7 +413,7 @@ class Reference:
     is a property of the relation itself: a chain adds transitivity and a
     rendered page, neither of which a relation needs in order to mean
     something. Declaring it here is also the only way to assert it over a
-    relation that crosses schemes, since a chain may not (#272)."""
+    relation that crosses schemes, since a chain may not (ADR-106, #272)."""
     field: str
     scheme: str
     required: bool = True
@@ -458,7 +458,7 @@ class Vocabulary:
     field: str
     name: str
     # What this vocabulary IS, as data rather than as a comment nothing could
-    # render (#279). A value already carries `label` and `blurb`, and so does
+    # render (ADR-109, #279). A value already carries `label` and `blurb`, and so does
     # a relation (#254); the set they belong to carried neither, so a reader
     # could learn what `training-optimization` means and not what the axis it
     # sits on is for. `label` is what a view calls it, `blurb` is what it
@@ -482,7 +482,7 @@ class Vocabulary:
     # for the values a project has an opinion about, and adding a new one
     # stays an edit to a document rather than to the config.
     closed: bool = True
-    # Prose a closed-set violation prints after the values (#273). A closed
+    # Prose a closed-set violation prints after the values (ADR-108, #273). A closed
     # vocabulary's message reads as "this value is not allowed", when the
     # project often means "this value is not declared YET, and declaring it
     # is the move". Only the record knows which, so only the record can say:
@@ -595,7 +595,7 @@ class Scheme:
     the annotation vocabulary says `inactive-ok`, not `adr-ok`, and a code
     carries its prefix, so a second scheme is an entry here (ADR-006).
 
-    `title` and `blurb` say what the family IS (#279) — `Journal` already
+    `title` and `blurb` say what the family IS (ADR-109, #279) — `Journal` already
     carries exactly that pair and a scheme is the same shape of thing, a
     stream of documents with a rendered index. The pairing is deliberate and
     is the rule this repository now follows: a thing that renders its own
@@ -1305,7 +1305,7 @@ class VocabularyTable:
     a vocabulary (#273) and the nested form arrived separately (#279); the
     first record to use both was refused, because the discriminator spelled
     the keys inline and nobody updated them when the dataclass grew a fourth
-    (#281). A list that has to be edited in step with a dataclass is one that
+    (ADR-110, #281). A list that has to be edited in step with a dataclass is one that
     will not be — so there is no list, and `KEYS` below is read off the
     fields.
 
@@ -2532,7 +2532,7 @@ def _check_cardinality(where: str, rule, source_plural: set, declared_many: bool
     accepted and was silent: the field resolved to a list, `contract.values_of`
     read a list on a scalar field as no values at all, and every page the
     scheme groups by that field stopped being written — nothing failed, the
-    directory just emptied (#276)."""
+    directory just emptied (ADR-107, #276)."""
     from .derive import whole_field
     if not whole_field(rule.template):
         return

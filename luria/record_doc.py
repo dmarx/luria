@@ -109,7 +109,7 @@ def schemes_section(cfg) -> str:
 
 
 def families_section(cfg) -> str:
-    """What each scheme IS, where it declares it (#279).
+    """What each scheme IS, where it declares it (ADR-109, #279).
 
     Separate from the table above, which says where a family's files live and
     how a code looks. That answers *where*; this answers *what*, and a reader
