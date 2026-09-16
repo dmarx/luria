@@ -4,9 +4,10 @@
 
 **Proposed** — not in force yet — an open question, so citing it as settled is what the reference report catches.
 
-2 of 107 decisions. Back to the [full index](../README.md).
+3 of 108 decisions. Back to the [full index](../README.md).
 
 | # | Title | Summary | Status |
 |---|---|---|---|
 | [ADR-106](../../../record/decisions.d/ADR-106.md) | An invariant is a property of the relation, not of the chain that walks it | `invariant` becomes a key on a declared reference, so the assertion that two related documents share a field holds without a chain to walk it and may cross schemes. Chains stay within one scheme and are refused at load when they do not, in place of the KeyError they used to raise. Rejected: teaching the chain walker to carry far-scheme nodes, and making a chain's `output` optional so an invariant could be declared with no view. | Proposed |
 | [ADR-107](../../../record/decisions.d/ADR-107.md) | A whole-field derivation holds what its source holds | `derive = "{tags}"` off a plural source derives a plural field. `many` says so and is checked against the source's scheme rather than inferred, because a followed derivation reads a scheme the loader has not finished assembling. Both directions of disagreement are refused eagerly — the one that was possible before was silent, emptying every tag page of the scheme with nothing failing. Rejected: inferring `many` from the template, and leaving the blanket refusal in place. | Proposed |
+| [ADR-108](../../../record/decisions.d/ADR-108.md) | A rule carries its own alert, on the thing the rule belongs to | A closed vocabulary's finding says what is allowed. Whether the list is finished or merely short is a fact only the record knows, and it had nowhere to say it — so the message reads as "pick one of these", which is how a vocabulary stops growing. `Vocabulary` and `TagGroup` each gain a `alert:`, printed as a continuation of their own violation. Rejected: the per-rule keys the issue proposed (`closed_alert`, `required_alert`), which turn out to be unnecessary once the alert rides the carrier rather than the field. | Proposed |

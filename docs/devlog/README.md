@@ -8,6 +8,7 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 
 - [16 Sep 05:49 — The bug was not the refusal, it was what happened when you worked around it](2026-09.md#the-bug-was-not-the-refusal-it-was-what-happened-when-you-worked-around-it)
 - [16 Sep 04:27 — A crash in the chain walker was the wrong feature in the right place](2026-09.md#a-crash-in-the-chain-walker-was-the-wrong-feature-in-the-right-place)
+- [16 Sep 03:52 — A rule can carry its own alert](2026-09.md#a-rule-can-carry-its-own-alert)
 - [15 Sep 05:26 — Naming a code in the reason is how you create the citation you are excusing](2026-09.md#naming-a-code-in-the-reason-is-how-you-create-the-citation-you-are-excusing)
 - [15 Sep 03:30 — Firing the new guard on the case that motivated it](2026-09.md#firing-the-new-guard-on-the-case-that-motivated-it)
 - [15 Sep 03:08 — One stale code silently un-acknowledged four others](2026-09.md#one-stale-code-silently-un-acknowledged-four-others)
@@ -77,9 +78,9 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 
 ## All books
 
-114 entries across 2 books, newest first.
+115 entries across 2 books, newest first.
 
 | Book | Entries | First | Last |
 |---|--:|---|---|
-| [2026-09](2026-09.md) | 68 | 2026-09-03 | 2026-09-16 |
+| [2026-09](2026-09.md) | 69 | 2026-09-03 | 2026-09-16 |
 | [2026-08](2026-08.md) | 46 | 2026-08-03 | 2026-08-28 |

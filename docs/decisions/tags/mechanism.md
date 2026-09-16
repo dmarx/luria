@@ -4,7 +4,7 @@
 
 **Mechanism** — collectors, generators, the lint, the directive vocabulary.
 
-75 of 107 decisions. Back to the [full index](../README.md).
+76 of 108 decisions. Back to the [full index](../README.md).
 
 | # | Title | Summary | Status |
 |---|---|---|---|
@@ -83,3 +83,4 @@
 | [ADR-103](../../../record/decisions.d/ADR-103.md) | One reader for a document, and the listing it comes from | `read_document` caches a document's parse and expires it when the file's mtime moves — the bargain that lets `repair` write mid-run and read back. Eleven call sites did not take it, opening and parsing documents for themselves, so `forget_documents()` cleared a cache half the readers were not using. All eleven now ask `read_document`, and a test over the sources keeps it that way. Separately, `Scheme.documents()` re-globbed and re-sorted its directory on every one of 24,960 calls per lint; it and `temp_documents()` now share one walk cached on the directory's mtime. Anthology lint 127.6s to 20.4s, output byte-identical. Rejected: a `--only` flag, which can report clean because it did not look. | Active |
 | [ADR-104](../../../record/decisions.d/ADR-104.md) | A directive's argument list is syntax; its reason is prose |  | Active |
 | [ADR-105](../../../record/decisions.d/ADR-105.md) | A mention is not a citation, and says nothing about status |  | Active |
+| [ADR-108](../../../record/decisions.d/ADR-108.md) | A rule carries its own alert, on the thing the rule belongs to | A closed vocabulary's finding says what is allowed. Whether the list is finished or merely short is a fact only the record knows, and it had nowhere to say it — so the message reads as "pick one of these", which is how a vocabulary stops growing. `Vocabulary` and `TagGroup` each gain a `alert:`, printed as a continuation of their own violation. Rejected: the per-rule keys the issue proposed (`closed_alert`, `required_alert`), which turn out to be unnecessary once the alert rides the carrier rather than the field. | Proposed |
