@@ -386,12 +386,19 @@ def test_a_closed_vocabulary_can_print_its_own_advice(example):
     reads as "pick one of these", which is how a vocabulary stops growing."""
     root = example("world-bible")
     cfg = root / "luria.yaml"
-    cfg.write_text(cfg.read_text().replace(
-        "      worlds:\n        vocabulary: worlds\n",
-        "      worlds:\n        vocabulary: worlds\n"
-        "        alert: >-\n"
-        "          Closed so every trajectory is one somebody plotted. A new\n"
-        "          one is an edit to this table, not a workaround.\n"))
+    # On the SET, in the central table (#281) — the rule an alert explains is
+    # a fact about the vocabulary, not about one field that names it.
+    lines = cfg.read_text().split("\n")
+    top = lines.index("  worlds:")
+    stop = next(i for i in range(top + 1, len(lines))
+                if lines[i][:3].strip() and not lines[i].startswith("   "))
+    lines[top:stop] = ["  worlds:",
+                       "    alert: >-",
+                       "      Closed so every trajectory is one somebody plotted. A new",
+                       "      one is an edit to this table, not a workaround.",
+                       "    values:"] + ["  " + l if l.strip() else l
+                                         for l in lines[top + 1:stop]]
+    cfg.write_text("\n".join(lines))
     config.reset()
     doc = root / "record" / "scenes.d" / "SCENE-002.md"
     doc.write_text(doc.read_text().replace("worlds:\n- A\n", "worlds:\n- Z\n"))

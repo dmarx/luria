@@ -1296,6 +1296,15 @@ def primary_tags(prefix: str, values: dict) -> frozenset[str]:
     return frozenset(found)
 
 
+# Everything a nested vocabulary table may say about ITSELF, plus the key that
+# holds its values. Named once because the discriminator below tests against
+# it: when `alert` arrived on a vocabulary (#273) and the nested form arrived
+# separately (#279), the first record to use both was refused — the set was
+# spelled inline and nobody updated it. A list that has to be edited in step
+# with a dataclass is one that will not be (#281).
+VOCABULARY_KEYS = frozenset({"label", "blurb", "alert", "values"})
+
+
 def _vocabulary_tables(raw: dict) -> tuple[dict, dict]:
     """The central `vocabularies:` table, split into values and the set's own
     description (#279).
@@ -1332,18 +1341,18 @@ def _vocabulary_tables(raw: dict) -> tuple[dict, dict]:
         # vocabulary named after the key that holds values is not a case
         # worth a third syntax.
         nested = (isinstance(table.get("values"), dict)
-                  and set(table) <= {"label", "blurb", "values"})
+                  and set(table) <= VOCABULARY_KEYS)
         if not nested and "values" in table:
             raise ValueError(
                 f"luria.yaml: vocabularies.{name} has a value named `values`, "
                 f"which is also the key that holds a nested vocabulary's "
                 f"values — write the whole table in the nested form "
-                f"(`label`, `blurb`, `values:`) so the two cannot be "
-                f"confused")
+                f"({', '.join(chr(96) + k + chr(96) for k in sorted(VOCABULARY_KEYS))})"
+                f" so the two cannot be confused")
         values_by_name[name] = dict(table["values"]) if nested else table
         if nested:
-            meta[name] = {"label": str(table.get("label", "")).strip(),
-                          "blurb": str(table.get("blurb", "")).strip()}
+            meta[name] = {k: str(table.get(k, "")).strip()
+                          for k in VOCABULARY_KEYS - {"values"}}
     return values_by_name, meta
 
 
@@ -1681,7 +1690,13 @@ def _fields(prefix: str, raw: dict, scheme_dir: Path, root: Path,
                                 many=many, required=required,
                                 default=defaults,
                                 closed=bool(spec.get("closed", True)),
-                                alert=str(spec.get("alert", "")).strip(),
+                                # From the SET too (#281). The rule an alert
+                                # explains — whether the list is closed
+                                # because it is finished — is a fact about
+                                # the vocabulary, and a record whose three
+                                # schemes name one vocabulary would otherwise
+                                # write the same sentence three times.
+                                alert=meta.get("alert", ""),
                                 # From the SET, not this field: a vocabulary
                                 # two schemes share is described once, which
                                 # is the whole reason it is declared centrally
