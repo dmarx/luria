@@ -39,13 +39,13 @@ un-silently revisable, and this record has worked examples of both
 **[ci](tags/ci.md)** (1):
 [069](../../record/decisions.d/ADR-069.md)
 
-**[config](tags/config.md)** (3):
-[082](../../record/decisions.d/ADR-082.md) · [107](../../record/decisions.d/ADR-107.md) · [109](../../record/decisions.d/ADR-109.md)
+**[config](tags/config.md)** (4):
+[082](../../record/decisions.d/ADR-082.md) · [107](../../record/decisions.d/ADR-107.md) · [109](../../record/decisions.d/ADR-109.md) · [110](../../record/decisions.d/ADR-110.md)
 
-**[contract](tags/contract.md)** (3):
-[082](../../record/decisions.d/ADR-082.md) · [107](../../record/decisions.d/ADR-107.md) · [109](../../record/decisions.d/ADR-109.md)
+**[contract](tags/contract.md)** (4):
+[082](../../record/decisions.d/ADR-082.md) · [107](../../record/decisions.d/ADR-107.md) · [109](../../record/decisions.d/ADR-109.md) · [110](../../record/decisions.d/ADR-110.md)
 
-**By status:** [Active](status/Active.md) (101) · [Proposed](status/Proposed.md) (4) · [Deferred](status/Deferred.md) (0) · [Superseded](status/Superseded.md) (3) · [Rejected](status/Rejected.md) (1)
+**By status:** [Active](status/Active.md) (101) · [Proposed](status/Proposed.md) (5) · [Deferred](status/Deferred.md) (0) · [Superseded](status/Superseded.md) (3) · [Rejected](status/Rejected.md) (1)
 
 ## Chronological
 
@@ -170,4 +170,5 @@ What the status column means in this scheme — the words are luria's, the meani
 | [ADR-107](../../record/decisions.d/ADR-107.md) | A whole-field derivation holds what its source holds | `derive = "{tags}"` off a plural source derives a plural field. `many` says so and is checked against the source's scheme rather than inferred, because a followed derivation reads a scheme the loader has not finished assembling. Both directions of disagreement are refused eagerly — the one that was possible before was silent, emptying every tag page of the scheme with nothing failing. Rejected: inferring `many` from the template, and leaving the blanket refusal in place. | Proposed |
 | [ADR-108](../../record/decisions.d/ADR-108.md) | A rule carries its own alert, on the thing the rule belongs to | A closed vocabulary's finding says what is allowed. Whether the list is finished or merely short is a fact only the record knows, and it had nowhere to say it — so the message reads as "pick one of these", which is how a vocabulary stops growing. `Vocabulary` and `TagGroup` each gain a `alert:`, printed as a continuation of their own violation. Rejected: the per-rule keys the issue proposed (`closed_alert`, `required_alert`), which turn out to be unnecessary once the alert rides the carrier rather than the field. | Proposed |
 | [ADR-109](../../record/decisions.d/ADR-109.md) | A config object says what it is, and where it says it depends on what it is | `label` + `blurb` for a thing named inside a scheme — a vocabulary, a tag group, a plain field, a field group — matching what a relation already had; `title` + `blurb` for a thing that renders its own page, which is a scheme, a journal and a chain. A vocabulary's pair lives in the central table, not on the field that invokes it, so a set two schemes share is described once. Rejected: putting it on the field, which is where the first implementation put it and where it would have drifted. | Proposed |
+| [ADR-110](../../record/decisions.d/ADR-110.md) | A vocabulary's alert belongs to the set, like its blurb | `alert` on a vocabulary moves from the field that names it to the central table, beside `label` and `blurb`. The rule it explains is a fact about the set, and a record whose three schemes name one vocabulary was otherwise writing the same sentence three times. The nested form's key list becomes a named constant, because the version that was spelled inline did not know about `alert` and refused the first record to use both features together. | Proposed |
 

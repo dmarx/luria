@@ -4,10 +4,11 @@
 
 **contract**.
 
-3 of 109 decisions. Back to the [full index](../README.md).
+4 of 110 decisions. Back to the [full index](../README.md).
 
 | # | Title | Summary | Status |
 |---|---|---|---|
 | [ADR-082](../../../record/decisions.d/ADR-082.md) | A field can be required by another field's value | A record can state what it believes and had no way to state what would change its mind, so provisional documents accumulate with nothing saying what they are provisional pending. `required_when` demands a field only while another field holds one of a listed set of values — one field, one set, no expression language, because the value of the rule is that it is legible in the line that declares it. | Active |
 | [ADR-107](../../../record/decisions.d/ADR-107.md) | A whole-field derivation holds what its source holds | `derive = "{tags}"` off a plural source derives a plural field. `many` says so and is checked against the source's scheme rather than inferred, because a followed derivation reads a scheme the loader has not finished assembling. Both directions of disagreement are refused eagerly — the one that was possible before was silent, emptying every tag page of the scheme with nothing failing. Rejected: inferring `many` from the template, and leaving the blanket refusal in place. | Proposed |
 | [ADR-109](../../../record/decisions.d/ADR-109.md) | A config object says what it is, and where it says it depends on what it is | `label` + `blurb` for a thing named inside a scheme — a vocabulary, a tag group, a plain field, a field group — matching what a relation already had; `title` + `blurb` for a thing that renders its own page, which is a scheme, a journal and a chain. A vocabulary's pair lives in the central table, not on the field that invokes it, so a set two schemes share is described once. Rejected: putting it on the field, which is where the first implementation put it and where it would have drifted. | Proposed |
+| [ADR-110](../../../record/decisions.d/ADR-110.md) | A vocabulary's alert belongs to the set, like its blurb | `alert` on a vocabulary moves from the field that names it to the central table, beside `label` and `blurb`. The rule it explains is a fact about the set, and a record whose three schemes name one vocabulary was otherwise writing the same sentence three times. The nested form's key list becomes a named constant, because the version that was spelled inline did not know about `alert` and refused the first record to use both features together. | Proposed |
