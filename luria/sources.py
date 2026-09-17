@@ -394,14 +394,13 @@ def mismatch_lines() -> tuple[list[str], list[str], list[str]]:
     ask a finding, so a green CI run means the references were verified rather
     than remembered.
     """
-    from . import directives, remotes
+    from . import directives
     cfg = current()
     known = dict(state())
     policy = cfg.network
     flagged: list[str] = []
     unchecked: list[str] = []
     stale: list[str] = []
-    learned: dict[str, dict[str, str]] = {}
 
     by_path: dict = {}
     for ident in identifiers():
@@ -426,7 +425,6 @@ def mismatch_lines() -> tuple[list[str], list[str], list[str]]:
                     reason = f"{got.status} — {got.detail}"
                 if entry is not None:
                     known[ident.key] = entry
-                    learned[ident.key] = entry
             ack = next((d for d in found
                         if d.covers(ident.line)
                         and (ident.uid in d.args or ident.key in d.args)), None)
@@ -464,8 +462,13 @@ def mismatch_lines() -> tuple[list[str], list[str], list[str]]:
                     stale.append(f"{cfg.rel(path)}:{d.line}: {problem}")
                     break
 
-    # What the lint learned is worth keeping: the next run answers from the
-    # lockfile, and the diff shows a reviewer what upstream said and when.
-    if learned:
-        remotes.write_lock(titles=known)
+    # What the lint learned is NOT written here, and the instinct to write it
+    # was right about everything except where. Keeping the answer is worth
+    # doing — the next run goes offline, and the diff shows a reviewer what
+    # upstream said and when. But the lint runs on every branch, so persisting
+    # it here made `remotes.lock.json` a file every contribution rewrites:
+    # DP-002's lock, reintroduced through a *check* rather than a generator,
+    # which is why it went unnoticed. `luria remotes --resolve` keeps the
+    # answer, at the serialization point, where one writer holds the pen
+    # (ADR-tmp1adp3). Reading and asking stay here; only the write moved.
     return flagged, unchecked, stale

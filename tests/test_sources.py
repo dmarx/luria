@@ -209,16 +209,36 @@ def test_the_lint_asks_about_what_the_lockfile_cannot_answer(project,
     assert len(flagged) == 1 and "TinyLlama" in flagged[0]
 
 
-def test_what_the_lint_learns_is_written_back(project, monkeypatch):
-    """So the next run answers offline, and the diff shows a reviewer what
-    upstream said and when."""
+def test_the_lint_does_not_write_the_lockfile(project, monkeypatch):
+    """It used to, and keeping what it learned was the right instinct — but
+    the lint runs on every branch, so persisting there made a file every
+    contribution rewrites (DP-002). The answer is kept where merges
+    serialize; the check only reads."""
     _project(project, network="auto")
     _note(project, 8, "Attention Is All You Need", "2401.02385")
     _resolved(project, {})
+    before = (project / "remotes.lock.json").read_text()
     monkeypatch.setattr(sources, "ask",
                         lambda ident: sources.Fetched("ok", title="TinyLlama"))
     sources.mismatch_lines()
-    assert sources.state()["ARXIV/2401.02385"]["title"] == "TinyLlama"
+    assert (project / "remotes.lock.json").read_text() == before
+    assert sources.state() == {}
+
+
+def test_the_lint_still_reports_what_it_learned_without_keeping_it(
+        project, monkeypatch):
+    """Not writing is not the same as not asking: the early-warning half of
+    the check — a wrong citation caught on the run that adds it — is what the
+    fetch is for, and it survives the write being removed."""
+    _project(project, network="auto")
+    _note(project, 9, "Attention Is All You Need", "2401.02385")
+    _resolved(project, {})
+    monkeypatch.setattr(sources, "ask",
+                        lambda ident: sources.Fetched("ok", title="TinyLlama"))
+    flagged, unchecked, _ = sources.mismatch_lines()
+    assert len(flagged) == 1 and "TinyLlama" in flagged[0]
+    assert unchecked == []
+    assert sources.state() == {}
 
 
 def test_an_identifier_upstream_does_not_have_is_its_own_finding(project):

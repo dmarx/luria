@@ -52,6 +52,20 @@ inputs:
       with no merge-allocated schemes can pass true harmlessly; the command
       is a no-op with nothing pending.
     default: "false"
+  resolve:
+    description: >-
+      "true" runs `luria remotes --resolve` before the views are written, so
+      what upstream says each identifier is gets recorded in
+      `remotes.lock.json` and committed with them. Pass true ONLY where merges
+      serialize — the push-to-default-branch run — for the same reason
+      `concretize` is passed there and nowhere else (DP-002): the lockfile is
+      a shared artifact, and a branch that writes it is a branch every other
+      branch conflicts with. The lint still ASKS about identifiers the
+      lockfile cannot answer, on every run, so a wrong citation is still
+      caught on the pull request that adds it — what moved is the write, not
+      the check. A project whose remotes declare no way to ask can pass true
+      harmlessly; the command has nothing to do.
+    default: "false"
   views:
     description: >-
       "true" regenerates the views and commits and pushes them together with
@@ -110,6 +124,11 @@ runs:
           git pull --rebase origin "$(git rev-parse --abbrev-ref HEAD)"
           git push
         fi
+    # Before the views, so the lockfile it writes is staged into the same
+    # commit rather than left dirty for the next run to find.
+    - if: ${{ inputs.resolve == 'true' }}
+      shell: bash
+      run: luria remotes --resolve
     - if: ${{ inputs.views == 'true' }}
       shell: bash
       run: luria index
