@@ -9,6 +9,19 @@ vocabularies:
     process:
       label: Process
       blurb: how the machinery is adopted, run, and reported on
+    docs:
+      label: Documented
+      blurb: >-
+        cited by the documentation a reader browses — a hand-written page under
+        `docs/`, or prose that renders into one — so retiring this decision
+        changes what the docs claim and the page has to change with it
+    load-bearing:
+      label: Load-bearing
+      blurb: >-
+        fixes something an adopting record must write: a frontmatter field, a
+        path on disk, the spelling of a code, or directive syntax in prose.
+        Reversing it does not just change luria's behaviour, it invalidates
+        records that have already been filed
   statuses:
     Active:
       blurb: in force — the current answer, and what a citation should normally point at
