@@ -621,3 +621,59 @@ def test_staging_leaves_no_unresolved_wikilink():
     import tempfile
     with tempfile.TemporaryDirectory() as d:
         assert site.stage(Path(d)).unplaced == []
+
+
+def test_a_view_the_branch_has_not_regenerated_is_still_published(
+        tmp_path, monkeypatch):
+    """A generated view is published whether or not it is on disk yet.
+
+    ADR-068 keeps generated views off a branch: a pull request lints its
+    sources and commits no view. So a contribution that ADDS a view — a new
+    tag value, a new scheme — leaves the record citing a page the working tree
+    does not have, and `publishable()` walks the tree. Asking the filesystem
+    "is this published?" answers "no" for a page main publishes, and the
+    record line's own link is reported as leaving the site.
+
+    Fired on the real case: adding two tag values to this project's own
+    vocabulary turned the two whole-record assertions above red, on a branch
+    that was correct by ADR-068's rule."""
+    from luria import adr_index, config, site
+
+    root = tmp_path / "rec"
+    (root / "record" / "decisions.d").mkdir(parents=True)
+    (root / "docs" / "decisions").mkdir(parents=True)
+    (root / "luria.yaml").write_text("""
+        issue_url: https://example.test/issues/{n}
+        vocabularies:
+          statuses:
+            Active: {blurb: in force}
+          topics:
+            alpha: {blurb: the first topic}
+        schemes:
+          ADR:
+            dir: record/decisions.d
+            output: docs/decisions
+            active: Active
+            render: index
+            axis: tags
+            fields:
+              status: {vocabulary: statuses}
+              tags: {vocabulary: topics, many: true, closed: false}
+        """, encoding="utf-8")
+    (root / "record" / "decisions.d" / "ADR-001.md").write_text(
+        "---\nstatus: Active\ntitle: A decision\ntags:\n- alpha\n"
+        "date: '2026-01-01'\n---\n\n# A decision\n\nBody.\n",
+        encoding="utf-8")
+    monkeypatch.setenv("LURIA_ROOT", str(root))
+    config.reset()
+
+    adr_index.run()
+    page = root / "docs" / "decisions" / "tags" / "alpha.md"
+    assert page.exists(), "precondition: the tag page is a view of this record"
+
+    # Exactly what a branch looks like under ADR-068: the source that implies
+    # the view is committed, the view itself is not.
+    page.unlink()
+    adr_index.forget_documents()
+    config.reset()
+    assert site.stage(tmp_path / "out").unplaced == []

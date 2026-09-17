@@ -59,7 +59,7 @@ import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from . import doc_refs, edges, statuses
+from . import adr_index, doc_refs, edges, statuses
 from .adr_index import parse_frontmatter
 from .config import Site, current
 
@@ -958,7 +958,14 @@ def stage(out: Path, cfg=None, nested: bool = True) -> Report:
     content.mkdir(parents=True)
 
     pages = publishable(cfg, skip=out)
-    published = set(pages)
+    # What the record PUBLISHES, not what happens to be on disk. A generated
+    # view is published whether or not it has been rendered into this working
+    # tree yet, and under ADR-068 a branch carries none of them — so a
+    # contribution that adds a view (a new tag value, a new scheme) would
+    # otherwise have every link to it reported as leaving the site. `pages` is
+    # still the disk walk, because only a file that exists can be staged; the
+    # question `_retarget` asks is a different one.
+    published = set(pages) | set(adr_index.outputs(nested=nested))
     report, assets = Report(), {}
     # Read once for the whole record: a page's backlinks are somebody else's
     # frontmatter.
