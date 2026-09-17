@@ -12,9 +12,9 @@ repository.
 
 ## The shape of the file
 
-The tables below are the whole schema. Four of them — `schemes`, `fragments`,
-`journals` and `remotes` — are *families*: you name the entries, and the name
-you choose becomes part of the vocabulary. `schemes.RFC` is how a
+The tables below are the whole schema. Five of them — `schemes`, `fragments`,
+`journals`, `remotes` and `chains` — are *families*: you name the entries, and
+the name you choose becomes part of the vocabulary. `schemes.RFC` is how a
 project gets RFCs; `journals.incidents` is how it gets a second
 journal. No code path spells `ADR`.
 
@@ -36,14 +36,16 @@ it to inherit from.
 
 | table | what it configures | families |
 |---|---|---|
-| `luria` | issue links, staleness horizon | — |
+| `luria` | issue links, staleness horizon, nested records | — |
 | `paths` | where the read and write surfaces live | — |
+| `vocabularies.<name>` | value sets a scheme's fields point at by name | — |
 | `schemes.X` | a referable document family: `ADR`, `RFC`, `SPEC` | yes, keyed by prefix |
 | `fragments.<dir>` | many small files assembled into one document | yes, keyed by directory |
 | `journals.X` | dated entries that persist, rendered into books | yes, keyed by name |
+| `chains.X` | a relation walked transitively, rendered as sequences | yes, keyed by name |
 | `remotes.X` | another project's codes, cited from this one | yes, keyed by prefix |
 | `code` | which source files are scanned for stale references | — |
-| `lint` | which warning classes fail the build | — |
+| `lint` | which warning classes fail, and which are not reported | — |
 | `site` | publishing the record as a browsable site | — |
 
 ## Top level — `luria`
@@ -52,6 +54,7 @@ it to inherit from.
 |---|---|---|
 | `issue_url` | *unset* | A template for issue links, with `{n}` for the number. Writing it also tells Luria which GitHub repository this is, which is where every `site` default comes from. Unset, issue numbers stay bare rather than linking somewhere wrong. |
 | `stale_days` | `90` | How long a document may sit undecided before the pending-decisions report calls it out. |
+| `include_records` | *unset* | Globs naming further records inside this repository — `examples/*` — each read with its own `luria.yaml` and linted in the same run. What makes a worked example a thing CI exercises rather than a directory of prose nobody runs. |
 
 ## Paths — `paths`
 
@@ -80,7 +83,9 @@ The dial between reported and enforced. Status findings are warnings by default;
 | key | default | what it does |
 |---|---|---|
 | `fail_on` | *unset* | Warning classes promoted to failures. |
+| `mute` | *unset* | Warning classes not reported at all. Where `fail_on` changes a finding's consequence, this removes it from the run — the blunter instrument, for a check a project has decided is not useful to it, where an acknowledgement directive is the right shape when the finding is about one document. Naming a class in both is refused rather than resolved. `luria reports` renders the full accounting either way. |
 | `narrow_terms` | *unset* | This project's own concrete nouns. A title in a scheme marked `titles_generalize` that names one is reported as `narrow-titles`. Luria ships none — the words are yours, and empty means the class never fires. |
+| `network` | `"auto"` | How far `luria lint` may reach to check what a cited identifier actually is. `auto` asks only about identifiers the lockfile has no answer for and falls back to reporting them unchecked; `never` answers from the lockfile alone, for the hermetic build; `require` makes an unreachable remote a failure, so a green run means the references were verified rather than remembered. |
 
 ## Schemes — `schemes.X`
 
@@ -129,13 +134,257 @@ Without it, `docs/record.md` could say a scheme's codes look like
 | `uniform_ok` | `str \| None` | *unset* |
 | `uniform_share` | `float` | `1.0` |
 
+## Vocabulary fields — `schemes.X.fields.<field>`
+
+A field whose values come from a named set the project declares. `status` and `tags` are two instances of this shape rather than two special cases beside it, which is why a scheme can narrow either one.
+
+A frontmatter field backed by a scheme-local controlled vocabulary
+(ADR-076):
+
+```yaml
+schemes:
+  SCENE:
+    fields:
+      worlds:
+        vocabulary: worlds
+        many: true
+        default:            # the effective value when absent
+        - B
+```
+
+`fields` is the table a field's shape and type are declared in; today
+`vocabulary` is the one type it takes, and `requires` and `references`
+remain the spellings for the other two kinds until they consolidate
+here. The values file is shaped like `tags.yaml`. Closed: a value
+outside the file is a finding. `required` (default false) and `default`
+are exclusive — a field with a default is never absent, so `required`
+would say nothing.
+
+| key | type | default |
+|---|---|---|
+| `field` | `str` | *required* |
+| `name` | `str` | *required* |
+| `label` | `str` | *unset* |
+| `blurb` | `str` | *unset* |
+| `values_by_name` | `dict[str, dict]` | *unset* |
+| `many` | `bool` | `False` |
+| `required` | `bool` | `False` |
+| `default` | `tuple[str, ...] \| None` | *unset* |
+| `closed` | `bool` | `True` |
+| `alert` | `str` | *unset* |
+| `required_when` | `RequiredWhen \| None` | *unset* |
+
+## Plain fields — `schemes.X.fields.<field>`
+
+The same table, for a field that carries no vocabulary: its type is "any truthy value" and what it adds over a `requires` entry is when the requirement applies.
+
+A field declared in the `fields` table that carries no vocabulary —
+its type is "any truthy value", the same as a `requires` entry, and what
+it adds is when the requirement applies.
+
+| key | type | default |
+|---|---|---|
+| `field` | `str` | *required* |
+| `required` | `bool` | `False` |
+| `many` | `bool` | `False` |
+| `required_when` | `RequiredWhen \| None` | *unset* |
+| `unique` | `bool` | `False` |
+| `label` | `str` | *unset* |
+| `blurb` | `str` | *unset* |
+
+## Conditional requirement — `…fields.<field>.required_when`
+
+A field demanded only while another field says one of a set of values — the shape a question that is only open while a document is unsettled actually has.
+
+A field demanded only while another field says one of these things:
+
+```yaml
+schemes:
+  SOTA:
+    fields:
+      promote_when:
+        required_when:
+          status:
+          - Proposed
+          - Deferred
+```
+
+`requires` says a field must always be there, which is right for identity
+— a title, a source. It is wrong for a field that is *about* a state: a
+practice at a provisional status should say what would settle it, and one
+already in force has nothing to be waiting for. Demanding the field of
+everything makes most documents carry a key with nothing to put in it,
+and demanding it of nothing is what a project has today (#170).
+
+One field against a set of literal values, and no more than that. Not
+negation, not conjunction, not an expression: a config that can state
+arbitrary predicates is a config nobody reads at a glance, and the whole
+value of this one is that a reader sees the rule in the line.
+
+Pure data. Deciding whether it holds of a document needs the field's
+*effective* value — a status carrying a note is still that status, a
+vocabulary field with a default is never absent — and only the compiled
+contract knows how to resolve that. `Contract.demands` does it, which
+also keeps this module from reaching up into ones that depend on it.
+
+| key | type | default |
+|---|---|---|
+| `on` | `str` | *required* |
+| `values` | `tuple[str, ...]` | *required* |
+
+## Reference fields — `schemes.X.references.<field>`
+
+A frontmatter field that holds a code from a named scheme. Declaring the relationship rather than merely requiring the field is what turns one check into four — present, shaped like a code, resolving to a real document, and in force — and what lets `luria link --fix` complete a declared `converse`.
+
+A frontmatter field that holds a code from a named scheme.
+
+```yaml
+schemes:
+  SOTA:
+    references:
+      source:
+        scheme: LIT
+        required: true
+```
+`requires = ["source"]` already says the field must be there. What it
+cannot say is what the field MEANS, and the gap is wider than it looks: a
+required field is satisfied by any truthy value, so a practice citing a
+decision as its evidence passes, and so does one citing the string "a
+paper I read once". The rule the project was relying on — every practice
+names the paper behind it — was enforced only in the sense that the field
+was not blank.
+
+Declaring the relationship instead makes four checks out of one: present,
+shaped like a code, belonging to that scheme, resolving to a document
+(ADR-060).
+
+`converse` names the field holding the same relation read backwards —
+`extends` and `extended_by`, or `compared_against` naming itself, which
+is what symmetry *is*. Declaring it is what licenses `luria link --fix`
+to write one side from the other, and what makes a one-sided pair a
+finding; a relation with no declared converse is left entirely alone,
+because its reverse edge would be a guess (#178).
+
+`many` says the field holds a list of codes rather than one. Without it
+a list was stringified and its first code checked, the rest ignored —
+structured input coerced to prose and half-read, with no finding. A
+scalar field given a list is now a finding; a plural field checks and
+resolves every element, and each becomes an edge (#141).
+
+`invariant` names the field both ends of the relation must share a value
+in — the assertion `A extends B` makes and never spells out. It lives
+here, on the relation, rather than only on a chain, because the assertion
+is a property of the relation itself: a chain adds transitivity and a
+rendered page, neither of which a relation needs in order to mean
+something. Declaring it here is also the only way to assert it over a
+relation that crosses schemes, since a chain may not (ADR-106, #272).
+
+| key | type | default |
+|---|---|---|
+| `field` | `str` | *required* |
+| `scheme` | `str` | *required* |
+| `required` | `bool` | `True` |
+| `many` | `bool` | `False` |
+| `converse` | `str` | *unset* |
+| `invariant` | `str` | *unset* |
+| `label` | `str` | *unset* |
+| `blurb` | `str` | *unset* |
+| `required_when` | `RequiredWhen \| None` | *unset* |
+
+## Tag groups — `schemes.X.fields.<field>.groups.<name>`
+
+Which of a field's values may appear together. A vocabulary says what a value means; a group says whether the field is an axis or a pile.
+
+A set of a scheme's tags that combine under a rule.
+
+`tags.yaml` declares what a tag *means*; this declares which of them may
+appear together, because some vocabularies are axes rather than piles. An
+argument is sound or overreaching or invalid — exactly one — and saying so
+in prose leaves it to be checked by nobody, which is how a rule becomes a
+comment.
+
+Opt-in per scheme: a scheme declaring no group is unconstrained, which is
+every scheme that exists today.
+
+| key | type | default |
+|---|---|---|
+| `name` | `str` | *required* |
+| `tags` | `frozenset[str]` | *required* |
+| `field` | `str` | `"tags"` |
+| `require` | `str` | `"any"` |
+| `excluded_by` | `frozenset[str]` | `frozenset()` |
+| `alert` | `str` | *unset* |
+| `label` | `str` | *unset* |
+| `blurb` | `str` | *unset* |
+| `derived` | `bool` | `False` |
+
+## Field groups — `schemes.X.field_groups.<name>`
+
+Several fields of which an entry must carry some, named for what they have in common — the shape of *a source*, where `requires` can only spell one of the fields that would be one.
+
+Several fields of which an entry must carry some — a requirement that
+is satisfied by any of them, named for what they have in common:
+
+```yaml
+schemes:
+  LIT:
+    field_groups:
+      source:
+        fields:
+        - arxiv
+        - doi
+        - url
+        require: at-least-one   # or exactly-one, at-most-one
+```
+
+`requires` demands every field it names; a paper that was never posted
+to arXiv but has a DOI, or only a URL, has a source all the same, and
+demanding `arxiv` of it is demanding the wrong thing. The group says
+what is actually required — *a source* — and which fields count as
+one. Opt-in per scheme, like a tag group (ADR-054).
+
+| key | type | default |
+|---|---|---|
+| `name` | `str` | *required* |
+| `fields` | `tuple[str, ...]` | *required* |
+| `require` | `str` | `"at-least-one"` |
+| `unique` | `bool` | `False` |
+| `label` | `str` | *unset* |
+| `blurb` | `str` | *unset* |
+
+## Vocabularies — `vocabularies.<name>`
+
+The central table a scheme's fields point at by name, so a set of values and their blurbs are declared once however many fields use them. A value may be a bare blurb or this nested table.
+
+The nested shape of one entry in the central `vocabularies:` table.
+
+This exists so the set of keys a nested table may carry is a consequence
+of the declaration rather than a second list beside it. `alert` arrived on
+a vocabulary (#273) and the nested form arrived separately (#279); the
+first record to use both was refused, because the discriminator spelled
+the keys inline and nobody updated them when the dataclass grew a fourth
+(ADR-110, #281). A list that has to be edited in step with a dataclass is one that
+will not be — so there is no list, and `KEYS` below is read off the
+fields.
+
+It is a schema, not a carrier: `_vocabulary_tables` builds one and reads
+its attributes, so a field added here reaches both the discriminator and
+the metadata in the same edit.
+
+| key | type | default |
+|---|---|---|
+| `label` | `str` | *unset* |
+| `blurb` | `str` | *unset* |
+| `alert` | `str` | *unset* |
+| `terms` | `dict[str, dict]` | *unset* |
+
 ## Fragment directories — `fragments.<dir>`
 
 One entry per directory whose files are assembled into a single document and then consumed. The changelog is the shipped instance; the mechanism is not changelog-shaped.
 
 One fragment directory: where its pieces assemble to, and in what shape.
 
-```toml
+```yaml
 fragments:
   record/changelog.d: CHANGELOG.md         # the append style
   record/changelog.d:                      # or, spelled as a mapping:
@@ -162,13 +411,14 @@ One entry per stream of dated entries that persist. This is a family like any ot
 
 Dated entries that persist, rendered into books (ADR-020).
 
-```toml
-`journals.devlog`
-dir         = "devlog.d"        # entries, partitioned yyyy/mm/dd/
-output      = "docs/devlog"     # a directory of books plus an index
-granularity = "month"           # year | month | day
-title       = "Development log"
-blurb       = "…"               # optional prose for the index
+```yaml
+journals:
+  devlog:
+    dir: record/devlog.d      # entries, partitioned yyyy/mm/dd/
+    output: docs/devlog       # a directory of books plus an index
+    granularity: month        # year | month | day
+    title: Development log
+    blurb: "…"                # optional prose for the index
 ```
 
 The difference from a fragment directory is that nothing is consumed: an
@@ -184,6 +434,53 @@ sources that persist rather than collected from sources that are deleted.
 | `title` | `str` | `"Journal"` |
 | `blurb` | `str` | *unset* |
 
+## Chains — `chains.X`
+
+One entry per relation walked transitively and rendered as sequences. Where a reference field gives a document its neighbours, a chain answers the question no single document holds: what line of work is this a step in?
+
+A relation walked transitively and rendered as sequences (#171).
+
+```yaml
+chains:
+  lineage:
+    scheme: LIT
+    relation: extends
+    sibling: compared_against
+    output: docs/lineage.md
+    title: Lines of work
+```
+`relation` takes one field or several — `["extends", "corrects"]` — and
+several are walked as one spine (#211). That is not a convenience: a
+record can carry succession with a sign, where "builds on the parent" and
+"exists because the parent is broken" are both steps in one line and one
+relation renders them identically. Two relations state the difference
+where a per-entry attribute would have to qualify a reference, which is
+the shape the consumer record's own ADR-011 refuses. The sign is which
+field the code sits in.
+
+`edges.py` already reads a reference field as a typed relation, and the
+site already renders each page's neighbours. What no view answered is
+*what sequence is this document a step in* — and that is the question the
+documents themselves were answering, one prose paragraph each, until two
+of them went stale on the same fact and had to be corrected in two
+places.
+
+Both fields must be declared references on the scheme; a chain over a
+field nothing declares would render nothing, and nothing looks exactly
+like current (DP-15).
+
+| key | type | default |
+|---|---|---|
+| `name` | `str` | *required* |
+| `scheme` | `str` | *required* |
+| `relation` | `tuple[str, ...]` | *required* |
+| `output` | `Path` | *required* |
+| `sibling` | `str` | *unset* |
+| `title` | `str` | *unset* |
+| `facet_by` | `tuple[str, ...]` | `('status',)` |
+| `blurb` | `str` | *unset* |
+| `invariant` | `str` | *unset* |
+
 ## Remotes — `remotes.X`
 
 One entry per foreign project whose codes this record cites. The `uid` key is the general case: with a regex and a URL template, a remote need not hold a Luria-shaped record — or any record — at all, which is how arXiv identifiers, ticket keys and CVE numbers become linted references.
@@ -194,13 +491,14 @@ A reference to it composes the remote's prefix with the foreign scheme's
 own code — `LU-ADR-013` — so the namespace is explicit at the point of use
 and nothing has to guess which project an unprefixed code meant (ADR-016).
 
-```toml
-`remotes.LU`
-name = "luria"
-repo = "dmarx/luria"             # GitHub owner/name
-ref  = "main"                    # branch or tag the links point at
-dir  = "record/decisions.d"      # where its decisions live
-url  = "https://…/{code}.md"     # optional: overrides construction
+```yaml
+remotes:
+  LU:
+    name: luria
+    repo: dmarx/luria           # GitHub owner/name
+    ref: main                   # branch or tag the links point at
+    dir: record/decisions.d     # where its decisions live
+    url: "https://…/{code}.md"  # optional: overrides construction
 ```
 
 Everything but `repo` (or `url`) has a default, because the defaults are
@@ -214,10 +512,11 @@ whatever the pattern matches — an arxiv id, a ticket key — constructed
 through the `url` template, which can index the uid's capture groups by
 position:
 
-```toml
-`remotes.ARXIV`
-uid = "(\d{4})[.:](\d{4,5})"
-url = "https://arxiv.org/abs/{1}.{2}"   # {0} or {uid} is the whole tail
+```yaml
+remotes:
+  ARXIV:
+    uid: '(\d{4})[.:](\d{4,5})'
+    url: https://arxiv.org/abs/{1}.{2}   # {0}/{uid} is the whole tail
 ```
 
 A `pin_url` template names where the remote's *stable bytes* live, which
@@ -225,8 +524,10 @@ is what lets `luria remotes --pin` endorse content that has no GitHub
 file behind it (#135) — arXiv's e-print archive is the paper where its
 abstract page is a rendering:
 
-```toml
-pin_url = "https://arxiv.org/e-print/{1}.{2}"
+```yaml
+remotes:
+  ARXIV:
+    pin_url: "https://arxiv.org/e-print/{1}.{2}"
 ```
 
 Both are the short names of a general table: a code relates to a SET of
@@ -236,10 +537,12 @@ named URIs, each through a template over one vocabulary — {code},
 `uris.read`, `pin_url` is `uris.bytes`, and a relation Luria does not
 ship yet is one more name:
 
-```toml
-`remotes.LU.uris`
-bytes   = "https://gitlab.example/{repo}/-/raw/{ref}/{dir}/{filename}"
-history = "https://github.com/{repo}/commits/{ref}/{dir}/{filename}"
+```yaml
+remotes:
+  LU:
+    uris:
+      bytes: "https://gitlab.example/{repo}/-/raw/{ref}/{dir}/{filename}"
+      history: "https://github.com/{repo}/commits/{ref}/{dir}/{filename}"
 ```
 
 GitHub's blob/raw pair is simply the shipped default pair of `read` and
@@ -272,15 +575,15 @@ How one of a remote's code families constructs (ADR-023).
 A remote is not one directory of files — it is a project, and different
 schemes in it have different shapes. Each entry names one construction:
 
-```toml
-`remotes.SG.schemes.ADR`
-dir = "docs/decisions"                 # file per code
-```
-
-```toml
-`remotes.SG.schemes.DP`
-document = "docs/design-principles.md" # sections of one file…
-anchor = "dp-{number}"                 # …at Luria's stable anchors
+```yaml
+remotes:
+  SG:
+    schemes:
+      ADR:
+        dir: docs/decisions       # file per code
+      DP:
+        document: docs/design-principles.md  # sections of one file…
+        anchor: "dp-{number}"                # …at stable anchors
 ```
 
 `anchor` defaults to the prefix lowercased plus the number — `dp-18` —
@@ -306,12 +609,13 @@ Publishing the record as a browsable vault. Every key derives from `issue_url` f
 
 How the record publishes as a browsable site (ADR-042).
 
-```toml
-`site`
-title      = "Luria"
-base_url   = "dmarx.github.io/luria"
-source_url = "https://github.com/dmarx/luria/blob/HEAD"
-exclude    = ["template/**"]
+```yaml
+site:
+  title: Luria
+  base_url: dmarx.github.io/luria
+  source_url: https://github.com/dmarx/luria/blob/HEAD
+  exclude:
+  - template/**
 ```
 
 Only `exclude` is genuinely per-project: the rest default off `issue_url`,
@@ -324,15 +628,18 @@ means "leave those links alone", and `luria site` says how many it left.
 
 The branding keys are the project's own artwork, cited by path:
 
-```toml
-icon      = "assets/brand/icon.svg"    # favicon, any square image
-logo      = "assets/brand/lockup.svg"  # shown in place of the title
-logo_dark = "assets/brand/lockup-inverted.svg"   # optional
+```yaml
+site:
+  icon: assets/brand/icon.svg     # favicon, any square image
+  logo: assets/brand/lockup.svg   # shown in place of the title
+  logo_dark: assets/brand/lockup-inverted.svg   # optional
 ```
 
-```toml
-`site.theme.light`
-light = "#f4f1e8"                      # any of Quartz's colour names
+```yaml
+site:
+  theme:
+    light:
+      light: "#f4f1e8"          # any of Quartz's colour names
 ```
 
 `logo_dark` is only needed when the artwork can't invert itself. A logo
@@ -384,10 +691,13 @@ everything is one:
 - **The frontmatter vocabulary.** `status:`, `title:`, `tags:`, `date:`,
   `version:`, `history:` are fixed field names. Which *statuses* count as in
   force is per-scheme (`active`), but the field they live in is not.
-- **Renaming a scheme in place.** Adding `schemes.RFC` costs one
-  table; renaming an existing scheme, or moving its documents, is currently a
-  manual pass — there is no migration command. The decision that would give
-  it one is still Proposed.
+- **The record's shape, from the command line.** Adding `schemes.RFC` costs
+  one table, and that table is the only way to add it: there is no
+  `luria add-scheme`. Changing a shape that already has documents under it is
+  `luria migrate`, which executes a spec committed to `record/migrations.d/`
+  — renaming a prefix or moving a document between schemes, swept across the
+  repository in one pass. The spec is a file because the rename is a thing
+  the record should remember, not an argument typed once.
 
 Two earlier entries in this list are gone because they stopped being true
 (ADR-047): the shipped `ADR` scheme *can* be removed — declare the `schemes`
