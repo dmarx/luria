@@ -159,8 +159,13 @@ whether the config can state it instead:
 | exactly one primary category | `fields.<field>.groups` with `require: exactly-one` | a violation |
 | at most one of these, they are an axis | `require = "at-most-one"` | a violation |
 | saying it failed contradicts saying it holds | `excluded_by` | a violation |
-| a field is required only while the entry is unsettled | `fields` with `required_when = { status = ["Proposed", "Deferred"] }` | a violation naming the value that fired it |
+| a field is required only while the entry is unsettled | `fields` with `required_when: {status: [Proposed, Deferred]}` | a violation naming the value that fired it |
 | this scheme only uses three of the five statuses | a `vocabularies:` entry named by `fields.status.vocabulary` | a violation |
+| no two entries name the same source | `unique: true` on the field, or on the group the fields share | a violation naming both |
+| stating the relation once should state it both ways | `converse` on the reference field | `one-sided-relations`, and `luria link --fix` writes the other side |
+| both ends of a relation must agree on something | `invariant` on the reference field, or on the chain | a violation naming the two documents and the field |
+| what sequence is this entry a step in | `chains.X` with `scheme` and `relation` | a page of sequences; a cycle is `broken-chains` |
+| the reason for a rule is not mechanical | `alert` on the vocabulary or the tag group | printed after that rule's own violation |
 | a principle should not name one subsystem | `titles_generalize` + `narrow_terms` | `narrow-titles` |
 | citing something not in force should be deliberate | (always on) | `retired-citations` |
 
@@ -178,12 +183,8 @@ schemes:
             require: exactly-one
             tags:
             - training-optimization
-        - systems-optimization
-        - model-stability
-        - distributed-optimization
-        - data-pipeline
-        - attention-techniques
-        - model-architecture
+            - systems-optimization
+            - model-stability
 ```
 
 Those eight lines replaced a specification that had sat in a template for two

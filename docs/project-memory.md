@@ -243,6 +243,71 @@ schemes:
 A paper never posted to arXiv but carrying a DOI, or only a URL, passes;
 one with none of the three fails, and the finding names all three.
 
+**A field no two documents may share.** `unique: true` on a field — or on a
+field group, where it means the group as a whole — makes a second document
+of the same scheme carrying that value a violation, naming both:
+
+```yaml
+schemes:
+  LIT:
+    field_groups:
+      source:
+        fields:
+        - arxiv
+        - doi
+        - url
+        require: at-least-one
+        unique: true
+```
+
+Said once on the group rather than three times on the fields, because a
+source is what the three have in common and uniqueness is a property of it.
+Two notes filed for one paper is the failure it catches: the record grows a
+second entry nobody knows to merge, and both go on being cited.
+
+**Typed relations.** A field that holds a *code* is not just a required
+field — `requires: [source]` is satisfied by the string "a paper I read
+once". Declaring what the field points at makes four checks out of one:
+present, shaped like a code, resolving to a real document, and in force.
+
+```yaml
+schemes:
+  SOTA:
+    references:
+      source:
+        scheme: LIT
+        required: true
+      extends:
+        scheme: SOTA
+        many: true
+        converse: extended_by
+        invariant: worlds
+```
+
+`converse` names the field holding the same relation read backwards, which
+is what licenses `luria link --fix` to write the missing side — a relation
+naming *itself* is what symmetry is. `invariant` names a field both ends
+must agree on: a scene that extends a scene in another world is a mistake
+the codes alone cannot show. A relation with no declared converse is left
+alone entirely, because its reverse edge would be a guess.
+
+A relation can also be *walked*, which is what a chain is:
+
+```yaml
+chains:
+  lineage:
+    scheme: LIT
+    relation: extends
+    sibling: compared_against
+    output: docs/lineage.md
+    title: Lines of work
+```
+
+Where a reference gives one document its neighbours, a chain answers the
+question no single document holds — *what line of work is this a step in* —
+and renders the sequences on one page. A cycle, or a comparison held on one
+side only, becomes a finding rather than a page that quietly omits it.
+
 **Tag rules.** A vocabulary says what a value *means*; a group says which of
 them may appear together, because some fields are an axis rather than a pile.
 The group is declared under the field it constrains:
@@ -295,6 +360,25 @@ default is an effective value — the lint, the index and the record page read
 an absent field as `B` — and is never written into the source. `luria index`
 renders a page per value, for every grouped field alike: `status` and `tags`
 are two instances of this shape, not two special cases beside it.
+
+**What a rule says when it fires.** A vocabulary or a tag group can carry an
+`alert` — prose printed after its own violation:
+
+```yaml
+vocabularies:
+  topics:
+    alert: >-
+      Closed so every tag is one somebody chose, not because the list is
+      finished — add a value here rather than reaching for the nearest
+      wrong one.
+```
+
+The rule is mechanical and the reason for it is not. A closed vocabulary's
+default message reads as *this value is not allowed*, where the project
+usually means *this value is not declared yet, and declaring it is the move*
+— and only the record knows which. It rides the set rather than the field,
+so every field using that vocabulary gets the same sentence; a guard whose
+message teaches the wrong lesson costs more than the typo it catches.
 
 **Titles that generalise.** A principle stated about the one artifact it was
 noticed on is a principle nobody applies to the next one. That failure is

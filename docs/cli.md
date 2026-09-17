@@ -19,6 +19,7 @@ One binary, `luria`, dispatching to plain functions. Every command takes
 | [`luria remotes`](#luria-remotes) | inspect and verify foreign references |
 | [`luria migrate`](#luria-migrate) | execute a rename/move spec |
 | [`luria site`](#luria-site) | stage the record as a publishable site |
+| [`luria upgrade`](#luria-upgrade) | carry a record across a version boundary |
 
 ## luria init
 
@@ -263,34 +264,63 @@ The contract, in two halves.
   a status outside the vocabulary (`Active`, `Proposed`, `Deferred`,
   `Superseded`, `Rejected`; a note still riding in `status:` rather
   than in `status_note:`; `Superseded` with no `superseded_by:`) or
-  undeclared in the
-  scheme's `statuses.yaml`; a missing field the scheme `requires`;
-  a `title:` disagreeing with the body heading; tag-group rules
-  (`exactly-one`, `at-most-one`, `excluded_by`) broken
+  undeclared in the scheme's vocabulary; a missing field the scheme
+  `requires`, or one its `required_when` demands at the status the
+  document is at; a `title:` disagreeing with the body heading
+- a constraint the scheme declares, broken: tag-group rules
+  (`exactly-one`, `at-most-one`, `excluded_by`), a field group's
+  `at-least-one`, a value outside a closed vocabulary, a reference field
+  holding something that is not a resolvable code of the scheme it names,
+  a relation's declared `invariant` disagreeing across the edge, or a
+  field marked `unique` whose value appears on a second document of the
+  same scheme
 - a `version:` above 1 with no `history:`, or history that ends on a
   different version than the document claims
 - a journal entry with no derivable `created:`, or filed at a path its
   timestamp says is wrong
+- a number collision inside a scheme, an alias two documents both claim,
+  or a code on the reserved `tmp` prefix
 - a stray hand-written file in a view directory (whether a committed view
   is *current* is `luria index --check`'s question, asked in the generation
   job on the default branch; a branch carries no view of its own)
 - a bare code or unexpanded wikilink that `luria link --fix` would rewrite,
   or a wikilink that resolves to nothing
 - a docs page missing from the docs index (`docs/README.md`)
+- `luria.yaml` naming a warning class that does not exist in `fail_on` or
+  `mute`, or the same class in both
 
 **Warnings**, printed but passing — each is a judgement call, surfaced with
 its acknowledgement route (see [directives](directives.md)) and listed in
 full in the [reports](reports/reference-status.md):
 
-`retired-citations` · `unresolved-codes` · `hand-written-urls` ·
-`broken-targets` · `source-mismatch` · `source-unchecked` ·
-`inert-status` · `legacy-spellings` ·
-`narrow-titles` · `stale-directives` · `pending-documents` ·
-`unlinted-files` · `workflow-temp-codes`
+`retired-citations` · `unresolved-codes` · `unresolved-citations` ·
+`hand-written-urls` · `broken-targets` · `remote-drift` ·
+`source-mismatch` · `source-unchecked` · `inert-status` ·
+`legacy-spellings` · `narrow-titles` · `stale-directives` ·
+`template-drift` · `broken-chains` · `one-sided-relations` ·
+`spent-upgrades` · `pending-documents` · `unlinted-files` ·
+`workflow-temp-codes` · `unlinked-site`
 
 Any of those class names listed in `lint.fail_on` fails the build
 instead. Only unacknowledged findings ever reach a class, so
 acknowledgements keep working under enforcement.
+
+`lint.mute` is the other direction: a class named there is not reported at
+all. Where `fail_on` changes what a finding *costs*, `mute` decides whether
+it is heard — the blunter instrument, for a check a project has decided is
+not useful to it, where an acknowledgement directive is the right shape when
+the finding is about one document and carries its reason at the citing site.
+Every failable class is mutable, plus `acknowledged-uniformity`, which is
+mutable only: a project cannot promote its own acknowledgement to a failure.
+Naming a class in both is refused rather than resolved — a record cannot
+both enforce a check and refuse to hear it, and guessing which was meant
+would make one of the two settings a lie. `luria reports` renders the full
+accounting either way, so muting changes what a run prints and not what the
+record says.
+
+`lint.network` promotes one class on its own: under `network = "require"`,
+`source-unchecked` fails without being named in `fail_on`, because the
+setting already said that a green run means the references were verified.
 
 ## luria reports
 
@@ -337,7 +367,7 @@ would re-create the collision the temporary codes exist to avoid.
 ## luria remotes
 
 ```
-luria remotes [--refresh] [--check] [--pin [CODE]]
+luria remotes [--refresh] [--check] [--pin [CODE]] [--resolve [CODE]]
 ```
 
 Prints every foreign code the record cites, per remote, with the URL each
@@ -474,6 +504,44 @@ repository, and the theme/branding from `site` rendered into
 Quartz config. The published site gets search, backlinks, and a local
 graph per page. The `actions/site` composite action builds the staged
 vault with a pinned Quartz for GitHub Pages — see [adopting](adopting.md).
+
+## luria upgrade
+
+```
+luria upgrade [NAME] [--dry-run] [--root DIR]
+```
+
+Writes what a new version of Luria requires into a record that predates it.
+With no `NAME`, lists the upgrades that exist and what each is waiting on:
+
+```console
+$ luria upgrade
+temporary — each is deleted once every record has run it:
+
+  luria upgrade yaml
+      convert `luria.toml` and the per-scheme vocabulary files into one
+      `luria.yaml`
+      remove when: 1.0.0, or when no record on TOML remains.
+```
+
+- `yaml` — folds `luria.toml` and the per-scheme vocabulary files into a
+  single `luria.yaml`, carrying the comments across. This is the only way
+  over that boundary: the current version does not read TOML at all.
+- `statuses` — declares `status:` as the controlled vocabulary it always
+  was, for a record filed before it became one.
+
+`--dry-run` prints what would be written. `--root` points the run at a tree
+that is not the working directory, for upgrading a record from outside it.
+
+**Every command here is temporary by construction.** An upgrade exists to
+move records that predate a change onto it; once they have moved it is dead
+code that still has to be read, tested and explained. Each one carries the
+condition for its own deletion, and `luria lint` reports an upgrade this
+record no longer needs as `spent-upgrades` — so the question of removing it
+comes up on its own rather than waiting to be remembered. Nothing here goes
+through the config loader: the config an upgrade repairs is the config the
+new version refuses to load, so a command that needed it would be unrunnable
+in exactly the situation it exists for.
 
 ## Environment
 

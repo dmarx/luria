@@ -6,25 +6,28 @@ whether or not anyone remembered to describe it.** A page that merely *looked*
 right today would be worth nothing — a hand-written one looks right today too,
 and that is exactly the failure this module exists to prevent (DP-3).
 """
+import re
 from dataclasses import make_dataclass
 
 import pytest
 
+from luria import config as config_mod
 from luria import config_doc
 from luria.config import Fragment, Journal, Remote, RemoteScheme, Scheme, Site, current
 
 
-ALL_SECTIONS = [Scheme, Fragment, Journal, Remote, RemoteScheme, Site]
+#: Read off the module, not listed here — the same reason the rows are.
+ALL_SECTIONS = config_doc.tables()
 
 
 def test_renders_a_page_with_every_section():
     text = config_doc.render()
     assert text.startswith("# Configuration")
-    for _, cls, _ in config_doc.SECTIONS:
-        assert cls in ALL_SECTIONS
+    for title, _, _ in config_doc.SECTIONS:
+        assert f"\n## {title}\n" in text
 
 
-@pytest.mark.parametrize("cls", ALL_SECTIONS)
+@pytest.mark.parametrize("cls", ALL_SECTIONS, ids=lambda c: c.__name__)
 def test_every_public_field_of_every_config_dataclass_has_a_row(cls):
     """The guarantee, stated once per schema class.
 
@@ -87,8 +90,8 @@ def test_defaults_are_the_schema_not_this_repos_config():
 
 
 def test_indented_examples_become_fenced_blocks():
-    assert config_doc.fence("Prose.\n\n    [luria]\n    a = 1\n") == (
-        "Prose.\n\n```toml\n[luria]\na = 1\n```\n")
+    assert config_doc.fence("Prose.\n\n    luria:\n      a: 1\n") == (
+        "Prose.\n\n```yaml\nluria:\n  a: 1\n```\n")
 
 
 def test_page_is_registered_as_generated():
@@ -182,3 +185,113 @@ def test_retire_never_touches_the_reference_where_it_belongs():
     a generator deleting its own output."""
     assert config_doc.retire() == []
     assert current().config_doc.exists()
+
+
+# --- Coverage is derived, not transcribed (DP-3) ----------------------------
+#
+# `rows()` always read the schema, so no *key* could go missing. Two lists
+# above it did not, and both silently rotted: `SECTIONS` decided which classes
+# got a section at all, and `PLAIN` spelled out which scalar keys existed. A
+# `chains` family, seven nested tables, `lint.mute` and `lint.network` were
+# absent from the reference for as long as they had existed. The property the
+# module claimed — the schema decides what the page holds — now covers the
+# sections and the scalars too.
+
+def test_every_table_in_the_defaults_has_a_section():
+    """The gap that let `chains` go undocumented for its whole life.
+
+    A key whose default is a dict is a table, and a table wants a section —
+    whether a dataclass renders it (`schemes`, `chains`) or a scalar list
+    does (`paths`, `lint`). The old test asked "is every section I listed a
+    class I know?", which passes forever while the schema grows underneath
+    it. This asks the question that can fail."""
+    text = config_doc.render()
+    headings = [line for line in text.splitlines() if line.startswith("## ")]
+    for key, value in config_mod.DEFAULTS.items():
+        if not isinstance(value, dict):
+            continue
+        assert any(f"`{key}" in h for h in headings), f"no section for {key}"
+
+
+def test_a_new_nested_table_cannot_be_silently_absent(monkeypatch):
+    """Fired directly: a class the module has never heard of still renders."""
+    Invented = make_dataclass("Invented", [("novel_key", str, "x")])
+    Invented.__doc__ = "A table nobody described."
+    monkeypatch.setattr(config_doc, "tables", lambda: [Invented])
+    text = config_doc.render()
+    assert "Invented" in text
+    assert "| `novel_key` |" in text
+
+
+def test_every_scalar_key_in_the_defaults_has_a_row():
+    """`lint.mute` and `lint.network` existed for releases with no row.
+
+    The scalar tables have no dataclass behind them, so the schema they are
+    read from is `config.DEFAULTS` — the same file, the same guarantee."""
+    text = config_doc.render()
+    for _, subtree, _, _ in config_doc.PLAIN:
+        for key in config_doc.plain_keys(subtree):
+            assert f"| `{key}` |" in text, f"{subtree or 'luria'}.{key} missing"
+
+
+def test_an_undescribed_scalar_key_still_gets_a_row():
+    """The stamp's promise, fired. Prose is what a person supplies; the row
+    is what the schema supplies, and the second must not wait on the first."""
+    rendered = config_doc.plain_table(["invented"], {"invented": 7}, {})
+    assert "| `invented` |" in rendered
+
+
+def test_every_scalar_key_is_described():
+    """The other half: a row with no prose is a reminder, not a reference.
+
+    It renders — a reader sees the key exists — and this fails, so the
+    reminder is answered in CI rather than in a reader's head."""
+    undescribed = sorted(f"{subtree or 'luria'}.{key}"
+                         for _, subtree, _, prose in config_doc.PLAIN
+                         for key in config_doc.plain_keys(subtree)
+                         if key not in prose)
+    assert not undescribed, f"no prose for {undescribed}"
+
+
+# --- The file is YAML ------------------------------------------------------
+
+def test_examples_are_fenced_as_yaml():
+    """`luria.yaml` replaced `luria.toml` in #257; the fence language did not
+    move, so every example on the page was labelled as the format it is not."""
+    text = config_doc.render()
+    assert "```toml" not in text
+    assert "```yaml" in text
+
+
+def test_no_example_is_still_written_in_toml():
+    """#286 rewrote the example configs and reached only some docstrings.
+
+    What it left is worse than a wrong fence: a `[table.header]` became a bare
+    backticked line and the body under it stayed `key = "value"`, so the page
+    showed a reader YAML that is not YAML. Parsing is the check — a TOML body
+    under a YAML fence is what this is looking for, not a spelling."""
+    import yaml
+    text = config_doc.render()
+    for block in re.findall(r"```yaml\n(.*?)```", text, re.DOTALL):
+        try:
+            parsed = yaml.safe_load(block)
+        except yaml.YAMLError as exc:                    # pragma: no cover
+            raise AssertionError(f"not YAML:\n{block}\n{exc}") from exc
+        assert isinstance(parsed, dict), \
+            f"example parses as {type(parsed).__name__}, not a mapping:\n{block}"
+
+
+# --- Prose that outlived what it described ---------------------------------
+
+def test_migration_is_not_listed_as_missing():
+    """`luria migrate` shipped; the reference went on saying it had not."""
+    text = config_doc.render()
+    assert "there is no migration command" not in text
+
+
+def test_the_shape_table_names_every_family():
+    """The overview table is prose, and prose about a list of tables is a
+    projection of that list."""
+    text = config_doc.render()
+    for family in config_doc.FAMILIES:
+        assert f"| `{family}" in text, f"{family} missing from the shape table"
