@@ -1,0 +1,144 @@
+---
+status: Active
+title: 'The lockfile is written where merges serialize, and the lint only reads it'
+version: 1
+tags:
+- mechanism
+- process
+date: '2026-09-17'
+influenced_by:
+- DP-002
+- ADR-049
+- ADR-068
+- ADR-016
+summary: >-
+  `luria lint` asked upstream about identifiers the lockfile could not answer
+  and wrote what it learned. Caching the answer is right; doing it from a
+  check that runs on every branch made `remotes.lock.json` a file every
+  contribution rewrites. The write moves to `luria remotes --resolve` at the
+  serialization point, via a `resolve:` input on the generate action; the ask
+  stays, so a wrong citation is still caught on the pull request that adds it.
+  Rejected: sharding the lockfile, a merge driver, and scoping the finding to
+  the trunk.
+---
+
+# ADR-tmp1adp3: The lockfile is written where merges serialize, and the lint only reads it
+
+## Context
+
+`remotes.lock.json` records what upstream says each cited identifier is, so
+`luria lint` can report an `arxiv:` that names a different paper than the
+document does — the `source-mismatch` class ([#166](https://github.com/dmarx/luria/issues/166)).
+
+Under `lint.network = "auto"` the lint does not only read it. It asks about
+identifiers the lockfile has no answer for — normally the one citation a
+contribution just added — and then keeps what it learned:
+
+```python
+# What the lint learned is worth keeping: the next run answers from the
+# lockfile, and the diff shows a reviewer what upstream said and when.
+if learned:
+    remotes.write_lock(titles=known)
+```
+
+Every clause of that comment is true. The next run does answer offline, and
+the diff does show a reviewer what upstream said and when. What it does not
+account for is **where the lint runs**, which is everywhere.
+
+### What that costs, measured
+
+In `anthology-of-the-sota`, `remotes.lock.json` is 921 lines: an empty
+`remotes` section and 305 `titles` entries. The last fifteen commits touching
+it are fifteen different contributions — and one of them,
+`eb3c204`, is an entire pull request whose only content is recording one
+paper's resolved title.
+
+So two concurrent branches that share no subject still collide on it, which is
+[DP-002](../principles.d/DP-002.md)'s lock exactly. The wrinkle is that everything [DP-002](../principles.d/DP-002.md)'s
+remedy asks for had already been done: the sources are fragments (one file per
+paper), and the shared artifact is derived rather than hand-maintained. The
+lock survived both, because the derivation ran on every branch.
+
+### And a second cost, which is worse
+
+A branch's lint result depends on the contributor's network. Filing four
+papers in one session, arXiv began returning 429 partway through; two
+identifiers were verified by hand against the same API and could not be
+written, so the branch carries a finding whose cause is a rate limit on one
+laptop. Under `lint.network = "require"` — where an unreachable remote is a
+*failure* — that is a red build nobody can clear by fixing their work.
+
+## Decision
+
+**The lint asks and reports; it does not write.** `mismatch_lines()` keeps its
+in-memory cache for the run, so an identifier cited twice is fetched once, and
+returns its findings. The call to `write_lock` is gone.
+
+**`luria remotes --resolve` is the writer**, and it runs where merges
+serialize. The generate action takes a **`resolve:` input**, passed `true` in
+the push-to-default-branch job for the same reason `concretize:` is
+([ADR-049](ADR-049.md)) and alongside the views ([ADR-068](ADR-068.md)). It runs *before*
+`luria index`, so the lockfile it writes is staged into the same commit rather
+than left dirty.
+
+**The early-warning half is deliberately kept.** The argument for asking on the
+branch is real — a citation is never likelier to be wrong than in the minutes
+after it is typed, and the first version of this check passed exactly then
+because nothing had resolved it yet. Asking and writing are separable, and
+only the write was the problem. A pull request still fetches, still compares,
+and still reports a mismatch before the merge.
+
+**`source-unchecked` needs no trunk scoping**, which is the thing this decision
+almost got wrong. The finding means "nobody could ask and the lockfile has no
+answer". On a pull request with a working network that is now rare, because the
+lint asks; when it does fire it is true and worth saying. Scoping it to the
+trunk would have suppressed a real signal to fix a problem that the write
+removal already fixes.
+
+## Alternatives considered
+
+- **Shard the lockfile** — `remotes.lock.d/titles/ARXIV/2206.14486.json`, one
+  file per identifier, the way every record scheme already shards. It works,
+  it is the house pattern, and it fixes only conflicts: the contributor whose
+  network is throttled is still blocked, and 305 files carry 305 files' worth
+  of ceremony. Once branches stop writing the artifact there is nothing left
+  to shard for.
+- **A git merge driver for the lockfile.** A union merge on sorted JSON
+  produces invalid JSON, so it would have to parse and re-emit — perhaps
+  twenty lines. It also has to be installed per clone (`git config
+  merge.*.driver`), which means it does not run on the forge's server-side
+  merge, which is where these merges actually happen. It would not have
+  helped any of the observed cases.
+- **Scope `source-unchecked` to the trunk.** Considered because the first
+  sketch of this decision assumed the lint would stop asking as well as stop
+  writing, which would have made every paper-filing pull request warn about
+  its own new identifiers — a finding that always fires, which
+  [DP-015](../principles.d/DP-015.md) says reads like a success. Separating the ask from the write
+  made it unnecessary.
+- **Leave it and resolve by hand before pushing.** The status quo. It is a
+  step every contributor must remember, it fails silently when they do not,
+  and its failure mode is a lockfile entry that lands in whichever pull
+  request happens to run the command next.
+
+## Consequences
+
+`remotes.lock.json` leaves the branch diff entirely. Two branches filing
+papers no longer conflict on it, and no contribution is blocked by the state
+of one machine's rate limit.
+
+The cost is latency in the committed record: what upstream said is recorded
+one merge later than before. The *check* is not delayed — the lint asks on the
+branch — so what arrives late is the durable note of the answer, not the
+finding.
+
+`lint.network = "require"` becomes usable for the first time. It was already
+implemented and no project could adopt it, because nothing in CI ever ran the
+resolve, so "an unreachable remote is a finding" meant "every new citation is
+a finding". With a resolve at the serialization point, a green trunk build now
+means the citations were verified rather than remembered.
+
+A throttled resolve in the merge job leaves the entries unwritten and reports
+them, exactly as it does today; it does not fail the job. The command already
+asks unsettled identifiers first, checkpoints as it goes, and stops asking a
+remote that has refused, so a typical merge adds a handful of lookups and a
+bad day costs the answers rather than the build.
