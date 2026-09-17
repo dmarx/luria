@@ -4,7 +4,7 @@
 
 Each of these is **generated** — run `luria index`. The list above is
 [written by `luria init` from this project's own
-`luria.toml`](https://github.com/dmarx/luria/blob/main/record/decisions.d/ADR-048.md),
+`luria.yaml`](https://github.com/dmarx/luria/blob/main/record/decisions.d/ADR-048.md),
 so it names the views this record actually renders; edit it freely
 afterwards, it is yours. This directory is for
 *reading*; filing happens in `record/`, whose `.d`-suffixed containers hold

@@ -4,7 +4,7 @@
 # depends on the scheme's `allocate` mode: `filing` (the default) takes the
 # next free number on the spot, `merge` mints a temporary code that
 # `luria concretize` numbers where merges serialize (FX-ADR-049). The kinds are the
-# config: every scheme, fragment directory and journal in luria.toml is one, so
+# config: every scheme, fragment directory and journal in luria.yaml is one, so
 # `luria new <kind>` works for a scheme the moment it is declared.
 #
 # Numbering is sequential and carries information (it's the order decisions were

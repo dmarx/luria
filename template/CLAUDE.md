@@ -26,10 +26,10 @@ that's wrong.
   — the acknowledgement vocabulary (`inactive-ok:` and friends), wikilinks,
   and fixture codes.
 - [Configuration](https://github.com/dmarx/luria/blob/main/docs/configuration.md)
-  — every `luria.toml` key, generated from Luria's own schema. Read this
+  — every `luria.yaml` key, generated from Luria's own schema. Read this
   before assuming the record can only hold decisions: schemes, fragment
   directories, journals and remotes are families this project names, and
-  `luria.toml` is where its shape is decided.
+  `luria.yaml` is where its shape is decided.
 
 Four ground rules, terse enough to restate:
 

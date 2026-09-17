@@ -300,8 +300,11 @@ class RequiredWhen:
         schemes:
           SOTA:
             fields:
-              promote_when: {}
-        required_when = { status = ["Proposed", "Deferred"] }
+              promote_when:
+                required_when:
+                  status:
+                  - Proposed
+                  - Deferred
 
     `requires` says a field must always be there, which is right for identity
     — a title, a source. It is wrong for a field that is *about* a state: a
@@ -357,9 +360,12 @@ class FieldGroup:
         schemes:
           LIT:
             field_groups:
-              source: {}
-        fields  = ["arxiv", "doi", "url"]
-        require = "at-least-one"          # or "exactly-one", "at-most-one"
+              source:
+                fields:
+                - arxiv
+                - doi
+                - url
+                require: at-least-one   # or exactly-one, at-most-one
 
     `requires` demands every field it names; a paper that was never posted
     to arXiv but has a DOI, or only a URL, has a source all the same, and
@@ -457,7 +463,8 @@ class Vocabulary:
               worlds:
                 vocabulary: worlds
                 many: true
-        default    = ["B"]        # the effective value when the field is absent
+                default:            # the effective value when absent
+                - B
 
     `fields` is the table a field's shape and type are declared in; today
     `vocabulary` is the one type it takes, and `requires` and `references`
@@ -995,12 +1002,14 @@ class RemoteScheme:
     A remote is not one directory of files — it is a project, and different
     schemes in it have different shapes. Each entry names one construction:
 
-        `remotes.SG.schemes.ADR`
-        dir = "docs/decisions"                 # file per code
-
-        `remotes.SG.schemes.DP`
-        document = "docs/design-principles.md" # sections of one file…
-        anchor = "dp-{number}"                 # …at Luria's stable anchors
+        remotes:
+          SG:
+            schemes:
+              ADR:
+                dir: docs/decisions       # file per code
+              DP:
+                document: docs/design-principles.md  # sections of one file…
+                anchor: "dp-{number}"                # …at stable anchors
 
     `anchor` defaults to the prefix lowercased plus the number — `dp-18` —
     which is the anchor shape Luria's own document render emits, so a remote
@@ -1039,12 +1048,13 @@ class Remote:
     own code — `LU-ADR-013` — so the namespace is explicit at the point of use
     and nothing has to guess which project an unprefixed code meant (ADR-016).
 
-        `remotes.LU`
-        name = "luria"
-        repo = "dmarx/luria"             # GitHub owner/name
-        ref  = "main"                    # branch or tag the links point at
-        dir  = "record/decisions.d"      # where its decisions live
-        url  = "https://…/{code}.md"     # optional: overrides construction
+        remotes:
+          LU:
+            name: luria
+            repo: dmarx/luria           # GitHub owner/name
+            ref: main                   # branch or tag the links point at
+            dir: record/decisions.d     # where its decisions live
+            url: "https://…/{code}.md"  # optional: overrides construction
 
     Everything but `repo` (or `url`) has a default, because the defaults are
     Luria's own conventions — a remote that uses them needs one line. A code
@@ -1057,16 +1067,19 @@ class Remote:
     through the `url` template, which can index the uid's capture groups by
     position:
 
-        `remotes.ARXIV`
-        uid = "(\\d{4})[.:](\\d{4,5})"
-        url = "https://arxiv.org/abs/{1}.{2}"   # {0} or {uid} is the whole tail
+        remotes:
+          ARXIV:
+            uid: '(\\d{4})[.:](\\d{4,5})'
+            url: https://arxiv.org/abs/{1}.{2}   # {0}/{uid} is the whole tail
 
     A `pin_url` template names where the remote's *stable bytes* live, which
     is what lets `luria remotes --pin` endorse content that has no GitHub
     file behind it (#135) — arXiv's e-print archive is the paper where its
     abstract page is a rendering:
 
-        pin_url = "https://arxiv.org/e-print/{1}.{2}"
+        remotes:
+          ARXIV:
+            pin_url: "https://arxiv.org/e-print/{1}.{2}"
 
     Both are the short names of a general table: a code relates to a SET of
     named URIs, each through a template over one vocabulary — {code},
@@ -1075,9 +1088,11 @@ class Remote:
     `uris.read`, `pin_url` is `uris.bytes`, and a relation Luria does not
     ship yet is one more name:
 
-        `remotes.LU.uris`
-        bytes   = "https://gitlab.example/{repo}/-/raw/{ref}/{dir}/{filename}"
-        history = "https://github.com/{repo}/commits/{ref}/{dir}/{filename}"
+        remotes:
+          LU:
+            uris:
+              bytes: "https://gitlab.example/{repo}/-/raw/{ref}/{dir}/{filename}"
+              history: "https://github.com/{repo}/commits/{ref}/{dir}/{filename}"
 
     GitHub's blob/raw pair is simply the shipped default pair of `read` and
     `bytes` templates for a remote with a `repo` — a different forge is a
@@ -1868,12 +1883,13 @@ class Chain:
 class Journal:
     """Dated entries that persist, rendered into books (ADR-020).
 
-        `journals.devlog`
-        dir         = "devlog.d"        # entries, partitioned yyyy/mm/dd/
-        output      = "docs/devlog"     # a directory of books plus an index
-        granularity = "month"           # year | month | day
-        title       = "Development log"
-        blurb       = "…"               # optional prose for the index
+        journals:
+          devlog:
+            dir: record/devlog.d      # entries, partitioned yyyy/mm/dd/
+            output: docs/devlog       # a directory of books plus an index
+            granularity: month        # year | month | day
+            title: Development log
+            blurb: "…"                # optional prose for the index
 
     The difference from a fragment directory is that nothing is consumed: an
     entry was true when written and stays true, so the view is *generated* from
@@ -1898,11 +1914,12 @@ class Journal:
 class Site:
     """How the record publishes as a browsable site (ADR-042).
 
-        `site`
-        title      = "Luria"
-        base_url   = "dmarx.github.io/luria"
-        source_url = "https://github.com/dmarx/luria/blob/HEAD"
-        exclude    = ["template/**"]
+        site:
+          title: Luria
+          base_url: dmarx.github.io/luria
+          source_url: https://github.com/dmarx/luria/blob/HEAD
+          exclude:
+          - template/**
 
     Only `exclude` is genuinely per-project: the rest default off `issue_url`,
     because a project that told Luria where its issues live has already told
@@ -1914,12 +1931,15 @@ class Site:
 
     The branding keys are the project's own artwork, cited by path:
 
-        icon      = "assets/brand/icon.svg"    # favicon, any square image
-        logo      = "assets/brand/lockup.svg"  # shown in place of the title
-        logo_dark = "assets/brand/lockup-inverted.svg"   # optional
+        site:
+          icon: assets/brand/icon.svg     # favicon, any square image
+          logo: assets/brand/lockup.svg   # shown in place of the title
+          logo_dark: assets/brand/lockup-inverted.svg   # optional
 
-        `site.theme.light`
-        light = "#f4f1e8"                      # any of Quartz's colour names
+        site:
+          theme:
+            light:
+              light: "#f4f1e8"          # any of Quartz's colour names
 
     `logo_dark` is only needed when the artwork can't invert itself. A logo
     whose SVG exposes a `--luria-ink` custom property — the convention this
