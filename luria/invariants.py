@@ -105,6 +105,21 @@ def held(doc: Adr, field: str) -> set[str]:
     return {str(v).strip() for v in values if v not in (None, "")}
 
 
+def shared(docs, field: str) -> set[str]:
+    """What every one of `docs` holds in `field` — the invariant they have in
+    common, empty when they have none.
+
+    One definition because two consumers ask it: this module, to report a
+    component that shares nothing, and `chains._sections`, to give a line the
+    heading it belongs under. They are the same question read two ways, and a
+    view that grouped by a rule the check did not use would be worse than no
+    grouping at all."""
+    docs = list(docs)
+    if not docs:
+        return set()
+    return set.intersection(*(held(d, field) for d in docs))
+
+
 def _neighbours(chain: Chain) -> dict[str, set[str]]:
     """Every undirected edge the chain walks — spine and cross-link alike.
 
@@ -156,8 +171,7 @@ def paths(chain: Chain) -> list[Unbound]:
         if len(group) < 2:
             continue
         members = tuple(docs[c] for c in group)
-        common = set.intersection(*(held(d, chain.invariant) for d in members))
-        if not common:
+        if not shared(members, chain.invariant):
             out.append(Unbound(chain.name, chain.invariant, members))
     return out
 

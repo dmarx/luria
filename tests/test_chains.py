@@ -72,9 +72,11 @@ def project(tmp_path, monkeypatch, extra: str = merged(RELATIONS, CHAIN)) -> Pat
 
 
 def note(root: Path, number: int, title: str, *, status: str = "Active",
-         extends=(), compared_against=(), corrects=()) -> Path:
-    front = ["---", f"status: {status}", f"title: {title!r}", "tags:",
-             "- record", "date: '2026-01-01'"]
+         extends=(), compared_against=(), corrects=(),
+         tags=("record",)) -> Path:
+    front = ["---", f"status: {status}", f"title: {title!r}", "tags:"]
+    front += [f"- {t}" for t in tags]
+    front += ["date: '2026-01-01'"]
     for name, codes in (("extends", extends),
                         ("compared_against", compared_against),
                         ("corrects", corrects)):
@@ -666,3 +668,92 @@ def test_a_cycle_across_two_spine_relations_is_a_finding(
     note(root, 2, "Two", corrects=["LIT-001"])
     found = chains.rows()
     assert found and "makes a cycle" in found[0]
+
+
+# --- grouping by the invariant ---------------------------------------------
+
+GROUPED = """
+vocabularies:
+  lit-tags:
+    training-optimization:
+      label: Training optimization
+      blurb: optimizers and schedules
+    data-pipeline:
+      label: Data pipeline
+      blurb: selection and preparation
+    record:
+      label: Record
+      blurb: the default the fixtures use
+schemes:
+  LIT:
+    fields:
+      tags:
+        vocabulary: lit-tags
+        many: true
+        closed: false
+chains:
+  lineage:
+    scheme: LIT
+    relation: extends
+    sibling: compared_against
+    invariant: tags
+    output: docs/lineage.md
+    title: Lines of work
+"""
+
+
+def test_lines_group_under_the_invariant_they_share(tmp_path, monkeypatch):
+    """A chain that declares what its members hold in common can say so on
+    the page: the value is the heading, and the lines that share it sit
+    under it."""
+    root = project(tmp_path, monkeypatch, extra=merged(RELATIONS, GROUPED))
+    note(root, 1, "Optimizer root", tags=("training-optimization",))
+    note(root, 2, "Optimizer step", tags=("training-optimization",),
+         extends=["LIT-001"])
+    note(root, 3, "Data root", tags=("data-pipeline",))
+    note(root, 4, "Data step", tags=("data-pipeline",), extends=["LIT-003"])
+    page = chains.outputs()[root / "docs/lineage.md"]
+    assert "## data-pipeline" in page
+    assert "## training-optimization" in page
+    # The lines drop a level so the invariant can own the `##`.
+    assert "### From Optimizer root" in page
+    assert "### From Data root" in page
+    # Sections are ordered so the page reads the same way twice.
+    assert page.index("## data-pipeline") < page.index("## training-optimization")
+
+
+def test_a_line_sharing_two_values_is_listed_under_both(tmp_path, monkeypatch):
+    """The invariant is what the line is about, and a line can be about two
+    things. Listing it once would make the second heading a lie by omission."""
+    root = project(tmp_path, monkeypatch, extra=merged(RELATIONS, GROUPED))
+    note(root, 1, "Both root", tags=("training-optimization", "data-pipeline"))
+    note(root, 2, "Both step", tags=("training-optimization", "data-pipeline"),
+         extends=["LIT-001"])
+    page = chains.outputs()[root / "docs/lineage.md"]
+    assert page.count("### From Both root") == 2
+    assert "## data-pipeline" in page and "## training-optimization" in page
+
+
+def test_a_line_sharing_nothing_gets_its_own_section(tmp_path, monkeypatch):
+    """The unbound case is a report, not a failure (see invariants.py) — so
+    it belongs on the page rather than only in the lint, where the reader
+    meets the line itself."""
+    root = project(tmp_path, monkeypatch, extra=merged(RELATIONS, GROUPED))
+    note(root, 1, "One subject", tags=("training-optimization",))
+    note(root, 2, "Another subject", tags=("data-pipeline",),
+         extends=["LIT-001"])
+    page = chains.outputs()[root / "docs/lineage.md"]
+    assert "## Sharing no `tags`" in page
+    assert "### From One subject" in page
+
+
+def test_without_a_declared_invariant_the_page_is_ungrouped(tmp_path,
+                                                            monkeypatch):
+    """Grouping is opt-in through the same key that opts into the check. A
+    project that declares no invariant gets exactly the page it had."""
+    root = project(tmp_path, monkeypatch)
+    note(root, 1, "The original")
+    note(root, 2, "The replacement", extends=["LIT-001"])
+    page = chains.outputs()[root / "docs/lineage.md"]
+    assert "## From The original" in page
+    assert "### From" not in page

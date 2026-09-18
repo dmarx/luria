@@ -1,0 +1,116 @@
+---
+status: Active
+title: 'A chain''s page is organized by the invariant the chain declares'
+version: 1
+tags:
+- mechanism
+- docs
+date: '2026-09-18'
+influenced_by:
+- ADR-049
+- DP-004
+- DP-015
+summary: >-
+  A chain that declares `invariant` already says what its members hold in
+  common; the page now uses it, giving each value a section and listing the
+  lines that share it underneath. Lines sharing nothing get a section of their
+  own, because that is a finding about a line and this is where lines are
+  read. Opt-in through the same key that opts into the check, so a chain
+  without one renders exactly as before. Rejected: choosing one value per
+  line, and a separate grouping key.
+---
+
+# ADR-tmpcolqo: A chain's page is organized by the invariant the chain declares
+
+## Context
+
+`chains.<name>.invariant` names the field every member of a line must hold a
+value in common ([ADR-106](ADR-106.md), and `invariants.py`). It was used for one thing:
+reporting the lines that hold nothing in common.
+
+The page did not use it at all. A chain's page was a flat list of `## From X`
+sections in component order, which is the order the walk happened to produce
+and is not an order anybody wants to read. The record this was built for
+renders **43 lines of practice** that way — long enough that finding the
+optimizer lineage means scrolling past the data ones, and long enough that
+nobody notices the page groups by nothing.
+
+That is the odd part: the declaration that says *what these lines are about*
+was sitting in the config, checked and unused by the view whose whole job is
+to make lines findable.
+
+## Decision
+
+**Where a chain declares `invariant`, the page groups by it.** Each value it
+finds becomes a `##` section; the lines that hold that value in common are
+listed under it, dropping to `###`. The intro says which field is doing the
+grouping.
+
+**A line is listed under every value it shares, not one chosen for it.** The
+invariant is what a line is *about* and a line can be about two things;
+picking one would make the other heading wrong by omission — a reader looking
+under `data-pipeline` for a line that is also about data would not find it.
+Measured on the consumer record: 43 lines render 43 blocks, so nothing is
+duplicated there today and the rule costs nothing to adopt.
+
+**Lines sharing nothing get their own section**, headed `Sharing no <field>`.
+That set is exactly what `invariants.paths` reports, and it already has a
+report page — but a reader meets the *line* here, and the case for grouping
+is strongest precisely where the grouping fails. On the consumer record that
+section holds the warmup practices, the batch-size practices and the
+attention-scaling line that reaches into optimizers: the "vocabulary is short
+a word" cases the record's own config predicted, now visible in the place
+they are about.
+
+**Opt-in through the same key that opts into the check.** A chain that
+declares no invariant renders exactly the page it rendered before — same
+heading levels, same order. One key means one decision, and the record that
+has not thought about invariants does not get a new page shape it did not ask
+for ([DP-010](../principles.d/DP-010.md)).
+
+**One definition of what a line shares.** `invariants.shared(docs, field)` is
+extracted and used by both consumers: this module, to report a component that
+shares nothing, and the renderer, to pick a heading. A view that grouped by a
+rule the check did not use would be worse than no grouping ([DP-004](../principles.d/DP-004.md)).
+
+## Alternatives considered
+
+- **Choose one value per line** — the first tag, or the rarest. Shorter page,
+  and it makes the heading a claim the data does not support: a line under
+  `model-stability` that is equally about attention is filed, from the
+  reader's side, as not being about attention. The duplication this avoids
+  does not currently occur in the only record that declares an invariant.
+- **A separate `group_by` key.** More expressive — group by one field, check
+  another — and it invites exactly the divergence `DP-004` is about: two
+  fields that should agree, no rule that they do, and a page whose sections
+  contradict the report. If a record ever wants to group by something it does
+  not assert, the honest answer is that it is asserting something and has not
+  said so.
+- **Sort lines by invariant without sectioning them.** Cheaper, and it leaves
+  the reader to notice the runs. Headings are what make a long page
+  navigable; ordering alone is the improvement that looks like one.
+- **Group the unbound lines under each member's own values.** Tempting — it
+  puts every line somewhere meaningful — and it silently converts a finding
+  into content. The line's whole property is that its members agree on
+  nothing; scattering it under each member's tags is the reading its
+  existence argues against.
+- **Status quo.** The declaration stays checked and unused, and the page stays
+  in walk order. The cost is not hypothetical: it is a 43-section page whose
+  organizing principle is an implementation detail of the component walk.
+
+## Consequences
+
+Heading levels shift under a declared invariant — `## From X` becomes
+`### From X`, under a `##` for the value. Any project that deep-links to a
+chain page's anchors will find the line anchors unchanged (the text is the
+same) and gains new ones above them. No chain without an invariant changes at
+all.
+
+The page now shows a finding the lint also reports, which is duplication of a
+*derived* fact between two generated views rather than of a source, and is the
+kind views exist to do. Both come from one computation.
+
+The grouping is only as good as the invariant. A record that declares a field
+its documents barely populate will get a page of one-line sections and an
+enormous unbound bucket — which is a true report about that declaration, and
+the right thing for it to see.
