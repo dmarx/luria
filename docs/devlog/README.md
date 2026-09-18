@@ -6,6 +6,7 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 
 ## Currently — [September 2026](2026-09.md)
 
+- [17 Sep 09:45 — Two tags, and the one that nearly said nothing](2026-09.md#two-tags-and-the-one-that-nearly-said-nothing)
 - [17 Sep 05:42 — The generated reference had a hand-kept list inside it](2026-09.md#the-generated-reference-had-a-hand-kept-list-inside-it)
 - [16 Sep 19:00 — The code cited the argument, not the decision](2026-09.md#the-code-cited-the-argument-not-the-decision)
 - [16 Sep 16:05 — The description belongs to the set, and firing it on a real record is what proved it](2026-09.md#the-description-belongs-to-the-set-and-firing-it-on-a-real-record-is-what-proved-it)
@@ -81,9 +82,9 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 
 ## All books
 
-118 entries across 2 books, newest first.
+119 entries across 2 books, newest first.
 
 | Book | Entries | First | Last |
 |---|--:|---|---|
-| [2026-09](2026-09.md) | 72 | 2026-09-03 | 2026-09-17 |
+| [2026-09](2026-09.md) | 73 | 2026-09-03 | 2026-09-17 |
 | [2026-08](2026-08.md) | 46 | 2026-08-03 | 2026-08-28 |

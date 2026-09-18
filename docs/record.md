@@ -31,7 +31,7 @@ Every entry carries `title`, `tags` and `date`, and one standard field is condit
 **`ADR`**
 
 - `status` — optional, one of `Active`, `Proposed`, `Deferred`, `Superseded`, `Rejected` (luria.yaml: schemes.ADR.fields.status; vocabulary 'statuses': values)
-- `tags` — required, one or more of `record`, `mechanism`, `process` (luria.yaml: schemes.ADR.fields.tags; vocabulary 'decision-tags': values)
+- `tags` — required, one or more of `record`, `mechanism`, `process`, `docs`, `load-bearing` (luria.yaml: schemes.ADR.fields.tags; vocabulary 'decision-tags': values)
 
 **`DP`**
 
@@ -90,5 +90,5 @@ Everything not listed here is at Luria's default.
 | `site.icon` | `assets/branding/luria-brainslug/luria_project_memory_icon.svg` | *empty* |
 | `site.logo` | `assets/branding/luria-brainslug/luria_project_memory_lockup_horizontal.svg` | *empty* |
 | `site.theme` | *2 keys set* | *empty* |
-| `vocabularies.decision-tags` | *3 keys set* | *unset* |
+| `vocabularies.decision-tags` | *5 keys set* | *unset* |
 | `vocabularies.statuses` | *5 keys set* | *unset* |
