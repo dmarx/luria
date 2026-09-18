@@ -126,6 +126,19 @@ DEFAULTS: dict = {
         },
     },
     "stale_days": 90,
+    # What luria announces when it opens a socket. The stdlib default is
+    # `Python-urllib/3.x`, which names the language and nothing else — not
+    # the tool, not the project, not a way to be reached — and is the shape
+    # of traffic a metadata host rations first.
+    #
+    # The default here is a browser string, which is a pragmatic choice
+    # rather than an honest one, and the reason this is CONFIGURATION is
+    # that the honest option belongs to the project rather than to luria: a
+    # contact address is a per-record fact, and CrossRef's polite pool wants
+    # a real one. A project that would rather say who it is sets this
+    # (ADR-tmpdmtfc).
+    "user_agent": ("Mozilla/5.0 (X11; Linux x86_64; rv:128.0) "
+                   "Gecko/20100101 Firefox/128.0"),
     # The enforcement dial (ADR-035): warning classes named here fail the
     # lint instead of printing. Empty is the default posture — reported,
     # not enforced — and the acknowledgement directives keep working under
@@ -1986,6 +1999,7 @@ class Config:
     journals: dict[str, Journal]
     chains: dict[str, Chain]
     stale_days: int
+    user_agent: str                     # what every request announces
     fail_on: tuple[str, ...]            # warning classes promoted to failures
     # Warning classes a project has decided it does not want to see at all.
     # `fail_on` changes a class's CONSEQUENCE; this removes it from the
@@ -2321,6 +2335,8 @@ def load(root: Path | None = None, text: str | None = None,
         },
         chains=_chains(raw.get("chains", {}), schemes, root),
         stale_days=int(raw.get("stale_days", 90)),
+        user_agent=str(raw.get("user_agent")
+                       or DEFAULTS["user_agent"]),
         fail_on=tuple(raw["lint"]["fail_on"]),
         mute=tuple(raw["lint"]["mute"]),
         narrow_terms=tuple(raw["lint"].get("narrow_terms", [])),

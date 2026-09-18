@@ -321,6 +321,16 @@ PLAIN: list[tuple[str, str, str, dict[str, str]]] = [
                      "linking somewhere wrong.",
         "stale_days": "How long a document may sit undecided before the "
                       "pending-decisions report calls it out.",
+        "user_agent": "What Luria announces when it opens a socket — the "
+                      "identifier check and remote discovery both send it. "
+                      "The default is a generic browser string, because the "
+                      "stdlib default (`Python-urllib/3.x`) names the "
+                      "language and nothing else and is what a metadata host "
+                      "rations first. Setting this is how a project says who "
+                      "it actually is, which is the form some hosts ask for: "
+                      "CrossRef's polite pool wants a real contact address, "
+                      "and that address belongs to the record rather than to "
+                      "Luria.",
         "include_records": "Globs naming further records inside this "
                            "repository — `examples/*` — each read with its "
                            "own `luria.yaml` and linted in the same run. What "

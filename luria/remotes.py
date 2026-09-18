@@ -60,6 +60,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from .config import Remote, current
+from .fetch import request
 
 # `LU-ADR-013`: a remote prefix, a delimiter, then a tail in that remote's own
 # namespace. Built from config, because an unconfigured prefix must NOT match —
@@ -367,7 +368,7 @@ def _fetch_bytes(url: str) -> tuple[bytes, str]:
     deliberately: a discovery that needs a secret is a discovery CI can't
     reproduce, and the answer for an unreadable remote is a `url` template."""
     try:
-        with urllib.request.urlopen(url, timeout=15) as response:
+        with urllib.request.urlopen(request(url), timeout=15) as response:
             return response.read(), ""
     except urllib.error.HTTPError as exc:
         return b"", ("not readable anonymously"
@@ -450,7 +451,7 @@ def _head(url: str) -> tuple[bool, str]:
     """(reached, why-not). A HEAD, because the body is never wanted."""
     try:
         with urllib.request.urlopen(
-                urllib.request.Request(url, method="HEAD"), timeout=15) as r:
+                request(url, method="HEAD"), timeout=15) as r:
             return (True, "") if r.status == 200 else (False, str(r.status))
     except urllib.error.HTTPError as exc:
         return False, str(exc.code)
