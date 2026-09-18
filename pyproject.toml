@@ -81,6 +81,10 @@ include = ["luria", "template", "tests", "README.md", "LICENSE", "pyproject.toml
 [tool.hatch.version]
 source = "vcs"
 
-# No `[tool.hatch.build.hooks.vcs]` version file on purpose: nothing in the
-# package reads its own version, and writing one out would reintroduce exactly
-# the hand-maintained copy this removes.
+# No `[tool.hatch.build.hooks.vcs]` version file on purpose. `luria.__version__`
+# DOES read the version now — the user agent sends it (ADR-tmpdmtfc) — but it
+# reads it from installed distribution metadata, which hatch-vcs has already
+# written correctly. A generated version file would be a second copy for the
+# first to drift from, which is the failure this section exists to prevent and
+# which happened anyway: `__version__` sat at a hand-written "0.1.0" through
+# twenty-seven releases (#295).

@@ -76,6 +76,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from .config import current
+from .fetch import request
 
 SOURCE_OK = "source-ok"
 
@@ -221,7 +222,7 @@ def _retry_after(error) -> float | None:
 
 def _once(url: str, pattern: str) -> Fetched:
     try:
-        with urllib.request.urlopen(url, timeout=60) as response:
+        with urllib.request.urlopen(request(url), timeout=60) as response:
             body = response.read().decode("utf-8", "replace")
     except urllib.error.HTTPError as error:
         if error.code in (404, 410):

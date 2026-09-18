@@ -321,6 +321,17 @@ PLAIN: list[tuple[str, str, str, dict[str, str]]] = [
                      "linking somewhere wrong.",
         "stale_days": "How long a document may sit undecided before the "
                       "pending-decisions report calls it out.",
+        "user_agent": "What Luria announces when it opens a socket — the "
+                      "identifier check and remote discovery both send it. "
+                      "The default is `luria/<version>`: honest about the "
+                      "software, the way `curl/8.0` is, and carrying no "
+                      "contact, because a URL or mailbox in a shipped "
+                      "default would route every user's traffic to whoever "
+                      "maintains Luria. Add your own contact here if you "
+                      "want the treatment some hosts reserve for callers "
+                      "who identify themselves — CrossRef's polite pool "
+                      "wants a real address — since that address belongs to "
+                      "your record rather than to Luria.",
         "include_records": "Globs naming further records inside this "
                            "repository — `examples/*` — each read with its "
                            "own `luria.yaml` and linted in the same run. What "

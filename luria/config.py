@@ -61,6 +61,8 @@ config object, resolved once from disk.
 
 from __future__ import annotations
 
+from . import __version__
+
 import os
 import re
 from contextlib import contextmanager
@@ -80,6 +82,17 @@ CONFIG_NAME = "luria.yaml"
 # (ADR-098). One format is one set of quoting rules to know, and one
 # parser to reason about when a regex in a `uid` does not mean what it looks
 # like.
+
+def _own_version() -> str:
+    """luria's own version, for the user agent.
+
+    `__version__`, minus the local segment — a git hash and a date, in a
+    development checkout, which is noise in a header. A `.devN` suffix is
+    kept, because a development build saying so is the honest thing for this
+    field to do.
+    """
+    return __version__.split("+")[0]
+
 
 DEFAULTS: dict = {
     "issue_url": "",
@@ -126,6 +139,19 @@ DEFAULTS: dict = {
         },
     },
     "stale_days": 90,
+    # What luria announces when it opens a socket. The stdlib default is
+    # `Python-urllib/3.x`, which names the language and nothing else — not
+    # the tool, not the project, not a way to be reached — and is the shape
+    # of traffic a metadata host rations first.
+    #
+    # `luria/<version>`, and deliberately nothing more. It names the software
+    # honestly, the way `curl/8.0` and `Wget/1.21` do, and it carries no
+    # contact: a URL or a mailbox in a shipped default would route every
+    # user's traffic to whoever happens to maintain luria, which is a
+    # person who did not agree to that and is not the operator a host wants
+    # to reach anyway. The contact is the project's to add, which is why
+    # this is configuration (ADR-tmpdmtfc).
+    "user_agent": f"luria/{_own_version()}",
     # The enforcement dial (ADR-035): warning classes named here fail the
     # lint instead of printing. Empty is the default posture — reported,
     # not enforced — and the acknowledgement directives keep working under
@@ -1986,6 +2012,7 @@ class Config:
     journals: dict[str, Journal]
     chains: dict[str, Chain]
     stale_days: int
+    user_agent: str                     # what every request announces
     fail_on: tuple[str, ...]            # warning classes promoted to failures
     # Warning classes a project has decided it does not want to see at all.
     # `fail_on` changes a class's CONSEQUENCE; this removes it from the
@@ -2321,6 +2348,8 @@ def load(root: Path | None = None, text: str | None = None,
         },
         chains=_chains(raw.get("chains", {}), schemes, root),
         stale_days=int(raw.get("stale_days", 90)),
+        user_agent=str(raw.get("user_agent")
+                       or DEFAULTS["user_agent"]),
         fail_on=tuple(raw["lint"]["fail_on"]),
         mute=tuple(raw["lint"]["mute"]),
         narrow_terms=tuple(raw["lint"].get("narrow_terms", [])),
