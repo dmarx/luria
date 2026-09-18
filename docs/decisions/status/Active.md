@@ -4,7 +4,7 @@
 
 **Active** — in force — the current answer, and what a citation should normally point at.
 
-110 of 114 decisions. Back to the [full index](../README.md).
+111 of 115 decisions. Back to the [full index](../README.md).
 
 | # | Title | Summary | Status |
 |---|---|---|---|
@@ -118,3 +118,4 @@
 | [ADR-112](../../../record/decisions.d/ADR-112.md) | The lockfile is written where merges serialize, and the lint only reads it | `luria lint` asked upstream about identifiers the lockfile could not answer and wrote what it learned. Caching the answer is right; doing it from a check that runs on every branch made `remotes.lock.json` a file every contribution rewrites. The write moves to `luria remotes --resolve` at the serialization point, via a `resolve:` input on the generate action; the ask stays, so a wrong citation is still caught on the pull request that adds it. Rejected: sharding the lockfile, a merge driver, and scoping the finding to the trunk. | Active |
 | [ADR-113](../../../record/decisions.d/ADR-113.md) | A chain's page is organized by the invariant the chain declares | A chain that declares `invariant` already says what its members hold in common; the page now uses it, giving each value a section and listing the lines that share it underneath. Lines sharing nothing get a section of their own, because that is a finding about a line and this is where lines are read. Opt-in through the same key that opts into the check, so a chain without one renders exactly as before. Rejected: choosing one value per line, and a separate grouping key. | Active |
 | [ADR-114](../../../record/decisions.d/ADR-114.md) | A 406 from a metadata remote is a throttle, not an outage | arXiv returns 406 and 429 interchangeably for the same identifier seconds apart when it is shedding load. `_once` classified 406 as `unreachable`, which skips the retry and — the part that cost something — never trips the circuit breaker, so a sustained refusal bought one socket per unverified identifier every run. 406 now classifies as `throttled`. Rejected: a fourth status, and leaving the RFC reading in place. | Active |
+| [ADR-115](../../../record/decisions.d/ADR-115.md) | Every request names the software and no contact, and the project adds the rest | Luria sent `Python-urllib/3.11` — the language and nothing else — from three call sites that had already drifted apart. All three now go through `fetch.request()`, which carries the project's `user_agent`. The default is `luria/<version>`: honest about the software, and carrying no contact, because a shipped contact routes every user's traffic to whoever maintains luria. Rejected: a browser string, and a hardcoded project URL. | Active |

@@ -150,7 +150,7 @@ DEFAULTS: dict = {
     # user's traffic to whoever happens to maintain luria, which is a
     # person who did not agree to that and is not the operator a host wants
     # to reach anyway. The contact is the project's to add, which is why
-    # this is configuration (ADR-tmpdmtfc).
+    # this is configuration (ADR-115).
     "user_agent": f"luria/{_own_version()}",
     # The enforcement dial (ADR-035): warning classes named here fail the
     # lint instead of printing. Empty is the default posture — reported,
