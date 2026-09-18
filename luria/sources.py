@@ -226,7 +226,17 @@ def _once(url: str, pattern: str) -> Fetched:
     except urllib.error.HTTPError as error:
         if error.code in (404, 410):
             return Fetched("absent", detail=f"HTTP {error.code}")
-        if error.code in (429, 503):
+        # 406 is here on evidence rather than on the RFC, which reads it as
+        # content negotiation. arXiv returns 406 and 429 interchangeably for
+        # the same identifier seconds apart when it is shedding load, and a
+        # negotiation failure cannot be intermittent. It cannot be OUR
+        # negotiation failure either: every request here is built from a
+        # remote's own `uris.title` template and sends no Accept header to
+        # argue about, so there is nothing for a server to refuse. A remote
+        # that really does mean 406 the orthodox way now reports a throttle
+        # that never clears, which is louder than the `unreachable` it used
+        # to get (ADR-tmp39d41).
+        if error.code in (406, 429, 503):
             wait = _retry_after(error)
             return Fetched("throttled",
                            detail=f"HTTP {error.code}"
