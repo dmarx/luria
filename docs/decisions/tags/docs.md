@@ -4,7 +4,7 @@
 
 **Documented** — cited by the documentation a reader browses — a hand-written page under `docs/`, or prose that renders into one — so retiring this decision changes what the docs claim and the page has to change with it.
 
-16 of 112 decisions. Back to the [full index](../README.md).
+17 of 113 decisions. Back to the [full index](../README.md).
 
 | # | Title | Summary | Status |
 |---|---|---|---|
@@ -24,3 +24,4 @@
 | [ADR-095](../../../record/decisions.d/ADR-095.md) | An acknowledgement can carry its own deadline | A directive may be written `until <YYYY-MM-DD>`; after that date `find` stops returning it, so every check behaves as if it were never written, and `luria lint` reports what expired. Rejected: a relative duration, which needs an anchor the file does not carry; and a version milestone, which needs a project-version concept luria does not have. | Active |
 | [ADR-105](../../../record/decisions.d/ADR-105.md) | A mention is not a citation, and says nothing about status |  | Active |
 | [ADR-109](../../../record/decisions.d/ADR-109.md) | A config object says what it is, and where it says it depends on what it is | `label` + `blurb` for a thing named inside a scheme — a vocabulary, a tag group, a plain field, a field group — matching what a relation already had; `title` + `blurb` for a thing that renders its own page, which is a scheme, a journal and a chain. A vocabulary's pair lives in the central table, not on the field that invokes it, so a set two schemes share is described once. Rejected: putting it on the field, which is where the first implementation put it and where it would have drifted. | Active |
+| [ADR-113](../../../record/decisions.d/ADR-113.md) | A chain's page is organized by the invariant the chain declares | A chain that declares `invariant` already says what its members hold in common; the page now uses it, giving each value a section and listing the lines that share it underneath. Lines sharing nothing get a section of their own, because that is a finding about a line and this is where lines are read. Opt-in through the same key that opts into the check, so a chain without one renders exactly as before. Rejected: choosing one value per line, and a separate grouping key. | Active |
