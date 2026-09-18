@@ -236,7 +236,7 @@ def _once(url: str, pattern: str) -> Fetched:
         # argue about, so there is nothing for a server to refuse. A remote
         # that really does mean 406 the orthodox way now reports a throttle
         # that never clears, which is louder than the `unreachable` it used
-        # to get (ADR-tmp39d41).
+        # to get (ADR-114).
         if error.code in (406, 429, 503):
             wait = _retry_after(error)
             return Fetched("throttled",
