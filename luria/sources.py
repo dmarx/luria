@@ -470,5 +470,5 @@ def mismatch_lines() -> tuple[list[str], list[str], list[str]]:
     # DP-002's lock, reintroduced through a *check* rather than a generator,
     # which is why it went unnoticed. `luria remotes --resolve` keeps the
     # answer, at the serialization point, where one writer holds the pen
-    # (ADR-tmp1adp3). Reading and asking stay here; only the write moved.
+    # (ADR-112). Reading and asking stay here; only the write moved.
     return flagged, unchecked, stale

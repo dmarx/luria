@@ -4,7 +4,7 @@
 
 **Mechanism** — collectors, generators, the lint, the directive vocabulary.
 
-76 of 111 decisions. Back to the [full index](../README.md).
+77 of 112 decisions. Back to the [full index](../README.md).
 
 | # | Title | Summary | Status |
 |---|---|---|---|
@@ -84,3 +84,4 @@
 | [ADR-104](../../../record/decisions.d/ADR-104.md) | A directive's argument list is syntax; its reason is prose |  | Active |
 | [ADR-105](../../../record/decisions.d/ADR-105.md) | A mention is not a citation, and says nothing about status |  | Active |
 | [ADR-108](../../../record/decisions.d/ADR-108.md) | A rule carries its own alert, on the thing the rule belongs to | A closed vocabulary's finding says what is allowed. Whether the list is finished or merely short is a fact only the record knows, and it had nowhere to say it — so the message reads as "pick one of these", which is how a vocabulary stops growing. `Vocabulary` and `TagGroup` each gain a `alert:`, printed as a continuation of their own violation. Rejected: the per-rule keys the issue proposed (`closed_alert`, `required_alert`), which turn out to be unnecessary once the alert rides the carrier rather than the field. | Active |
+| [ADR-112](../../../record/decisions.d/ADR-112.md) | The lockfile is written where merges serialize, and the lint only reads it | `luria lint` asked upstream about identifiers the lockfile could not answer and wrote what it learned. Caching the answer is right; doing it from a check that runs on every branch made `remotes.lock.json` a file every contribution rewrites. The write moves to `luria remotes --resolve` at the serialization point, via a `resolve:` input on the generate action; the ask stays, so a wrong citation is still caught on the pull request that adds it. Rejected: sharding the lockfile, a merge driver, and scoping the finding to the trunk. | Active |
