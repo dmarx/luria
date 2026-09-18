@@ -330,27 +330,83 @@ def _step(doc: Adr, chain, lead: str = "") -> str:
             + (f" *({shown})*" if shown else ""))
 
 
+def common_of(chain, line: Line) -> set[str]:
+    """The values every member of one line holds in the chain's invariant.
+
+    Imported here rather than at module scope because `invariants` walks
+    components through this module — the cycle is real and the deferred
+    import is how the rest of the package breaks one (DP-004 keeps `held`
+    in one place rather than copying eight lines to avoid it)."""
+    from .invariants import shared
+    if not chain.invariant:
+        return set()
+    return shared(line.members, chain.invariant)
+
+
+def _sections(chain, lines: list[Line]) -> list[tuple[str, list[Line]]]:
+    """Lines grouped under each value they hold in common, unbound last.
+
+    A line is listed under EVERY value it shares, not under one chosen for
+    it. The invariant is what a line is about, a line can be about two
+    things, and picking one would make the other heading wrong by omission —
+    the reader looking under `data-pipeline` for a line that is also about
+    data would not find it.
+
+    A line sharing nothing is the `Unbound` case `invariants.py` reports.
+    It goes in a section of its own rather than being dropped, because the
+    finding is about a line and this is the page where lines are read."""
+    by_value: dict[str, list[Line]] = {}
+    unbound: list[Line] = []
+    for line in lines:
+        common = common_of(chain, line)
+        if not common:
+            unbound.append(line)
+            continue
+        for value in common:
+            by_value.setdefault(value, []).append(line)
+    out = [(value, by_value[value]) for value in sorted(by_value)]
+    if unbound:
+        out.append((f"Sharing no `{chain.invariant}`", unbound))
+    return out
+
+
+def _line_block(chain, line: Line, heading: str) -> list[str]:
+    head = line.spine[0] if line.spine else line.alongside[0]
+    out = [f"{heading} From {head.title}", ""]
+    for doc in line.spine:
+        # A step with several parents nests under one of them; the rest
+        # are named here so the page holds every declared edge, not the
+        # subset a tree layout can draw.
+        extra = line.also.get(doc.code, [])
+        tail = (f" — also extends {', '.join(extra)}" if extra else "")
+        out.append("  " * line.depth[doc.code] + "- "
+                   + _step(doc, chain) + tail)
+    for doc in line.alongside:
+        out.append(_step(doc, chain, lead="- alongside: "))
+    out.append("")
+    return out
+
+
 def _render(chain, lines: list[Line]) -> str:
     count = f"{len(lines)} line" + ("" if len(lines) == 1 else "s")
     out = [MARKER, "", f"# {chain.title}", "",
            f"{count}, walked from {_spine(chain)} on {chain.scheme} "
            f"documents. Each step explains itself; this page is the order "
            f"they came in.", ""]
-    for line in lines:
-        head = line.spine[0] if line.spine else line.alongside[0]
-        out.append(f"## From {head.title}")
+    if not chain.invariant:
+        for line in lines:
+            out += _line_block(chain, line, "##")
+        return "\n".join(out).rstrip() + "\n"
+
+    # Grouping is opt-in through the same key that opts into the check, so a
+    # record that declares no invariant gets exactly the page it had.
+    out += [f"Grouped by `{chain.invariant}`, which every line holds in "
+            f"common — a line about two things is listed under both.", ""]
+    for value, group in _sections(chain, lines):
+        out.append(f"## {value}")
         out.append("")
-        for doc in line.spine:
-            # A step with several parents nests under one of them; the rest
-            # are named here so the page holds every declared edge, not the
-            # subset a tree layout can draw.
-            extra = line.also.get(doc.code, [])
-            tail = (f" — also extends {', '.join(extra)}" if extra else "")
-            out.append("  " * line.depth[doc.code] + "- "
-                       + _step(doc, chain) + tail)
-        for doc in line.alongside:
-            out.append(_step(doc, chain, lead="- alongside: "))
-        out.append("")
+        for line in group:
+            out += _line_block(chain, line, "###")
     return "\n".join(out).rstrip() + "\n"
 
 
