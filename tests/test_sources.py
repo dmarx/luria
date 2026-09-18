@@ -13,6 +13,7 @@ from _config import merged
 import json
 
 from luria import config, lint, sources
+import urllib.error
 
 SOURCE_BASE = (
     """
@@ -291,3 +292,63 @@ def test_a_remote_with_no_title_uri_is_skipped(project):
                             """)
     remote = config.current().remotes["TICKET"]
     assert sources._title_url(remote, "OPS-1") == ""
+
+
+def _ident(project, uid):
+    return sources.Identifier(path=project / "note.md", code="LIT-001",
+                              remote="ARXIV", uid=uid, recorded="", line=1)
+
+
+def _raises(code, headers=None):
+    def go(*a, **k):
+        raise urllib.error.HTTPError("https://example.test/x", code, "refused",
+                                     headers or {}, None)
+    return go
+
+
+def test_a_406_is_a_throttle_because_that_is_what_arxiv_means_by_it(
+        project, monkeypatch):
+    """Found on a real corpus: eight identifiers sat unverified for hours
+    reported as "unreachable — HTTP 406" while arXiv was up and answering
+    other requests. Hitting the same endpoint three times, two seconds apart,
+    returned 406, then 429, then 429 for one identifier — the host uses the
+    two interchangeably to shed load (#292).
+
+    The RFC meaning of 406 is content negotiation, which does not apply here:
+    luria only ever sends requests it built itself from a remote's own url
+    template, so there is nothing for a server to negotiate away."""
+    _project(project)
+    monkeypatch.setattr(sources.urllib.request, "urlopen", _raises(406))
+    assert sources._once("https://example.test/x", "(.*)").status == "throttled"
+
+
+def test_a_throttling_remote_is_asked_once_and_then_believed(
+        project, monkeypatch):
+    """The cost of the old classification was not the missing retry — arXiv
+    sends no Retry-After, so there was nothing to wait for. It was that
+    `unreachable` never trips the breaker in `ask`, so a sustained refusal
+    cost one socket per unverified identifier, every run. That is the case
+    the breaker exists for."""
+    _project(project)
+    calls = []
+
+    def counted(*a, **k):
+        calls.append(1)
+        raise urllib.error.HTTPError("https://example.test/x", 406,
+                                     "refused", {}, None)
+
+    monkeypatch.setattr(sources.urllib.request, "urlopen", counted)
+    sources.forget_refusals()
+    first = sources.ask(_ident(project, "2401.00001"))
+    second = sources.ask(_ident(project, "2401.00002"))
+    assert first.status == second.status == "throttled"
+    assert len(calls) == 1, "the second identifier should reuse the refusal"
+    assert "not asked again" in second.detail
+
+
+def test_a_real_outage_is_still_unreachable(project, monkeypatch):
+    """The reclassification is narrow. A 500 says the host is broken, not
+    that it is rationing, and it keeps the status that says so."""
+    _project(project)
+    monkeypatch.setattr(sources.urllib.request, "urlopen", _raises(500))
+    assert sources._once("https://example.test/x", "(.*)").status == "unreachable"
