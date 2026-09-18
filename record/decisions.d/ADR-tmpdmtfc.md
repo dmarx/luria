@@ -1,6 +1,6 @@
 ---
 status: Active
-title: 'Every request carries a configured user agent, defaulting to a browser string'
+title: 'Every request names the software and no contact, and the project adds the rest'
 version: 1
 tags:
 - record
@@ -9,12 +9,12 @@ summary: >-
   Luria sent `Python-urllib/3.11` — the language and nothing else — from
   three call sites that had already drifted apart. All three now go through
   `fetch.request()`, which carries the project's `user_agent`. The default
-  is a generic Firefox string: pragmatic rather than honest, and
-  configurable precisely because the honest version is a per-record fact.
-  Rejected: a hardcoded `luria/<version>` identity.
+  is `luria/<version>`: honest about the software, and carrying no contact,
+  because a shipped contact routes every user's traffic to whoever
+  maintains luria. Rejected: a browser string, and a hardcoded project URL.
 ---
 
-# ADR-tmpdmtfc: Every request carries a configured user agent, defaulting to a browser string
+# ADR-tmpdmtfc: Every request names the software and no contact, and the project adds the rest
 
 ## Context
 
@@ -49,27 +49,40 @@ headers luria sends are now a single fact rather than a habit repeated three
 times (`DP-004`), and the module exists so that the next call site has an
 obvious thing to call.
 
-**The default is a generic Firefox string.** This is a pragmatic choice, not
-an honest one, and it is recorded as such: a browser string is what gets
-served, and it is also what a rate-limiter is trying to see through.
+**The default is `luria/<version>` and deliberately nothing more.** Two
+constraints meet here and the string satisfies both. It is honest about the
+software — the shape `curl/8.0` and `Wget/1.21` have used for decades — so a
+host reading a log sees what is actually calling it. And it carries **no
+contact**, because a URL or a mailbox in a shipped default routes every
+user's traffic to whoever happens to maintain luria: a person who did not
+agree to that, and who is not the operator a host wants to reach anyway.
 
-**What makes that defensible is the `user_agent` setting**, which is the
-substance of this decision rather than a convenience on top of it. The honest
-identity belongs to the project, not to luria: a contact address is a
-per-record fact, and the form some hosts actually ask for — CrossRef's polite
-pool wants a real mailbox — cannot be supplied by a default at all. So the
-tool ships the string that works and gives every project one line to say who
-it really is.
+**The contact is the project's to add**, which is what the `user_agent`
+setting is for and the substance of this decision rather than a convenience
+on top of it. The form some hosts ask for — CrossRef's polite pool wants a
+real mailbox — is a per-record fact that no default can supply.
+
+The version is read from installed distribution metadata rather than from
+`luria.__version__`, which was a hand-written `"0.1.0"` that had been wrong
+for twenty-seven releases (`#295`). A header being honest about the software
+should not misreport its version in the same breath; that line is now derived
+too.
 
 ## Alternatives considered
 
-- **A hardcoded `luria/<version> (+https://github.com/dmarx/luria)`.** The
-  polite option, and it was the first proposal. It loses because it is the
-  wrong thing to hardcode: it identifies the *tool* when what a host wants is
-  the *operator*, so every project would announce the same contact for
-  traffic none of them shares. Making it configurable keeps this available —
-  a project that wants it writes it — while not imposing luria's identity on
-  a record's traffic.
+- **`luria/<version> (+https://github.com/dmarx/luria)`.** The polite
+  option, and the first proposal. It loses on the same ground the browser
+  string does, from the other direction: it identifies the *tool* when a host
+  wants the *operator*, so every project using luria would point complaints
+  at one maintainer for traffic none of them sent. A contact nobody consented
+  to publish is not politeness. A project that wants that URL can write it.
+- **A generic browser string** (`Mozilla/5.0 … Firefox/128.0`). Gets served,
+  and was the shipped default in the first draft of this change. It loses
+  because it is a lie told to the party least able to check it, and it is
+  what a rate-limiter is specifically trying to see through — so it buys
+  goodwill now at the cost of being the traffic a host blocks by pattern
+  later. It also forfeits the one benefit that motivated setting an agent at
+  all.
 - **Keep the stdlib default.** Free, and it is the traffic a metadata host
   rations first. It also leaves nothing for a project to change.
 - **A UA as the fix for `#292`.** Tested and rejected on evidence; see
@@ -87,11 +100,12 @@ line.** `luria.user_agent` in `luria.yaml`, documented in the generated
 config reference — luria's own `test_every_scalar_key_is_described` failed
 until that prose existed, which is the check doing its job.
 
-**The default misrepresents what luria is**, and a project that cares should
-override it. That is a real cost and is the reason this ADR says so in the
-title rather than in a footnote: someone reading a server log will see a
-browser, and the record should not be the only place that fact is written
-down.
+**No project gets the polite-pool treatment without opting in.** A default
+that named a contact would earn it for everyone at once; this one earns it
+for nobody until a record writes its own address. That is the cost of not
+publishing a maintainer's inbox on other people's behalf, and it is the right
+side to err on — the setting is one line, and a project that cares will find
+it in the config reference.
 
 **A fourth call site is now a one-liner** — `request(url)` rather than a
 header dict copied from somewhere. That was the point of extracting the

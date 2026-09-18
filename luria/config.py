@@ -61,6 +61,8 @@ config object, resolved once from disk.
 
 from __future__ import annotations
 
+from . import __version__
+
 import os
 import re
 from contextlib import contextmanager
@@ -80,6 +82,17 @@ CONFIG_NAME = "luria.yaml"
 # (ADR-098). One format is one set of quoting rules to know, and one
 # parser to reason about when a regex in a `uid` does not mean what it looks
 # like.
+
+def _own_version() -> str:
+    """luria's own version, for the user agent.
+
+    `__version__`, minus the local segment — a git hash and a date, in a
+    development checkout, which is noise in a header. A `.devN` suffix is
+    kept, because a development build saying so is the honest thing for this
+    field to do.
+    """
+    return __version__.split("+")[0]
+
 
 DEFAULTS: dict = {
     "issue_url": "",
@@ -131,14 +144,14 @@ DEFAULTS: dict = {
     # the tool, not the project, not a way to be reached — and is the shape
     # of traffic a metadata host rations first.
     #
-    # The default here is a browser string, which is a pragmatic choice
-    # rather than an honest one, and the reason this is CONFIGURATION is
-    # that the honest option belongs to the project rather than to luria: a
-    # contact address is a per-record fact, and CrossRef's polite pool wants
-    # a real one. A project that would rather say who it is sets this
-    # (ADR-tmpdmtfc).
-    "user_agent": ("Mozilla/5.0 (X11; Linux x86_64; rv:128.0) "
-                   "Gecko/20100101 Firefox/128.0"),
+    # `luria/<version>`, and deliberately nothing more. It names the software
+    # honestly, the way `curl/8.0` and `Wget/1.21` do, and it carries no
+    # contact: a URL or a mailbox in a shipped default would route every
+    # user's traffic to whoever happens to maintain luria, which is a
+    # person who did not agree to that and is not the operator a host wants
+    # to reach anyway. The contact is the project's to add, which is why
+    # this is configuration (ADR-tmpdmtfc).
+    "user_agent": f"luria/{_own_version()}",
     # The enforcement dial (ADR-035): warning classes named here fail the
     # lint instead of printing. Empty is the default posture — reported,
     # not enforced — and the acknowledgement directives keep working under

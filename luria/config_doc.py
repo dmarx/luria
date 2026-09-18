@@ -323,14 +323,15 @@ PLAIN: list[tuple[str, str, str, dict[str, str]]] = [
                       "pending-decisions report calls it out.",
         "user_agent": "What Luria announces when it opens a socket — the "
                       "identifier check and remote discovery both send it. "
-                      "The default is a generic browser string, because the "
-                      "stdlib default (`Python-urllib/3.x`) names the "
-                      "language and nothing else and is what a metadata host "
-                      "rations first. Setting this is how a project says who "
-                      "it actually is, which is the form some hosts ask for: "
-                      "CrossRef's polite pool wants a real contact address, "
-                      "and that address belongs to the record rather than to "
-                      "Luria.",
+                      "The default is `luria/<version>`: honest about the "
+                      "software, the way `curl/8.0` is, and carrying no "
+                      "contact, because a URL or mailbox in a shipped "
+                      "default would route every user's traffic to whoever "
+                      "maintains Luria. Add your own contact here if you "
+                      "want the treatment some hosts reserve for callers "
+                      "who identify themselves — CrossRef's polite pool "
+                      "wants a real address — since that address belongs to "
+                      "your record rather than to Luria.",
         "include_records": "Globs naming further records inside this "
                            "repository — `examples/*` — each read with its "
                            "own `luria.yaml` and linted in the same run. What "

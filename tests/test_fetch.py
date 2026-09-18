@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import urllib.request
+from importlib import metadata
 
 from _config import merged
 from luria import config, fetch, remotes, sources
@@ -25,7 +26,8 @@ remotes:
     title_re: '<title>(.*?)</title>'
 """
 
-FIREFOX = "Mozilla/5.0 (X11; Linux x86_64; rv:128.0) Gecko/20100101 Firefox/128.0"
+def _default() -> str:
+    return config.DEFAULTS["user_agent"]
 
 
 def _project(project, extra: str = "") -> None:
@@ -34,14 +36,28 @@ def _project(project, extra: str = "") -> None:
     config.reset()
 
 
-def test_the_default_user_agent_is_a_browser_string(project):
-    """A deliberate choice, not an oversight: the stdlib default announces
-    `Python-urllib/3.x`, which is the shape of traffic a metadata host
-    rate-limits first. A project that would rather identify itself honestly
-    sets `user_agent` — which is why this is configuration and not a
-    constant."""
+def test_the_default_names_the_software_and_nothing_else(project):
+    """Two constraints at once, and this pins both.
+
+    It must be honest — `luria/<version>`, the way `curl/8.0` is — because
+    the stdlib default names the language and is what a metadata host
+    rations first. And it must carry NO contact: a URL or mailbox in a
+    shipped default routes every user's traffic to whoever maintains luria,
+    who did not agree to that and is not the operator a host wants anyway.
+    The contact is the project's to add."""
     _project(project)
-    assert config.current().user_agent == FIREFOX
+    agent = config.current().user_agent
+    assert agent.startswith("luria/")
+    assert "Mozilla" not in agent
+    assert "@" not in agent and "http" not in agent
+
+
+def test_the_version_comes_from_package_metadata(project):
+    """Not from `luria.__version__`, which is a stale hand-maintained
+    `0.1.0` that `pyproject.toml` says should not exist (#295). A user agent
+    claiming 0.1.0 would misreport the software it is being honest about."""
+    _project(project)
+    assert config.current().user_agent != "luria/0.1.0"
 
 
 def test_a_project_sets_its_own(project):
@@ -52,7 +68,7 @@ def test_a_project_sets_its_own(project):
 def test_the_request_carries_it(project):
     _project(project)
     req = fetch.request("https://example.test/x")
-    assert req.get_header("User-agent") == FIREFOX
+    assert req.get_header("User-agent") == _default()
 
 
 def test_a_head_request_keeps_both_the_method_and_the_agent(project):
@@ -61,7 +77,7 @@ def test_a_head_request_keeps_both_the_method_and_the_agent(project):
     _project(project)
     req = fetch.request("https://example.test/x", method="HEAD")
     assert req.get_method() == "HEAD"
-    assert req.get_header("User-agent") == FIREFOX
+    assert req.get_header("User-agent") == _default()
 
 
 def _capture(monkeypatch, module):
@@ -86,7 +102,7 @@ def test_the_identifier_check_sends_it(project, monkeypatch):
     _project(project)
     seen = _capture(monkeypatch, sources)
     sources._once("https://example.test/x", "<title>(.*?)</title>")
-    assert seen["agent"] == FIREFOX
+    assert seen["agent"] == _default()
 
 
 def test_remote_discovery_sends_it(project, monkeypatch):
@@ -96,11 +112,21 @@ def test_remote_discovery_sends_it(project, monkeypatch):
     _project(project)
     seen = _capture(monkeypatch, remotes)
     remotes._fetch_bytes("https://example.test/x")
-    assert seen["agent"] == FIREFOX
+    assert seen["agent"] == _default()
 
 
 def test_the_head_probe_sends_it(project, monkeypatch):
     _project(project)
     seen = _capture(monkeypatch, remotes)
     remotes._head("https://example.test/x")
-    assert seen["agent"] == FIREFOX
+    assert seen["agent"] == _default()
+
+
+def test_the_package_version_is_not_hand_written():
+    """`__version__` sat at "0.1.0" through twenty-seven releases while
+    `pyproject.toml` derived the real version from git tags (#295). It is
+    read from distribution metadata now, and this fails if anyone writes a
+    literal back."""
+    import luria
+    assert luria.__version__ != "0.1.0"
+    assert luria.__version__ == metadata.version("luria")
