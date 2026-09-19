@@ -5,6 +5,7 @@
     luria new adr              # the next free decision number, from _template.md
     luria new dp               # the next free principle number
     luria new changelog        # a fragment named for its filing moment
+    luria new --draft f.json   # file the draft(s) a tool wrote to f.json
 
 Prints the created path and nothing else. The identity fields a machine can
 compute — filename, number, timestamp, `date:` — are computed; every other
@@ -342,9 +343,67 @@ UNIVERSAL = ("title", "status", "summary", "tags", "influenced_by")
 STANDARD_PLURAL = frozenset({"influenced_by"})
 
 
+# What a drafts file carries that is not a field of the document: the
+# canvas's own bookkeeping (strata-g's exporter writes these beside the
+# fields, and nothing here has an opinion about them).
+DRAFT_BOOKKEEPING = frozenset({"id", "scheme", "command", "unresolved"})
+
+
+def _read_drafts(path: str) -> list[dict]:
+    """The draft objects in a JSON file: one object, or a `luria-drafts`
+    document (`{"format": "luria-drafts", "drafts": [...]}`) as strata-g's
+    *Record — luria drafts* export writes it (SG-ADR-tmpiylaq there)."""
+    import json
+    try:
+        data = json.loads(Path(path).read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        sys.exit(f"luria new: no such file {path!r}")
+    except json.JSONDecodeError as e:
+        sys.exit(f"luria new: {path} is not JSON ({e})")
+    if isinstance(data, dict) and isinstance(data.get("drafts"), list):
+        drafts = data["drafts"]
+    elif isinstance(data, dict):
+        drafts = [data]
+    else:
+        sys.exit(f"luria new: {path} holds neither a draft object nor a "
+                 "luria-drafts document")
+    bad = [d for d in drafts if not isinstance(d, dict)]
+    if bad:
+        sys.exit(f"luria new: {path}: every draft must be an object")
+    return drafts
+
+
+def _file_drafts(kind: str | None, drafts: list[dict], where: str) -> None:
+    """File every draft, each into the kind its `scheme` names (or KIND when
+    it names none), with the same field validation the flags get: a key the
+    scheme has no opinion about is refused by name, not written."""
+    kinds_ = kinds()
+    for i, draft in enumerate(drafts, 1):
+        scheme = str(draft.get("scheme") or "").lower()
+        resolved = scheme or (kind or default_kind() or "").lower()
+        if kind and scheme and scheme != kind.lower():
+            sys.exit(f"luria new {kind}: draft {i} in {where} is for "
+                     f"{scheme!r}, not {kind!r}")
+        entry = kinds_.get(resolved)
+        if entry is None:
+            sys.exit(f"luria new: draft {i} in {where} names kind "
+                     f"{resolved!r} — this project scaffolds: "
+                     + ", ".join(sorted(kinds_)))
+        accepted = declared_fields(entry[1]) if entry[0] == "scheme" else ()
+        fields = {k: v for k, v in draft.items()
+                  if k not in DRAFT_BOOKKEEPING and v not in (None, "", [], ())}
+        unknown = [f for f in fields if f not in UNIVERSAL and f not in accepted]
+        if unknown:
+            known = ", ".join(f for f in (*UNIVERSAL, *accepted))
+            sys.exit(f"luria new {resolved}: draft {i} in {where} carries "
+                     f"{', '.join(repr(u) for u in unknown)} "
+                     f"(this kind accepts: {known})")
+        print(current().rel(new_entry(resolved, fields, None)))
+
+
 def run(kind: str = None, title: str = None, status: str = None,
         summary: str = None, tags: str = None, influenced_by: str = None,
-        name: str = None, **declared) -> None:
+        name: str = None, draft: str = None, **declared) -> None:
     """Scaffold an entry and print its path. KIND defaults to the journal;
     the other kinds come from luria.yaml (scheme prefixes, fragment dirs).
     Field flags are optional — content belongs to your editor.
@@ -354,7 +413,18 @@ def run(kind: str = None, title: str = None, status: str = None,
     declares `source` — and written in the shape the contract declares
     (#169). An undeclared flag is refused rather than written, because a key
     the scheme has no opinion about, scaffolded by a script, is exactly the
-    kind of thing nothing downstream would ever report."""
+    kind of thing nothing downstream would ever report.
+
+    `--draft FILE` files what a tool wrote instead: one draft object, or a
+    `luria-drafts` document holding several, each with the fields above and
+    the kind its `scheme` names (#301). Same validation, one path printed
+    per draft."""
+    if draft is not None:
+        if any(v for v in (title, status, summary, tags, influenced_by, name)) or declared:
+            sys.exit("luria new: --draft takes its fields from the file; "
+                     "no other field flag applies")
+        _file_drafts(kind, _read_drafts(draft), draft)
+        return
     fields = {k: v for k, v in
               [("title", title), ("status", status),
                ("summary", summary), ("tags", tags),
