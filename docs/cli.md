@@ -99,7 +99,8 @@ $ luria init
 ## luria new
 
 ```
-luria new [KIND] [--title T] [--status S] [--summary S] [--tags a,b] [--name N]
+luria new [KIND] [--title T] [--status S] [--summary S] [--tags a,b]
+          [--influenced_by ADR-1,ADR-2] [--name N]
 ```
 
 Files one new entry and prints its path. `KIND` is any name the project's
@@ -118,8 +119,10 @@ Files one new entry and prints its path. `KIND` is any name the project's
 
 With no `KIND` and exactly one journal configured, the journal is the
 default — `luria new --title "…"` is the cheapest possible filing. The
-field flags (`--title`, `--status`, `--summary`, `--tags`) pre-fill the
-scaffolded frontmatter. The generated view of your own config lists every
+field flags (`--title`, `--status`, `--summary`, `--tags`,
+`--influenced_by`) pre-fill the scaffolded frontmatter; `--influenced_by` is
+written as the list of codes the index reads, and a scheme's own declared
+reference fields are accepted by name the same way. The generated view of your own config lists every
 kind your project accepts (see [the record](record.md) for this one).
 
 ## luria repair

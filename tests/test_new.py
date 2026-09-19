@@ -243,3 +243,36 @@ def test_an_unfilled_summary_is_dropped_not_copied_from_the_form(project):
     filled = new.new_scheme_doc(scheme, {"title": "Filled",
                                          "summary": "We chose it."}).read_text()
     assert "summary: >-\n  We chose it." in filled
+
+
+# --- influenced_by as a flag (#301) ------------------------------------------
+#
+# `influenced_by:` is read by the index and by edges.py as a typed relation,
+# but it is not a contract field, so `declared_fields` never offered it and
+# `run` refused it by name. A tool handing over a draft — the documents it
+# was drawn from are exactly this list — needs the flag on every scheme.
+
+def test_influenced_by_is_accepted_on_a_scheme_that_declares_nothing(project, capsys):
+    from tests._scheme import decision
+    decision(project, 1, "Active")
+    new_mod.run(kind="adr", title="Drafted", influenced_by="ADR-001,ADR-002")
+    written = (current().root / capsys.readouterr().out.strip()).read_text()
+    assert "influenced_by:\n- ADR-001\n- ADR-002\n" in written, written
+    assert "'ADR-001, ADR-002'" not in written
+
+
+def test_one_influence_is_still_a_list(project):
+    """The index and edges.py iterate the field; a scalar would be read as
+    a string's characters, which is the #141 finding written by the tool
+    that scaffolds the document."""
+    from tests._scheme import decision
+    decision(project, 1, "Active")
+    text = new_mod.new_entry("adr", {"influenced_by": "ADR-001"}, None).read_text()
+    assert "influenced_by:\n- ADR-001\n" in text, text
+
+
+def test_influenced_by_survives_fire_reading_it_as_a_tuple(project):
+    from tests._scheme import decision
+    decision(project, 1, "Active")
+    text = new_mod.new_entry("adr", {"influenced_by": ("ADR-001", "ADR-002")}, None).read_text()
+    assert "influenced_by:\n- ADR-001\n- ADR-002\n" in text, text

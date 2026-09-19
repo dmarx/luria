@@ -11,7 +11,7 @@ compute — filename, number, timestamp, `date:` — are computed; every other
 field stays the template's placeholder, because a fragment is authored in a
 markdown-aware editor, not assembled on a command line (ADR-036). A tool
 driving the CLI can still set fields inline (`--title`, `--status`,
-`--summary`, `--tags`); a human never has to.
+`--summary`, `--tags`, `--influenced_by`); a human never has to.
 
 **The kinds are the config.** Every journal, scheme and fragment directory in
 `luria.yaml` is a kind, so a project that adds a scheme gets its scaffold for
@@ -197,7 +197,8 @@ def new_scheme_doc(scheme, fields: dict[str, str]) -> Path:
         if old_title:
             text = text.replace(f"# {code}: {old_title}", f"# {code}: {title}")
     for field, value in fields.items():
-        text = _sub_line(text, field, value, many=field in plural)
+        text = _sub_line(text, field, value,
+                         many=field in plural or field in STANDARD_PLURAL)
     # A prose field the caller did not fill still carries the form's own
     # words — "one-paragraph description of the decision" — which the lint
     # reports as the form's text, not the document's. Drop the value and keep
@@ -330,17 +331,25 @@ def new_entry(kind: str | None, fields: dict[str, str],
     return journal_mod.new(target, title, dt.datetime.now())
 
 
-UNIVERSAL = ("title", "status", "summary", "tags")
+UNIVERSAL = ("title", "status", "summary", "tags", "influenced_by")
+
+# `influenced_by:` is standard frontmatter for every scheme — the index and
+# the typed-edge module read it as a list of codes (ADR-012) — but it is not
+# a contract field, so the contract cannot say its shape. Named here so the
+# scaffold writes it as the list the readers expect (#301): a tool handing
+# over a draft drawn on a canvas names the documents it was drawn from, and
+# `--influenced_by ADR-231,ADR-245` is that hand-over.
+STANDARD_PLURAL = frozenset({"influenced_by"})
 
 
 def run(kind: str = None, title: str = None, status: str = None,
-        summary: str = None, tags: str = None, name: str = None,
-        **declared) -> None:
+        summary: str = None, tags: str = None, influenced_by: str = None,
+        name: str = None, **declared) -> None:
     """Scaffold an entry and print its path. KIND defaults to the journal;
     the other kinds come from luria.yaml (scheme prefixes, fragment dirs).
     Field flags are optional — content belongs to your editor.
 
-    Beyond the four universal flags, a scheme's own declared fields are
+    Beyond the five universal flags, a scheme's own declared fields are
     accepted by name — `--source LIT-134,LIT-140` where the SOTA scheme
     declares `source` — and written in the shape the contract declares
     (#169). An undeclared flag is refused rather than written, because a key
@@ -348,7 +357,8 @@ def run(kind: str = None, title: str = None, status: str = None,
     kind of thing nothing downstream would ever report."""
     fields = {k: v for k, v in
               [("title", title), ("status", status),
-               ("summary", summary), ("tags", tags)] if v}
+               ("summary", summary), ("tags", tags),
+               ("influenced_by", influenced_by)] if v}
     if declared:
         kinds_ = kinds()
         resolved = (kind or default_kind() or "").lower()
