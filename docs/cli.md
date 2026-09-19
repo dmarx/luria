@@ -20,6 +20,7 @@ One binary, `luria`, dispatching to plain functions. Every command takes
 | [`luria remotes`](#luria-remotes) | inspect and verify foreign references |
 | [`luria migrate`](#luria-migrate) | execute a rename/move spec |
 | [`luria site`](#luria-site) | stage the record as a publishable site |
+| [`luria export`](#luria-export) | write the record as a SQLite database, for querying |
 | [`luria upgrade`](#luria-upgrade) | carry a record across a version boundary |
 
 ## luria init
@@ -549,6 +550,24 @@ repository, and the theme/branding from `site` rendered into
 Quartz config. The published site gets search, backlinks, and a local
 graph per page. The `actions/site` composite action builds the staged
 vault with a pinned Quartz for GitHub Pages — see [adopting](adopting.md).
+
+## luria export
+
+```
+luria export [--out build/record.sqlite]
+```
+
+Writes the record as one SQLite file: a row per scheme document (code,
+scheme, number, title, status, version, date, path, the whole frontmatter
+as JSON, and the body), a row per field value with list fields exploded
+into positioned rows, the typed edges (`superseded_by:`, `influenced_by:`,
+every declared reference field), every citation the lint's scanner counts
+— where it sits, whether it resolves, whether a directive excuses it — and
+every journal entry with its tags. Rebuilt from scratch on each run, so a
+row never outlives its source; refuses to overwrite a file it did not
+write. It is a generated view for asking the record questions with
+`sqlite3`, Datasette or pandas — never a source, and not committed
+([ADR-tmptir3g](../record/decisions.d/ADR-tmptir3g.md)).
 
 ## luria upgrade
 
