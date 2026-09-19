@@ -567,7 +567,7 @@ every journal entry with its tags. Rebuilt from scratch on each run, so a
 row never outlives its source; refuses to overwrite a file it did not
 write. It is a generated view for asking the record questions with
 `sqlite3`, Datasette or pandas — never a source, and not committed
-([ADR-tmptir3g](../record/decisions.d/ADR-tmptir3g.md)).
+([ADR-116](../record/decisions.d/ADR-116.md)).
 
 ## luria upgrade
 

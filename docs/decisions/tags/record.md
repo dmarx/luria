@@ -4,7 +4,7 @@
 
 **The record** — what the four layers hold, and the rules between them.
 
-55 of 115 decisions. Back to the [full index](../README.md).
+56 of 116 decisions. Back to the [full index](../README.md).
 
 | # | Title | Summary | Status |
 |---|---|---|---|
@@ -63,3 +63,4 @@
 | [ADR-106](../../../record/decisions.d/ADR-106.md) | An invariant is a property of the relation, not of the chain that walks it | `invariant` becomes a key on a declared reference, so the assertion that two related documents share a field holds without a chain to walk it and may cross schemes. Chains stay within one scheme and are refused at load when they do not, in place of the KeyError they used to raise. Rejected: teaching the chain walker to carry far-scheme nodes, and making a chain's `output` optional so an invariant could be declared with no view. | Active |
 | [ADR-114](../../../record/decisions.d/ADR-114.md) | A 406 from a metadata remote is a throttle, not an outage | arXiv returns 406 and 429 interchangeably for the same identifier seconds apart when it is shedding load. `_once` classified 406 as `unreachable`, which skips the retry and — the part that cost something — never trips the circuit breaker, so a sustained refusal bought one socket per unverified identifier every run. 406 now classifies as `throttled`. Rejected: a fourth status, and leaving the RFC reading in place. | Active |
 | [ADR-115](../../../record/decisions.d/ADR-115.md) | Every request names the software and no contact, and the project adds the rest | Luria sent `Python-urllib/3.11` — the language and nothing else — from three call sites that had already drifted apart. All three now go through `fetch.request()`, which carries the project's `user_agent`. The default is `luria/<version>`: honest about the software, and carrying no contact, because a shipped contact routes every user's traffic to whoever maintains luria. Rejected: a browser string, and a hardcoded project URL. | Active |
+| [ADR-116](../../../record/decisions.d/ADR-116.md) | Alternative backends are generated views; the sources stay files | `luria export` writes the record as a SQLite database — every document, field value, typed edge, citation and journal entry — rebuilt from scratch on each run and never written back to. That is what "store it in a database" buys: asking the record arbitrary questions. The sources stay one markdown file per entry in git, because that is the contribution model, not a storage detail. Rejected: a pluggable source store, a data-model refactor ahead of a second implementation, committing the database as a view, and a query command in place of the file. | Active |
