@@ -25,6 +25,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from . import adr_index, config_doc, doc_refs, journal, link_refs, statuses
+from . import store
 from .config import current
 
 
@@ -85,16 +86,16 @@ def populate_numbers(scheme) -> list[Path]:
     from . import config as config_mod
     from .new import write_number
     done: list[Path] = []
-    for path in sorted(scheme.dir.glob("*.md")):
+    for path in sorted(store.glob(scheme.dir, "*.md")):
         if scheme.temp_of(path) is not None:
             continue
         number = scheme.number_in_name(path)
         if number is None or config_mod._declared_number(path) is not None:
             continue
-        text = path.read_text(encoding="utf-8")
+        text = store.read_text(path)
         written = write_number(text, number)
         if written != text:
-            path.write_text(written, encoding="utf-8")
+            store.write_text(path, written)
             done.append(path)
     return done
 
@@ -116,7 +117,7 @@ def retire_aliases(scheme) -> list[Path]:
         return []
     done: list[Path] = []
     for number, path in scheme.documents().items():
-        text = path.read_text(encoding="utf-8")
+        text = store.read_text(path)
         meta, _ = adr_index.parse_frontmatter(text)
         now = aliases_mod.render(scheme.alias, meta, scheme, number)
         was = aliases_mod.previous(path, scheme, number)
@@ -124,7 +125,7 @@ def retire_aliases(scheme) -> list[Path]:
             continue
         if any(str(a).strip() == was for a in (meta.get("formerly") or [])):
             continue
-        path.write_text(add_to_field(text, "formerly", was), encoding="utf-8")
+        store.write_text(path, add_to_field(text, "formerly", was))
         done.append(path)
     if done:
         aliases_mod.reset()

@@ -51,6 +51,7 @@ import sys
 from pathlib import Path
 
 from . import doc_refs
+from . import store
 from . import new as new_mod
 from .collect import _added_at
 from .config import current
@@ -89,14 +90,14 @@ def _rewrite_files(renames: list[tuple[str, str]]) -> int:
     cfg = current()
     files = list(doc_refs.doc_files())
     for pattern in cfg.code_globs:
-        files += [p for p in cfg.root.glob(pattern) if p.is_file()]
+        files += [p for p in store.glob(cfg.root, pattern) if store.is_file(p)]
     touched = 0
     seen = set()
     for path in files:
         if path in seen:
             continue
         seen.add(path)
-        text = new = path.read_text(encoding="utf-8")
+        text = new = store.read_text(path)
         for old, target in renames:
             new = new.replace(old, target)
             # An anchor spells the code in lower case (`#adr-tmp47fje`,
@@ -107,7 +108,7 @@ def _rewrite_files(renames: list[tuple[str, str]]) -> int:
             if (low := old.lower()) != old:
                 new = new.replace(low, target.lower())
         if new != text:
-            path.write_text(new, encoding="utf-8")
+            store.write_text(path, new)
             touched += 1
     return touched
 
@@ -152,9 +153,9 @@ def run(check: bool = False) -> None:
         # all: until now it had a temporary tail and no claim on the sequence
         # (ADR-049), which is exactly why `luria new` leaves `number:` out and
         # this command puts it in.
-        text = _record_alias(src.read_text(encoding="utf-8"), old)
-        dest.write_text(new_mod.write_number(text, number), encoding="utf-8")
-        src.unlink()
+        text = _record_alias(store.read_text(src), old)
+        store.write_text(dest, new_mod.write_number(text, number))
+        store.unlink(src)
         print(f"{old} → {new}")
 
     # The views re-derive from the renamed sources, so the index, tag pages

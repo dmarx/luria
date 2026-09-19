@@ -7,6 +7,7 @@ every decision is Active. A fixture states what it needs.
 """
 from pathlib import Path
 
+from luria import store
 from luria.config import current
 
 
@@ -36,6 +37,6 @@ def decision(root: Path, number: int, status: str, title: str = "A decision",
     front += [f"title: {title!r}", "tags:", "- record", "date: '2026-01-01'"]
     if summary:
         front.append(f"summary: {summary!r}")
-    path.write_text("---\n" + "\n".join(front) + "\n---\n\n"
-                    f"# ADR-{number:03d}: {title}\n\nBody.\n")
+    store.write_text(path, "---\n" + "\n".join(front) + "\n---\n\n"
+                     f"# ADR-{number:03d}: {title}\n\nBody.\n")
     return path

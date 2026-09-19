@@ -29,6 +29,7 @@ import sys
 from pathlib import Path
 
 from . import journal as journal_mod
+from . import store
 from .config import current
 
 TEMPLATE_NAME = "_template.md"
@@ -175,8 +176,8 @@ def new_scheme_doc(scheme, fields: dict[str, str]) -> Path:
     today = dt.date.today().isoformat()
 
     template = scheme.dir / TEMPLATE_NAME
-    if template.exists():
-        text = template.read_text(encoding="utf-8")
+    if store.exists(template):
+        text = store.read_text(template)
         # The template speaks of itself as `<PREFIX>-NNN`; the copy is a real
         # document, so the code is filled in everywhere the reader would see
         # a placeholder — the body heading included.
@@ -220,8 +221,7 @@ def new_scheme_doc(scheme, fields: dict[str, str]) -> Path:
         text = write_number(text, number)
 
     path = scheme.dir / f"{stem}.md"
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(text, encoding="utf-8")
+    store.write_text(path, text)
     return path
 
 
@@ -261,15 +261,14 @@ def new_fragment(dir_name: str, name: str | None) -> Path:
     frag_dir = current().root / dir_name
     if name:
         path = frag_dir / f"{name.removesuffix('.md')}.md"
-        if path.exists():
+        if store.exists(path):
             return path
     else:
         stamp = dt.datetime.now().strftime("%Y%m%d-%H%M%S")
         path = frag_dir / f"{stamp}.md"
     template = frag_dir / TEMPLATE_NAME
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(template.read_text(encoding="utf-8") if template.exists()
-                    else "### Changed\n\n- \n", encoding="utf-8")
+    store.write_text(path, store.read_text(template) if store.exists(template)
+                    else "### Changed\n\n- \n")
     return path
 
 
@@ -303,14 +302,13 @@ def new_migration(fields: dict[str, str], name: str | None) -> Path:
     from .migrate import MIGRATIONS_DIR
     mig_dir = current().root / MIGRATIONS_DIR
     taken = [int(m.group(1)) for p in
-             (mig_dir.glob("*.yaml") if mig_dir.exists() else [])
+             (store.glob(mig_dir, "*.yaml") if store.exists(mig_dir) else [])
              if (m := re.match(r"(\d{4})-", p.name))]
     number = f"{max(taken, default=0) + 1:04d}"
     title = fields.get("title") or "What moves, and why"
     slug = name or re.sub(r"[^a-z0-9]+", "-", title.lower()).strip("-")
     path = mig_dir / f"{number}-{slug}.yaml"
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(MIGRATION_TEMPLATE.format(number=number, title=title), encoding="utf-8")
+    store.write_text(path, MIGRATION_TEMPLATE.format(number=number, title=title))
     return path
 
 
@@ -356,7 +354,7 @@ def _read_drafts(path: str) -> list[dict]:
     *Record — luria drafts* export writes it (SG-ADR-tmpiylaq there)."""
     import json
     try:
-        data = json.loads(Path(path).read_text(encoding="utf-8"))
+        data = json.loads(store.read_text(Path(path)))
     except FileNotFoundError:
         sys.exit(f"luria new: no such file {path!r}")
     except json.JSONDecodeError as e:

@@ -53,6 +53,7 @@ from __future__ import annotations
 import re
 
 from . import directives
+from . import store
 from .adr_index import parse_frontmatter
 from .config import current
 
@@ -91,7 +92,7 @@ def rows() -> list[str]:
         if not scheme.titles_generalize:
             continue
         for number, path in scheme.documents().items():
-            text = path.read_text(encoding="utf-8")
+            text = store.read_text(path)
             meta, _ = parse_frontmatter(text)
             title = str(meta.get("title") or "").strip()
             if not title:

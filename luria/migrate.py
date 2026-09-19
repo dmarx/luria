@@ -65,6 +65,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from . import aliases as aliases_mod
+from . import store
 from . import doc_refs, new as new_mod, remotes
 from . import yaml_edit
 from .config import current, is_temp_tail
@@ -177,17 +178,17 @@ def _spec_path(ref: str) -> Path:
     """The spec file `ref` names: a path, a filename, or a leading number."""
     cfg = current()
     direct = Path(ref)
-    if direct.exists():
+    if store.exists(direct):
         return direct.resolve()
     mig_dir = cfg.root / MIGRATIONS_DIR
     for candidate in (mig_dir / ref, mig_dir / f"{ref}.yaml"):
-        if candidate.exists():
+        if store.exists(candidate):
             return candidate
-    matches = sorted(mig_dir.glob(f"{ref}*.yaml")) if mig_dir.exists() else []
+    matches = sorted(store.glob(mig_dir, f"{ref}*.yaml")) if store.exists(mig_dir) else []
     if len(matches) == 1:
         return matches[0]
-    have = ", ".join(p.name for p in sorted(mig_dir.glob("*.yaml"))) \
-        if mig_dir.exists() else "none"
+    have = ", ".join(p.name for p in sorted(store.glob(mig_dir, "*.yaml"))) \
+        if store.exists(mig_dir) else "none"
     raise SystemExit(f"luria migrate: no spec matches {ref!r} in "
                      f"{MIGRATIONS_DIR}/ (have: {have})")
 
@@ -234,7 +235,7 @@ def _plan_rename(plan: Plan, op: dict) -> None:
         [cfg.root / c for c in op.get("configs", [])]
     plan.claimed_remotes += [r.upper() for r in op.get("remotes", [])]
     for config_file in configs:
-        if not config_file.exists():
+        if not store.exists(config_file):
             raise SystemExit(f"luria migrate: {config_file} not found")
         plan.config_files.append(config_file)
         plan.section_renames.append(
@@ -321,7 +322,11 @@ def _tracked_files() -> list[Path]:
     out = subprocess.run(["git", "ls-files"], cwd=cfg.root,
                          capture_output=True, text=True, check=True)
     keep = []
-    for name in out.stdout.splitlines():
+    # Sources the backend holds that git does not list: every row of a
+    # database backend, and on disk a document filed but not yet committed.
+    tracked = {cfg.root / name for name in out.stdout.splitlines()}
+    extra = [p for p in store.sources() if p not in tracked]
+    for name in out.stdout.splitlines() + [cfg.rel(p) for p in extra]:
         if name.startswith(MIGRATIONS_DIR):
             continue                     # the spec remembers old spellings
         if cfg.root / name == cfg.remotes_lock:
@@ -538,15 +543,15 @@ def _stamp_formerly(path: Path, old_code: str) -> None:
     """Append `old_code` to the document's `formerly:` list, creating it
     after the opening `---` when absent. Appending, never replacing: a
     document moved twice carries both pasts."""
-    text = path.read_text(encoding="utf-8")
+    text = store.read_text(path)
     if not text.startswith("---\n"):
         raise SystemExit(f"luria migrate: {path} has no frontmatter to stamp")
     m = re.search(r"^formerly:\n((?:- .*\n)*)", text, flags=re.MULTILINE)
     if m:
-        path.write_text(text[:m.end()] + f"- {old_code}\n" + text[m.end():], encoding="utf-8")
+        store.write_text(path, text[:m.end()] + f"- {old_code}\n" + text[m.end():])
     else:
         head, rest = text.split("\n", 1)
-        path.write_text(f"{head}\nformerly:\n- {old_code}\n{rest}", encoding="utf-8")
+        store.write_text(path, f"{head}\nformerly:\n- {old_code}\n{rest}")
 
 
 def _git(args: list[str]) -> str:
@@ -565,31 +570,32 @@ def apply(plan: Plan) -> tuple[int, int]:
     cfg = current()
 
     for old_path, new_path in plan.moves:
-        _git(["mv", str(old_path), str(new_path)])
+        if store.is_source(old_path) or store.is_source(new_path):
+            # A record source: the store moves it, whichever backend holds
+            # it. Git sees the result on disk when the backend is files.
+            store.move(old_path, new_path)
+        else:
+            _git(["mv", str(old_path), str(new_path)])
     for new_path, old_code in plan.stamps.items():
         _stamp_formerly(new_path, old_code)
     for source, new_path, old_code, new_code in plan.copies:
         # The fresh copy speaks as the new code; the source keeps saying the
         # old one — it is the tombstone, and its body is history.
-        text = source.read_text(encoding="utf-8").replace(old_code, new_code)
-        new_path.parent.mkdir(parents=True, exist_ok=True)
-        new_path.write_text(text, encoding="utf-8")
+        text = store.read_text(source).replace(old_code, new_code)
+        store.write_text(new_path, text)
     from . import statuses
     for source, new_code in plan.tombstones:
-        text = source.read_text(encoding="utf-8")
-        source.write_text(
-            statuses.set_status(text, "Superseded", superseded_by=[new_code]),
-            encoding="utf-8")
+        text = store.read_text(source)
+        store.write_text(source, statuses.set_status(text, "Superseded", superseded_by=[new_code]))
     for config_file, path, old_key, new_key in plan.section_renames:
-        text = config_file.read_text(encoding="utf-8")
+        text = store.read_text(config_file)
         renamed = rename_key_at(text, path, old_key, new_key)
         if renamed != text:
-            config_file.write_text(renamed, encoding="utf-8")
+            store.write_text(config_file, renamed)
     for config_file in plan.config_files:
-        config_file.write_text(
-            config_paths_pass(config_file.read_text(encoding="utf-8"), plan), encoding="utf-8")
+        store.write_text(config_file, config_paths_pass(store.read_text(config_file), plan))
     for stale_view in plan.removals:
-        if stale_view.exists():
+        if store.exists(stale_view):
             _git(["rm", "-q", str(stale_view)])
 
     # Pinned endorsements travel with a claimed remote's rename — re-keyed
@@ -613,10 +619,10 @@ def apply(plan: Plan) -> tuple[int, int]:
             for old_path, new_path in plan.moves:
                 if path == old_path:
                     live = new_path
-            if not live.exists():
+            if not store.exists(live):
                 continue
             try:
-                text = live.read_text(encoding="utf-8")
+                text = store.read_text(live)
             except (UnicodeDecodeError, OSError):
                 continue
             # `unlinted-file` declares every reference in the file a quote,
@@ -629,7 +635,7 @@ def apply(plan: Plan) -> tuple[int, int]:
                                     paths=live not in plan.config_files,
                                     source=live)
             if count:
-                live.write_text(new, encoding="utf-8")
+                store.write_text(live, new)
                 files += 1
                 swept += count
     aliases_mod.reset()
@@ -655,17 +661,17 @@ def apply(plan: Plan) -> tuple[int, int]:
     if plan.relocated:
         adrs, anchors = doc_refs.adr_paths(), doc_refs.dp_anchors()
         for path in doc_refs.doc_files():
-            if not path.exists():
+            if not store.exists(path):
                 continue
             try:
-                text = path.read_text(encoding="utf-8")
+                text = store.read_text(path)
             except (UnicodeDecodeError, OSError):
                 continue
             if doc_refs.unlinted(path, text):
                 continue
             linked, n = doc_refs.linkify(text, path, adrs, anchors)
             if n:
-                path.write_text(linked, encoding="utf-8")
+                store.write_text(path, linked)
     return files, swept
 
 
@@ -700,8 +706,8 @@ def describe(plan: Plan) -> list[str]:
 def _blame_ignore(sha: str, title: str) -> None:
     path = current().root / BLAME_IGNORE
     stamp = f"# luria migrate: {title}\n{sha}\n"
-    path.write_text((path.read_text(encoding="utf-8") if path.exists() else
-                     "# Commits git blame should read through.\n") + stamp, encoding="utf-8")
+    store.write_text(path, (store.read_text(path) if store.exists(path) else
+                     "# Commits git blame should read through.\n") + stamp)
 
 
 def run(spec: str, dry_run: bool = False, commit: bool = False) -> None:
@@ -709,7 +715,7 @@ def run(spec: str, dry_run: bool = False, commit: bool = False) -> None:
     path, filename or leading number). --dry-run prints the plan; --commit
     commits the result and appends it to .git-blame-ignore-revs."""
     spec_path = _spec_path(str(spec))
-    parsed = yaml.safe_load(spec_path.read_text(encoding="utf-8")) or {}
+    parsed = yaml.safe_load(store.read_text(spec_path)) or {}
     title = parsed.get("title") or spec_path.stem
     plan = build_plan(parsed, title)
 
@@ -717,7 +723,7 @@ def run(spec: str, dry_run: bool = False, commit: bool = False) -> None:
         would = 0
         for path in _tracked_files():
             try:
-                _, count = sweep_text(path.read_text(encoding="utf-8"), plan,
+                _, count = sweep_text(store.read_text(path), plan,
                                       source=path)
             except (UnicodeDecodeError, OSError):
                 continue

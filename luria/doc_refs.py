@@ -50,6 +50,7 @@ from pathlib import Path
 import yaml  # noqa: F401  (re-exported for callers that parse frontmatter)
 
 from . import aliases, directives, remotes
+from . import store
 from .adr_index import parse_frontmatter
 from .config import Config, current
 
@@ -676,9 +677,9 @@ def dp_anchors() -> dict[int, str]:
     has only headings, and those still work."""
     anchors: dict[int, str] = {}
     principles = current().design_principles
-    if not principles.exists():
+    if not store.exists(principles):
         return {}
-    for line in principles.read_text(encoding="utf-8").splitlines():
+    for line in store.read_text(principles).splitlines():
         if m := EXPLICIT_ANCHOR_RE.match(line):
             anchors[int(m.group(1))] = line.split('"')[1]
         elif m := HEADING_ANCHOR_RE.match(line):
@@ -802,7 +803,7 @@ def legacy_spellings() -> list[str]:
     cfg = current()
     files = list(doc_files())
     for pattern in cfg.code_globs:
-        files += [p for p in cfg.root.glob(pattern) if p.is_file()]
+        files += [p for p in store.glob(cfg.root, pattern) if store.is_file(p)]
     known: dict[tuple[str, str], int | None] = {}
     rows: list[str] = []
     seen: set[Path] = set()
@@ -810,7 +811,7 @@ def legacy_spellings() -> list[str]:
         if path in seen:
             continue
         seen.add(path)
-        text = path.read_text(encoding="utf-8")
+        text = store.read_text(path)
         # The `formerly:` block is where an old spelling is SUPPOSED to
         # persist — it is the alias record, not a citation.
         formerly = [m.span() for m in
@@ -1079,20 +1080,20 @@ def doc_files() -> list[Path]:
     paths = [cfg.root / name for name in
              ("README.md", "CLAUDE.md", "AGENTS.md", "CONTRIBUTING.md")]
     paths += [cfg.root / f.target for f in cfg.fragments.values()]
-    paths += sorted(cfg.docs.rglob("*.md")) + sorted(cfg.docs.rglob("*.stub"))
+    paths += sorted(store.rglob(cfg.docs, "*.md")) + sorted(store.rglob(cfg.docs, "*.stub"))
     # A scheme's directory need not sit under docs/ — the record layout puts
     # sources in `record/` (ADR-021) — so it is scanned on its own account
     # rather than by happening to be a descendant of somewhere else.
     for scheme in cfg.schemes.values():
-        paths += sorted(scheme.dir.glob("*.md")) + sorted(scheme.dir.glob("*.stub"))
+        paths += sorted(store.glob(scheme.dir, "*.md")) + sorted(store.glob(scheme.dir, "*.stub"))
     for fragment_dir in cfg.fragments:
-        paths += sorted((cfg.root / fragment_dir).glob("*.md"))
+        paths += sorted(store.glob((cfg.root / fragment_dir), "*.md"))
     # A journal's entries are nested (`yyyy/mm/dd/`), so rglob rather than glob.
     for journal in cfg.journals.values():
-        paths += sorted(journal.dir.rglob("*.md"))
+        paths += sorted(store.rglob(journal.dir, "*.md"))
     seen, out = set(), []
     for path in paths:
-        if path.exists() and path not in seen and not cfg.is_generated(path):
+        if store.exists(path) and path not in seen and not cfg.is_generated(path):
             seen.add(path)
             out.append(path)
     return out

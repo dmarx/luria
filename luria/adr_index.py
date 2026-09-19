@@ -51,6 +51,7 @@ from pathlib import Path
 import yaml
 
 from . import derive, referents, vocabularies
+from . import store
 from .config import current
 
 # unresolved-ok: ADR-tmp47fje — ADR-049's example of the shape, not a document
@@ -182,14 +183,12 @@ def read_document(path: Path) -> tuple[dict, str]:
     the dict it is handed, and a shared mapping would let one reading's
     derivation leak into the next — the failure the per-`Adr` resolver in
     `Adr.__init__` exists to avoid (#233), reintroduced one layer down."""
-    try:
-        st = path.stat()
-    except OSError:
-        return parse_frontmatter(path.read_text(encoding="utf-8"))
-    key = (st.st_mtime_ns, st.st_size)
+    key = store.revision(path)
+    if key is None:
+        return parse_frontmatter(store.read_text(path))
     hit = _DOCUMENT_CACHE.get(path)
     if hit is None or hit[0] != key:
-        meta, body = parse_frontmatter(path.read_text(encoding="utf-8"))
+        meta, body = parse_frontmatter(store.read_text(path))
         hit = (key, meta, body)
         _DOCUMENT_CACHE[path] = hit
     return copy.deepcopy(hit[1]), hit[2]
@@ -356,7 +355,7 @@ def render_index(adrs: list[Adr], scheme=None) -> str:
     if declared := statuses.legend(scheme):
         table = declared + "\n" + table
     stub = scheme.stub
-    prose = (stub.read_text(encoding="utf-8") if stub.exists()
+    prose = (store.read_text(stub) if store.exists(stub)
              else DEFAULT_STUB.replace(
                  "{title}", "Architecture decision records"
                  if scheme.prefix == "ADR" else f"{scheme.prefix} documents"))
@@ -380,7 +379,7 @@ def render_document(scheme, docs: list[Adr]) -> str:
     # A project that wrote a stub gets its own prose verbatim; one that hasn't
     # gets a heading named after its own scheme rather than after this
     # package's principles.
-    head = (stub.read_text(encoding="utf-8") if stub.exists()
+    head = (store.read_text(stub) if store.exists(stub)
             else DEFAULT_DOCUMENT_STUB.replace(
                 "{title}", f"{scheme.prefix} documents"))
     base = scheme.output.parent if scheme.output else scheme.dir
@@ -461,8 +460,8 @@ def view_dirs(nested: bool = True) -> list[Path]:
 
 
 def orphans(rendered: dict[Path, str]) -> list[Path]:
-    return [p for d in view_dirs() if d.is_dir()
-            for p in sorted(d.glob("*.md")) if p not in rendered]
+    return [p for d in view_dirs() if store.is_dir(d)
+            for p in sorted(store.glob(d, "*.md")) if p not in rendered]
 
 
 def ignored(paths: list[Path]) -> set[Path]:
@@ -603,14 +602,14 @@ def staleness(rendered: dict[Path, str] | None = None) -> Staleness:
     skip = ignored(list(rendered) + loose)
     readme = badges_mod.readme()
     drifted = False
-    if readme.exists() and readme not in skip:
-        text = readme.read_text(encoding="utf-8")
+    if store.exists(readme) and readme not in skip:
+        text = store.read_text(readme)
         drifted = ((badges_mod.OPEN in text and badges_mod.rewrite(text) != text)
                    or (citation_mod.OPEN in text
                        and citation_mod.rewrite(text) != text))
     return Staleness(
         stale=[p for p, text in rendered.items()
-               if p not in skip and (not p.exists() or p.read_text(encoding="utf-8") != text)],
+               if p not in skip and (not store.exists(p) or store.read_text(p) != text)],
         orphaned=[p for p in loose if p not in skip],
         readme=readme if drifted else None,
     )
@@ -640,10 +639,9 @@ def run(check: bool = False) -> None:
     rendered = outputs()
     cfg = current()
     for stale_file in orphans(rendered):
-        stale_file.unlink()
+        store.unlink(stale_file)
     for p, text in rendered.items():
-        p.parent.mkdir(parents=True, exist_ok=True)
-        p.write_text(text, encoding="utf-8")
+        store.write_text(p, text)
     # Name every scheme, not just the decisions: a project that adds one wants
     # to see it counted, and a scheme silently rendering nothing is the failure
     # this line exists to make visible (DP-1).
@@ -666,8 +664,8 @@ def run(check: bool = False) -> None:
     # (ADR-018). A project with no badge region is left alone.
     from . import badges, citation, readme as readme_mod, site
     path = readme_mod.path()
-    if path.exists():
-        before = path.read_text(encoding="utf-8")
+    if store.exists(path):
+        before = store.read_text(path)
         text = before
         if readme_mod.has(text, "badges"):
             text = badges.rewrite(text)
@@ -679,7 +677,7 @@ def run(check: bool = False) -> None:
         if readme_mod.has(text, "site"):
             text = readme_mod.rewrite(text, "site", site.readme_region())
         if text != before:
-            path.write_text(text, encoding="utf-8")
+            store.write_text(path, text)
 
 
 if __name__ == "__main__":

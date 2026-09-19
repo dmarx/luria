@@ -29,6 +29,7 @@ from pathlib import Path
 import yaml
 
 from . import readme as readme_mod
+from . import store
 from .config import current
 
 # Shared region machinery (`readme.py`); these names stay for the callers.
@@ -83,10 +84,10 @@ def _key(data: dict, authors: list[str]) -> str:
 def entry() -> str:
     """The BibTeX entry, or "" when there is no readable `CITATION.cff`."""
     src = path()
-    if not src.exists():
+    if not store.exists(src):
         return ""
     try:
-        data = yaml.safe_load(src.read_text(encoding="utf-8")) or {}
+        data = yaml.safe_load(store.read_text(src)) or {}
     except yaml.YAMLError:
         return ""
     if not isinstance(data, dict):
@@ -136,7 +137,7 @@ def run(write: bool = False, check: bool = False) -> None:
     """Print, write, or check the README's citation region."""
     import sys
     target = readme()
-    if not target.exists() or OPEN not in (text := target.read_text(encoding="utf-8")):
+    if not store.exists(target) or OPEN not in (text := store.read_text(target)):
         print(f"luria citation: no {OPEN} region in README.md; nothing to do")
         return
     fresh = rewrite(text)
@@ -147,7 +148,7 @@ def run(write: bool = False, check: bool = False) -> None:
             raise SystemExit(1)
         return
     if write:
-        target.write_text(fresh, encoding="utf-8")
+        store.write_text(target, fresh)
         return
     print(region())
 

@@ -48,6 +48,7 @@ import hashlib
 import sys
 
 from . import remotes
+from . import store
 from .config import Remote, current
 
 # ── Where stable bytes live ──────────────────────────────────────────────
@@ -127,7 +128,7 @@ def flagged_urls(files=None) -> tuple[set[str], list[str]]:
     problems: list[str] = []
     for path in files if files is not None else ref_status.scanned_files():
         try:
-            text = path.read_text(encoding="utf-8")
+            text = store.read_text(path)
         except (OSError, UnicodeDecodeError):
             continue
         found = directives.find(path, text, {PIN})

@@ -39,6 +39,7 @@ all five words, no legend.
 from __future__ import annotations
 
 import re
+from . import store
 from collections import Counter
 from dataclasses import dataclass
 
@@ -253,9 +254,9 @@ def populate(scheme) -> list:
     say so in the fields that carry them."""
     moved = []
     for path in [*scheme.documents().values(), *scheme.temp_documents().values()]:
-        text = path.read_text(encoding="utf-8")
+        text = store.read_text(path)
         if (fresh := repair(text)) is not None:
-            path.write_text(fresh, encoding="utf-8")
+            store.write_text(path, fresh)
             moved.append(path)
     return moved
 

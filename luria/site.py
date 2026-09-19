@@ -60,6 +60,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from . import adr_index, doc_refs, edges, statuses
+from . import store
 from .adr_index import parse_frontmatter
 from .config import Site, current
 
@@ -471,9 +472,13 @@ def publishable(cfg=None, skip: Path | None = None) -> list[Path]:
     # `include_records` a mount rather than a merge; `stage_nested` publishes
     # each child through its own config.
     nested = [r for r in nested_records(cfg)]
+    # `build/` is where luria's own commands write — this staging, and the
+    # markdown tree `luria export --markdown` puts there — so the second run
+    # must not publish the first run's output (#110).
+    build = cfg.root / "build"
     out = []
-    for path in sorted(cfg.root.rglob("*.md")):
-        if skip and skip in path.parents:
+    for path in sorted(store.rglob(cfg.root, "*.md")):
+        if (skip and skip in path.parents) or build in path.parents:
             continue
         if any(record in path.parents for record in nested):
             continue
@@ -872,9 +877,9 @@ def _retarget(text: str, source: Path, cfg, published: set[Path],
         except (ValueError, OSError):
             return target
         absolute = cfg.root / inside
-        if absolute in published or absolute.is_dir():
+        if absolute in published or store.is_dir(absolute):
             return target
-        if not absolute.exists():
+        if not store.exists(absolute):
             report.unplaced.append(f"{rel_source} → {target}")
             return target
         if absolute.suffix.lower() in IMAGE_SUFFIXES:
@@ -906,21 +911,21 @@ def brand(out: Path, cfg, report: Report) -> str:
 
     for label, source in (("icon", site.icon), ("logo", site.logo),
                           ("logo_dark", site.logo_dark)):
-        if source is not None and not source.exists():
+        if source is not None and not store.exists(source):
             report.unplaced.append(f"`site` {label} → {cfg.rel(source)} "
                                    f"(no such file)")
 
-    if site.icon is not None and site.icon.exists():
+    if site.icon is not None and store.exists(site.icon):
         shutil.copyfile(site.icon, static / f"icon{site.icon.suffix.lower()}")
         report.assets += 1
 
-    if site.logo is None or not site.logo.exists():
+    if site.logo is None or not store.exists(site.logo):
         return CUSTOM_SCSS
 
-    light_svg = site.logo.read_text(encoding="utf-8")
+    light_svg = store.read_text(site.logo)
     dark_source = site.logo_dark if (site.logo_dark
-                                     and site.logo_dark.exists()) else None
-    dark_svg = (dark_source.read_text(encoding="utf-8") if dark_source
+                                     and store.exists(site.logo_dark)) else None
+    dark_svg = (store.read_text(dark_source) if dark_source
                 else light_svg)
     palette = {mode: {**THEME_DEFAULTS[mode], **(site.theme.get(mode) or {})}
                for mode in ("light", "dark")}
@@ -930,8 +935,8 @@ def brand(out: Path, cfg, report: Report) -> str:
     if dark_source is None:
         dark_svg = _reinked(dark_svg, palette["dark"]["dark"])
 
-    (static / "logo-light.svg").write_text(light_svg, encoding="utf-8")
-    (static / "logo-dark.svg").write_text(dark_svg, encoding="utf-8")
+    store.write_text((static / "logo-light.svg"), light_svg)
+    store.write_text((static / "logo-dark.svg"), dark_svg)
     report.assets += 2
 
     w, h = _svg_size(light_svg)
@@ -953,7 +958,7 @@ def stage(out: Path, cfg=None, nested: bool = True) -> Report:
     cfg = cfg or current()
     out = out.resolve()
     content = out / "content"
-    if content.exists():
+    if store.exists(content):
         shutil.rmtree(content)
     content.mkdir(parents=True)
 
@@ -973,7 +978,7 @@ def stage(out: Path, cfg=None, nested: bool = True) -> Report:
     known = titles()
 
     for path in pages:
-        text = path.read_text(encoding="utf-8")
+        text = store.read_text(path)
         yaml_text, body = split_frontmatter(text)
         if yaml_text is not None:
             meta = parse_frontmatter(text)[0]
@@ -1008,8 +1013,7 @@ def stage(out: Path, cfg=None, nested: bool = True) -> Report:
         text = _rebase(text, path, cfg)
         text = _retarget(text, path, cfg, published, assets, report)
         dest = content / dest_rel
-        dest.parent.mkdir(parents=True, exist_ok=True)
-        dest.write_text(text, encoding="utf-8")
+        store.write_text(dest, text)
         report.pages += 1
 
     for absolute, rel in assets.items():
@@ -1024,13 +1028,11 @@ def stage(out: Path, cfg=None, nested: bool = True) -> Report:
     # One file, where Quartz 4 needed two: v5 takes its layout from each
     # plugin's own `layout:` key, so the generated `quartz.layout.ts` — and
     # the TSX luria had to write to move one component — is gone (ADR-101).
-    (out / "quartz.config.yaml").write_text(
-        QUARTZ_CONFIG.format(title=cfg.site.title,
+    store.write_text((out / "quartz.config.yaml"), QUARTZ_CONFIG.format(title=cfg.site.title,
                              base_url=cfg.site.base_url,
                              repo_url=repo_url or cfg.site.source_url,
-                             colors=colors(cfg.site)),
-        encoding="utf-8")
-    (out / "custom.scss").write_text(brand(out, cfg, report), encoding="utf-8")
+                             colors=colors(cfg.site)))
+    store.write_text((out / "custom.scss"), brand(out, cfg, report))
 
     if nested:
         stage_nested(content, cfg, report)
@@ -1089,7 +1091,7 @@ def stage_nested(content: Path, cfg, report: Report) -> None:
                 child_out = Path(tmp) / "vault"
                 child_report = stage(child_out, child, nested=False)
             mount = content / rel
-            if mount.exists():
+            if store.exists(mount):
                 shutil.rmtree(mount)
             shutil.copytree(child_out / "content", mount)
         report.nested[rel.as_posix()] = child_report.pages

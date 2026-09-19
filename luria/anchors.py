@@ -34,6 +34,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from . import slugs
+from . import store
 
 # `<a name="x">`, and only in the empty-anchor form the generator wrote and a
 # person writes by hand. An `<a name=… href=…>` is a link that happens to
@@ -121,7 +122,7 @@ def scan(documents: dict[Path, str], generated=None, base=None) -> list[Finding]
             known = text is not None
             if text is None:
                 try:
-                    text = target.read_text(encoding="utf-8")
+                    text = store.read_text(target)
                     known = True
                 except (OSError, UnicodeDecodeError):
                     text = ""
@@ -180,7 +181,7 @@ def documents(rendered: dict[Path, str] | None = None) -> dict[Path, str]:
     out: dict[Path, str] = {}
     for path in doc_refs.doc_files():
         try:
-            out[path] = path.read_text(encoding="utf-8")
+            out[path] = store.read_text(path)
         except (OSError, UnicodeDecodeError):
             continue
     out.update(outputs() if rendered is None else rendered)

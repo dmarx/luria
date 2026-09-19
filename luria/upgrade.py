@@ -28,6 +28,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from . import comment_carry, yaml_edit
+from . import store
 from .config import CONFIG_NAME, find_root
 from .statuses import DEFAULT_STATUSES
 
@@ -95,9 +96,9 @@ def _schemes(raw: dict) -> dict[str, dict]:
 def _plan(root: Path) -> tuple[list[tuple[Path, str]], list[str], list[str]]:
     """(files to write, config lines to append, notes) — nothing written."""
     config = root / CONFIG_NAME
-    if not config.exists():
+    if not store.exists(config):
         return [], [], [f"no {CONFIG_NAME} at {root} — nothing to upgrade"]
-    raw = yaml.safe_load(config.read_text(encoding="utf-8")) or {}
+    raw = yaml.safe_load(store.read_text(config)) or {}
     schemes = _schemes(raw.get("luria", raw))
     if not schemes:
         return [], [], [
@@ -231,7 +232,7 @@ def convert_config(root: Path) -> tuple[str, list[str], list[Path]]:
     attached to a place, and `comment_carry` recovers the place. What a
     project wrote to explain its own config is the part of the config a
     reader needs most, and the first version of this dropped all of it."""
-    raw = (root / TOML_NAME).read_text(encoding="utf-8")
+    raw = store.read_text((root / TOML_NAME))
     cfg = tomllib.loads(raw)
     cfg = cfg.get("luria", cfg)
     vocabs: dict[str, dict] = {}
@@ -242,9 +243,9 @@ def convert_config(root: Path) -> tuple[str, list[str], list[Path]]:
     for prefix, spec in (cfg.get("schemes") or {}).items():
         for kind in ("tags", "statuses"):
             f = root / str(spec.get("dir", "")) / f"{kind}.yaml"
-            if not f.exists():
+            if not store.exists(f):
                 continue
-            text = f.read_text(encoding="utf-8")
+            text = store.read_text(f)
             orphans.append(f)
             if text in by_text:
                 spec[kind] = by_text[text]
@@ -264,9 +265,9 @@ def convert_config(root: Path) -> tuple[str, list[str], list[Path]]:
                 fspec["vocabulary"] = spec[named]
             elif named and named not in vocabs:
                 f = root / str(spec.get("dir", "")) / f"{named}.yaml"
-                if f.exists():
+                if store.exists(f):
                     vocabs[named] = yaml_edit.load(_prose(
-                        f.read_text(encoding="utf-8"), named, headers))
+                        store.read_text(f), named, headers))
                     orphans.append(f)
                     notes.append(f"{prefix}.fields vocabulary {named} -> {named}")
         # `status` and `tags` are fields, so their vocabularies are named in
@@ -320,7 +321,7 @@ def _run_yaml(where: Path, dry_run: bool) -> None:
     """The boundary crossing. Leaves the TOML on disk: deleting what you just
     converted, before anyone has read the result, is not a migration anybody
     should trust."""
-    if not (where / TOML_NAME).exists():
+    if not store.exists((where / TOML_NAME)):
         print(f"yaml: no {TOML_NAME} at {where} — this record is already "
               f"across, and `luria upgrade yaml` can be deleted once every "
               f"other one is")
@@ -333,7 +334,7 @@ def _run_yaml(where: Path, dry_run: bool) -> None:
         for f in orphans:
             print(f"  would leave {f.relative_to(where)} unread")
         return
-    (where / CONFIG_NAME).write_text(text, encoding="utf-8")
+    store.write_text((where / CONFIG_NAME), text)
     print(f"  wrote {CONFIG_NAME}")
     if orphans:
         print(f"\n  nothing reads these now — check the result first, then:")
@@ -374,7 +375,7 @@ def run(name: str = "", *, dry_run: bool = False, root: str = "") -> None:
                          f"(have: {', '.join(SUNSET) or 'none'})")
     if name == "yaml":
         return _run_yaml(where, dry_run)
-    if (where / TOML_NAME).exists() and not (where / CONFIG_NAME).exists():
+    if store.exists((where / TOML_NAME)) and not store.exists((where / CONFIG_NAME)):
         raise SystemExit(
             f"luria upgrade {name}: this record still has a {TOML_NAME}, "
             f"which nothing reads — run `luria upgrade yaml` first")
@@ -393,15 +394,12 @@ def run(name: str = "", *, dry_run: bool = False, root: str = "") -> None:
                   f"{CONFIG_NAME}")
         return
     for path, text in writes:
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(text, encoding="utf-8")
+        store.write_text(path, text)
         print(f"  wrote {path.relative_to(where)}")
     if lines:
         config = where / CONFIG_NAME
-        config.write_text(
-            _declared(config.read_text(encoding="utf-8"), lines,
-                      {w: _BLURBS[w] for w in DEFAULT_STATUSES}),
-            encoding="utf-8")
+        store.write_text(config, _declared(store.read_text(config), lines,
+                      {w: _BLURBS[w] for w in DEFAULT_STATUSES}))
         print(f"  declared `status` for {len(lines)} scheme(s) "
               f"in {CONFIG_NAME}")
 

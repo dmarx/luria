@@ -49,6 +49,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from .adr_index import parse_frontmatter, read_document
+from . import store
 from . import slugs
 from .config import Journal, current
 
@@ -108,7 +109,7 @@ def read(path: Path) -> Entry | None:
 def entries(journal: Journal) -> list[Entry]:
     """Every filed entry, oldest first. Sorted by the timestamp, so the order
     is a property of the record rather than of how the branches landed."""
-    found = [e for p in sorted(journal.dir.rglob("*.md"))
+    found = [e for p in sorted(store.rglob(journal.dir, "*.md"))
              if p.name != "_template.md" and (e := read(p)) is not None]
     return sorted(found, key=lambda e: (e.created, e.path.as_posix()))
 
@@ -128,10 +129,10 @@ def populate_created(journal: Journal) -> list[Path]:
     Runs from `luria repair`, which the generation job commits onto the
     branch that filed the entry (ADR-068)."""
     fixed: list[Path] = []
-    for path in sorted(journal.dir.rglob("*.md")):
+    for path in sorted(store.rglob(journal.dir, "*.md")):
         if path.name == "_template.md":
             continue
-        text = path.read_text(encoding="utf-8")
+        text = store.read_text(path)
         meta, _ = parse_frontmatter(text)
         if parse_created(meta.get("created")) is not None:
             continue
@@ -147,7 +148,7 @@ def populate_created(journal: Journal) -> list[Path]:
             new_text = f"{head}\n{line}\n{rest}"
         else:
             new_text = f"---\n{line}\n---\n\n{text}"
-        path.write_text(new_text, encoding="utf-8")
+        store.write_text(path, new_text)
         fixed.append(path)
     return fixed
 
@@ -285,7 +286,7 @@ def outputs_for(journal: Journal) -> dict[Path, str]:
     runs (ADR-026). A configured-but-unused journal renders nothing: the
     default config names one, so emitting an empty index would put a
     `docs/devlog/` into every project that never files an entry."""
-    if not journal.dir.exists():
+    if not store.exists(journal.dir):
         return {}
     grouped = books(journal)
     out = {journal.output / "README.md": render_index(journal, grouped)}
@@ -311,19 +312,17 @@ def new(journal: Journal, title: str, now: dt.datetime) -> Path:
 
     Not a probability argument — the filesystem already knows. A same-second
     collision is possible when a tool files several at once, and "unlikely" is
-    a worse guarantee than "checked" when checking is a `path.exists()`."""
-    while (path := path_for(journal, now)).exists():
+    a worse guarantee than "checked" when checking is a `store.exists(path)`."""
+    while store.exists((path := path_for(journal, now))):
         now += dt.timedelta(seconds=1)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(
-        "---\n"
+    store.write_text(path, "---\n"
         f"title: {title!r}\n"
         f"created: '{now.isoformat(timespec='seconds')}'\n"
         "tags: []\n"
         "---\n\n"
         "Write the entry here: what problem was solved, what the fix was, and\n"
         "what was found along the way — the failed approaches and the traps the\n"
-        "next person would otherwise rediscover.\n", encoding="utf-8")
+        "next person would otherwise rediscover.\n")
     return path
 
 

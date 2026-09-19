@@ -34,6 +34,10 @@ def bare_io_calls(path: Path) -> list[str]:
             continue
         if any(kw.arg == "encoding" for kw in node.keywords):
             continue
+        # `store.read_text(path)` is the door every source goes through, and
+        # the one place that names the encoding is inside it (#110).
+        if isinstance(fn.value, ast.Name) and fn.value.id == "store":
+            continue
         found.append(f"{path.name}:{node.lineno}: {fn.attr}()")
     return found
 

@@ -29,6 +29,7 @@ from pathlib import Path
 from urllib.parse import unquote
 
 from .config import current
+from . import store
 
 TARGET_OK = "target-ok"
 
@@ -70,7 +71,7 @@ def broken(files: list[Path] | None = None) -> tuple[list[str], list[str]]:
     stale: list[str] = []
     for path in files if files is not None else doc_refs.doc_files():
         try:
-            text = path.read_text(encoding="utf-8")
+            text = store.read_text(path)
         except (OSError, UnicodeDecodeError):
             continue
         quoted = doc_refs.code_spans(text)
@@ -82,11 +83,11 @@ def broken(files: list[Path] | None = None) -> tuple[list[str], list[str]]:
                 continue                      # a quotation, not a citation
             target = m.group(1)
             rel = _local_path(target)
-            # Normalized textually, not by `Path.exists()` on the raw join: a
+            # Normalized textually, not by `store.exists(Path)` on the raw join: a
             # view directory need not exist yet (`luria index` creates it), and
             # `..` through a missing directory fails on the filesystem while
             # resolving fine for a reader. Text is also what a renderer does.
-            if rel is None or Path(os.path.normpath(base / rel)).exists():
+            if rel is None or store.exists(Path(os.path.normpath(base / rel))):
                 continue
             line = text.count("\n", 0, m.start()) + 1
             ack = next((d for d in found

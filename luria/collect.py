@@ -43,11 +43,10 @@ the changelog — and wrong where the entries are dated observations.
 """
 
 import re
-import subprocess
-import sys
 from pathlib import Path
 
 from .config import current
+from . import store
 
 TEMPLATE_NAME = "_template.md"
 # Collected entries are inserted immediately BEFORE this marker, so the marker
@@ -103,28 +102,20 @@ def collect(view_text: str, bodies: list[str], style: str = "append",
 
 
 def _added_at(path: Path) -> tuple[int, str]:
-    """Sort key: commit time the fragment was added, then filename.
+    """Sort key: when the fragment entered the record, then filename.
 
-    Uncommitted fragments get a sentinel that sorts last — locally, the entry
-    you just wrote is the newest thing in the batch.
-    """
-    try:
-        out = subprocess.run(
-            ["git", "log", "--diff-filter=A", "--format=%ct", "-1", "--", str(path)],
-            cwd=current().root, capture_output=True, text=True, check=True,
-        ).stdout.strip()
-        if out:
-            return (int(out), path.name)
-    except (subprocess.CalledProcessError, ValueError, OSError):
-        pass
-    return (sys.maxsize, path.name)
+    On disk that is the commit that added it, and an uncommitted fragment
+    sorts last — locally, the entry you just wrote is the newest thing in
+    the batch. In a database it is the row's filing order. The store knows
+    which, so it answers."""
+    return store.added_order(path)
 
 
 def fragment_paths(fragment_dir: Path) -> list[Path]:
-    if not fragment_dir.is_dir():
+    if not store.is_dir(fragment_dir):
         return []
     return sorted(
-        (p for p in fragment_dir.glob("*.md") if p.name != TEMPLATE_NAME),
+        (p for p in store.glob(fragment_dir, "*.md") if p.name != TEMPLATE_NAME),
         key=_added_at,
     )
 
@@ -137,11 +128,11 @@ def collect_dir(name: str, fragment) -> int:
     if not paths:
         return 0
     view = cfg.root / fragment.target
-    view.write_text(collect(view.read_text(encoding="utf-8"), [p.read_text(encoding="utf-8") for p in paths],
+    store.write_text(view, collect(store.read_text(view), [store.read_text(p) for p in paths],
                             style=fragment.style,
-                            date=dt.date.today().isoformat()), encoding="utf-8")
+                            date=dt.date.today().isoformat()))
     for p in paths:
-        p.unlink()
+        store.unlink(p)
     print(f"Collected {len(paths)} fragment(s) from {name} "
           f"into {fragment.target}.")
     return len(paths)

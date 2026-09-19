@@ -46,6 +46,7 @@ from __future__ import annotations
 import re
 
 from .adr_index import parse_frontmatter, read_document
+from . import store
 from .config import current
 from .contract import _cite, for_scheme
 from .doc_refs import PROSE_KEYS
@@ -67,9 +68,9 @@ def rows() -> list[str]:
     found: list[str] = []
     for scheme in cfg.schemes.values():
         path = scheme.dir / TEMPLATE_NAME
-        if not path.exists():
+        if not store.exists(path):
             continue
-        text = path.read_text(encoding="utf-8")
+        text = store.read_text(path)
         meta, _ = parse_frontmatter(text)
         if not meta:
             # No frontmatter at all is the docs checks' finding, not a
@@ -114,7 +115,7 @@ def placeholders(scheme) -> dict[str, str]:
     the words a filed document must not still be saying. Empty when the
     scheme has no form."""
     path = scheme.dir / TEMPLATE_NAME
-    if not path.exists():
+    if not store.exists(path):
         return {}
     meta, _ = read_document(path)
     return {k: _squash(meta[k]) for k in PROSE_KEYS

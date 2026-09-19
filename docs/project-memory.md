@@ -14,8 +14,7 @@ Everything in a Luria record divides into two kinds of file:
 - **Views** are written by `luria index`: the decision index and its tag
   pages, the rendered principles document, journal books, the status
   reports, the badge counts in the README — and, on demand rather than
-  committed, the SQLite database `luria export` writes for asking the
-  record questions. A view directory holds *only*
+  committed, the query tables `luria export` writes. A view directory holds *only*
   generated files — `luria lint` fails on a stray hand-written file inside
   one, and `luria index --check` on the default branch fails on a stale
   view, so a reader can trust that what they see reflects the sources.
@@ -23,6 +22,37 @@ Everything in a Luria record divides into two kinds of file:
 The split is the whole trick. Contributors write into an append-only pile;
 readers get curated, cross-linked pages; and nothing depends on anyone
 remembering to keep the two in sync, because the lint remembers.
+
+## Where the sources live
+
+A source is addressed by its path — `record/decisions.d/ADR-012.md` — and
+that path is its identity everywhere: in a finding, in a link, in the
+frame a link target is resolved from. Where the bytes behind the path are
+kept is a separate choice, made once in `luria.yaml`:
+
+```yaml
+backend:
+  kind: sqlite          # `files`, the default, is one markdown file per entry
+  file: record.sqlite
+```
+
+Under the SQLite backend the same documents are rows in one database and
+every command operates on it: `luria new` files a row, `luria lint`
+validates its fields, `luria index` renders the views from it. Only a
+source is stored there — anything under a scheme, journal or fragment
+directory. Docs pages, generated views, the code the reference scan reads
+and `luria.yaml` itself are files whichever backend is configured, and a
+file that happens to sit on disk inside a source directory is ignored: the
+database is the record, and a record has one source of truth.
+
+`luria export` converts in both directions. From a files record it writes
+the database, sources and query tables together; point `backend` at that
+file and the record has moved. Under SQLite, `luria export` refreshes the
+query tables in place, and `luria export --markdown` writes every source
+back out as a file — the markdown tree as an artifact of the record. What
+the choice costs is what git gave the files for free: a contribution as a
+reviewable diff, and history a `formerly:` entry can be read out of. A
+record that wants those keeps the default.
 
 ## The four families
 

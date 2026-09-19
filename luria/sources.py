@@ -76,6 +76,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from .config import current
+from . import store
 from .fetch import request
 
 SOURCE_OK = "source-ok"
@@ -119,7 +120,7 @@ def identifiers() -> list[Identifier]:
         for code, path in [*scheme.documents().items(),
                            *scheme.temp_documents().items()]:
             try:
-                text = path.read_text(encoding="utf-8")
+                text = store.read_text(path)
             except (OSError, UnicodeDecodeError):
                 continue
             meta, _ = adr_index.parse_frontmatter(text)
@@ -418,7 +419,7 @@ def mismatch_lines() -> tuple[list[str], list[str], list[str]]:
         by_path.setdefault(ident.path, []).append(ident)
 
     for path, idents in sorted(by_path.items(), key=lambda kv: str(kv[0])):
-        text = path.read_text(encoding="utf-8")
+        text = store.read_text(path)
         found = directives.find(path, text, {SOURCE_OK})
         used: set[tuple[int, str]] = set()
         for ident in idents:

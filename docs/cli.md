@@ -554,20 +554,25 @@ vault with a pinned Quartz for GitHub Pages — see [adopting](adopting.md).
 ## luria export
 
 ```
-luria export [--out build/record.sqlite]
+luria export [--out PATH] [--markdown]
 ```
 
-Writes the record as one SQLite file: a row per scheme document (code,
-scheme, number, title, status, version, date, path, the whole frontmatter
-as JSON, and the body), a row per field value with list fields exploded
-into positioned rows, the typed edges (`superseded_by:`, `influenced_by:`,
-every declared reference field), every citation the lint's scanner counts
-— where it sits, whether it resolves, whether a directive excuses it — and
-every journal entry with its tags. Rebuilt from scratch on each run, so a
-row never outlives its source; refuses to overwrite a file it did not
-write. It is a generated view for asking the record questions with
-`sqlite3`, Datasette or pandas — never a source, and not committed
-([ADR-116](../record/decisions.d/ADR-116.md)).
+Converts the record between its two storages and writes the tables a
+reader queries. The SQLite file holds `sources` — one row per source, its
+text as written, the table the SQLite backend reads — beside the derived
+tables: a row per scheme document (code, scheme, number, title, status,
+version, date, path, the whole frontmatter as JSON, and the body), a row
+per field value with list fields exploded into positioned rows, the typed
+edges, every citation the lint's scanner counts with whether it resolves
+and whether a directive excuses it, and every journal entry with its
+tags. Under the files backend `--out` defaults to `build/record.sqlite`
+and the file is written from scratch; point `backend` at it and it is the
+record. Under the SQLite backend `--out` defaults to the record's own
+database and only the derived tables are refreshed, sources untouched.
+`--markdown` goes the other way — every source as a file at its own path
+under `--out` (default `build/record`) — which under SQLite is the markdown
+corpus as an artifact of the record. A file at `--out` that is not a
+SQLite database is reported and left alone ([ADR-tmpk52vs](../record/decisions.d/ADR-tmpk52vs.md)).
 
 ## luria upgrade
 

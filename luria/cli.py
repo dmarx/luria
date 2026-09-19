@@ -15,7 +15,8 @@
                         documents between schemes (ADR-040)
     luria remotes       other projects' records cited from this one
     luria site          stage the record as a Quartz vault, ready to build
-    luria export        write the record as a SQLite database, for querying
+    luria export        the record as a SQLite database — or, --markdown,
+                        the database as a markdown tree
     luria init          scaffold the record into a project that has none
     luria config        write a starting luria.yaml and stop, for editing
                         before anything is scaffolded

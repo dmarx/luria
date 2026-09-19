@@ -67,8 +67,9 @@ import re
 from pathlib import Path
 
 from . import config as config_mod
+from . import store
 from .adr_index import escape_cell
-from .config import (FAMILIES, Chain, FieldGroup, Fragment, Journal,
+from .config import (FAMILIES, Backend, Chain, FieldGroup, Fragment, Journal,
                      PlainField, Reference, Remote, RemoteScheme, RequiredWhen,
                      Scheme, Site, TagGroup, Vocabulary, VocabularyTable,
                      current)
@@ -229,6 +230,12 @@ PROSE: dict[type, tuple[str, str]] = {
      "The central table a scheme's fields point at by name, so a set of "
      "values and their blurbs are declared once however many fields use "
      "them. A value may be a bare blurb or this nested table."),
+    Backend: ("Backend — `backend`",
+     "Where the record's sources are kept: one markdown file per entry on "
+     "disk (the default), or the same documents as rows in one SQLite file. "
+     "Only the storage moves — every path stays a document's identity and "
+     "every check reads the same text — and `luria export` converts a record "
+     "either way. Nothing that is not a source is affected."),
     Fragment: ("Fragment directories — `fragments.<dir>`",
      "One entry per directory whose files are assembled into a single "
      "document and then consumed. The changelog is the shipped instance; the "
@@ -271,7 +278,7 @@ NOT_A_TABLE = ("Config",)
 #: of the page instead of nowhere.
 ORDER = [Scheme, Vocabulary, PlainField, RequiredWhen, Reference, TagGroup,
          FieldGroup, VocabularyTable, Fragment, Journal, Chain, Remote,
-         RemoteScheme, Site]
+         RemoteScheme, Backend, Site]
 
 
 def tables() -> list[type]:
@@ -533,19 +540,18 @@ def retire() -> list[Path]:
     the project's own prose and is left exactly where it is."""
     cfg = current()
     path = cfg.config_doc
-    if cfg.owns_schema or not path.exists():
+    if cfg.owns_schema or not store.exists(path):
         return []
-    if MARKER not in path.read_text(encoding="utf-8"):
+    if MARKER not in store.read_text(path):
         return []
-    path.unlink()
+    store.unlink(path)
     return [path]
 
 
 def write(out_dir: Path | None = None) -> list[Path]:
     rendered = outputs(out_dir)
     for path, text in rendered.items():
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(text, encoding="utf-8")
+        store.write_text(path, text)
     return sorted(rendered)
 
 

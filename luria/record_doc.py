@@ -39,6 +39,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from . import config as config_mod
+from . import store
 from . import contract as contract_mod
 from .adr_index import escape_cell
 from .config import current
@@ -70,7 +71,7 @@ def _rel(cfg, path: Path | None, dir: bool = False) -> str:
     a trailing slash when it names a directory.
 
     `dir` is passed by the caller rather than read off the disk. A first draft
-    asked `Path.is_dir()`, which made the page a function of the filesystem
+    asked `store.is_dir(Path)`, which made the page a function of the filesystem
     and therefore not idempotent: a directory `luria index` creates on its own
     run answers differently before and after, so the page rendered one way,
     was written, and then compared unequal to itself. `luria index && luria
@@ -328,8 +329,7 @@ def outputs(out_dir: Path | None = None) -> dict[Path, str]:
 def write(out_dir: Path | None = None) -> list[Path]:
     rendered = outputs(out_dir)
     for path, text in rendered.items():
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(text, encoding="utf-8")
+        store.write_text(path, text)
     return sorted(rendered)
 
 

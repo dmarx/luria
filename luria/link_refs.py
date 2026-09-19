@@ -23,6 +23,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from . import doc_refs, relations
+from . import store
 from .config import current
 
 
@@ -33,7 +34,7 @@ def linkify_files(paths: list[Path], fix: bool = False) -> tuple[int, list[Path]
     total = 0
     written: list[Path] = []
     for path in paths:
-        text = path.read_text(encoding="utf-8")
+        text = store.read_text(path)
         new, count = doc_refs.linkify(text, path, adrs, anchors)
         # Two mechanical passes over the same text, reported as one number
         # because they are one question to the author: "is every reference in
@@ -49,7 +50,7 @@ def linkify_files(paths: list[Path], fix: bool = False) -> tuple[int, list[Path]
         total += count
         print(f"{current().rel(path)}: {count} reference(s)")
         if fix:
-            path.write_text(new, encoding="utf-8")
+            store.write_text(path, new)
             written.append(path)
     return total, written
 
@@ -89,7 +90,7 @@ def fix_anchors(fix: bool = False) -> int:
             continue
         changed += 1
         if fix:
-            path.write_text(fresh, encoding="utf-8")
+            store.write_text(path, fresh)
     return changed
 
 

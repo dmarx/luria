@@ -59,6 +59,7 @@ import sys
 from pathlib import Path
 
 from . import adr_index as builder
+from . import store
 from . import (adr_pending, badges, chains, ci, contract, directives, doc_refs,
                frontmatter_shape, journal, referents,
                link_targets, narrow_titles, pins, ref_status, remotes,
@@ -75,9 +76,9 @@ INDEX_EXEMPT = {"README.md"}
 def check_docs_index(errors: list[str]) -> None:
     cfg = current()
     index = cfg.docs / "README.md"
-    if not index.exists():
+    if not store.exists(index):
         return
-    text = index.read_text(encoding="utf-8")
+    text = store.read_text(index)
     # Two kinds of directory are exempt. A *source* directory holds things a
     # writer files, not pages a reader browses — the thing a reader opens is
     # the view. A *view* directory is wholly generated and carries its own
@@ -90,10 +91,10 @@ def check_docs_index(errors: list[str]) -> None:
               | {j.dir for j in cfg.journals.values()}
               | {j.output for j in cfg.journals.values()}
               | {cfg.reports})
-    pages = sorted(cfg.docs.glob("*.md"))
-    for sub in sorted(p for p in cfg.docs.iterdir() if p.is_dir()):
+    pages = sorted(store.glob(cfg.docs, "*.md"))
+    for sub in sorted(p for p in store.iterdir(cfg.docs) if store.is_dir(p)):
         if sub not in exempt:
-            pages += sorted(sub.glob("*.md"))
+            pages += sorted(store.glob(sub, "*.md"))
     for page in pages:
         rel = page.relative_to(cfg.docs)
         if str(rel) in INDEX_EXEMPT:
@@ -101,6 +102,36 @@ def check_docs_index(errors: list[str]) -> None:
         # A page is "indexed" when README.md links its relative path.
         if f"({rel})" not in text:
             errors.append(f"{cfg.rel(index)}: missing index entry for {rel}")
+
+
+def check_backend(errors: list[str]) -> None:
+    """A SQLite backend that cannot be what the config says it is (#110).
+
+    Two states are silent failures without this. A database that is not
+    there reads as an empty record — every scheme has no documents, and
+    the lint would print `docs lint clean` over a record that simply is
+    not being read (DP-1). And a row under no source directory is a source
+    nothing will ever list: the store routes by path, so a row filed at
+    `notes/x.md` when no scheme, journal or fragment directory claims
+    `notes/` is unreachable by every command, including this one's
+    remedies. Both are violations because both are always wrong."""
+    cfg = current()
+    if cfg.backend.kind != "sqlite":
+        return
+    db = store.active().sqlite
+    if db is None or not db.present():
+        errors.append(
+            f"{cfg.rel(cfg.backend.file)}: `backend.kind: sqlite` but the "
+            "database is not there — `luria export --out "
+            f"{cfg.rel(cfg.backend.file)}` converts a record on disk into "
+            "one, or file a first entry with `luria new`")
+        return
+    for path in db.paths():
+        if not store.is_source(path):
+            errors.append(
+                f"{cfg.rel(cfg.backend.file)}: row `{cfg.rel(path)}` sits under "
+                "no scheme, journal or fragment directory, so nothing reads "
+                "it — move it under one, or declare the directory")
 
 
 def check_frontmatter(errors: list[str]) -> None:
@@ -113,7 +144,7 @@ def check_frontmatter(errors: list[str]) -> None:
         for path in [*scheme.documents().values(),
                      *scheme.temp_documents().values()]:
             rel = cfg.rel(path)
-            text = path.read_text(encoding="utf-8")
+            text = store.read_text(path)
             frontmatter_shape.check(errors, rel, text)
             meta, body = builder.parse_frontmatter(text)
             if not meta:
@@ -277,7 +308,7 @@ def check_numbers(errors: list[str]) -> None:
     is the repairable case, and `luria repair` handles it from the path."""
     cfg = current()
     for scheme in cfg.schemes.values():
-        for path in sorted(scheme.dir.glob("*.md")):
+        for path in sorted(store.glob(scheme.dir, "*.md")):
             if scheme.temp_of(path) is not None:
                 continue
             declared = config_mod._declared_number(path)
@@ -440,7 +471,7 @@ def check_journals(errors: list[str]) -> None:
     a title, because the title is what the book's contents list shows."""
     cfg = current()
     for name, jrnl in cfg.journals.items():
-        for path in sorted(jrnl.dir.rglob("*.md")):
+        for path in sorted(store.rglob(jrnl.dir, "*.md")):
             if path.name == "_template.md":
                 continue
             rel = cfg.rel(path)
@@ -510,7 +541,7 @@ def check_view_dirs(errors: list[str],
     reports, not something a person wrote."""
     cfg = current()
     for path in builder.staleness(rendered).orphaned:
-        if "luria index" in path.read_text(encoding="utf-8"):
+        if "luria index" in store.read_text(path):
             continue
         errors.append(f"{cfg.rel(path)}: not something the generator wrote — "
                       "a view directory holds only generated files (ADR-021); "
@@ -529,8 +560,8 @@ def workflow_temp_code_lines() -> list[str]:
     cfg = current()
     patterns = [s.temp_pattern for s in cfg.schemes.values()]
     found: list[str] = []
-    for path in sorted(cfg.root.glob(".github/workflows/*.y*ml")):
-        text = path.read_text(encoding="utf-8")
+    for path in sorted(store.glob(cfg.root, ".github/workflows/*.y*ml")):
+        text = store.read_text(path)
         for regex in patterns:
             for m in regex.finditer(text):
                 line = text.count("\n", 0, m.start()) + 1
@@ -545,7 +576,7 @@ def check_wikilinks(errors: list[str]) -> None:
     machinery cannot honour — which must be said, not skipped (DP-1)."""
     cfg = current()
     for path in doc_refs.doc_files():
-        text = path.read_text(encoding="utf-8")
+        text = store.read_text(path)
         for w in doc_refs.wikilinks(text, path):
             rel = cfg.rel(path)
             if w.target is None:
@@ -644,7 +675,7 @@ def check_bare_refs(errors: list[str]) -> None:
     adrs, anchors = doc_refs.adr_paths(), doc_refs.dp_anchors()
 
     def scan_one(path) -> list[str]:
-        text = path.read_text(encoding="utf-8")
+        text = store.read_text(path)
         # `rewritable_refs` is what the fixer would write — unresolvable codes,
         # self-references and rewrites the frontmatter wouldn't survive are
         # already excluded, so lint never demands something `--fix` won't do.
@@ -710,9 +741,9 @@ def unlinked_site() -> list[str]:
     if not (cfg.site.publish and cfg.site.base_url):
         return []
     path = readme.path()
-    if not path.exists():
+    if not store.exists(path):
         return []
-    if cfg.site.base_url in path.read_text(encoding="utf-8"):
+    if cfg.site.base_url in store.read_text(path):
         return []
     return [f"README.md never names {cfg.site.base_url}, where `luria site` "
             f"publishes this record — add a `{readme.markers('site')[0]}` / "
@@ -951,7 +982,7 @@ def status_sections() -> list[tuple[str, str, list[str]]]:
     stale = ref_status.stale_annotations(result, docs) + stale_urls \
         + stale_targets + stale_sources + pins.flag_problems()
     for path in doc_refs.doc_files():
-        stale += doc_refs.directive_problems(path, path.read_text(encoding="utf-8"))
+        stale += doc_refs.directive_problems(path, store.read_text(path))
     if stale:
         sections.append((
             "stale-directives",
@@ -990,7 +1021,7 @@ def expired_directives(as_of: dt.date | None = None) -> list[str]:
     out = []
     for path in ref_status.scanned_files():
         try:
-            text = path.read_text(encoding="utf-8")
+            text = store.read_text(path)
         except (OSError, UnicodeDecodeError):        # pragma: no cover
             continue
         for d in directives.find_expired(path, text, as_of=as_of):
@@ -1062,6 +1093,7 @@ def report_warnings(errors: list[str]) -> None:
 def run() -> None:
     """Check the record; exits 1 with one line per violation."""
     errors: list[str] = []
+    check_backend(errors)
     check_docs_index(errors)
     check_frontmatter(errors)
     check_form_text(errors)

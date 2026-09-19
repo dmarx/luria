@@ -69,6 +69,7 @@ from pathlib import Path
 from typing import Callable
 
 from . import adr_index as builder
+from . import store
 from . import directives, doc_refs, remotes
 from .config import TEMP_TAIL, current, is_temp_tail
 
@@ -289,7 +290,7 @@ def scanned_files() -> list[Path]:
             if not cfg.is_historical(p) and not cfg.is_template(p)]
     code: list[Path] = []
     for pattern in cfg.code_globs:
-        code += [p for p in cfg.root.glob(pattern) if p.is_file()]
+        code += [p for p in store.glob(cfg.root, pattern) if store.is_file(p)]
     return docs + sorted(set(code))
 
 
@@ -323,11 +324,7 @@ def forget_scan() -> None:
 def _fingerprint() -> tuple:
     out = []
     for path in scanned_files():
-        try:
-            st = path.stat()
-            out.append((str(path), st.st_mtime_ns, st.st_size))
-        except OSError:
-            out.append((str(path), 0, 0))
+        out.append((str(path), store.revision(path) or (0, 0)))
     return tuple(out)
 
 
@@ -364,7 +361,7 @@ def _scan(files: list[Path] | None = None, docs: dict[str, Doc] | None = None) -
     result = Scan()
     for path in files if files is not None else scanned_files():
         try:
-            text = path.read_text(encoding="utf-8")
+            text = store.read_text(path)
         except (OSError, UnicodeDecodeError):
             continue
         if doc_refs.unlinted(path, text):

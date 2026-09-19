@@ -43,6 +43,7 @@ import sys
 from pathlib import Path
 
 from . import adr_pending, ci, readme as readme_mod, ref_status
+from . import store
 from .config import current
 
 # The region's own machinery lives in `readme.py`, shared with every other
@@ -120,13 +121,13 @@ def run(write: bool = False, check: bool = False) -> None:
               file=sys.stderr)
         return
 
-    if not path.exists() or OPEN not in path.read_text(encoding="utf-8"):
+    if not store.exists(path) or OPEN not in store.read_text(path):
         print(f"luria badges: no {OPEN} region in "
               f"{current().rel(path)} — add one where the badges belong:\n\n"
               f"  {OPEN}\n  {CLOSE}\n", file=sys.stderr)
         return
 
-    text = path.read_text(encoding="utf-8")
+    text = store.read_text(path)
     fresh = rewrite(text)
     if check:
         if fresh != text:
@@ -135,7 +136,7 @@ def run(write: bool = False, check: bool = False) -> None:
             raise SystemExit(1)
         print("luria badges: current")
         return
-    path.write_text(fresh, encoding="utf-8")
+    store.write_text(path, fresh)
     undecided, retired = counts()
     print(f"badges: needs decision {undecided}, cited not in force {retired}")
 

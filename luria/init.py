@@ -42,6 +42,7 @@ import os
 from pathlib import Path
 
 from . import yaml_edit
+from . import store
 from .config import CONFIG_NAME, Config, Scheme, find_root, load
 
 
@@ -53,7 +54,7 @@ def _template_dir() -> Path:
     top level, where a visitor browses it (ADR-021). Packaged wins when both
     exist, because an installed Luria should scaffold what it shipped."""
     packaged = Path(__file__).resolve().parent / "template"
-    if packaged.is_dir():
+    if store.is_dir(packaged):
         return packaged
     return Path(__file__).resolve().parent.parent / "template"
 
@@ -325,7 +326,7 @@ def shorthand_tables(text: str, schemes: str, journals: str) -> str:
 
 
 def _read(rel: str) -> str:
-    return (TEMPLATE / rel).read_text(encoding="utf-8")
+    return store.read_text((TEMPLATE / rel))
 
 
 def _toml_text(into: Path, config_arg: str | None, issue_url: str,
@@ -333,7 +334,7 @@ def _toml_text(into: Path, config_arg: str | None, issue_url: str,
     """The config the scaffold is planned from, resolved in priority order."""
     root_cfg = into / CONFIG_NAME
     if config_arg:
-        if root_cfg.exists():
+        if store.exists(root_cfg):
             raise SystemExit(
                 f"luria init: {CONFIG_NAME} already exists in {into} — "
                 "refusing to scaffold from a different config. Merge the two "
@@ -343,14 +344,14 @@ def _toml_text(into: Path, config_arg: str | None, issue_url: str,
                 "luria init: --schemes/--journals extend the shipped "
                 "template; with --config the shape is already declared, so "
                 "add the tables to that file instead.")
-        return Path(config_arg).read_text(encoding="utf-8")
-    if root_cfg.exists():
+        return store.read_text(Path(config_arg))
+    if store.exists(root_cfg):
         if schemes or journals:
             raise SystemExit(
                 f"luria init: {CONFIG_NAME} already exists in {into}, so the "
                 "shape is already declared — add the tables to it rather "
                 "than passing --schemes/--journals.")
-        return root_cfg.read_text(encoding="utf-8")
+        return store.read_text(root_cfg)
     return template_config(into, issue_url, schemes, journals)
 
 
@@ -387,9 +388,9 @@ def _scheme_files(scheme: Scheme) -> dict[Path, str]:
             scheme.stub: _read("record/decisions.d/README.stub"),
         }
     if scheme.prefix == "DP" and scheme.render == "document":
-        return {scheme.dir / src.name: src.read_text(encoding="utf-8")
-                for src in sorted((TEMPLATE / "record/principles.d").glob("*"))
-                if src.is_file()}
+        return {scheme.dir / src.name: store.read_text(src)
+                for src in sorted(store.glob((TEMPLATE / "record/principles.d"), "*"))
+                if store.is_file(src)}
     stub = (GENERIC_STUB_DOCUMENT if scheme.render == "document"
             else GENERIC_STUB_INDEX)
     subs = {"{PREFIX}": scheme.prefix, "{prefix}": scheme.prefix.lower()}
@@ -483,7 +484,7 @@ def plan(into: Path, config_arg: str | None = None,
          issue_url: str = "", schemes: str = "",
          journals: str = "") -> list[tuple[Path, str]]:
     """(destination, content) for everything the scaffold would write."""
-    if not TEMPLATE.is_dir():                       # installed without data
+    if not store.is_dir(TEMPLATE):                       # installed without data
         return []
     toml_text = _toml_text(into, config_arg, issue_url, schemes, journals)
     # The scaffold is planned from a config whose vocabulary files it is
@@ -500,9 +501,9 @@ def plan(into: Path, config_arg: str | None = None,
     files[cfg.docs / "README.md"] = _read("docs/README.md").replace(
         "{views}", _views(cfg))
     files[into / "CLAUDE.md"] = _read("CLAUDE.md")
-    for wf in sorted((TEMPLATE / ".github").rglob("*")):
-        if wf.is_file():
-            files[into / wf.relative_to(TEMPLATE)] = wf.read_text(encoding="utf-8")
+    for wf in sorted(store.rglob((TEMPLATE / ".github"), "*")):
+        if store.is_file(wf):
+            files[into / wf.relative_to(TEMPLATE)] = store.read_text(wf)
     return sorted(files.items())
 
 
@@ -512,7 +513,7 @@ def write(into: Path, issue_url: str = "", dry_run: bool = False,
     written = skipped = 0
     kept: list[Path] = []
     for dest, content in plan(into, config, issue_url, schemes, journals):
-        if dest.exists():
+        if store.exists(dest):
             print(f"  skip   {dest.relative_to(into)} (exists)")
             skipped += 1
             kept.append(dest)
@@ -521,8 +522,7 @@ def write(into: Path, issue_url: str = "", dry_run: bool = False,
         written += 1
         if dry_run:
             continue
-        dest.parent.mkdir(parents=True, exist_ok=True)
-        dest.write_text(content, encoding="utf-8")
+        store.write_text(dest, content)
     return written, skipped, kept
 
 
@@ -550,12 +550,12 @@ def config_run(into: str = None, issue_url: str = "", schemes: str = "",
         print(text, end="")
         return
     dest = into / CONFIG_NAME
-    if dest.exists():
+    if store.exists(dest):
         raise SystemExit(
             f"luria config: {dest} already exists — this writes a starting "
             f"config, and yours has already started. Add the tables by hand, "
             f"or pass --stdout to see what this would have written.")
-    dest.write_text(text, encoding="utf-8")
+    store.write_text(dest, text)
     print(dest)
     print("\nEdit it, then `luria init` to scaffold the shape it declares.")
 
@@ -573,7 +573,7 @@ def run(into: str = None, issue_url: str = "", dry_run: bool = False,
     type once rather than a format anything reads back."""
     into = (Path(into) if into else find_root()).resolve()
     print(f"luria init → {into}")
-    if not issue_url and not config and not (into / CONFIG_NAME).exists():
+    if not issue_url and not config and not store.exists((into / CONFIG_NAME)):
         if guessed := infer_issue_url(into):
             print(f"  issue_url  {guessed}  (from the origin remote)")
     written, skipped, kept = write(into, issue_url, dry_run, config,

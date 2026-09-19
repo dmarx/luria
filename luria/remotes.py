@@ -60,6 +60,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from .config import Remote, current
+from . import store
 from .fetch import request
 
 # `LU-ADR-013`: a remote prefix, a delimiter, then a tail in that remote's own
@@ -145,10 +146,10 @@ def normalise(code: str) -> str:
 
 def _read_lockfile() -> dict:
     path = current().remotes_lock
-    if not path.exists():
+    if not store.exists(path):
         return {}
     try:
-        return json.loads(path.read_text(encoding="utf-8"))
+        return json.loads(store.read_text(path))
     except (OSError, ValueError):
         return {}
 
@@ -188,7 +189,7 @@ def write_lock(found: dict[str, dict[str, str]] | None = None,
         payload["titles"] = {key: dict(sorted(entry.items()))
                              for key, entry in sorted(titles.items())}
     path = current().remotes_lock
-    path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+    store.write_text(path, json.dumps(payload, indent=2) + "\n")
     return path
 
 
@@ -282,7 +283,7 @@ def hand_links(files: list[Path] | None = None
     stale: list[str] = []
     for path in files if files is not None else ref_status.scanned_files():
         try:
-            text = path.read_text(encoding="utf-8")
+            text = store.read_text(path)
         except (OSError, UnicodeDecodeError):
             continue
         quoted = doc_refs.code_spans(text) if path.suffix == ".md" else []
@@ -439,7 +440,7 @@ def cited() -> dict[str, set[str]]:
         return found
     for path in ref_status.scanned_files():
         try:
-            text = path.read_text(encoding="utf-8")
+            text = store.read_text(path)
         except (OSError, UnicodeDecodeError):
             continue
         for ref in references(text):

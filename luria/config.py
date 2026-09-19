@@ -74,6 +74,8 @@ from typing import ClassVar, cast
 from omegaconf import OmegaConf
 from pathlib import Path
 
+from . import store
+
 CONFIG_NAME = "luria.yaml"
 
 # The record already speaks YAML — every document's frontmatter is YAML, and
@@ -96,6 +98,10 @@ def _own_version() -> str:
 
 DEFAULTS: dict = {
     "issue_url": "",
+    "backend": {
+        "kind": "files",
+        "file": "record.sqlite",
+    },
     "paths": {
         "docs": "docs",
         "decisions": "record/decisions.d",
@@ -216,10 +222,10 @@ def find_root(start: Path | None = None) -> Path:
         return Path(env).resolve()
     here = (start or Path.cwd()).resolve()
     for candidate in (here, *here.parents):
-        if (candidate / CONFIG_NAME).exists():
+        if store.exists(candidate / CONFIG_NAME):
             return candidate
     for candidate in (here, *here.parents):
-        if (candidate / ".git").exists():
+        if store.exists(candidate / ".git"):
             return candidate
     return here
 
@@ -593,7 +599,7 @@ def _declared_number(path: Path) -> int | None:
     about identity, not a claim to one — and it does occur there, so the
     block boundary is what makes the field readable without a YAML parse."""
     try:
-        text = path.read_text(encoding="utf-8")
+        text = store.read_text(path)
     except OSError:
         return None
     if not text.startswith("---\n"):
@@ -906,17 +912,15 @@ class Scheme:
 
         Both questions are answered from one walk, because they were two
         walks of the same directory and neither was cached."""
-        try:
-            st = self.dir.stat()
-        except OSError:
+        key = store.revision(self.dir)
+        if key is None:
             return {}, {}
-        key = (st.st_mtime_ns, st.st_size)
         hit = _LISTING_CACHE.get(self.dir)
         if hit is not None and hit[0] == key:
             return hit[1], hit[2]
         numbered: dict[int, Path] = {}
         temps: dict[str, Path] = {}
-        for path in sorted(self.dir.glob("*.md")):
+        for path in store.glob(self.dir, "*.md"):
             tail = self.temp_of(path)
             if tail is not None:
                 temps[tail] = path
@@ -953,11 +957,9 @@ class Scheme:
         caller has to remember. Reading the field costs a parse, and this is
         the hot path — `documents()` runs on every lint, index and link
         pass."""
-        try:
-            st = path.stat()
-        except OSError:
+        key = store.revision(path)
+        if key is None:
             return self.number_in_name(path)
-        key = (st.st_mtime_ns, st.st_size)
         hit = _NUMBER_CACHE.get(path)
         if hit is not None and hit[0] == key:
             return hit[1]
@@ -1937,6 +1939,25 @@ class Journal:
 
 
 @dataclass(frozen=True)
+class Backend:
+    """Where the record's sources are kept (#110).
+
+        backend:
+          kind: files              # one markdown file per entry (default)
+        backend:
+          kind: sqlite             # the same documents, as rows in one file
+          file: record.sqlite      # relative to the root
+
+    What moves is only the storage: a document is markdown with YAML
+    frontmatter under either backend, every path stays its identity, and
+    every check reads the same text. `luria export` converts a record in
+    either direction. Everything that is not a source — docs pages, views,
+    the code the reference scan reads, this file — is on disk regardless."""
+    kind: str = "files"
+    file: Path | None = None
+
+
+@dataclass(frozen=True)
 class Site:
     """How the record publishes as a browsable site (ADR-042).
 
@@ -2040,6 +2061,7 @@ class Config:
     # awkwardness — a distinction the layout had stopped expressing.
     include_records: tuple[str, ...] = ()
     site: Site = None  # type: ignore[assignment]
+    backend: Backend = Backend()
     _raw: dict = dcfield(default_factory=dict, repr=False)
 
     def nested_records(self) -> list[Path]:
@@ -2059,8 +2081,8 @@ class Config:
         maintained (DP-1, DP-15)."""
         out = []
         for pattern in self.include_records:
-            for path in sorted(self.root.glob(pattern)):
-                if path.is_dir() and (path / CONFIG_NAME).exists():
+            for path in store.glob(self.root, pattern):
+                if store.is_dir(path) and store.exists(path / CONFIG_NAME):
                     out.append(path)
         return out
 
@@ -2272,8 +2294,10 @@ def load(root: Path | None = None, text: str | None = None,
     root = root or find_root()
     raw = DEFAULTS
     config_file = root / CONFIG_NAME
-    if text is None and config_file.exists():
-        text = config_file.read_text(encoding="utf-8")
+    if text is None and store.exists(config_file):
+        # Unrouted on purpose: the store routes by the config this is
+        # loading, and the config file is never a source.
+        text = store.read_file(config_file)
     if text is not None:
         parsed = yaml.safe_load(text) or {}
         parsed = parsed.get("luria", parsed)
@@ -2356,8 +2380,20 @@ def load(root: Path | None = None, text: str | None = None,
         network=str(raw["lint"].get("network", "auto")),
         include_records=tuple(raw.get("include_records", ())),
         site=_site(raw, root),
+        backend=_backend(raw, root),
         _raw=raw,
     )
+
+
+def _backend(raw: dict, root: Path) -> Backend:
+    spec = raw.get("backend") or {}
+    kind = str(spec.get("kind", "files"))
+    if kind not in store.KINDS:
+        raise ValueError(
+            f"backend.kind: {kind!r} is not a backend this version knows — "
+            f"one of {', '.join(store.KINDS)}")
+    file = spec.get("file") or DEFAULTS["backend"]["file"]
+    return Backend(kind=kind, file=root / file)
 
 
 def nameable(scheme) -> set[str]:
@@ -2848,14 +2884,21 @@ def _site(raw: dict, root: Path) -> Site:
 @lru_cache(maxsize=1)
 def current() -> Config:
     """The config for this process. Cached because every module wants it and
-    re-reading per call would make the file's mtime a source of skew."""
-    return load()
+    re-reading per call would make the file's mtime a source of skew.
+
+    Loading is also what points the store at this record's backend: the
+    store cannot ask the config where the sources are, because loading the
+    config reads a file through the store (see `luria/store.py`)."""
+    cfg = load()
+    store.activate(cfg)
+    return cfg
 
 
 def reset() -> None:
     """Drop the cache — for tests that point `LURIA_ROOT` at a fixture."""
     current.cache_clear()
     forget_documents()
+    store.deactivate()
 
 
 @contextmanager

@@ -32,6 +32,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from .adr_index import parse_frontmatter
+from . import store
 from .config import current
 from .contract import ANY_SCHEME, Field, for_scheme, is_remote, local_scheme
 from .field_edit import add_to_field
@@ -110,7 +111,7 @@ def relate(source: str, field: str, target: str) -> Related:
         sys.exit(f"{where}: a document cannot relate to itself")
     _check_target(spec, target, where)
 
-    text = path.read_text(encoding="utf-8")
+    text = store.read_text(path)
     meta, _ = parse_frontmatter(text)
     held = _listed(meta.get(field))
     notes = []
@@ -133,14 +134,14 @@ def relate(source: str, field: str, target: str) -> Related:
     else:
         from .new import _sub_line
         text = _sub_line(text, field, target)
-    path.write_text(text, encoding="utf-8")
+    store.write_text(path, text)
     return Related(path, field, target, "added", tuple(notes))
 
 
 def _read_relations(draft: str) -> list[dict]:
     import json
     try:
-        data = json.loads(Path(draft).read_text(encoding="utf-8"))
+        data = json.loads(store.read_text(Path(draft)))
     except FileNotFoundError:
         sys.exit(f"luria relate: no such file {draft!r}")
     except json.JSONDecodeError as e:
