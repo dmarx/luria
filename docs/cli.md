@@ -101,6 +101,7 @@ $ luria init
 ```
 luria new [KIND] [--title T] [--status S] [--summary S] [--tags a,b]
           [--influenced_by ADR-1,ADR-2] [--name N]
+luria new [KIND] --draft FILE
 ```
 
 Files one new entry and prints its path. `KIND` is any name the project's
@@ -122,7 +123,16 @@ default — `luria new --title "…"` is the cheapest possible filing. The
 field flags (`--title`, `--status`, `--summary`, `--tags`,
 `--influenced_by`) pre-fill the scaffolded frontmatter; `--influenced_by` is
 written as the list of codes the index reads, and a scheme's own declared
-reference fields are accepted by name the same way. The generated view of your own config lists every
+reference fields are accepted by name the same way.
+
+`--draft FILE` files what a tool wrote instead of flags: one draft object
+(`{"scheme": "ADR", "title": …, "tags": […], "summary": …,
+"influenced_by": […]}`) or a `luria-drafts` document holding several
+(`{"format": "luria-drafts", "drafts": […]}`), which is what strata-g's
+*Record — luria drafts (JSON)* export writes for the entries drafted on its
+canvas. Each draft files into the kind its `scheme` names, with the same
+validation the flags get — a key the scheme has no opinion about is refused
+by name — and one path is printed per draft. The generated view of your own config lists every
 kind your project accepts (see [the record](record.md) for this one).
 
 ## luria repair

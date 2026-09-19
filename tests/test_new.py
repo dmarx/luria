@@ -276,3 +276,82 @@ def test_influenced_by_survives_fire_reading_it_as_a_tuple(project):
     decision(project, 1, "Active")
     text = new_mod.new_entry("adr", {"influenced_by": ("ADR-001", "ADR-002")}, None).read_text()
     assert "influenced_by:\n- ADR-001\n- ADR-002\n" in text, text
+
+
+# --- a drafts file as input (#301) -------------------------------------------
+#
+# strata-g's canvas exports the entries drafted on it as a `luria-drafts`
+# document: each draft carries the universal fields plus the documents it was
+# drawn from as `influenced_by`, and the canvas's own bookkeeping beside
+# them. `luria new --draft FILE` is the hand-over.
+
+def _drafts_file(project, payload) -> str:
+    import json
+    path = project / "drafts.json"
+    path.write_text(json.dumps(payload))
+    return str(path)
+
+
+def test_a_drafts_document_files_one_entry_per_draft(project, capsys):
+    from tests._scheme import decision
+    decision(project, 1, "Active")
+    decision(project, 2, "Active")
+    path = _drafts_file(project, {
+        "format": "luria-drafts", "version": 1,
+        "drafts": [
+            {"id": "manual-1", "scheme": "ADR", "title": "First",
+             "tags": ["record", "mechanism"], "summary": "Why.",
+             "influenced_by": ["ADR-001", "ADR-002"], "unresolved": [],
+             "command": "luria new adr --title 'First'"},
+            {"id": "manual-2", "scheme": "ADR", "title": "Second",
+             "tags": [], "summary": "", "influenced_by": ["ADR-001"],
+             "unresolved": ["manual-1"], "command": ""},
+        ],
+    })
+    new_mod.run(draft=path)
+    written = [current().root / line for line in capsys.readouterr().out.split()]
+    assert len(written) == 2
+    first, second = (w.read_text() for w in written)
+    assert "title: 'First'" in first and "tags:\n- record\n- mechanism\n" in first
+    assert "influenced_by:\n- ADR-001\n- ADR-002\n" in first, first
+    assert "summary: >-\n  Why." in first
+    assert "title: 'Second'" in second and "influenced_by:\n- ADR-001\n" in second
+    # Bookkeeping never reaches the document.
+    for text in (first, second):
+        assert "command" not in text and "unresolved" not in text and "manual-" not in text
+
+
+def test_a_single_draft_object_files_too(project, capsys):
+    from tests._scheme import decision
+    decision(project, 1, "Active")
+    path = _drafts_file(project, {"scheme": "ADR", "title": "Alone", "influenced_by": ["ADR-001"]})
+    new_mod.run(draft=path)
+    text = (current().root / capsys.readouterr().out.strip()).read_text()
+    assert "title: 'Alone'" in text and "influenced_by:\n- ADR-001\n" in text
+
+
+def test_a_draft_key_the_scheme_has_no_opinion_about_is_refused_by_name(project):
+    from tests._scheme import decision
+    decision(project, 1, "Active")
+    path = _drafts_file(project, {"scheme": "ADR", "title": "T", "sauce": "LIT-1"})
+    with pytest.raises(SystemExit) as caught:
+        new_mod.run(draft=path)
+    assert "sauce" in str(caught.value) and "influenced_by" in str(caught.value)
+
+
+def test_a_draft_for_another_kind_than_the_one_asked_for_is_refused(project):
+    from tests._scheme import decision
+    decision(project, 1, "Active")
+    path = _drafts_file(project, {"scheme": "DP", "title": "T"})
+    with pytest.raises(SystemExit) as caught:
+        new_mod.run(kind="adr", draft=path)
+    assert "'dp'" in str(caught.value) and "'adr'" in str(caught.value)
+
+
+def test_draft_and_field_flags_do_not_mix(project):
+    from tests._scheme import decision
+    decision(project, 1, "Active")
+    path = _drafts_file(project, {"scheme": "ADR", "title": "T"})
+    with pytest.raises(SystemExit) as caught:
+        new_mod.run(draft=path, title="Other")
+    assert "--draft" in str(caught.value)
