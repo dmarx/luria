@@ -288,14 +288,21 @@ def test_the_landing_page_is_named_and_still_answers_to_README(tmp_path):
     assert 'aliases:\n- "README"' in index
 
 
-def test_the_graph_sits_above_the_article_not_in_the_sidebar(tmp_path):
+def test_the_graph_sits_above_the_article_not_in_the_sidebar(project):
     """Quartz's sidebars stack below the content under 1200px, so a graph in
     the right rail is at the bottom of the page on most windows (#71).
 
     One key since Quartz 5, where it was a generated `quartz.layout.ts` — the
-    whole reason luria wrote TSX at all (ADR-101)."""
-    site.stage(tmp_path)
-    graph = _plugin(_quartz_config(tmp_path), "graph")
+    whole reason luria wrote TSX at all (ADR-101).
+
+    Run against a fixture project rather than this record, because this record
+    now configures a graph of its own (ADR-tmp0hx52), which writes Quartz's
+    graph plugin `enabled: false`. The claim here is about where the layout
+    PUTS Quartz's graph when it has one, so it needs a project that has one."""
+    out = project / "build" / "site"
+    site.stage(out)
+    graph = _plugin(_quartz_config(out), "graph")
+    assert graph["enabled"] is True, "the control: this project keeps Quartz's graph"
     assert graph["layout"]["position"] == "beforeBody"
     # Under the title and its metadata, which are 10 and 20.
     assert graph["layout"]["priority"] > 20
