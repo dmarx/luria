@@ -4,7 +4,7 @@
 
 **Documented** — cited by the documentation a reader browses — a hand-written page under `docs/`, or prose that renders into one — so retiring this decision changes what the docs claim and the page has to change with it.
 
-17 of 115 decisions. Back to the [full index](../README.md).
+17 of 117 decisions. Back to the [full index](../README.md).
 
 | # | Title | Summary | Status |
 |---|---|---|---|
