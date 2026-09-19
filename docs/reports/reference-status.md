@@ -22,16 +22,31 @@ Nothing unacknowledged. ✅
 
 A reference the reader cannot follow: the code names no document in this record. A typo, a number carried in from another project, and an illustrative code in an example all look identical from here — telling them apart takes a human, so this is a report, not an error.
 
-**2 codes unaccounted for.** Not listed: 106 mentions marked deliberate with an `unresolved-ok:` comment (same syntax and scopes as `inactive-ok:` above).
+**5 codes unaccounted for.** Not listed: 106 mentions marked deliberate with an `unresolved-ok:` comment (same syntax and scopes as `inactive-ok:` above).
 
 
-### ADR-000 — resolves to nothing (1 unmarked site · 2 other mentions marked deliberate)
+### ADR-000 — resolves to nothing (2 unmarked sites · 2 other mentions marked deliberate)
 
 - [`tests/test_lint.py:467`](../../tests/test_lint.py)
+- [`tests/test_relate.py:155`](../../tests/test_relate.py)
+
+### ADR-231 — resolves to nothing (2 unmarked sites)
+
+- [`luria/new.py:343`](../../luria/new.py)
+- [`luria/relate.py:5`](../../luria/relate.py)
+
+### ADR-245 — resolves to nothing (2 unmarked sites)
+
+- [`luria/new.py:343`](../../luria/new.py)
+- [`luria/relate.py:5`](../../luria/relate.py)
 
 ### ADR-919 — resolves to nothing (1 unmarked site · 8 other mentions marked deliberate)
 
 - [`tests/test_documents_cache.py:125`](../../tests/test_documents_cache.py)
+
+### ADR-tmpiylaq — resolves to nothing (1 unmarked site)
+
+- [`luria/new.py:356`](../../luria/new.py)
 
 ## Files that opt out of reference checking
 
