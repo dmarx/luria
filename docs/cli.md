@@ -9,6 +9,7 @@ One binary, `luria`, dispatching to plain functions. Every command takes
 | [`luria init`](#luria-init) | scaffold a record into a repository |
 | [`luria config`](#luria-config) | write a starting `luria.yaml`, without scaffolding |
 | [`luria new`](#luria-new) | file a new entry of any configured kind |
+| [`luria relate`](#luria-relate) | write a relation into an existing document |
 | [`luria repair`](#luria-repair) | write every mechanical source repair |
 | [`luria index`](#luria-index) | render every generated view |
 | [`luria link`](#luria-link) | turn bare codes and wikilinks into links |
@@ -134,6 +135,37 @@ canvas. Each draft files into the kind its `scheme` names, with the same
 validation the flags get — a key the scheme has no opinion about is refused
 by name — and one path is printed per draft. The generated view of your own config lists every
 kind your project accepts (see [the record](record.md) for this one).
+
+## luria relate
+
+```
+luria relate SOURCE FIELD TARGET
+luria relate --draft FILE
+```
+
+Writes one relation into a document that already exists: `TARGET` joins
+`FIELD` of the document `SOURCE` names, and the path is printed. The edit
+is one line in the frontmatter; the form's comments and every other field
+stay as they were.
+
+- `FIELD` is a relation the source's scheme reads: `influenced_by`, the
+  successor field (`superseded_by` unless the scheme renames it), or any
+  field declared under the scheme's `references:`. A prose mention is not
+  a field, so `cites` is refused by name.
+- `TARGET` has to resolve — a local code, or a remote one where the field
+  allows any scheme — and has to be of the scheme a typed field names.
+  An unresolvable code is refused, not written.
+- A relation already present is reported, never duplicated. A scalar
+  field already set to something else is refused rather than replaced.
+- Naming the successor on a document still in force says so: the status
+  is yours to set, and the lint will ask for it.
+- A declared converse is not written here; `luria repair` completes it,
+  as for every other one-sided relation, and the command says so.
+
+`--draft FILE` reads the `relations` list of a `luria-drafts` document
+(`{"source": …, "field": …, "target": …}` by code) — the shape a canvas
+exports for a relation drawn between two filed documents — and files each
+entry in turn.
 
 ## luria repair
 

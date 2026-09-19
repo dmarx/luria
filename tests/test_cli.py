@@ -13,14 +13,15 @@ import subprocess
 import sys
 
 from luria import (adr_index, cli, collect, concretize, init, link_refs,
-                   lint, migrate, new, remotes, repair, reports, site, upgrade)
+                   lint, migrate, new, relate, remotes, repair, reports, site,
+                   upgrade)
 
 
 def test_every_command_is_registered():
     assert cli.COMMANDS == {
         "lint": lint.run, "link": link_refs.run, "repair": repair.run,
         "index": adr_index.run,
-        "new": new.run, "concretize": concretize.run,
+        "new": new.run, "relate": relate.run, "concretize": concretize.run,
         "migrate": migrate.run, "remotes": remotes.run,
         "site": site.run, "init": init.run, "reports": reports.run,
         "collect": collect.run, "config": init.config_run,

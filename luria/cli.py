@@ -7,6 +7,8 @@
     luria index         regenerate every generated view, badges included
     luria new [kind]    scaffold an entry: the journal by default, or any
                         configured scheme or fragment dir (adr, dp, changelog)
+    luria relate        write a relation into an existing document's
+                        frontmatter: SOURCE FIELD TARGET, or a drafts file
     luria concretize    assign real numbers to temporary codes (ADR-049);
                         --check is the trunk's guard
     luria migrate       execute a migration spec: rename a scheme, move
@@ -41,7 +43,7 @@ import sys
 import fire
 
 from . import (adr_index, collect, concretize, init, link_refs, lint, migrate,
-               new, remotes, repair, reports, site, upgrade)
+               new, relate, remotes, repair, reports, site, upgrade)
 
 COMMANDS = {
     "lint": lint.run,
@@ -49,6 +51,7 @@ COMMANDS = {
     "repair": repair.run,
     "index": adr_index.run,
     "new": new.run,
+    "relate": relate.run,
     "concretize": concretize.run,
     "migrate": migrate.run,
     "remotes": remotes.run,
