@@ -1,0 +1,149 @@
+---
+status: Active
+title: 'Alternative backends are generated views; the sources stay files'
+version: 1
+tags:
+- record
+- mechanism
+date: '2026-09-19'
+issue: '#110'
+summary: >-
+  `luria export` writes the record as a SQLite database — every document,
+  field value, typed edge, citation and journal entry — rebuilt from scratch
+  on each run and never written back to. That is what "store it in a
+  database" buys: asking the record arbitrary questions. The sources stay
+  one markdown file per entry in git, because that is the contribution
+  model, not a storage detail. Rejected: a pluggable source store, a
+  data-model refactor ahead of a second implementation, committing the
+  database as a view, and a query command in place of the file.
+---
+
+# ADR-tmptir3g: Alternative backends are generated views; the sources stay files
+
+## Context
+
+[#110](https://github.com/dmarx/luria/issues/110) asks for the record to live somewhere other than markdown files —
+"sqlite or whatever". The request has two readings, and they pull in
+opposite directions. A *source* backend puts the record itself in a database:
+`luria new` inserts a row, the lint reads rows, a contribution is a change to
+the database. A *query* backend leaves the record where it is and gives a
+reader a way to ask it questions that grep and the shipped reports do not
+answer. [ADR-111](ADR-111.md) deferred on the first reading and diagnosed the second: a
+database is what you reach for when you want to *ask* arbitrary questions.
+
+The question that decides between them is not whether the model is
+storage-agnostic. It is ([DP-014](../principles.d/DP-014.md) says so: identity, standing, declared rules
+and generated views say nothing about a file format). The question is what
+the *file* is doing in the contribution model, and the answer is: everything.
+One file per entry is what makes a contribution a diff that a reviewer reads
+before it becomes what the project believes; it is why two branches never
+conflict on the record; it is what `formerly:` and the blame-ignore list
+attach history to; it is what `luria collect` orders fragments by. [DP-002](../principles.d/DP-002.md)
+exists because a shared file everyone writes is a lock, and a database in
+the repository is that file in its purest form — one binary blob every
+`luria new` on every branch rewrites, and one git cannot merge.
+
+The cost of the source reading was measured before it was declined, because
+"big refactor" is not an argument. The package touches the filesystem at
+about 150 call sites in thirty modules. Every writer — `new`, `relate`,
+`repair`, `concretize`, `migrate`, `field_edit` — is text surgery on a
+markdown document, deliberately, so that the comments a scaffold ships
+survive a machine edit. Every finding is reported as `path:line`. A source
+store would have to carry all of that, and the thing it would buy — queries
+— is the thing the other reading delivers without touching any of it.
+
+## Decision
+
+**The sources are files.** One markdown document per entry, in git, is the
+record's contribution model and not a backend option. A project that wants
+its record in a database is asking for a different tool's model of what a
+contribution is, and this one should say so rather than half-support it.
+
+**A backend is a view.** `luria export` writes one SQLite file from the
+record — `build/record.sqlite` by default, `--out` elsewhere — with six
+tables: `documents` (code, scheme, number, title, status, version, date,
+path, the whole frontmatter as JSON, and the body), `fields` (one row per
+value, a list exploded into positioned rows), `edges` (the typed graph
+`luria/edges.py` derives), `citations` (every code the lint's scanner counts
+as one, where it sits, whether it resolves, and whether a directive excuses
+it), `journal_entries` with `journal_tags`, and `meta`. It is a generated
+view in the sense of the record's own split: rebuilt from scratch on every
+run, never a place anything is written back to, and not committed — it
+lives beside `luria site`'s output, under `build/`, for the same reason.
+
+Three details are load-bearing:
+
+- **Every row comes through the record's own readers.** `load_scheme` for a
+  document, `edges.graph` for a relation, `ref_status.scan` for a citation,
+  `journal.entries` for an entry. Not a second parse of the files. A mention
+  in backticks is not a citation in the database for exactly the reason it
+  is not one in the lint ([ADR-105](ADR-105.md)), and a derived field arrives as an
+  ordinary field for the reason it does everywhere else. This is the same
+  rule the site follows, and it is what stops the export drifting from the
+  lint ([DP-004](../principles.d/DP-004.md)).
+- **A suppression is counted, never hidden.** `citations.excused` records
+  that a directive acknowledges a finding, so "dangling and unacknowledged"
+  is a query and not a lost distinction ([DP-001](../principles.d/DP-001.md)).
+- **Rebuilding means deleting, and only a file this command made is
+  deleted.** Anything at `--out` that is not a SQLite database is reported
+  and left alone. A typo should cost a message, not a file.
+
+**No store abstraction, yet.** The read side already has one reader per
+kind of source — `documents()`, `read_document`, `journal.entries`,
+`ref_status.scan` — and that is the boundary a second *file format* would
+extend. Wrapping a protocol around it now, with one implementation, would be
+a guess about what the second one needs; the project fires a guard once on a
+real case before trusting it, and the same discipline applies to an
+abstraction.
+
+## Alternatives considered
+
+- **A pluggable source store, SQLite first.** The literal reading. It loses
+  on the contribution model, not on effort: a database in the repository is
+  the shared file [DP-002](../principles.d/DP-002.md) abolishes, every branch's `luria new` rewrites the
+  same blob, git cannot merge it, and a reviewer cannot read a contribution
+  as a diff. `formerly:` and the blame-ignore list lose the history they
+  attach to. Every writer is rewritten and every finding loses its
+  `path:line`. And the queries it would buy are the ones the view gives.
+- **The data-model refactor first** — a `Store` protocol and a `Document`
+  that does not carry a `Path`, routed through those 150 sites, ahead of any
+  second backend. Declined for now rather than rejected: the cost was
+  measured and the benefit was not, because there is no second
+  implementation to shape the boundary. The case that would justify it is a
+  second *file format* — one YAML or JSON document per entry — which keeps
+  the contribution model and is the honest "alternative backend" for
+  sources. What that would touch, so the next person does not re-measure:
+  `_listing` and `_declared_number` in `luria/config.py`, `read_document`,
+  and the writers named above.
+- **Committing the database as a generated view under `docs/`.** It is a
+  view, so why not treat it as one? Because it is binary: `luria index
+  --check` compares text, a reviewer cannot read a diff of it, and every
+  merge to the default branch would rewrite a two-megabyte blob — [DP-002](../principles.d/DP-002.md)'s
+  tell, on the file that was supposed to be the remedy.
+- **A query command** (`luria query "SELECT …"`) instead of an export. The
+  same database with a worse interface. `sqlite3`, Datasette and a pandas
+  call already exist, and every one of them is better at the job than a
+  subcommand would be.
+- **Status quo.** Questions are answered by grep, or by writing a report
+  module: the pending-decisions report is one query, hard-coded, with its own
+  renderer. Each new question costs a new module, and the questions a record
+  gets asked are not the ones its author thought to ship.
+
+## Consequences
+
+Any question is a query. Fired on this record: 133 documents, 1,277 field
+values, 70 edges, 2,250 citations and 120 journal entries, in 1.8 seconds,
+into 2.1 MB. The first question asked of it — which Active documents does
+nothing cite? — returned 25, which no shipped report shows.
+
+What it costs is a second consumer to keep in step with the model. A new
+kind of edge, or a new family of source, has to be added here or the export
+is silently incomplete; `test_exports_this_record` holds the document count
+against the config, and nothing yet holds the *set of tables* against the
+set of families. Chains are not exported, because they are derivable from
+`edges`. Nested records (`include_records`) are not exported; the database
+is one record.
+
+It obliges the sources/views split to stay the rule for any backend that
+follows: a format a reader wants is a view to generate, and the sources are
+not on the table.

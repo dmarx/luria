@@ -13,7 +13,9 @@ Everything in a Luria record divides into two kinds of file:
   new file.
 - **Views** are written by `luria index`: the decision index and its tag
   pages, the rendered principles document, journal books, the status
-  reports, the badge counts in the README. A view directory holds *only*
+  reports, the badge counts in the README — and, on demand rather than
+  committed, the SQLite database `luria export` writes for asking the
+  record questions. A view directory holds *only*
   generated files — `luria lint` fails on a stray hand-written file inside
   one, and `luria index --check` on the default branch fails on a stale
   view, so a reader can trust that what they see reflects the sources.

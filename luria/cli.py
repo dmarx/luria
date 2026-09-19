@@ -15,6 +15,7 @@
                         documents between schemes (ADR-040)
     luria remotes       other projects' records cited from this one
     luria site          stage the record as a Quartz vault, ready to build
+    luria export        write the record as a SQLite database, for querying
     luria init          scaffold the record into a project that has none
     luria config        write a starting luria.yaml and stop, for editing
                         before anything is scaffolded
@@ -42,8 +43,8 @@ import sys
 
 import fire
 
-from . import (adr_index, collect, concretize, init, link_refs, lint, migrate,
-               new, relate, remotes, repair, reports, site, upgrade)
+from . import (adr_index, collect, concretize, export, init, link_refs, lint,
+               migrate, new, relate, remotes, repair, reports, site, upgrade)
 
 COMMANDS = {
     "lint": lint.run,
@@ -56,6 +57,7 @@ COMMANDS = {
     "migrate": migrate.run,
     "remotes": remotes.run,
     "site": site.run,
+    "export": export.run,
     "init": init.run,
     "config": init.config_run,
     "reports": reports.run,
