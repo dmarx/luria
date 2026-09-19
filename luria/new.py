@@ -190,13 +190,14 @@ def new_scheme_doc(scheme, fields: dict[str, str]) -> Path:
     plural = plural_fields(scheme)
     title = fields.pop("title", None)
     if title is not None:
-        old_title = None
-        m = re.search(r"^title: (.*)$", text, flags=re.MULTILINE)
-        if m:
-            old_title = m.group(1).strip().strip("'\"")
         text = _sub_line(text, "title", title)
-        if old_title:
-            text = text.replace(f"# {code}: {old_title}", f"# {code}: {title}")
+        # The heading is DERIVED from the title — the lint holds the two
+        # equal — so it is rewritten by rule, whatever the form said there.
+        # This used to replace `# CODE: <the form's title:>` and nothing
+        # else, so a template whose title: and heading disagreed (strata-g's
+        # did) scaffolded a document the lint rejected on first read (#301).
+        text = re.sub(rf"^# {re.escape(code)}: .*$", f"# {code}: {title}",
+                      text, count=1, flags=re.MULTILINE)
     for field, value in fields.items():
         text = _sub_line(text, field, value,
                          many=field in plural or field in STANDARD_PLURAL)

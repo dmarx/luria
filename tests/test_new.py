@@ -355,3 +355,29 @@ def test_draft_and_field_flags_do_not_mix(project):
     with pytest.raises(SystemExit) as caught:
         new_mod.run(draft=path, title="Other")
     assert "--draft" in str(caught.value)
+
+
+def test_the_heading_follows_the_title_even_when_the_form_disagreed_with_itself(project):
+    """A form whose `title:` and `# CODE:` heading carry different
+    placeholder text scaffolded a document the lint rejected on first read:
+    the heading was only rewritten when it repeated the form's `title:`.
+    The heading is derived from the title, so it is rewritten by rule."""
+    from luria import config
+    (project / "luria.yaml").write_text(
+        """
+        issue_url: https://example.test/issues/{n}
+        schemes:
+          ADR:
+            dir: record/decisions.d
+            output: docs/decisions
+        """)
+    config.reset()
+    d = project / "record" / "decisions.d"
+    d.mkdir(parents=True, exist_ok=True)
+    (d / "_template.md").write_text(
+        "---\nstatus: Proposed\ntitle: 'A short imperative title'\ntags:\n- record\n"
+        "date: '2026-01-01'\n---\n\n# ADR-NNN: Decision, stated as the thing you did\n\nBody.\n")
+    text = new_mod.new_entry("adr", {"title": "Filed by a tool"}, None).read_text()
+    assert "title: 'Filed by a tool'" in text
+    assert "# ADR-001: Filed by a tool" in text, text
+    assert "Decision, stated as the thing you did" not in text
