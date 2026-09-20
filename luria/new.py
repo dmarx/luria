@@ -12,7 +12,8 @@ compute — filename, number, timestamp, `date:` — are computed; every other
 field stays the template's placeholder, because a fragment is authored in a
 markdown-aware editor, not assembled on a command line (ADR-036). A tool
 driving the CLI can still set fields inline (`--title`, `--status`,
-`--summary`, `--tags`, `--influenced_by`); a human never has to.
+`--summary`, `--tags`, `--influenced_by`) and hand over the prose
+(`--body`); a human never has to.
 
 **The kinds are the config.** Every journal, scheme and fragment directory in
 `luria.yaml` is a kind, so a project that adds a scheme gets its scaffold for
@@ -189,6 +190,7 @@ def new_scheme_doc(scheme, fields: dict[str, str]) -> Path:
 
     plural = plural_fields(scheme)
     title = fields.pop("title", None)
+    body = fields.pop("body", None)
     if title is not None:
         text = _sub_line(text, "title", title)
         # The heading is DERIVED from the title — the lint holds the two
@@ -198,6 +200,8 @@ def new_scheme_doc(scheme, fields: dict[str, str]) -> Path:
         # did) scaffolded a document the lint rejected on first read (#301).
         text = re.sub(rf"^# {re.escape(code)}: .*$", f"# {code}: {title}",
                       text, count=1, flags=re.MULTILINE)
+    if body is not None:
+        text = replace_body(text, code, body)
     for field, value in fields.items():
         text = _sub_line(text, field, value,
                          many=field in plural or field in STANDARD_PLURAL)
@@ -225,6 +229,29 @@ def new_scheme_doc(scheme, fields: dict[str, str]) -> Path:
     return path
 
 
+def replace_body(text: str, code: str, body: str) -> str:
+    """Put `body` where the template's prose was: everything below the
+    `# CODE: title` heading, which stays — it is derived from the title and
+    the lint holds the two equal, so it is never the author's to write.
+
+    A body that opens with its own level-one heading has it dropped for the
+    same reason; a tool that hands over a whole document (strata-g's drop
+    dialog shows one) would otherwise file two. With no heading in the text
+    — a frontmatter-only scaffold — the body follows the frontmatter."""
+    lines = body.replace("\r\n", "\n").strip("\n").split("\n")
+    if lines and lines[0].startswith("# "):
+        lines = lines[1:]
+    prose = "\n".join(lines).strip("\n")
+    heading = re.search(rf"^# {re.escape(code)}: .*$", text, flags=re.MULTILINE)
+    if heading:
+        head = text[:heading.end()]
+    elif text.startswith("---\n") and (end := text.find("\n---\n", 3)) != -1:
+        head = text[:end + 4]
+    else:
+        head = text.rstrip("\n")
+    return head.rstrip("\n") + "\n\n" + prose + "\n"
+
+
 def write_number(text: str, number: int) -> str:
     """Put `number: N` at the top of a document's frontmatter.
 
@@ -244,7 +271,8 @@ def write_number(text: str, number: int) -> str:
     return text[:4] + line + text[4:]
 
 
-def new_fragment(dir_name: str, name: str | None) -> Path:
+def new_fragment(dir_name: str, name: str | None,
+                 body: str | None = None) -> Path:
     """A fragment named for its filing moment, like a journal entry.
 
     It used to be named for the git branch — one fragment per contribution,
@@ -268,8 +296,13 @@ def new_fragment(dir_name: str, name: str | None) -> Path:
         path = frag_dir / f"{stamp}.md"
     template = frag_dir / TEMPLATE_NAME
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(template.read_text(encoding="utf-8") if template.exists()
-                    else "### Changed\n\n- \n", encoding="utf-8")
+    if body is not None:
+        text = body.strip("\n") + "\n"
+    elif template.exists():
+        text = template.read_text(encoding="utf-8")
+    else:
+        text = "### Changed\n\n- \n"
+    path.write_text(text, encoding="utf-8")
     return path
 
 
@@ -326,14 +359,15 @@ def new_entry(kind: str | None, fields: dict[str, str],
     if what == "scheme":
         return new_scheme_doc(target, dict(fields))
     if what == "fragment":
-        return new_fragment(target, name)
+        return new_fragment(target, name, fields.get("body"))
     if what == "migration":
         return new_migration(dict(fields), name)
     title = fields.get("title") or "A sentence-shaped title"
-    return journal_mod.new(target, title, dt.datetime.now())
+    return journal_mod.new(target, title, dt.datetime.now(),
+                           body=fields.get("body"))
 
 
-UNIVERSAL = ("title", "status", "summary", "tags", "influenced_by")
+UNIVERSAL = ("title", "status", "summary", "tags", "influenced_by", "body")
 
 # `influenced_by:` is standard frontmatter for every scheme — the index and
 # the typed-edge module read it as a list of codes (ADR-012) — but it is not
@@ -404,12 +438,21 @@ def _file_drafts(kind: str | None, drafts: list[dict], where: str) -> None:
 
 def run(kind: str = None, title: str = None, status: str = None,
         summary: str = None, tags: str = None, influenced_by: str = None,
-        name: str = None, draft: str = None, **declared) -> None:
+        body: str = None, name: str = None, draft: str = None,
+        **declared) -> None:
     """Scaffold an entry and print its path. KIND defaults to the journal;
     the other kinds come from luria.yaml (scheme prefixes, fragment dirs).
     Field flags are optional — content belongs to your editor.
 
-    Beyond the five universal flags, a scheme's own declared fields are
+    `--body TEXT` is the prose: it replaces the template's body below the
+    `# CODE: title` heading (a scheme document), the placeholder paragraph
+    (a journal entry) or the whole fragment. The heading stays luria's — it
+    is derived from the title — so a body that opens with one has it
+    dropped rather than doubled. Multi-line text is ordinary shell quoting;
+    a tool that authored the prose elsewhere hands it over in a draft's
+    `body` key instead.
+
+    Beyond the six universal flags, a scheme's own declared fields are
     accepted by name — `--source LIT-134,LIT-140` where the SOTA scheme
     declares `source` — and written in the shape the contract declares
     (#169). An undeclared flag is refused rather than written, because a key
@@ -429,7 +472,7 @@ def run(kind: str = None, title: str = None, status: str = None,
     fields = {k: v for k, v in
               [("title", title), ("status", status),
                ("summary", summary), ("tags", tags),
-               ("influenced_by", influenced_by)] if v}
+               ("influenced_by", influenced_by), ("body", body)] if v}
     if declared:
         kinds_ = kinds()
         resolved = (kind or default_kind() or "").lower()
