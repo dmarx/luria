@@ -6,6 +6,7 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 
 ## Currently — [September 2026](2026-09.md)
 
+- [20 Sep 07:01 — A document's prose reaches luria through --body](2026-09.md#a-documents-prose-reaches-luria-through---body)
 - [19 Sep 07:57 — A backend for the record turned out to be a view](2026-09.md#a-backend-for-the-record-turned-out-to-be-a-view)
 - [17 Sep 09:45 — Two tags, and the one that nearly said nothing](2026-09.md#two-tags-and-the-one-that-nearly-said-nothing)
 - [17 Sep 05:42 — The generated reference had a hand-kept list inside it](2026-09.md#the-generated-reference-had-a-hand-kept-list-inside-it)
@@ -83,9 +84,9 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 
 ## All books
 
-120 entries across 2 books, newest first.
+121 entries across 2 books, newest first.
 
 | Book | Entries | First | Last |
 |---|--:|---|---|
-| [2026-09](2026-09.md) | 74 | 2026-09-03 | 2026-09-19 |
+| [2026-09](2026-09.md) | 75 | 2026-09-03 | 2026-09-20 |
 | [2026-08](2026-08.md) | 46 | 2026-08-03 | 2026-08-28 |

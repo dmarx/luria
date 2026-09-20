@@ -4,7 +4,7 @@
 
 **Active** — in force — the current answer, and what a citation should normally point at.
 
-112 of 116 decisions. Back to the [full index](../README.md).
+113 of 117 decisions. Back to the [full index](../README.md).
 
 | # | Title | Summary | Status |
 |---|---|---|---|
@@ -120,3 +120,4 @@
 | [ADR-114](../../../record/decisions.d/ADR-114.md) | A 406 from a metadata remote is a throttle, not an outage | arXiv returns 406 and 429 interchangeably for the same identifier seconds apart when it is shedding load. `_once` classified 406 as `unreachable`, which skips the retry and — the part that cost something — never trips the circuit breaker, so a sustained refusal bought one socket per unverified identifier every run. 406 now classifies as `throttled`. Rejected: a fourth status, and leaving the RFC reading in place. | Active |
 | [ADR-115](../../../record/decisions.d/ADR-115.md) | Every request names the software and no contact, and the project adds the rest | Luria sent `Python-urllib/3.11` — the language and nothing else — from three call sites that had already drifted apart. All three now go through `fetch.request()`, which carries the project's `user_agent`. The default is `luria/<version>`: honest about the software, and carrying no contact, because a shipped contact routes every user's traffic to whoever maintains luria. Rejected: a browser string, and a hardcoded project URL. | Active |
 | [ADR-116](../../../record/decisions.d/ADR-116.md) | Alternative backends are generated views; the sources stay files | `luria export` writes the record as a SQLite database — every document, field value, typed edge, citation and journal entry — rebuilt from scratch on each run and never written back to. That is what "store it in a database" buys: asking the record arbitrary questions. The sources stay one markdown file per entry in git, because that is the contribution model, not a storage detail. Rejected: a pluggable source store, a data-model refactor ahead of a second implementation, committing the database as a view, and a query command in place of the file. | Active |
+| [ADR-117](../../../record/decisions.d/ADR-117.md) | `--body` hands the prose to the caller, but never the heading | `luria new --body TEXT` (and a draft's `body` key) hands over a document's prose, so a tool holding a finished document can file it through the CLI instead of writing markdown itself. The `# CODE: title` heading stays derived from `title:` — a body that opens with one has it dropped rather than doubled — because the lint holds the two equal. Rejected: letting callers write the file and validating afterwards, which makes every tool re-derive the numbering, the heading and the frontmatter shape. | Active |
