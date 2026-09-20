@@ -381,3 +381,61 @@ def test_the_heading_follows_the_title_even_when_the_form_disagreed_with_itself(
     assert "title: 'Filed by a tool'" in text
     assert "# ADR-001: Filed by a tool" in text, text
     assert "Decision, stated as the thing you did" not in text
+
+
+# ── the body ──────────────────────────────────────────────────────────────
+# `--body` (and a draft's `body` key) hands over the prose: a tool that let
+# someone author the document — strata-g's drop dialog — has more than
+# frontmatter to file, and the alternative is a scaffold whose body is the
+# template's instructions, to be replaced by hand in an editor.
+
+
+def test_a_body_replaces_the_template_prose_below_the_heading(project, capsys):
+    tpl = current().root / "record" / "decisions.d" / "_template.md"
+    tpl.write_text("---\ntitle: 'Placeholder'\nstatus: Proposed\ntags:\n- record\n"
+                   "date: '2026-01-01'\n---\n\n# ADR-NNN: Placeholder\n\n"
+                   "## Context\n\nWhat was true.\n\n## Decision\n\nWhat was decided.\n")
+    new_mod.run("adr", title="Bodied", body="## Context\n\nIt rained.\n\n## Decision\n\nWe stayed in.")
+    text = (current().root / capsys.readouterr().out.strip()).read_text()
+    assert "# ADR-001: Bodied\n\n## Context\n\nIt rained.\n\n## Decision\n\nWe stayed in.\n" in text
+    assert "What was true" not in text and "Placeholder" not in text.split("---")[2]
+    # The frontmatter is untouched by the body.
+    assert "title: 'Bodied'" in text and "tags:\n- record" in text
+
+
+def test_a_body_that_opens_with_its_own_heading_does_not_double_it(project, capsys):
+    new_mod.run("adr", title="Once", body="# ADR-999: Once\n\nProse.")
+    text = (current().root / capsys.readouterr().out.strip()).read_text()
+    assert text.count("\n# ") == 1, text
+    assert "# ADR-001: Once\n\nProse.\n" in text
+
+
+def test_a_body_reaches_a_journal_entry_and_a_fragment(project, capsys):
+    from luria import config
+    # The fixture's YAML is written indented eight spaces (a triple-quoted
+    # literal), so what is appended keeps that base indentation.
+    (current().root / "luria.yaml").write_text(
+        (current().root / "luria.yaml").read_text().rstrip("\n") + "\n"
+        + "        journals:\n          devlog:\n            dir: devlog.d\n            output: docs/devlog\n"
+        + "        fragments:\n          changelog.d:\n            file: CHANGELOG.md\n            style: changelog\n")
+    config.reset()
+    new_mod.run("devlog", title="Noted", body="**What.** It happened.")
+    entry = (current().root / capsys.readouterr().out.strip()).read_text()
+    assert entry.endswith("---\n\n**What.** It happened.\n"), entry
+    assert "Write the entry here" not in entry
+    new_mod.run("changelog", body="### Added\n\n- A body.")
+    frag = (current().root / capsys.readouterr().out.strip()).read_text()
+    assert frag == "### Added\n\n- A body.\n"
+
+
+def test_a_draft_carries_its_body(project, capsys):
+    from tests._scheme import decision
+    decision(project, 1, "Active")
+    path = _drafts_file(project, {
+        "scheme": "ADR", "title": "Drafted", "influenced_by": ["ADR-001"],
+        "body": "## Context\n\nDrawn on the canvas.\n",
+    })
+    new_mod.run(draft=path)
+    text = (current().root / capsys.readouterr().out.strip()).read_text()
+    assert "# ADR-002: Drafted\n\n## Context\n\nDrawn on the canvas.\n" in text
+    assert "influenced_by:\n- ADR-001\n" in text

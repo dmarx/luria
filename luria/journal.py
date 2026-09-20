@@ -306,24 +306,30 @@ def outputs() -> dict[Path, str]:
 # ── Filing an entry ──────────────────────────────────────────────────────
 
 
-def new(journal: Journal, title: str, now: dt.datetime) -> Path:
+def new(journal: Journal, title: str, now: dt.datetime,
+        body: str | None = None) -> Path:
     """Create an entry, stepping a second forward on collision.
 
     Not a probability argument — the filesystem already knows. A same-second
     collision is possible when a tool files several at once, and "unlikely" is
-    a worse guarantee than "checked" when checking is a `path.exists()`."""
+    a worse guarantee than "checked" when checking is a `path.exists()`.
+
+    `body`, when given, is the entry's prose in place of the placeholder
+    paragraph — what `luria new --body` and a draft's `body` key hand over."""
     while (path := path_for(journal, now)).exists():
         now += dt.timedelta(seconds=1)
     path.parent.mkdir(parents=True, exist_ok=True)
+    prose = (body.strip("\n") + "\n") if body is not None else (
+        "Write the entry here: what problem was solved, what the fix was, and\n"
+        "what was found along the way — the failed approaches and the traps the\n"
+        "next person would otherwise rediscover.\n")
     path.write_text(
         "---\n"
         f"title: {title!r}\n"
         f"created: '{now.isoformat(timespec='seconds')}'\n"
         "tags: []\n"
         "---\n\n"
-        "Write the entry here: what problem was solved, what the fix was, and\n"
-        "what was found along the way — the failed approaches and the traps the\n"
-        "next person would otherwise rediscover.\n", encoding="utf-8")
+        + prose, encoding="utf-8")
     return path
 
 
