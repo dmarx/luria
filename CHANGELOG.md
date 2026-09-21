@@ -5,6 +5,797 @@ Assembled from `changelog.d/` fragments on a cadence — never hand-edited
 
 <!-- luria-insert-here -->
 
+## 2026-09-21
+
+### Added
+
+- `luria new --body TEXT` hands over a document's prose: it replaces the
+  template's body below the `# CODE: title` heading of a scheme document,
+  the placeholder paragraph of a journal entry, or the whole of a fragment.
+  A draft's `body` key does the same through `--draft`, so a tool that
+  authored a whole document can file it without writing markdown itself
+  ([ADR-117](record/decisions.d/ADR-117.md)). The heading stays derived from `title:` — a body that
+  opens with its own is dropped rather than doubled.
+
+### Added
+
+- `luria export` writes the record as a SQLite database — every document
+  with its frontmatter and body, one row per field value, the typed edges,
+  every citation with whether it resolves and whether a directive excuses
+  it, and every journal entry — at `build/record.sqlite` or `--out`,
+  rebuilt from scratch each run. A generated view for asking the record
+  questions, never a source ([ADR-116](record/decisions.d/ADR-116.md), [#110](https://github.com/dmarx/luria/issues/110)).
+
+### Added
+
+- **`luria new` accepts `--influenced_by`** on every scheme, written as the
+  list of codes the index and the typed-edge module read. The field was
+  standard frontmatter with no flag: it is not a contract field, so the
+  scaffold refused it by name. A tool handing over a draft — strata-g's
+  canvas drafts an entry from the documents it was drawn from
+  ([dmarx/strata-g#813](https://github.com/dmarx/strata-g/pull/813)) — names those documents in
+  exactly this field ([#301](https://github.com/dmarx/luria/issues/301)).
+- **`luria new --draft FILE`** files the draft object — or every draft in a
+  `luria-drafts` document — a tool wrote, each into the kind its `scheme`
+  names, with the flags' validation. It is the other half of the hand-over
+  above: strata-g exports the entries drafted on its canvas in exactly this
+  shape ([#301](https://github.com/dmarx/luria/issues/301)).
+- **`luria relate SOURCE FIELD TARGET`** writes one relation into an
+  existing document's frontmatter — `influenced_by`, the successor field, or
+  a declared reference field — with the flags' checks: the target has to
+  resolve, a typed field takes only its scheme, a relation already present
+  is reported rather than duplicated, and a declared converse is left to
+  `luria repair`. `--draft FILE` files a drafts document's `relations` list,
+  the canvas's hand-over for a relation drawn between two filed documents
+  ([#304](https://github.com/dmarx/luria/issues/304)).
+
+### Fixed
+
+- **`ADR-112` v2 stops quoting the downstream lockfile's size as numbers.** It
+  said **921 lines** and **305 `titles` entries** of `anthology-of-the-sota`.
+  The entry count was wrong when written — measured on a branch carrying two
+  entries that record's `main` did not have — and both figures have drifted
+  since. The argument never used them: one file, one entry per cited
+  identifier, rewritten by every contribution that files a paper, which holds
+  at any size. The figures stay in the `history:` note so the old numbers can
+  be traced.
+
+### Added
+
+- **`luria.user_agent`** — what luria announces when it opens a socket
+  (`ADR-115`). Defaults to `luria/<version>`: honest about the
+  software, the way `curl/8.0` is, and carrying **no contact**, because a
+  URL or mailbox in a shipped default would route every user's traffic to
+  whoever maintains luria. Add your own contact here if you want the
+  treatment some hosts reserve for callers who identify themselves —
+  CrossRef's polite pool wants a real address, and that address belongs to
+  your record rather than to luria.
+
+### Fixed
+
+- **Luria sent `Python-urllib/3.11` from every request**, which names the
+  language and nothing else and is the shape of traffic a metadata host
+  rations first. All three call sites — the lint's identifier check, remote
+  discovery and the reachability probe — now go through `fetch.request()`
+  and carry the configured agent. They had drifted apart first: two passed a
+  bare URL to `urlopen` and one built a `Request` for its `method`, so a
+  header added to the obvious place would have left a third of luria's
+  traffic anonymous.
+- **`luria.__version__` was a hand-written `"0.1.0"`** while the package was
+  at 0.28 — the exact drift `pyproject.toml` derives the version from git
+  tags to prevent, reintroduced two lines into the package it was
+  protecting (`#295`). It reads installed distribution metadata now, and a
+  test fails if anyone writes a literal back.
+
+### Changed
+
+- New module `luria/fetch.py`: the one place a request is built (`DP-004`).
+  A fourth call site is now `request(url)` rather than a header dict copied
+  from somewhere.
+
+### Fixed
+
+- **A 406 from a metadata remote is now classified as `throttled` rather
+  than `unreachable`** (`#292`, `ADR-114`). arXiv returns 406 and 429
+  interchangeably for the same identifier seconds apart when it is shedding
+  load, and the old classification meant such a refusal never tripped the
+  circuit breaker in `ask` — so a sustained throttle cost one socket per
+  unverified identifier on every run, against a host already rationing. That
+  is the case the breaker was built for and the one it sat out.
+
+### Changed
+
+- The lint's report follows from the status, so an identifier in this state
+  now reads `could not be checked — throttled — HTTP 406` instead of
+  `— unreachable — HTTP 406`. A host that answered and declined no longer
+  reads as a host that was down.
+
+### Changed
+
+- **A chain's page is organized by the invariant the chain declares.** Where
+  `chains.<name>.invariant` is set, each value it finds becomes a section and
+  the lines holding it in common are listed underneath; lines sharing nothing
+  get a `Sharing no <field>` section of their own. The declaration was already
+  there and already checked — the view just did not use it, so a 43-line page
+  was ordered by the component walk. See `ADR-113`.
+- A line is listed under **every** value it shares rather than one chosen for
+  it: the invariant is what a line is about, and a line can be about two
+  things.
+- Grouping is **opt-in through the same key that opts into the check**. A
+  chain that declares no invariant renders exactly the page it rendered
+  before.
+
+### Added
+
+- `invariants.shared(docs, field)` — one definition of what a set of
+  documents holds in common, used by the report that finds unbound components
+  and by the renderer that picks a heading. A view grouping by a rule the
+  check did not use would be worse than no grouping (`DP-004`).
+
+### Changed
+
+- **`luria lint` no longer writes `remotes.lock.json`.** It still asks about
+  identifiers the lockfile cannot answer and still reports a mismatch on the
+  run that adds the citation — what moved is the write, not the check. The
+  lint runs on every branch, so persisting there made the lockfile a file
+  every contribution rewrites (`DP-002`). See `ADR-112`.
+- `DP-002` v3 — retitled from the symptom to the rule: **one artifact, one
+  writer**, and the writer is wherever merges serialize. Versions 1 and 2
+  said to generate the shared artifact and not where, so `ADR-049`
+  (codes), `ADR-068` (views) and now the lockfile each answered that
+  separately and none cited the principle. `ADR-049` and `ADR-068` now do.
+
+### Added
+
+- A **`resolve:` input on the `generate` action**, running
+  `luria remotes --resolve` before the views so the answers land in the same
+  commit. Pass it `true` only where merges serialize, for the same reason as
+  `concretize:`.
+
+### Added
+
+- Two tags in this project's own ADR vocabulary. `docs` marks a decision the
+  documentation cites, so retiring one is a signal that a page has to change
+  with it — 16 decisions carry it. `load-bearing` marks a decision that fixes
+  something an adopting record must *write* — a frontmatter field, a path on
+  disk, the spelling of a code, directive syntax in prose — where reversing it
+  invalidates records already filed rather than merely changing luria's
+  behaviour; 20 decisions carry it. They overlap on 7, which is the point:
+  neither is a restatement of the other.
+
+### Fixed
+
+- `luria site` no longer reports a link to a generated view as leaving the
+  site when that view has not been rendered into the working tree. It asked
+  the filesystem "is this published?", and under [ADR-068](record/decisions.d/ADR-068.md) a branch carries no
+  views — so any contribution that ADDS one (a new tag value, a new scheme)
+  made every link to it unplaced. The question is now answered from the views
+  the record declares, which is what publishes them.
+
+### Fixed
+
+- The configuration reference now documents the whole schema. It was generated
+  from the dataclasses and so its *rows* could never go stale, but two lists
+  inside the generator were hand-kept and both had: `chains` and seven nested
+  tables — `references`, `fields`, `field_groups`, tag groups, vocabularies and
+  `required_when`, which is where `unique`, `alert`, `converse` and `invariant`
+  are declared — had no section at all, and `lint.mute`, `lint.network` and
+  `include_records` had no row. Sections now come from the dataclasses in
+  `config.py` and scalar keys from `DEFAULTS`, so a table or key added to the
+  schema appears on the page without anyone remembering to list it.
+- Every example in the configuration reference is YAML again. The config moved
+  from TOML to YAML in [ADR-098](record/decisions.d/ADR-098.md) and the examples did not follow: most were
+  still `key = "value"` bodies under a mangled table header, and all of them
+  were fenced as `toml`. A reader copying one got something that does not
+  parse.
+- The configuration reference no longer says there is no migration command;
+  `luria migrate` has shipped since it was written.
+- `luria.toml` in the scaffolded template's `CLAUDE.md`, decision template and
+  docs index is now `luria.yaml` — three places every adopting project has
+  been handed since the format changed.
+
+### Documentation
+
+- `luria upgrade` is in the CLI reference, with what each upgrade does and why
+  every one of them is temporary by construction. It had never been documented.
+- The CLI reference's account of `luria lint` is current: seven warning classes
+  it did not list (`unresolved-citations`, `remote-drift`, `template-drift`,
+  `broken-chains`, `one-sided-relations`, `spent-upgrades`, `unlinked-site`),
+  the violations raised by the constraint checks added since it was written,
+  and `lint.mute` — the dial that decides whether a finding is heard, where
+  `fail_on` decides what it costs.
+- [Project memory](docs/project-memory.md) and [designing a record](docs/modeling.md) cover the constraints added since
+  they were written: `unique` fields, typed relations with `converse` and
+  `invariant`, chains, and the `alert` a vocabulary or tag group prints with
+  its own violation.
+
+### Fixed
+
+- `code.globs` in this repository's own config now names `examples/**/*.yaml`,
+  so `luria concretize` rewrites the example configs along with everything
+  else. It did not, and [ADR-111](record/decisions.d/ADR-111.md) landed on main as a live `ADR-tmp92495` in the
+  knowledge-base example. Nothing complained, because a temporary code keeps
+  resolving through the successor's `formerly:` — the only symptom was a
+  shipped example reading as though it had been authored mid-branch. The stale
+  spelling is corrected here too.
+
+### Added
+
+- `unique: true` on a plain field, and on a field group to say it of every
+  field in the group. `luria lint` reports two documents in one scheme holding
+  one value — the converse question no existing check asked, since every other
+  check verifies that a pointer resolves and none asks whether two resolve to
+  the same place ([ADR-111](record/decisions.d/ADR-111.md), [#165](https://github.com/dmarx/luria/issues/165)). A duplicate already retired naming its
+  survivor is the resolution rather than the finding and is skipped, so a
+  record that has answered this correctly needs no acknowledgement directive.
+  Declaring `unique` over a field drawn from a closed vocabulary is refused at
+  load: it would allow one document per term.
+
+### Fixed
+
+- **A vocabulary could not carry an `alert` and a `blurb` at once.** The
+  nested-table discriminator ([#279](https://github.com/dmarx/luria/issues/279)) tested against an inline set of keys that
+  did not include `alert` ([#273](https://github.com/dmarx/luria/issues/273)), so the first record to use both features was
+  refused — with a message about a value named `values`, describing a
+  different fault entirely. The allowed keys are now read off a
+  `VocabularyTable` dataclass that mirrors the table, so the discriminator,
+  the refusal message and the metadata cannot drift apart again.
+
+### Changed
+
+- A vocabulary's `alert` is declared on **the set**, in the central
+  `vocabularies:` table, beside `label` and `blurb` — not on the field that
+  names it. The rule an alert explains is a fact about the vocabulary, and a
+  record whose three schemes name one vocabulary was otherwise writing the
+  same sentence three times, which is the drift [ADR-098](record/decisions.d/ADR-098.md) centralised
+  vocabularies to prevent. A tag group's `alert` is unchanged: a group is
+  declared inline and has no central table to move to.
+
+### Changed
+
+- **A nested vocabulary's values are declared under `terms:`, not `values:`**
+  — a controlled vocabulary has terms, and the old spelling collided with the
+  commonest name for a vocabulary's own entries, which is what made a value
+  named `values` plausible enough to need a refusal. **Breaking for anything
+  written against 0.25.0**, which is the only release that carried the nested
+  form; no alias is accepted, and the refusal message names the current
+  spelling.
+
+### Added
+
+- **A config object can say what it is.** `label` and `blurb` on a
+  vocabulary, a tag group, a plain field and a field group — the pair a
+  relation has had since [#254](https://github.com/dmarx/luria/issues/254) — and `title` and `blurb` on a scheme, the pair
+  a journal has had. `Chain` gains the `blurb` half of the one it already
+  half-had. Which pair an object takes follows from what it is:
+  `label` for a thing named inside a scheme, `title` for a thing that renders
+  its own page ([ADR-109](record/decisions.d/ADR-109.md), [#279](https://github.com/dmarx/luria/issues/279)).
+- A vocabulary describes **the set**, in the central table, so one that two
+  schemes share is described once:
+
+  ```yaml
+  vocabularies:
+    topics:
+      label: Topics
+      blurb: the primary axis of both indexes
+      values:
+        alpha: {label: Alpha, blurb: "..."}
+  ```
+
+  The flat form — every key a value — is unchanged, and is what a table
+  without a `values:` mapping still means.
+
+- Three render paths, so none of it is inert: a new **What each family is**
+  section in `docs/record.md`; a field's or group's blurb appended to its
+  contract line; and a vocabulary's own description heading each of its value
+  pages, above the value's. A relation's `blurb` renders for the first time —
+  it has been declarable since [#254](https://github.com/dmarx/luria/issues/254) and nothing printed it.
+
+### Fixed
+
+- A flat vocabulary table containing a key named `values` is refused, naming
+  the fault, rather than read as a nested table — which would have emptied
+  the vocabulary and reported that as no violations.
+
+### Added
+
+- A derived field may hold a list. `derive = "{tags}"` — one whole field, no
+  index, no format spec — holds what its source holds, and `many` says so
+  ([#276](https://github.com/dmarx/luria/issues/276)). Previously `many` was refused on any derivation.
+
+### Fixed
+
+- A derivation reading a plural source without `many` is now refused, naming
+  the source's scheme and what goes wrong. It used to be accepted and
+  silent: the field resolved to a list against a contract saying it held one,
+  `contract.values_of` read that as no values at all, and every page the
+  scheme groups by that field stopped being written with nothing failing.
+
+### Changed
+
+- The refusal of `many` on an indexed or text-bearing template
+  (`{tags[0]}`, `LIT-{author}-{n}`) says which shapes render one value,
+  rather than claiming every derivation does.
+
+### Added
+
+- `schemes.X.references.<field>.invariant` — the field both ends of a
+  relation must share a value in, declared on the relation rather than only
+  on a chain that walks it. It holds with no chain declared, and it may cross
+  schemes, which a chain may not ([#272](https://github.com/dmarx/luria/issues/272)).
+
+### Fixed
+
+- A chain whose `relation` or `sibling` points at another scheme is refused
+  when the config is read, naming the key and where the assertion belongs.
+  It used to raise `KeyError` part-way through `luria index`, because the
+  walker loads one scheme and the relation left it ([#272](https://github.com/dmarx/luria/issues/272)).
+
+### Changed
+
+- The unbound-lineage report names what declared each finding — a chain by
+  name, or a relation as `SCHEME.field` — in place of the `Chain` column.
+
+### Added
+
+- **A vocabulary and a tag group can each carry a `alert:`, printed after
+  their own violation** ([#273](https://github.com/dmarx/luria/issues/273)). A closed set's message says what is allowed;
+  only the record knows whether the list is finished or merely short, and
+  until now it had nowhere to say so:
+
+      fields:
+        tags:
+          vocabulary: topics
+          closed: true
+          alert: >-
+            Closed so every tag is one somebody chose, not because the list
+            is finished — add a value here rather than reaching for the
+            nearest wrong one.
+
+  renders as a continuation of the finding, indented under it:
+
+      record/practices.d/SOTA-085.md: `tags: kv-cache-paging` is not in the
+      `topics` vocabulary (vocabulary 'topics') — the values are …
+          ↳ Closed so every tag is one somebody chose, not because the list
+            is finished — add a value here rather than reaching for the
+            nearest wrong one.
+
+  A `TagGroup` takes the same key and prints it on its `require` and
+  `excluded_by` findings. A group has exactly one rule, so one alert needs no
+  per-rule spelling.
+
+  Opt-in and inert when absent: a vocabulary or group without an alert produces
+  byte-identical messages to before.
+
+### Added
+
+- **A decision for where a directive stops being syntax.** `SHAPED_RE` matches
+  a directive from its name to the em-dash, so the argument list is blanked
+  before the reference scan and the reason after it is scanned like any other
+  prose. That boundary is deliberate — naming a code in a directive is
+  governing it, not citing it — and it is not visible from outside the parser.
+
+  It produced the same bug twice in a week, both times while editing an
+  acknowledgement to fix an acknowledgement: a governed code named in the
+  reason becomes a citation that the annotation then excuses. The boundary
+  stays; the rule that follows is now written where it can be cited rather
+  than left in a devlog entry, which is for observations.
+
+  Rejected: blanking the whole comment a directive introduces — it would
+  swallow the genuine citations authors put in reasons, and "the whole
+  comment" is what `blocks()` guesses at, so it would build a silencer on a
+  guess and silence most reliably where the guess is worst.
+
+### Added
+
+- **`mention-ok:` — a code that is named, not cited.** Every other
+  acknowledgement asserts something about a code's *state*: `inactive-ok` says
+  the document is not in force, `unresolved-ok` says the code resolves to
+  nothing. That is why they retire correctly, and why neither fits a reference
+  that claims nothing — a specimen quoted as evidence, prose about a code's
+  literal spelling, a demonstration of what a moved address looks like.
+
+  Written as `unresolved-ok`, those go stale the day somebody allocates that
+  number, for a reason unrelated to why they were written — and take every
+  other code in the same annotation with them. The DP scheme is at 17 and two
+  acknowledgements name the next number today, so this was a scheduled
+  failure, not a hypothesis.
+
+  `mention-ok:` covers both findings and does not retire when the state
+  changes. It counts as used while the code it names is cited in its scope,
+  whatever the document's state, and is still reported stale the one way that
+  is about the annotation rather than the record: when nothing in scope names
+  the code any more. Counted in the reports like every other acknowledgement.
+
+  Prefer the reserved `FX` prefix where you control the spelling — it needs no
+  acknowledgement at all. This is for the mentions whose spelling is the point.
+
+### Fixed
+
+- **A DP code left an acknowledgement in `doc_refs.py` it never belonged in.**
+  The composed remote spelling on the wikilink line is blanked before the local
+  scheme pattern reads it, so there was never a local reference to excuse. It
+  looked otherwise only because the previous change named that code in the
+  acknowledgement's own reason text, and a continuation comment line is not
+  directive-shaped — so the mention the annotation excused existed because the
+  annotation explained itself. The devlog entry that drew the wrong conclusion
+  from it is corrected in place.
+
+### Added
+
+- **A stale annotation now reports what it cost.** `ref_status.scan` drops an
+  annotation with a `problem` whole — `usable = [a for a in anns if not
+  a.problem]` — so one stale code in a multi-code acknowledgement stops the
+  others being excused too. The finding said what was wrong with the
+  annotation and stopped there:
+
+  ```
+  doc_refs.py:38: annotation names DP-017, which does resolve here
+  ```
+
+  It now names the citations that lost their excuse with it:
+
+  ```
+  doc_refs.py:38: annotation names DP-017, which does resolve here — so it
+  excuses nothing, leaving ADR-157 (1 site), ADR-919 (3 sites), DP-018
+  (1 site) unacknowledged
+  ```
+
+  The information was always in the record — those citations show up as
+  unaccounted for in the reference-status report — but nothing tied them to
+  the annotation that had stopped covering them, so the finding read as a dead
+  comment to sweep up rather than four acknowledgements that had quietly
+  lapsed. Scoped by path and by the directive's own reach: an annotation is
+  only answerable for what it actually covered.
+
+  Still a report and not a failure ([ADR-035](record/decisions.d/ADR-035.md)): which lapsed citation is a typo
+  and which is deliberate is a judgement, and the remedy is an edit to the
+  annotation, not to the code.
+
+### Fixed
+
+- **Four deliberately-acknowledged citations had silently stopped being
+  acknowledged.** `luria/doc_refs.py` carried one `unresolved-ok-file:`
+  naming four illustrative codes — ADR-919, ADR-157, [DP-017](record/principles.d/DP-017.md), DP-018. When a
+  principle was later written at [DP-017](record/principles.d/DP-017.md) that code began resolving, which gave
+  the annotation a `problem`, and `ref_status.scan` only excuses a citation
+  with an annotation that has none:
+
+      usable = [a for a in anns if not a.problem]
+
+  So the whole directive went unusable, and ADR-919 at three sites and
+  ADR-157 at one stopped being excused along with it. The reference-status
+  report listed them as unaccounted for; nothing was wrong with them.
+
+  Dropping the one stale code from the list restores the other three. This is
+  the failure `ref_status.annotations` names in its own docstring — *"an
+  annotation that silently does nothing is worse than no annotation"* — and
+  the `directives that no longer apply` finding is how it gets said out loud.
+
+### Removed
+
+- **The three obsolete `unresolved-ok` acknowledgements of [DP-017](record/principles.d/DP-017.md)**, in
+  `luria/doc_refs.py`, `luria/migrate.py` and `record/decisions.d/ADR-046.md`.
+  Each was written when [DP-017](record/principles.d/DP-017.md) named no document and each claimed the code
+  resolves to nothing, which stopped being true. The mentions themselves are
+  left exactly as they were: all of them are in backticks, so the fixer leaves
+  them alone, and each is illustrative prose that reads the same either way.
+
+  `luria lint` reports **no directives that no longer apply**, down from 3,
+  and 2 codes unaccounted for, down from 3.
+
+### Changed
+
+- **Eleven decisions that had shipped are now `Active`.** [ADR-089](record/decisions.d/ADR-089.md), [ADR-092](record/decisions.d/ADR-092.md),
+  [ADR-094](record/decisions.d/ADR-094.md), [ADR-095](record/decisions.d/ADR-095.md), [ADR-096](record/decisions.d/ADR-096.md), [ADR-098](record/decisions.d/ADR-098.md), [ADR-099](record/decisions.d/ADR-099.md), [ADR-100](record/decisions.d/ADR-100.md), [ADR-101](record/decisions.d/ADR-101.md), [ADR-102](record/decisions.d/ADR-102.md) and
+  [ADR-103](record/decisions.d/ADR-103.md) were all still `Proposed`. Every one of them arrived in a commit
+  that is on `main`, every one is implemented, and not one carried a
+  `status_note` or a line of prose saying why it was being held open.
+
+  [ADR-052](record/decisions.d/ADR-052.md) already says what should have happened: a contribution carrying a
+  `Proposed` decision means the merge is the verdict, and **merge flips the
+  decision Active**. That step was skipped eleven times running.
+
+  `luria lint` now reports **0 documents awaiting a decision**, down from 11,
+  and the README's `needs decision` badge reads 0.
+
+### Removed
+
+- **53 `inactive-ok` acknowledgements that existed only because those
+  decisions were `Proposed`.** Each said so in as many words — *"Proposed.
+  Every mention names it as the decision this file implements… the citation
+  is to the reasoning, not a claim the decision is settled."* Once the
+  decisions are in force the citations need no excuse, and luria reports the
+  leftover annotations as no longer applying.
+
+### Added
+
+- **Citations for the six decisions nothing pointed at.** [ADR-089](record/decisions.d/ADR-089.md), [ADR-092](record/decisions.d/ADR-092.md),
+  [ADR-095](record/decisions.d/ADR-095.md), [ADR-096](record/decisions.d/ADR-096.md), [ADR-102](record/decisions.d/ADR-102.md) and [ADR-103](record/decisions.d/ADR-103.md) were implemented and cited nowhere —
+  the code named the issue number and never the decision. They are now cited
+  where each is enacted: `derive.py` and `contract.py` for the read-only rule
+  and the reference hop, `directives.py` and `docs/directives.md` for
+  `until <date>`, `sources.py` for the rate-limit answer, `comment_carry.py`
+  and `upgrade.py` for the comment crossing, and `adr_index.py` and
+  `config.py` for the one reader and the one walk — each with the test that
+  covers it.
+
+### Changed
+
+- **`luria lint` renders the view tree once instead of twice** — 7.8s to 5.8s
+  over this repository, byte-identical output. `adr_index.outputs()` renders
+  every view of every scheme, journal and report, then again for each nested
+  record ([ADR-078](record/decisions.d/ADR-078.md)); it is the most expensive thing the lint does. Two checks
+  need it — `check_view_dirs` compares the committed tree against it, and
+  `check_anchors` reads links out of the same pages — and each rendered it for
+  itself.
+
+  Both have taken a `rendered` argument since they were written, and nothing
+  had ever passed one. `run` now renders once and hands the same dict to both.
+
+- **Each record's reports scan its corpus once, not twice.**
+  `reports.reference_status` read `docs = ref_status.load_docs()` and then
+  asked for `scan(docs=docs)` — which is exactly what `scan()` fills in when
+  handed nothing. Restating the default changed no result and only put the
+  call outside the corpus-scan cache, so every record scanned itself once for
+  its reference-status table and again for its pending-decisions table.
+
+  Together these take one lint from **26 corpus scans to 10**: one per record,
+  plus the badges and the lint's own status section.
+
+### Changed
+
+- **`luria lint` over this repository went from 33 seconds to 10.6**, with
+  byte-identical output. Two scans under `directives._parse` are pure
+  functions of `(path, text)` and neither was cached: `blocks` walks an AST
+  to find the docstring spans a `-block` directive must treat as atomic, and
+  `comment_fragments` runs the tokenizer over a Python source. They are not
+  reached once per file — `_parse` re-derives both on every directive lookup,
+  and the lookups are per check rather than per document. One lint called
+  each **11,142 times over 451 distinct inputs**, about 25 readings of every
+  file, and spent 30 of its 33 seconds inside them.
+
+  Both are now memoized on the text itself rather than on a stat. That is
+  what makes this a cache and not a staleness bug waiting for `field_edit`
+  and `repair` to rewrite a document mid-run: the caller hands the content
+  in, so new content is simply a new key and nothing has to remember to drop
+  anything.
+
+- **The same lint went from 11.0 seconds to 10.3** on a second pass.
+  `Scheme.pattern` and `Scheme.temp_pattern` were properties that rebuilt an
+  f-string and called `re.compile` on every access, and `ref_status.scan`
+  reads both once per line, per scheme, per file — 911,410 and 912,206
+  accesses in one run. `re` memoizes internally, so this was never 1.8M
+  compilations and the win is proportionate: the cost removed is the string
+  interpolation and the cache probe, on the lint's hottest loop.
+
+  Compiled once per prefix in a module-level `lru_cache` rather than on the
+  instance. `functools.cached_property` does work on a frozen dataclass — it
+  writes straight into `__dict__` — but on Python 3.11, which this package
+  supports, it takes a per-attribute lock, and this is read from
+  `parallel.pmap`'s thread pool. The key is the prefix rather than the scheme
+  because `Scheme` is frozen but not hashable: it carries dict fields, so an
+  `lru_cache` over the instance would have raised on first call.
+
+- **And from 10.4 seconds to 7.9** on a third pass — `33.1s to 7.9s, 4.2×`,
+  across the three changes together. `ref_status.scan()` is called 36 times in
+  one lint and 18 of those pass no arguments: identical full-corpus scans,
+  fanned out through `reports.outputs` and `adr_pending.pending`, each
+  re-reading and re-regexing every file in the record.
+
+  The no-argument call is now served from a cache keyed on a
+  `(path, mtime_ns, size)` fingerprint of the scanned set. Unlike the directive
+  scans this one opens the files itself, so there is no content handed in to
+  key on and the stamp has to be the filesystem's — which is what keeps
+  `repair`, `field_edit` and `migrate` able to rewrite a document mid-run and
+  read it back. A call naming its own `files` or `docs` describes a corpus the
+  fingerprint does not, and is computed every time.
+
+### Fixed
+
+- **One reader for a document.** `read_document` caches a parse and expires
+  it when the file's mtime moves — the bargain that lets `field_edit` and
+  `repair` write mid-run and read back. Eleven call sites composed
+  `parse_frontmatter(path.read_text(...))` and so opened documents for
+  themselves, outside that bargain: `forget_documents()` cleared a cache
+  half the readers were not using, and a second reader can see a different
+  revision than every other caller in one run. All eleven now ask
+  `read_document`, and a test over the sources keeps the shape closed.
+
+- **One walk for a scheme directory.** `Scheme.documents()` globbed and
+  sorted on every call, 24,960 times per lint; `temp_documents()` walked the
+  same directory again. Both now read one listing cached on the directory's
+  `(mtime, size)` — the bargain `number_of` already takes, a directory up,
+  and whose docstring already said "`documents()` runs on every lint, index
+  and link pass".
+
+  Measured on two records, output compared rather than assumed:
+  `anthology-of-the-sota` lint **127.6s → 20.4s**, byte-identical output.
+  This record is unchanged at ~29s, because its lint spends its time in
+  `tokenize` and `ast` scanning its own Python sources — a different
+  bottleneck, untouched.
+
+### Fixed
+
+- **A comment naming a key that already carries one is no longer written
+  twice.** `yaml_set_comment_before_after_key` *appends* to whatever a key
+  already holds; [#262](https://github.com/dmarx/luria/issues/262) assumed it replaced, and joined the blocks itself to
+  stop the second erasing the first. Nothing was erased, so the join wrote
+  the first block again — visible in the config this was written for, where
+  the eight-line note above `primary_topic`'s `tags` appeared twice.
+
+  Each block is written on its own now, separated by a bare `#`.
+
+  The completeness property from [#262](https://github.com/dmarx/luria/issues/262) passed straight through this: it asks
+  whether every source line is *present*, and a duplicated line is present.
+  Counting is what catches it, so the property is now stated over
+  multiplicities — no line appears more often than it does in the sources.
+
+### Fixed
+
+- **The comment carry keeps every line, and puts each where it can be read.**
+  The first pass at carrying config comments ([#261](https://github.com/dmarx/luria/issues/261)) left three gaps, all found by
+  asserting the property — *every source comment line appears in the result* —
+  rather than by checking examples.
+
+  A vocabulary file's prose was emitted at the column it was written at, which
+  is 0, because the file is its own document. Inlined under `vocabularies:` it
+  landed flush left inside an indented mapping, documenting nothing a reader
+  could see. Vocabulary comments are now recovered as text and attached at the
+  depth they end up at, the same way every other block is.
+
+  Two blocks separated by a blank line merged into one and attached to
+  whatever followed — so a trailing comment on `[luria.site]` was emitted
+  above `lint:`. A blank line now ends a block, and a block that a blank line
+  separates from the next key is read as a trailing comment on the table it
+  sits inside.
+
+  Prose after a vocabulary's last entry was dropped outright, and a comment
+  inside a multi-line value (`tags = [..., # why these two, ...]`) was skipped
+  silently — the case [ADR-102](record/decisions.d/ADR-102.md) said would be *reported*. The first joins the
+  vocabulary's header; the second attaches to the key whose value it is
+  inside, and `_carry` now appends where two blocks name one key instead of
+  letting the second erase the first.
+
+  Measured on the config this was written for: 369 of 369 comment lines
+  carried, against 352 before.
+
+### Changed
+
+- `luria/toml_comments.py` is `luria/comment_carry.py`. It reads the YAML
+  vocabulary files as well as the TOML, and a module named for one format
+  was going to be wrong for as long as it existed.
+
+### Fixed
+
+- **`luria upgrade yaml` no longer drops what a project wrote about its own
+  config.** The crossing parsed TOML with `tomllib` and wrote the values —
+  correct, because a regex in a `uid` does not survive a byte copy — but
+  `tomllib` never sees comments, so every one of them went, and the command
+  reported only what it had folded. Measured: 85 comment lines lost when
+  this record crossed, 273 waiting to be lost in `anthology-of-the-sota`.
+
+  Comments are now attached to the key they documented. The scheme
+  vocabulary files are round-tripped rather than re-parsed, so their prose
+  survives too. A comment whose key does not exist on the far side —
+  `tags`, `statuses` and `tag_groups` each split into a vocabulary plus a
+  field — follows the field where that mapping is unambiguous, and is
+  otherwise **printed in full**, because a count says something was lost
+  without saying what.
+
+  A dotted key (`uris.title = "..."`) is read as the path it is rather than
+  a key with a dot in its name, and a paragraph break inside a block stays
+  inside it.
+
+### Changed
+
+- **The site builds on Quartz 5.** `luria site` writes one
+  `quartz.config.yaml` where it used to write `quartz.config.ts` and
+  `quartz.layout.ts`; the site action pins a v5 commit.
+
+  Two things paid for the upgrade. A hover over a link in a book's contents
+  list previewed the wrong section — a Quartz bug (`showPopover` reads
+  `popoverInner` before its `const`, and popovers are cached per pathname, so
+  every hover after the first threw before scrolling) that v5 fixes and that
+  nothing in luria could reach. And v5 takes each component's position from
+  that component's own config entry, so the generated `quartz.layout.ts` — 90
+  lines of TSX whose only purpose was to move the graph out of the right rail
+  ([#71](https://github.com/dmarx/luria/issues/71)) — collapses to two keys:
+
+      - source: "@quartz-community/graph"
+        layout: {position: beforeBody, priority: 40}
+
+  Verified against a real build of this record rather than a fixture: 317
+  pages, driven in a browser. Every contents-list hover lands on its own
+  heading, the graph renders in the content column, and internal links
+  resolve. No address changes — paths, anchors and slugs are as they were.
+
+  [ADR-042](record/decisions.d/ADR-042.md) rejected v5 because v5.0.0 could not build at all, and said to
+  revisit; that is amended rather than superseded, since what it decided —
+  publish as a Quartz vault, paths preserved, sources withheld — is
+  unchanged.
+
+### Fixed
+
+- **A journal entry had two addresses, and the one its own contents list
+  used was not the one the page offers.** Luria wrote a durable
+  `<a id="{timestamp}">` before each entry and linked that; the publisher
+  put its ¶ anchor and its sidebar Table of Contents on the *heading*. Both
+  resolve — but the address a reader copies off the page was not the address
+  the page's own contents list used, which is how this got reported as a
+  bug by somebody reading the two.
+
+  A book's contents list and a journal's index now link the heading. The
+  timestamp anchor stays, unlinked: a citation written by hand still has an
+  address that does not move when a title is reworded.
+
+### Added
+
+- **`luria/slugs.py` — the anchor a heading answers to.** Linking a heading
+  means producing the id the publisher will assign, which is
+  `github-slugger`, behind both `rehype-slug` on a Quartz site and GitHub's
+  own rendering. Validated against **288 headings across five pages this
+  record had actually published**, which is where the two bugs in the first
+  version came from: `_` is a word character (`fail_on`, not `failon`), and
+  each space becomes one hyphen *after* punctuation is removed (an em-dash
+  between spaces leaves `--`).
+
+- **`luria lint` reports a fragment that reaches nothing**, not only one
+  reachable by `<a name=>`. Previously ruled out because a heading's anchor
+  is the publisher's and a check that guessed at it would report links that
+  work; owning a slugger removed the objection, and the check is now also
+  the guard on the generator — it reads the page as the generator renders
+  it, so a drift between luria's slugger and the publisher's is a lint
+  failure rather than a link that quietly goes nowhere.
+
+- **`unresolved-citations`: `cite = "page"` in a record that does not
+  publish those pages.** A citation's durable address is either an anchor or
+  a page, and `cite` chooses; choosing the page and withholding it through
+  `site.exclude` leaves every citation of that scheme's codes pointing out
+  of the site. A warning — a record may publish a subset deliberately — and
+  failable by naming it in `lint.fail_on`.
+
+### Fixed
+
+- **Every fragment link in a published record pointed at the top of the page
+  it named.** The generator anchored a journal entry and an assembled
+  document with `<a name="x"></a>`. A `name` is reached by a real navigation
+  and nothing else, so those links resolved in the repository, on GitHub and
+  in an editor preview — and not on the site the record publishes to, whose
+  router scrolls with `getElementById`. **89 of the 100 fragment links in
+  this repository resolved that way and no other**: every devlog entry link
+  on every index, and every citation of a design principle.
+
+  Both emitters write `id` now. One attribute, and strictly a widening —
+  `id` is reachable everywhere `name` was. `luria index` repairs an existing
+  record's views in one pass; nothing in a source has to change.
+
+### Added
+
+- **`luria lint` checks that a fragment link's target can be reached.** A
+  link whose target answers to it by `<a name=>` alone is a finding, and
+  `luria link --fix` rewrites the anchor. A view's is the generator's to
+  fix, so a finding about one says `luria index` instead — an edit written
+  into a view is erased by the next build.
+
+  This is the one reference rule that reads generated pages — but the
+  RENDER, never the committed copy. A journal index links into a journal
+  book and both are generated, so a source-only scan cannot see the defect
+  it exists for; and a branch carries the default branch's views, so a scan
+  of what is on disk fails every pull request that touches an anchor and
+  names a repair the author is not allowed to make. Handed
+  `adr_index.outputs()`, the check asks what this source tree will produce,
+  which has the same answer on a branch and on main.
+
+### Changed
+
+- **[ADR-094](https://github.com/dmarx/luria/blob/HEAD/record/decisions.d/ADR-094.md) is corrected in place and versioned.** Its measurement held —
+  330 links, none of which resolved — and its stated cause did not: Quartz
+  does not drop the `<a>` element, and never did. The alternative it rejected
+  on that basis, "emit anchors that survive the publisher", was the right
+  answer and one attribute wide. `cite` keeps its other reason, which was
+  always the real one.
+
 ## 2026-09-14
 
 ### Removed
