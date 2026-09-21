@@ -4,7 +4,7 @@
 
 **Load-bearing** — fixes something an adopting record must write: a frontmatter field, a path on disk, the spelling of a code, or directive syntax in prose. Reversing it does not just change luria's behaviour, it invalidates records that have already been filed.
 
-20 of 117 decisions. Back to the [full index](../README.md).
+20 of 119 decisions. Back to the [full index](../README.md).
 
 | # | Title | Summary | Status |
 |---|---|---|---|
