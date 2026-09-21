@@ -31,6 +31,9 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 - [13 Sep 19:58 — The retries were paying nine seconds an identifier to learn nothing](2026-09.md#the-retries-were-paying-nine-seconds-an-identifier-to-learn-nothing)
 - [13 Sep 19:53 — The record was parsed twenty-three times per document per lint](2026-09.md#the-record-was-parsed-twenty-three-times-per-document-per-lint)
 - [12 Sep 21:59 — Two halves of one fix: a page to cite, and a citation that points at it](2026-09.md#two-halves-of-one-fix-a-page-to-cite-and-a-citation-that-points-at-it)
+- [12 Sep 06:52 — A morphing SPA and a label that was never bound](2026-09.md#a-morphing-spa-and-a-label-that-was-never-bound)
+- [12 Sep 02:27 — A graph you drew, on every page, instead of the one Quartz computes](2026-09.md#a-graph-you-drew-on-every-page-instead-of-the-one-quartz-computes)
+- [11 Sep 23:58 — A typed-lineage graph on every page that has lineage](2026-09.md#a-typed-lineage-graph-on-every-page-that-has-lineage)
 - [11 Sep 05:41 — Lint only column-0 HTML comments in YAML frontmatter](2026-09.md#lint-only-column-0-html-comments-in-yaml-frontmatter)
 - [11 Sep 01:23 — Reserving a namespace instead of blanking three suites](2026-09.md#reserving-a-namespace-instead-of-blanking-three-suites)
 - [10 Sep 22:10 — Grouping the pending report, and being caught twice by the specimen-code hazard](2026-09.md#grouping-the-pending-report-and-being-caught-twice-by-the-specimen-code-hazard)
@@ -84,9 +87,9 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 
 ## All books
 
-121 entries across 2 books, newest first.
+124 entries across 2 books, newest first.
 
 | Book | Entries | First | Last |
 |---|--:|---|---|
-| [2026-09](2026-09.md) | 75 | 2026-09-03 | 2026-09-20 |
+| [2026-09](2026-09.md) | 78 | 2026-09-03 | 2026-09-20 |
 | [2026-08](2026-08.md) | 46 | 2026-08-03 | 2026-08-28 |

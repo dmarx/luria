@@ -4,8 +4,9 @@
 
 **Proposed** — not in force yet — an open question, so citing it as settled is what the reference report catches.
 
-0 of 117 decisions. Back to the [full index](../README.md).
+2 of 119 decisions. Back to the [full index](../README.md).
 
 | # | Title | Summary | Status |
 |---|---|---|---|
-
+| [ADR-tmpronup](../../../record/decisions.d/ADR-tmpronup.md) | A document's typed lineage is drawn on its page, beside Quartz's graph | `luria site` renders each document's typed edges as an interactive graph at the foot of its page, using strata-g's vendored export viewer. Rejected: replacing Quartz's `Component.Graph` with it, which was the first plan — measured, the typed-edge graph reaches 47% of scheme documents and none of the journal entries, so the swap would have left most pages with an empty box where a neighbourhood used to be. | Proposed |
+| [ADR-tmp0hx52](../../../record/decisions.d/ADR-tmp0hx52.md) | A project can show a graph it designed in place of Quartz's | `[luria.site] graph` points at a strata-g `Canvas — graph data (JSON)` export; set, that one curated picture replaces Quartz's own graph plugin on every page. Opt-in, and the inverse of the generated lineage graph: one graph the project laid out, everywhere, rather than a neighbourhood computed per page. Rejected: a Quartz component that fetches the data (needs a network request and a viewer change), and base64 in the file (opaque for no gain). | Proposed |
