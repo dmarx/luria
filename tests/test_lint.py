@@ -321,17 +321,19 @@ def test_a_view_the_generator_no_longer_writes_is_not_a_stray(project):
 # ── The enforcement dial (ADR-035) ───────────────────────────────────────
 
 
-def dial_project(project, fail_on: str = "", mute: str = "") -> None:
+def dial_project(project, fail_on: str = "", mute: str = "",
+                 baseline: dict | None = None) -> None:
     """A project with a retired decision cited from a docs page, and the
-    dials set to `fail_on` and `mute` (TOML list bodies, e.g.
-    '"retired-citations"')."""
+    dials set to `fail_on`, `mute` and `baseline` (the first two are TOML
+    list bodies, e.g. '"retired-citations"'; the third is a mapping)."""
     _scheme.decision(project, 12, "Superseded")
     page = project / "docs" / "notes.md"
     page.parent.mkdir(parents=True, exist_ok=True)
     page.write_text("Still leaning on ADR-012 here.\n")
     (project / "luria.yaml").write_text(
         merged("issue_url: https://example.test/issues/{n}\n",
-               {"lint": {"fail_on": _listed(fail_on), "mute": _listed(mute)}}))
+               {"lint": {"fail_on": _listed(fail_on), "mute": _listed(mute),
+                         "baseline": baseline or {}}}))
     from luria import config
     config.reset()
 
@@ -559,3 +561,108 @@ def test_acknowledged_uniformity_is_mutable(project, capsys):
     dial_project(project, mute='"acknowledged-uniformity"')
     errors, _ = dial_errors(capsys)
     assert not any("is no mutable warning class" in e for e in errors), errors
+
+
+# ── The baseline dial (#307) ─────────────────────────────────────────────
+
+
+def test_a_class_at_its_baseline_reports_as_usual(project, capsys):
+    """The standing residue is what the dial exists to tolerate, so meeting it
+    is not an event: the class prints exactly as it would with no baseline."""
+    dial_project(project, baseline={"retired-citations": 1})
+    errors, err = dial_errors(capsys)
+    assert errors == []
+    assert "retired documents cited unacknowledged" in err
+    assert "ADR-012" in err, "the detail rows still print"
+
+
+def test_a_class_over_its_baseline_is_a_violation(project, capsys):
+    """The whole point: a count that has grown is the regression the exit code
+    could not previously carry."""
+    dial_project(project, baseline={"retired-citations": 0})
+    errors, _ = dial_errors(capsys)
+    assert any("1 found against a `baseline` of 0" in e for e in errors), errors
+    assert any("1 over" in e for e in errors), errors
+
+
+def test_the_rows_print_with_the_violation(project, capsys):
+    """Which rows are new is not knowable from a count, so the reader needs
+    the whole list to find out."""
+    dial_project(project, baseline={"retired-citations": 0})
+    errors, _ = dial_errors(capsys)
+    assert any("ADR-012" in e for e in errors), errors
+
+
+def test_a_class_under_its_baseline_says_so(project, capsys):
+    """Good news, and the only place it will ever be said — a baseline nobody
+    lowers is a ratchet pointing the wrong way."""
+    dial_project(project, baseline={"retired-citations": 5})
+    errors, err = dial_errors(capsys)
+    assert errors == []
+    assert "against a `baseline` of 5 — lower it" in err
+
+
+def test_a_cleared_class_still_reports_its_stale_baseline(project, capsys):
+    """A class with no findings yields no section, so the one state where the
+    number is certainly stale is the one nothing would otherwise report."""
+    dial_project(project, baseline={"narrow-titles": 3})
+    errors, err = dial_errors(capsys)
+    assert errors == []
+    assert "narrow-titles: 0 against a `baseline` of 3" in err
+    assert "remove it" in err
+
+
+def test_baseline_rejects_a_class_that_does_not_exist(project, capsys):
+    """Same rule as `fail_on` and `mute`: a dial set to a notch that does not
+    exist must say so rather than silently hold no line (DP-1)."""
+    dial_project(project, baseline={"no-such-check": 2})
+    errors, _ = dial_errors(capsys)
+    assert any("`baseline` names 'no-such-check'" in e for e in errors), errors
+
+
+def test_baseline_rejects_a_negative_count(project, capsys):
+    dial_project(project, baseline={"retired-citations": -1})
+    errors, _ = dial_errors(capsys)
+    assert any("cannot be negative" in e for e in errors), errors
+
+
+def test_an_invalid_baseline_does_not_also_gate_the_class(project, capsys):
+    """One actionable message, not that plus every row of the class it
+    mis-describes."""
+    dial_project(project, baseline={"retired-citations": -1})
+    errors, _ = dial_errors(capsys)
+    assert not any("found against a `baseline`" in e for e in errors), errors
+
+
+def test_a_class_cannot_be_both_held_to_a_count_and_hidden(project, capsys):
+    """A held line nobody is allowed to see cannot be checked by the person the
+    report is for, and the number would decay unread."""
+    dial_project(project, mute='"retired-citations"',
+                 baseline={"retired-citations": 1})
+    errors, _ = dial_errors(capsys)
+    assert any("both `baseline` and `mute`" in e for e in errors), errors
+
+
+def test_baseline_and_fail_on_together_are_a_configuration_error(project, capsys):
+    """`fail_on` is a baseline of 0 said another way. Both set is not a
+    precedence question: one of the two numbers is a lie."""
+    dial_project(project, fail_on='"retired-citations"',
+                 baseline={"retired-citations": 3})
+    errors, _ = dial_errors(capsys)
+    assert any("both `baseline` and `fail_on`" in e for e in errors), errors
+
+
+def test_enforcement_still_wins_over_a_conflicting_baseline(project, capsys):
+    """The conflict is reported AND the class still fails — a baseline must not
+    be able to soften a check the same file asked to enforce."""
+    dial_project(project, fail_on='"retired-citations"',
+                 baseline={"retired-citations": 3})
+    errors, _ = dial_errors(capsys)
+    assert any("failing: `fail_on`" in e for e in errors), errors
+
+
+def test_baselines_are_per_class(project, capsys):
+    """Holding one class to a number leaves the others reporting."""
+    dial_project(project, baseline={"inert-status": 0})
+    errors, err = dial_errors(capsys)
+    assert "retired documents cited unacknowledged" in err
