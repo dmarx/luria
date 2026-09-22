@@ -894,7 +894,8 @@ def status_sections() -> list[tuple[str, str, list[str]]]:
         sections.append((
             "legacy-spellings",
             f"{len(legacy)} citation(s) in a concretized code's old spelling "
-            "(`luria link --fix` upgrades them)", legacy))
+            "(`luria repair` upgrades them; one quoted in a code span or a "
+            "fenced block stays quoted)", legacy))
 
     # A title in a scheme that claims to transfer, spelled in this project's
     # own nouns. Absent entirely unless the project supplies a vocabulary AND

@@ -8,8 +8,9 @@ of this machinery found a crash (`render_categories` formatting a number that
 temp docs don't have) that no unit test of the minter would have seen.
 """
 
-# unresolved-ok-file: ADR-000, ADR-tmpab123 — the first is the string `[ADR-0`,
-# which the reference scanner reads as a code; the second is a fixture tail
+# unresolved-ok-file: ADR-000, ADR-tmpab123, ADR-tmpxxxxx — the first is the
+# string `[ADR-0`, which the reference scanner reads as a code; the second is a
+# fixture tail, and the third a placeholder in a docstring
 from _config import merged
 import re
 import subprocess
@@ -17,7 +18,7 @@ from pathlib import Path
 
 import pytest
 
-from luria import adr_index, concretize, config, doc_refs, lint, new
+from luria import adr_index, concretize, config, doc_refs, lint, new, repair
 
 TOML = """
 issue_url: https://example.test/issues/{n}
@@ -226,3 +227,106 @@ def test_the_warning_is_promotable(merge_project, monkeypatch):
         f"# Late\n\nPer {first.stem}.\n")
     assert any(cls == "legacy-spellings" for cls, _, _ in
                lint.status_sections())
+
+
+# --- upgrading them: the remedy the report names (#310, #312) ------------
+
+def test_the_two_shapes_link_fix_cannot_reach_are_upgraded(merge_project):
+    """`link --fix` clears the bare form and is designed to leave a link and a
+    code span alone (#310), so the finding named a command that could not
+    clear most of what it reported. The bare form and the link form are both
+    taken here — a link pointing at `ADR-tmpxxxxx.md` is broken, and a label
+    spelling a retired name says something untrue."""
+    root, first, _ = merge_project
+    a = first.stem
+    concretize.run()
+
+    straggler = root / "docs" / "straggler.md"
+    straggler.write_text(
+        f"# Late branch\n\n"
+        f"Bare: per {a}, we chose this.\n\n"
+        f"Both: [{a}]({a}.md). Target only: [the first](sub/{a}.md).\n")
+
+    assert doc_refs.upgrade_legacy_spellings() == [straggler]
+    text = straggler.read_text()
+    assert a not in text
+    assert text.count("ADR-0") == 4, "every occurrence, none doubled"
+    assert "](sub/ADR-0" in text, "a target is a citation even under a label"
+    assert doc_refs.legacy_spellings() == []
+
+
+def test_a_quoted_spelling_stays_quoted(merge_project):
+    """The exception, which was implemented the other way first and refuted on
+    the first live run. `concretize._rewrite_files` is a plain `str.replace`
+    and does flatten a code span, which looked like a decisive argument for
+    matching it — until this repository's own CHANGELOG turned up the sentence
+    *"ADR-111 landed on main as a live `ADR-tmpxxxxx`"*, which is **about** the
+    old spelling. Upgrading it would make it false. A quotation is the one
+    reading a bare code and a link do not have."""
+    root, first, _ = merge_project
+    a = first.stem
+    concretize.run()
+
+    quoted = root / "docs" / "quoted.md"
+    quoted.write_text(f"# Late\n\nIt landed as a live `{a}`.\n\n"
+                      f"```\nsee {a}\n```\n")
+
+    assert doc_refs.upgrade_legacy_spellings() == []
+    assert quoted.read_text().count(a) == 2, "both quotations survive"
+    assert len(doc_refs.legacy_spellings()) == 2, \
+        "and stay reported, with no remedy — the case for `legacy-ok:` (#314)"
+
+
+def test_a_formerly_block_keeps_its_old_spelling(merge_project):
+    """The one exception both commands make, and the one that is load-bearing:
+    `formerly:` is the alias record, not a citation. Rewriting it would
+    replace a document's memory of what it used to be called with what it is
+    called now — destroying the provenance the field exists to hold, and the
+    alias every outside citation resolves through."""
+    root, first, _ = merge_project
+    a = first.stem
+    concretize.run()
+    concretized = next(p for p in (root / "record" / "decisions.d").glob("*.md")
+                       if f"- {a}" in p.read_text())
+
+    doc_refs.upgrade_legacy_spellings()
+    assert f"- {a}" in concretized.read_text(), "the alias survives the fixer"
+    assert doc_refs.legacy_spellings() == [], "as it is not a row to begin with"
+
+
+def test_a_live_temp_code_is_never_upgraded(merge_project):
+    """Before concretization a temporary code is the branch's normal state and
+    resolves to a document that exists. Nothing to upgrade it to, and the
+    alias gate is what says so."""
+    root, first, second = merge_project
+    before = {p: p.read_text() for p in (first, second)}
+    assert doc_refs.upgrade_legacy_spellings() == []
+    assert all(p.read_text() == t for p, t in before.items())
+
+
+def test_upgrading_is_idempotent(merge_project):
+    """`luria repair`'s contract: the job that pushes a repair runs again on
+    what it pushed."""
+    root, first, _ = merge_project
+    concretize.run()
+    (root / "docs" / "straggler.md").write_text(
+        f"# Late\n\nPer {first.stem}.\n")
+    assert doc_refs.upgrade_legacy_spellings()
+    assert doc_refs.upgrade_legacy_spellings() == []
+
+
+def test_repair_is_where_the_upgrade_runs(merge_project, capsys):
+    """The lint names `luria repair` as the remedy, so the remedy has to be in
+    `luria repair` — the defect #312 reports is that the report named a
+    command that did not do it."""
+    root, first, _ = merge_project
+    concretize.run()
+    straggler = root / "docs" / "straggler.md"
+    # A link, not a bare code: `link --fix` runs first inside `repair` and
+    # would clear a bare one on its own, which is precisely the shape #310
+    # says is already covered. The other shapes are what needed a home.
+    straggler.write_text(f"# Late\n\nPer [{first.stem}]({first.stem}.md).\n")
+
+    assert straggler in repair.apply()
+    assert "old spelling" in capsys.readouterr().out
+    assert doc_refs.legacy_spellings() == []
