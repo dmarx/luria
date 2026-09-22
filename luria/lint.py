@@ -60,7 +60,7 @@ from pathlib import Path
 
 from . import adr_index as builder
 from . import (adr_pending, badges, chains, ci, contract, directives, doc_refs,
-               frontmatter_shape, journal, referents,
+               frontmatter_shape, invariants, journal, referents,
                link_targets, narrow_titles, pins, ref_status, remotes,
                relations, sources, statuses, templates)
 from . import aliases as aliases_mod
@@ -671,7 +671,8 @@ FAILABLE = ("retired-citations", "unresolved-codes", "foreign-temp-codes",
             "source-mismatch", "source-unchecked",
             "legacy-spellings", "narrow-titles", "stale-directives",
             "template-drift", "broken-chains",
-            "one-sided-relations", "spent-upgrades",
+            "one-sided-relations", "unbound-relations", "unbound-lines",
+            "spent-upgrades",
             "pending-documents", "unlinted-files", "workflow-temp-codes",
             "unlinked-site")
 
@@ -942,6 +943,28 @@ def status_sections() -> list[tuple[str, str, list[str]]]:
             "one-sided-relations",
             f"{len(lopsided)} declared relation(s) are held by one side "
             "only (`luria link --fix` writes the other)", lopsided))
+
+    # A relation that declares an `invariant:` asserts the two ends have
+    # something in common. Where neither holds a value the other does, the
+    # record has made the assertion and not said what it means. Two classes,
+    # because the two findings are not the same strength (#311) — and classes
+    # at all, because until now this was a report the dials could not reach,
+    # which made an `invariant:` declarable only over a corpus already at
+    # zero. `lint.baseline` is how a project declares one over a residue.
+    unbound_edges, unbound_paths = invariants.lines()
+    if unbound_edges:
+        sections.append((
+            "unbound-relations",
+            f"{len(unbound_edges)} relation(s) assert an invariant neither "
+            "end holds — either the field is missing a value that is true, "
+            "or the relation is wrong (`luria reports` for the table)",
+            unbound_edges))
+    if unbound_paths:
+        sections.append((
+            "unbound-lines",
+            f"{len(unbound_paths)} sequence(s) share no value across every "
+            "member, though each step may — the weaker signal, to read whole "
+            "before acting on", unbound_paths))
 
     # A scheme's form against the scheme's contract. The template is exempt
     # from every document check, so this is the only pass that reads it —

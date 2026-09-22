@@ -245,3 +245,32 @@ def findings() -> tuple[list[Unbound], list[Unbound]]:
         edge_hits += keep(edges(chain))
         path_hits += paths(chain)
     return edge_hits, path_hits
+
+
+def lines() -> tuple[list[str], list[str]]:
+    """`findings()` as the lint's two row lists — (relations, lines) (#311).
+
+    Until this existed the invariants were a *report* and nothing else: no
+    class, so `lint.fail_on`, `lint.mute` and `lint.baseline` all missed them,
+    and a project could only ever read the rows. That made an `invariant:`
+    all-or-nothing — declarable over a corpus already at zero, and otherwise
+    a report that says a number nobody can act on.
+
+    Two classes rather than one, because the two findings differ in strength
+    and `unbound-lineage.md` already says so: an unbound *edge* is two
+    documents joined directly with nothing in common, while an unbound *line*
+    is a whole sequence with no value common to every member — which happens
+    while every single step is expressed, since a component's intersection
+    only shrinks as the component grows. A project that wants the strong
+    signal fatal and the weak one standing needs them separable to say it."""
+    edge_hits, path_hits = findings()
+    edges_out = []
+    for f in edge_hits:
+        docs = " ↔ ".join(f.codes)
+        holds = " / ".join(", ".join(sorted(held(d, f.field))) or "(none)"
+                           for d in f.members)
+        edges_out.append(f"{docs} share no `{f.field}` "
+                         f"({f.declared_by}; each holds: {holds})")
+    paths_out = [f"{', '.join(f.codes)} share no `{f.field}` across the whole "
+                 f"line ({f.declared_by})" for f in path_hits]
+    return sorted(edges_out), sorted(paths_out)

@@ -424,3 +424,90 @@ def test_the_report_names_the_relation_that_declared_it(tmp_path, monkeypatch):
     assert "`SOTA.source` on `tags`" in text
     assert "| Declared by |" in text
     assert "SOTA.source" in text and "1 unbound relation" in text
+
+
+# --- the findings are a lint class, not only a report (#311) ---------------
+
+def test_an_unbound_relation_reaches_the_lint(tmp_path, monkeypatch):
+    """Until this, the invariants were a report and nothing else — no class,
+    so `fail_on`, `mute` and `baseline` all missed them, and the rows could
+    only ever be read. That made an `invariant:` all-or-nothing: declarable
+    over a corpus already at zero, and otherwise a number nobody could act
+    on."""
+    from luria import lint
+    root = project(tmp_path, monkeypatch)
+    note(root, 1, ["optimizers"])
+    note(root, 2, ["stability"], extends=["LIT-001"])
+    named = {name: rows for name, _, rows in lint.status_sections()}
+    assert "unbound-relations" in named
+    assert named["unbound-relations"] == [
+        "LIT-001 ↔ LIT-002 share no `tags` "
+        "(lineage; each holds: optimizers / stability)"], \
+        "the row names the documents, the field, what declared it, and what " \
+        "each side actually holds — every fact a reader needs to pick " \
+        "between the two readings without opening either file"
+
+
+def test_the_two_findings_are_separate_classes(tmp_path, monkeypatch):
+    """An edge and a line are not the same strength, and the report already
+    says so: a line can be unbound while every single step is expressed,
+    because a component's intersection only shrinks as the component grows.
+    A project that wants the strong signal fatal and the weak one standing
+    has to be able to name them apart."""
+    from luria import lint
+    root = project(tmp_path, monkeypatch)
+    note(root, 1, ["optimizers"])
+    note(root, 2, ["optimizers", "stability"], extends=["LIT-001"])
+    note(root, 3, ["stability"], extends=["LIT-002"])
+    named = {name: rows for name, _, rows in lint.status_sections()}
+    assert "unbound-relations" not in named, "every step shares a tag"
+    assert len(named["unbound-lines"]) == 1, "the whole line does not"
+
+
+def test_both_classes_ride_the_ladder(tmp_path, monkeypatch):
+    """`fail_on` for a project that wants an invariant enforced, `baseline`
+    for one declaring it over a residue it has read and accepted. The second
+    is the point: it is what makes an invariant declarable without first
+    taking every row to zero, which is how every other warn-first class
+    already works."""
+    from luria import lint
+    assert "unbound-relations" in lint.FAILABLE
+    assert "unbound-lines" in lint.FAILABLE
+    root = project(tmp_path, monkeypatch)
+    note(root, 1, ["optimizers"])
+    note(root, 2, ["stability"], extends=["LIT-001"])
+    write(root, "luria.yaml", merged(
+        (root / "luria.yaml").read_text(),
+        {"lint": {"baseline": {"unbound-relations": 1}}}))
+    config.reset()
+    errors: list[str] = []
+    lint.report_warnings(errors)
+    assert errors == [], "a row at the declared baseline is not a violation"
+
+
+def test_a_row_over_the_baseline_is_a_violation(tmp_path, monkeypatch):
+    """The whole value of a baseline over a mute: standing is not worse."""
+    from luria import lint
+    root = project(tmp_path, monkeypatch)
+    note(root, 1, ["optimizers"])
+    note(root, 2, ["stability"], extends=["LIT-001"])
+    note(root, 3, ["caching"], extends=["LIT-001"])
+    write(root, "luria.yaml", merged(
+        (root / "luria.yaml").read_text(),
+        {"lint": {"baseline": {"unbound-relations": 1}}}))
+    config.reset()
+    errors: list[str] = []
+    lint.report_warnings(errors)
+    assert any("2 found against a `baseline` of 1" in e for e in errors)
+
+
+def test_declaring_nothing_reports_nothing(tmp_path, monkeypatch):
+    """Opt-in stays opt-in: a record that has not said which field its
+    relations mean reads the same as one with no relations at all."""
+    from luria import lint
+    root = project(tmp_path, monkeypatch, extra=merged(RELATIONS, SILENT))
+    note(root, 1, ["optimizers"])
+    note(root, 2, ["stability"], extends=["LIT-001"])
+    named = {name for name, _, _ in lint.status_sections()}
+    assert "unbound-relations" not in named
+    assert "unbound-lines" not in named
