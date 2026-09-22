@@ -4,7 +4,7 @@
 
 **Mechanism** — collectors, generators, the lint, the directive vocabulary.
 
-80 of 119 decisions. Back to the [full index](../README.md).
+80 of 120 decisions. Back to the [full index](../README.md).
 
 | # | Title | Summary | Status |
 |---|---|---|---|
