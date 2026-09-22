@@ -34,6 +34,14 @@ def apply() -> list[Path]:
     changed: list[Path] = []
     _, linked = link_refs.linkify_files(doc_refs.doc_files(), fix=True)
     changed += linked
+    # An already-concretized old spelling: reported by `legacy-spellings`,
+    # cleared by `link --fix` in its bare form only, and out of
+    # concretization's reach because there is no pending rename left to apply
+    # (#312). Mechanical, idempotent, and nothing else was going to do it.
+    for upgraded in doc_refs.upgrade_legacy_spellings():
+        print("upgraded a concretized code's old spelling in "
+              f"{cfg.rel(upgraded)}")
+        changed.append(upgraded)
     for j in cfg.journals.values():
         for p in journal.populate_created(j):
             print(f"populated `created:` from the path in {cfg.rel(p)}")

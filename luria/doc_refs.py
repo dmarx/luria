@@ -35,7 +35,8 @@ renders into `docs/devlog/` (ADR-020). `link_base()` maps a path to the
 directory its links must resolve from.
 """
 
-# unresolved-ok-file: ADR-919, ADR-157 — illustrative codes in this module's
+# unresolved-ok-file: ADR-919, ADR-157, ADR-tmpxxxxx — illustrative codes in
+# this module's
 # prose. Two codes have left this list: DP-017, when a principle took that
 # number and the mention resolved; and the DP code beside it, which never had
 # a citation here at all — the composed remote spelling on the wikilink line
@@ -784,6 +785,89 @@ def is_ambiguous_issue(ref: Ref, text: str, anchors: dict[int, str]) -> bool:
     return not ISSUE_CUE_RE.search(text[max(0, ref.start - 120):ref.start])
 
 
+def upgrade_legacy_spellings() -> list[Path]:
+    """Rewrite every already-concretized old spelling to the code it became,
+    and return the files that changed (#312).
+
+    The counterpart to `legacy_spellings()`, which reports these and named
+    `luria link --fix` as the remedy — a command that clears the bare form and
+    is designed to leave the other two alone (#310). Concretization cannot
+    take them either: it applies a *pending* rename, and by the time a branch
+    cites another branch's numbered code there is none left to apply (#309).
+    So the rows were reported by one command, disowned by a second and
+    unreachable by a third, and the fix was a hand edit every time.
+
+    Two of the three shapes are taken. The **bare** code, which `link --fix`
+    also handles, and — unlike `link --fix` — a code inside an **existing
+    link**, in its label or its target or both: a link pointing at
+    `ADR-tmpxxxxx.md` is broken, and a label spelling a retired name says
+    something untrue. Neither has a reading as a deliberate quotation.
+
+    A **code span** does, and is left, along with a fenced block. The opposite
+    was implemented first, on an argument that looked decisive —
+    `concretize._rewrite_files` is a plain `str.replace` over the whole file,
+    so in-tree a sweep modernizes backticks too, and sparing one here would
+    make the fixer disagree with the concretizer about the same text. The
+    first live run refuted it, on this repository's own `CHANGELOG.md`:
+
+        ADR-111 landed on main as a live `ADR-tmpxxxxx` in the example
+
+    The sentence is *about* the old spelling. Upgrading it produces "landed on
+    main as a live `ADR-111`", which is false. The concretizer would indeed
+    have flattened it, and that is a thing the concretizer gets wrong on the
+    rare prose that quotes a code — not a licence to repeat it in a command
+    that runs long after the quotation was written deliberately.
+
+    The cost is that a quoted spelling is reported with no remedy, which is how
+    a warning class becomes wallpaper. That is the status quo rather than a
+    regression, and the fix for it is a `legacy-ok:` directive (#314) — an
+    acknowledgement, which is what the record already uses everywhere a check
+    is right to see something a fixer is right to leave.
+
+    `formerly:` is skipped for the reason `legacy_spellings()` skips it — that
+    block is the alias record rather than a citation, and rewriting it would
+    replace a document's memory of its own former spelling with its current
+    one, destroying exactly the provenance the field exists to hold. In-tree
+    the question never arises, since `concretize` writes `formerly:` after its
+    sweep; it arises here because this command runs long afterwards."""
+    cfg = current()
+    files = list(doc_files())
+    for pattern in cfg.code_globs:
+        files += [p for p in cfg.root.glob(pattern) if p.is_file()]
+    changed: list[Path] = []
+    seen: set[Path] = set()
+    for path in files:
+        if path in seen:
+            continue
+        seen.add(path)
+        text = path.read_text(encoding="utf-8")
+        keep = (_fence_spans(text) + _code_span_spans(text)
+                + [m.span() for m in
+                   re.finditer(r"^formerly:(?:\n- .*)*", text, re.MULTILINE)])
+        edits: list[tuple[int, int, str]] = []
+        for scheme in cfg.schemes.values():
+            live = None
+            for m in scheme.temp_pattern.finditer(text):
+                if any(a <= m.start() < b for a, b in keep):
+                    continue
+                tail = m.group("tail")
+                if live is None:
+                    live = scheme.temp_documents()
+                if tail in live:
+                    continue
+                number = alias_number(scheme, tail)
+                if number is None:
+                    continue
+                edits.append((m.start(), m.end(), scheme.code(number)))
+        if not edits:
+            continue
+        for start, end, replacement in sorted(edits, reverse=True):
+            text = text[:start] + replacement + text[end:]
+        path.write_text(text, encoding="utf-8")
+        changed.append(path)
+    return changed
+
+
 def legacy_spellings() -> list[str]:
     """Every citation still written in a concretized code's old spelling —
     `path:line CODE → CODE-NOW` — across the docs and the configured code
@@ -797,8 +881,10 @@ def legacy_spellings() -> list[str]:
     to no document is not a legacy spelling, it is either a live temp code
     (the branch's normal state) or prose noise, and neither belongs here.
     The in-tree steady state is an empty list — the sweep is full — so a
-    row here means an in-flight branch merged after a concretization pass,
-    and `luria link --fix` upgrades it."""
+    row here means an in-flight branch merged after a concretization pass
+    (#309), and `luria repair` upgrades it — every shape but a quotation in a
+    code span or a fenced block, which stays quoted and is acknowledged
+    instead (`upgrade_legacy_spellings`, #312; the directive, #314)."""
     cfg = current()
     files = list(doc_files())
     for pattern in cfg.code_globs:
