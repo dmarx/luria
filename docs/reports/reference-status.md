@@ -27,7 +27,7 @@ A reference the reader cannot follow: the code names no document in this record.
 
 ### ADR-000 — resolves to nothing (2 unmarked sites · 2 other mentions marked deliberate)
 
-- [`tests/test_lint.py:467`](../../tests/test_lint.py)
+- [`tests/test_lint.py:469`](../../tests/test_lint.py)
 - [`tests/test_relate.py:155`](../../tests/test_relate.py)
 
 ### ADR-231 — resolves to nothing (2 unmarked sites)
