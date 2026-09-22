@@ -4,8 +4,9 @@
 
 **ci**.
 
-1 of 117 decisions. Back to the [full index](../README.md).
+2 of 118 decisions. Back to the [full index](../README.md).
 
 | # | Title | Summary | Status |
 |---|---|---|---|
 | [ADR-069](../../../record/decisions.d/ADR-069.md) | A workflow file cites decisions in a form the generation job's token can commit: by number, or in prose | The generation job pushes with the workflow's own token, and that token cannot write under `.github/workflows/`; when `luria concretize` numbered [ADR-068](../../../record/decisions.d/ADR-068.md) it rewrote the temporary code in a `ci.yml` comment too, and the bot's whole commit was refused. The job keeps the workflow token — no setup, fork-safe — and a workflow file cites a decision by its number or in prose; a temporary code there is the `workflow-temp-codes` warning class, enforced here and in the scaffold through `fail_on`. A project that gives its job a token with workflow write leaves the class alone and the bot rewrites the file. A person's `luria concretize` was never constrained: the limit is the token, not the file. Rejected: a lint error regardless of token (the first draft, [#150](https://github.com/dmarx/luria/issues/150)), a concretizer that skips workflow files, and dropping them from the code globs. alternatives that lost. Written to be read in a table row. | Active |
+| [ADR-118](../../../record/decisions.d/ADR-118.md) | A temporary code nothing here mints is its own finding | `foreign-temp-codes` reports a temporary code cited in this tree that no document in it mints — the branch-side guard, where `concretize --check` guards the trunk and `legacy-spellings` reports the aftermath. The rows are partitioned out of `unresolved-codes` rather than added to it, so each code is counted once under the reading that carries its remedy. Rejected: a directive of its own, since an illustrative code is unresolved for the ordinary reason and `unresolved-ok:` already covers it; and comparing against `origin/main`, which needs a network in the lint path and still misses an unmerged branch. | Proposed |

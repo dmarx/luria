@@ -33,6 +33,14 @@ A reference the reader cannot follow: the code names no document in this record.
 
 - [`README.md:11`](../../README.md)
 
+## Temporary codes this record does not mint
+
+A temporary code belongs to the contribution that created it, and only that contribution can cite it safely. One cited here with no document behind it is another branch's — it resolves for as long as both are open, and stops the moment the other merges and its code is numbered. The trunk never sees the spelling this record wrote down.
+
+**0 codes not minted here.** Not listed: 0 mentions marked deliberate with an `unresolved-ok:` comment — an illustrative code in an example is the usual one.
+
+Every temporary code cited here is this record's own. ✅
+
 ## Files that opt out of reference checking
 
 `unlinted-file:` exempts a whole document from the reference machinery — the blunt tool for a fixture-heavy or vendored page. It is counted here rather than hidden, the same bargain as an acknowledgement: the report stays a complete account of what nobody is checking.

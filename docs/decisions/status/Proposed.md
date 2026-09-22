@@ -4,8 +4,8 @@
 
 **Proposed** — not in force yet — an open question, so citing it as settled is what the reference report catches.
 
-0 of 117 decisions. Back to the [full index](../README.md).
+1 of 118 decisions. Back to the [full index](../README.md).
 
 | # | Title | Summary | Status |
 |---|---|---|---|
-
+| [ADR-118](../../../record/decisions.d/ADR-118.md) | A temporary code nothing here mints is its own finding | `foreign-temp-codes` reports a temporary code cited in this tree that no document in it mints — the branch-side guard, where `concretize --check` guards the trunk and `legacy-spellings` reports the aftermath. The rows are partitioned out of `unresolved-codes` rather than added to it, so each code is counted once under the reading that carries its remedy. Rejected: a directive of its own, since an illustrative code is unresolved for the ordinary reason and `unresolved-ok:` already covers it; and comparing against `origin/main`, which needs a network in the lint path and still misses an unmerged branch. | Proposed |
