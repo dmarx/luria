@@ -1,0 +1,114 @@
+---
+status: Proposed
+title: 'A temporary code nothing here mints is its own finding'
+version: 1
+tags:
+- record
+- ci
+date: '2026-09-22'
+issue: '#309'
+summary: >-
+  `foreign-temp-codes` reports a temporary code cited in this tree that no
+  document in it mints — the branch-side guard, where `concretize --check`
+  guards the trunk and `legacy-spellings` reports the aftermath. The rows are
+  partitioned out of `unresolved-codes` rather than added to it, so each code
+  is counted once under the reading that carries its remedy. Rejected: a
+  directive of its own, since an illustrative code is unresolved for the
+  ordinary reason and `unresolved-ok:` already covers it; and comparing
+  against `origin/main`, which needs a network in the lint path and still
+  misses an unmerged branch.
+---
+
+# ADR-tmppppyr: A temporary code nothing here mints is its own finding
+
+## Context
+
+A temporary code belongs to the contribution that mints it. `luria concretize`
+numbers it where merges serialize, and `luria concretize --check` guards the
+trunk: a temp code on `main` means the concretizer did not run.
+
+Nothing guarded the **branch**. A contribution can cite another contribution's
+temporary code; while both branches are open the citation resolves, the lint is
+clean, and the pull request merges. Then the other branch merges, its code is
+numbered, and the citation is left naming a spelling the trunk never saw.
+
+It happened twice on consecutive days downstream. `anthology-of-the-sota#263`
+shipped three dangling references citing `#262`'s temp codes; the next day the
+same class produced sixteen sites in one contribution. Both were fixed by hand,
+a contribution later, and the second round arrived with a folk explanation of
+the cause that turned out to be false.
+
+`doc_refs.legacy_spellings()` already names the diagnosis — *"a row here means
+an in-flight branch merged after a concretization pass"* — in the docstring of
+the function that reports the aftermath. What was missing is the check that
+fires before the merge, while the author still has the context and the remedy
+is cheap.
+
+## Decision
+
+**`foreign-temp-codes`: a temporary code cited in this working tree that no
+document in it mints.** Warn-first and in `FAILABLE` like every other class
+([ADR-035](ADR-035.md)), and a better candidate than most for a project to put in `fail_on`.
+
+The rule is local — no git, no network, no knowledge of other branches. A temp
+code nothing here mints is either another contribution's or a typo, and both
+are defects.
+
+**The rows are partitioned out of `unresolved-codes`, not added alongside it.**
+A foreign temp code resolves to no document, so it was already reported there;
+`ref_status.dangling()` takes a `temps` flag and the two callers select opposite
+halves. One code, one row, under the reading that carries its remedy. The
+acknowledged counts are partitioned the same way, because a count that claims
+the other section's suppressions cannot be read.
+
+`luria reports` grows the matching section, so the sites stay findable — a
+class whose message names no way to see its sites is a class nobody can work.
+
+## Alternatives considered
+
+- **A directive of its own — `foreign-temp-ok:`.** Not needed, and adding one
+  would have been the mistake. luria's own tree holds four illustrative temp
+  codes in docstrings and fixtures, and every one of them is unresolved *for
+  the ordinary reason*: `unresolved-ok:` already excuses it, and a second
+  directive with the same argument list would mean two ways to say one thing.
+  Measured: acknowledging the two unmarked rows this change surfaced took two
+  existing-directive edits.
+- **Leave them in `unresolved-codes`.** They were there, and nobody read them
+  that way — the class mixes a typo, a number carried in from another project
+  and a fixture code, which is why its own docstring says only a human can tell
+  them apart. A foreign temp code is the one member of that set with a
+  *deadline*, and the remedy is not "acknowledge or fix" but "wait for the
+  other branch or stop citing it". A shared headline cannot say that.
+- **Report them in both sections.** The obvious compromise and the worst
+  option: two counts of one defect, and `luria lint`'s summary line stops being
+  a number anyone can act on. Two counts of one thing is the shape a report takes
+  when nobody has to choose which one is true.
+- **Compare against `origin/main` in the lint.** Needs git, a fetch and a
+  network in the lint path, and still misses the case that produced this — the
+  other branch had not merged yet, so `origin/main` knew nothing about it.
+- **Make `concretize --check` run on branches.** A different question. It asks
+  whether temp codes *exist*, which on a branch is the normal state and on the
+  trunk is the defect. Running it on a branch would report every document the
+  branch is filing.
+- **Status quo.** `legacy-spellings` catches the aftermath, in a later
+  contribution, when the fix is a hand edit across sixteen sites. That is the
+  measured cost of doing nothing, twice.
+
+## Consequences
+
+`unresolved-codes` reports fewer rows. That is a behaviour change to a class
+projects may have tuned — a `fail_on` or a `baseline` set over a count that
+included temp codes now sees a smaller number and a new class beside it. The
+`baseline` dial ([#307](https://github.com/dmarx/luria/issues/307)) makes this cheap to re-state, and a baseline that is now
+too high says so on the run.
+
+**The check is only as good as the tree it reads.** A branch that has not
+fetched the other contribution sees the same thing whether the other branch
+exists or the code is a typo — which is the point, since both are defects, and
+also the limit: this cannot tell you *which*.
+
+Two rows surfaced in luria's own record on the first run, both illustrative
+codes in docstrings, both acknowledged with `unresolved-ok:` written from
+`docs/reports/reference-status.md` after regenerating it. Neither was a real
+foreign citation, which is the expected steady state for a record whose
+contributions have all already merged.

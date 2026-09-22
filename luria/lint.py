@@ -664,7 +664,8 @@ def check_bare_refs(errors: list[str]) -> None:
 # UNACKNOWLEDGED rows ever reach a class, so the directives stay the escape
 # hatch under enforcement — the dial changes the consequence, not the
 # accounting.
-FAILABLE = ("retired-citations", "unresolved-codes", "unresolved-citations",
+FAILABLE = ("retired-citations", "unresolved-codes", "foreign-temp-codes",
+            "unresolved-citations",
             "hand-written-urls",
             "broken-targets", "remote-drift", "inert-status",
             "source-mismatch", "source-unchecked",
@@ -764,6 +765,19 @@ def status_sections() -> list[tuple[str, str, list[str]]]:
             f"{len(loose)} code(s) resolve to no document "
             "(`luria reports` for the sites, `unresolved-ok:` for the "
             "deliberate ones)", loose))
+
+    # The same rows, partitioned off because they read differently and have a
+    # deadline: a temporary code nothing here mints belongs to another open
+    # branch, and resolves fine until that branch merges and numbers it (#309).
+    # `concretize --check` guards the trunk; this is the branch-side guard, and
+    # `legacy-spellings` is what reports the same defect once it is too late.
+    foreign = ref_status.foreign_temp_lines(result, docs)
+    if foreign:
+        sections.append((
+            "foreign-temp-codes",
+            f"{len(foreign)} temporary code(s) no document here mints — "
+            "another contribution's, or a typo; wait for it to merge or stop "
+            "citing it (`unresolved-ok:` for an illustrative one)", foreign))
 
     if lines := cite_target_lines():
         sections.append((

@@ -505,8 +505,18 @@ def flagged(result: Scan | None = None, docs: dict[str, Doc] | None = None):
     return sorted(rows, key=lambda r: (-len(r[1]), r[0].code))
 
 
+def _temp_shaped(code: str) -> bool:
+    """Whether a code is spelled as a temporary one — `SOTA-tmpk3n9q` (#309).
+
+    Read off the schemes rather than the tail alone, so a project whose prefix
+    happens to precede a `tmp`-shaped word does not turn its prose into
+    findings."""
+    return any(s.temp_pattern.fullmatch(code) for s in current().schemes.values())
+
+
 def dangling(result: Scan | None = None,
-             docs: dict[str, Doc] | None = None) -> list[tuple[str, list[Citation], int]]:
+             docs: dict[str, Doc] | None = None,
+             temps: bool = False) -> list[tuple[str, list[Citation], int]]:
     """(code, unexcused sites, excused count) for codes that name no document
     here — most-cited first.
 
@@ -514,10 +524,21 @@ def dangling(result: Scan | None = None,
     number carried in from another project, and a fixture code in a test. Only
     a human can tell them apart, which is why this is a report and not an error
     (ADR-035) — and why `unresolved-ok` exists to retire the ones that are
-    deliberate."""
+    deliberate.
+
+    A **fourth** does not look the same at all, and `temps` is the partition
+    that separates it (#309). A temporary code cited here that no document
+    here mints is another contribution's, and unlike the other three it has a
+    deadline: while both branches are open the citation looks fine, and the
+    moment the other one merges and numbers its code, this one points at a
+    spelling that never existed on the trunk. `temps=True` selects those rows
+    and the default excludes them, so each code is reported once, under the
+    reading that carries its remedy."""
     result = scan(docs=docs) if result is None else result
     rows = []
     for code, sites in result.dangling.items():
+        if _temp_shaped(code) is not temps:
+            continue
         loud = [c for c in sites if c.excused_by is None]
         if loud:
             rows.append((code, loud, len(sites) - len(loud)))
@@ -535,6 +556,25 @@ def dangling_lines(result: Scan | None = None,
     return out
 
 
+def foreign_temp_lines(result: Scan | None = None,
+                       docs: dict[str, Doc] | None = None) -> list[str]:
+    """The `foreign-temp-codes` rows: a temporary code cited here that nothing
+    here mints (#309).
+
+    The branch-side counterpart to `legacy_spellings()`, which reports the same
+    defect after the fact — *"a row here means an in-flight branch merged after
+    a concretization pass"* — when the fix is a hand edit in a later
+    contribution. This fires while the author still has the context, and the
+    remedy is to wait for the other branch or stop citing it."""
+    out = []
+    for code, loud, excused in dangling(result, docs, temps=True):
+        files = len({c.path for c in loud})
+        tail = f", {excused} acknowledged" if excused else ""
+        out.append(f"{code} is not minted here, cited {len(loud)}× in "
+                   f"{files} file(s){tail}")
+    return out
+
+
 def acknowledged_count(result: Scan | None = None,
                        docs: dict[str, Doc] | None = None) -> int:
     """How many references to retired documents an annotation excused. Printed
@@ -547,11 +587,16 @@ def acknowledged_count(result: Scan | None = None,
 
 
 def dangling_acknowledged_count(result: Scan | None = None,
-                                docs: dict[str, Doc] | None = None) -> int:
+                                docs: dict[str, Doc] | None = None,
+                                temps: bool = False) -> int:
     """The same count for `unresolved-ok`. Both are printed on a clean run, so
-    "nothing to report" can never mean "everything was silenced"."""
+    "nothing to report" can never mean "everything was silenced".
+
+    `temps` partitions it the way `dangling` does (#309), so the two reports
+    each account for their own rows and neither claims the other's."""
     result = scan(docs=docs) if result is None else result
-    return sum(1 for sites in result.dangling.values()
+    return sum(1 for code, sites in result.dangling.items()
+               if _temp_shaped(code) is temps
                for c in sites if c.excused_by is not None)
 
 
