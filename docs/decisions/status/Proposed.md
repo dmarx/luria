@@ -4,8 +4,9 @@
 
 **Proposed** — not in force yet — an open question, so citing it as settled is what the reference report catches.
 
-1 of 118 decisions. Back to the [full index](../README.md).
+2 of 119 decisions. Back to the [full index](../README.md).
 
 | # | Title | Summary | Status |
 |---|---|---|---|
 | [ADR-118](../../../record/decisions.d/ADR-118.md) | A temporary code nothing here mints is its own finding | `foreign-temp-codes` reports a temporary code cited in this tree that no document in it mints — the branch-side guard, where `concretize --check` guards the trunk and `legacy-spellings` reports the aftermath. The rows are partitioned out of `unresolved-codes` rather than added to it, so each code is counted once under the reading that carries its remedy. Rejected: a directive of its own, since an illustrative code is unresolved for the ordinary reason and `unresolved-ok:` already covers it; and comparing against `origin/main`, which needs a network in the lint path and still misses an unmerged branch. | Proposed |
+| [ADR-119](../../../record/decisions.d/ADR-119.md) | luria ack: the code comes from the scan, the reason from a person | `luria ack` writes an acknowledgement directive at every unacknowledged citing site the scan reports, with the code, the directive name and the location read from `Scan` and only the reason supplied by a person. It refuses over a document in force, a code nothing cites, and a citation already covered. Rejected: a `--fix` that writes them in bulk, since a generated reason vouches for nothing; putting it in `luria repair`, whose contract a judgement cannot satisfy; and an interactive prompt, which no CI or agent caller can answer. | Proposed |

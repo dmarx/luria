@@ -5,14 +5,15 @@
 
 `Proposed` and `Deferred` both describe an open question. Neither says *since when*, and that is the signal: a decision proposed last week is pending; the same one a year later was either overdue or settled in code and never written back.
 
-**1 document(s) awaiting a decision.**
+**2 document(s) awaiting a decision.**
 
 | Open since | Status | Code | Cited | Unack. | Title |
 |---|---|---|--:|--:|---|
 | 2026-09-22 | Proposed | [ADR-118](../../record/decisions.d/ADR-118.md) | 0 | 0 | A temporary code nothing here mints is its own finding |
+| 2026-09-22 | Proposed | [ADR-119](../../record/decisions.d/ADR-119.md) | 0 | 0 | luria ack: the code comes from the scan, the reason from a person |
 
 The citation count is the second axis, and it flips the priority: an old proposal nothing references is a stalled idea worth closing, while an old proposal many files cite is a decision the codebase has already made and hasn't written down.
 
 This count and the reference-status report's will differ, and that is not an off-by-one. That report covers documents something actually **cites** and hasn't acknowledged; this one covers every **undecided** document. One here is missing from there for exactly one of two reasons: nothing cites it, or every citation carries an `inactive-ok` annotation.
 
-**Cited nowhere at all** (1): [ADR-118](../../record/decisions.d/ADR-118.md) — this is the cheapest to close, since nothing depends on the answer.
+**Cited nowhere at all** (2): [ADR-118](../../record/decisions.d/ADR-118.md), [ADR-119](../../record/decisions.d/ADR-119.md) — these are the cheapest to close, since nothing depends on the answer.

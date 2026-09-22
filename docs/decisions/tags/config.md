@@ -4,7 +4,7 @@
 
 **config**.
 
-5 of 118 decisions. Back to the [full index](../README.md).
+5 of 119 decisions. Back to the [full index](../README.md).
 
 | # | Title | Summary | Status |
 |---|---|---|---|

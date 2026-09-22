@@ -22,7 +22,7 @@ Nothing unacknowledged. ✅
 
 A reference the reader cannot follow: the code names no document in this record. A typo, a number carried in from another project, and an illustrative code in an example all look identical from here — telling them apart takes a human, so this is a report, not an error.
 
-**5 codes unaccounted for.** Not listed: 82 mentions marked deliberate with an `unresolved-ok:` comment (same syntax and scopes as `inactive-ok:` above).
+**5 codes unaccounted for.** Not listed: 85 mentions marked deliberate with an `unresolved-ok:` comment (same syntax and scopes as `inactive-ok:` above).
 
 
 ### ADR-000 — resolves to nothing (2 unmarked sites · 4 other mentions marked deliberate)
@@ -40,7 +40,7 @@ A reference the reader cannot follow: the code names no document in this record.
 - [`luria/new.py:377`](../../luria/new.py)
 - [`luria/relate.py:5`](../../luria/relate.py)
 
-### ADR-919 — resolves to nothing (1 unmarked site · 10 other mentions marked deliberate)
+### ADR-919 — resolves to nothing (1 unmarked site · 11 other mentions marked deliberate)
 
 - [`tests/test_documents_cache.py:125`](../../tests/test_documents_cache.py)
 
