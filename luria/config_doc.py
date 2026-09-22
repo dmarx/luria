@@ -305,6 +305,14 @@ def sections() -> list[tuple[str, type, str]]:
 
 SECTIONS: list[tuple[str, type, str]] = sections()
 
+# The dict-valued `DEFAULTS` keys that are rendered as a table somewhere else —
+# either a dataclass section or one of `PLAIN`'s flat sub-tables. Anything else
+# whose default is a dict is a free-form mapping and belongs in the table above
+# it, as a row like any other key.
+SECTION_SUBTREES: frozenset[str] = frozenset(
+    {"paths", "lint", "site", "code", "schemes", "chains", "remotes",
+     "journals", "fragments", "vocabularies"})
+
 # Prose for the tables that have no dataclass behind them: scalars at the top
 # level, and the three flat sub-tables. Each is (title, DEFAULTS subtree, blurb,
 # prose) where prose maps key → description; an empty subtree name means the
@@ -363,6 +371,20 @@ PLAIN: list[tuple[str, str, str, dict[str, str]]] = [
      "`luria lint` instead. Acknowledgement directives keep working under "
      "enforcement, because only unacknowledged rows ever reach a class.", {
         "fail_on": "Warning classes promoted to failures.",
+        "baseline": "A standing count per warning class, for a record whose "
+                    "residue is real and not shrinking. A class at or below "
+                    "its number reports as usual; above it, the excess is a "
+                    "violation naming both figures, and the rows still print "
+                    "because which ones are new is not knowable from a count. "
+                    "Below it, and when the class has cleared entirely, the "
+                    "run says so — a baseline nobody lowers is a ratchet "
+                    "pointing the wrong way. This is what `fail_on` cannot "
+                    "say (it fails at the first row) and what `mute` cannot "
+                    "say (it hides the new rows with the old). A count of "
+                    "`0` is `fail_on` in this dial's dialect; naming a class "
+                    "in both, or in this and `mute`, is refused rather than "
+                    "resolved. An unknown class or a negative count is "
+                    "reported and then ignored for gating.",
         "mute": "Warning classes not reported at all. Where `fail_on` changes "
                 "a finding's consequence, this removes it from the run — the "
                 "blunter instrument, for a check a project has decided is not "
@@ -389,12 +411,21 @@ PLAIN: list[tuple[str, str, str, dict[str, str]]] = [
 def plain_keys(subtree: str) -> list[str]:
     """The keys of one scalar table, read from `config.DEFAULTS`.
 
-    A key whose default is a *dict* is a table in its own right — `paths`,
-    `lint`, `schemes`, `chains` — and has its own section, so it is not also
-    a row in the table above it."""
+    A key whose default is a *dict* is usually a table in its own right —
+    `paths`, `lint`, `schemes`, `chains` — and has its own section, so it is
+    not also a row in the table above it.
+
+    Usually, not always. A *free-form mapping* — `lint.baseline`, whose keys
+    are warning-class names a project chooses — has no fixed shape, so nothing
+    generates a section for it, and excluding it on the strength of its type
+    dropped it out of the reference entirely and out of the "a key with no
+    prose still gets a row" guard with it. The test for a table is whether
+    something renders one, which is `SECTION_SUBTREES`, not whether the
+    default happens to be a `dict`."""
     defaults = config_mod.DEFAULTS.get(subtree, {}) if subtree \
         else config_mod.DEFAULTS
-    return [k for k, v in defaults.items() if not isinstance(v, dict)]
+    return [k for k, v in defaults.items()
+            if not isinstance(v, dict) or k not in SECTION_SUBTREES]
 
 
 # A run of 4-space-indented lines inside a docstring is a worked example. The

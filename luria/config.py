@@ -159,6 +159,19 @@ DEFAULTS: dict = {
     "lint": {
         "fail_on": [],
         "mute": [],
+        # The standing-findings dial (#307). `fail_on` makes a class fatal at
+        # the first row, which a class with a legitimate residue can never
+        # satisfy; `mute` hides the class including its new rows. Neither says
+        # "this many is where we are, and more than this is a regression",
+        # which is the only statement a warn-first lint can make about a
+        # corpus that is not at zero and is not getting worse.
+        #
+        # Empty means every class is reported and none is held to a number —
+        # the posture a project that has not thought about it should get. A
+        # class named here with a count of 0 is `fail_on` by another name, and
+        # that is fine: it is the same statement said in the dialect of this
+        # dial.
+        "baseline": {},
         # This project's own concrete nouns, for the `narrow-titles` class.
         # Luria ships NONE: the whole point of the check is that the words are
         # yours, and a shipped list would be some other project's vocabulary
@@ -2014,6 +2027,11 @@ class Config:
     stale_days: int
     user_agent: str                     # what every request announces
     fail_on: tuple[str, ...]            # warning classes promoted to failures
+    # Per-class standing counts (#307). A class at or below its number reports
+    # as usual; above it, the excess is a violation naming both figures. Below
+    # it, the run says so — a baseline nobody lowers is a ratchet pointing the
+    # wrong way, and the report is the only place that will ever notice.
+    baseline: dict[str, int]
     # Warning classes a project has decided it does not want to see at all.
     # `fail_on` changes a class's CONSEQUENCE; this removes it from the
     # report. The two are deliberately separate dials, and naming a class in
@@ -2351,6 +2369,7 @@ def load(root: Path | None = None, text: str | None = None,
         user_agent=str(raw.get("user_agent")
                        or DEFAULTS["user_agent"]),
         fail_on=tuple(raw["lint"]["fail_on"]),
+        baseline={str(k): int(v) for k, v in raw["lint"]["baseline"].items()},
         mute=tuple(raw["lint"]["mute"]),
         narrow_terms=tuple(raw["lint"].get("narrow_terms", [])),
         network=str(raw["lint"].get("network", "auto")),

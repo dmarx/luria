@@ -1034,6 +1034,33 @@ def report_warnings(errors: list[str]) -> None:
         # must say so rather than silently do nothing (DP-1).
         errors.append(f"luria.yaml: `mute` names {name!r}, which is no "
                       f"mutable warning class (known: {', '.join(MUTABLE)})")
+    # Same contract as the two dials above: a notch that does not exist must
+    # say so rather than silently hold no line (DP-1).
+    base = current().baseline
+    for name in sorted(set(base) - set(FAILABLE)):
+        errors.append(f"luria.yaml: `baseline` names {name!r}, which is no "
+                      f"warning class (known: {', '.join(FAILABLE)})")
+    for name in sorted(set(base) & mute):
+        # A held line nobody is allowed to see cannot be checked by the person
+        # the report is for, and the number would decay unread.
+        errors.append(f"luria.yaml: {name!r} is named in both `baseline` and "
+                      "`mute` — a class cannot be held to a count and hidden")
+    for name in sorted(set(base) & fail):
+        # `fail_on` is baseline 0 stated another way. Both set is not a
+        # precedence question: one of the two numbers is a lie.
+        errors.append(f"luria.yaml: {name!r} is named in both `baseline` and "
+                      f"`fail_on` — `fail_on` already means a baseline of 0, "
+                      f"and `baseline` says {base[name]}")
+    for name in sorted(base):
+        if base[name] < 0:
+            errors.append(f"luria.yaml: `baseline` gives {name!r} a count of "
+                          f"{base[name]}; a standing count cannot be negative")
+    # A misconfigured entry is reported once, above, and then ignored: gating a
+    # class against a number that is not a number would bury the one message
+    # the reader can act on under every row of the class it mis-describes.
+    base = {k: v for k, v in base.items()
+            if k in FAILABLE and v >= 0 and k not in mute and k not in fail}
+
     for name in sorted(mute & fail):
         # Not a precedence question. A project cannot both enforce a check
         # and refuse to hear it, and guessing which it meant would make one
@@ -1041,7 +1068,16 @@ def report_warnings(errors: list[str]) -> None:
         errors.append(f"luria.yaml: {name!r} is named in both `fail_on` and "
                       "`mute` — a class cannot be both enforced and hidden")
 
-    for name, headline, lines in status_sections():
+    # A class with no findings yields no section, so a baseline it has already
+    # met would otherwise go unmentioned forever — the one state where the
+    # number is certainly stale is the one nothing would have reported.
+    sections = status_sections()
+    seen = {name for name, _, _ in sections}
+    for name in sorted(set(base) - seen - mute - fail):
+        print(f"luria: {name}: 0 against a `baseline` of {base[name]} — the "
+              f"class is clear, remove it from luria.yaml", file=sys.stderr)
+
+    for name, headline, lines in sections:
         if name in mute and name not in fail:
             continue
         if name in fail:
@@ -1053,6 +1089,27 @@ def report_warnings(errors: list[str]) -> None:
                    else f"`fail_on` names {name!r}")
             errors.append(f"{headline} — failing: {why} in luria.yaml")
             errors.extend(lines)
+        elif name in base:
+            # Held to a number. Above it, only the excess is the finding: the
+            # rows themselves are still printed, because which ones are new is
+            # not knowable from a count and the reader needs the whole list to
+            # find out.
+            allowed, found = base[name], len(lines)
+            if found > allowed:
+                errors.append(
+                    f"{headline} — {found} found against a `baseline` of "
+                    f"{allowed} in luria.yaml: {found - allowed} over")
+                errors.extend(lines)
+            else:
+                print(f"luria: {headline}", file=sys.stderr)
+                for line in lines:
+                    print(f"  {line}", file=sys.stderr)
+                if found < allowed:
+                    # Good news, and the only place it will ever be said. A
+                    # baseline that nobody lowers is a ratchet pointing the
+                    # wrong way.
+                    print(f"luria: {name}: {found} against a `baseline` of "
+                          f"{allowed} — lower it in luria.yaml", file=sys.stderr)
         else:
             print(f"luria: {headline}", file=sys.stderr)
             for line in lines:
