@@ -12,7 +12,7 @@ from __future__ import annotations
 import subprocess
 import sys
 
-from luria import (adr_index, cli, collect, concretize, export, init,
+from luria import (ack, adr_index, cli, collect, concretize, export, init,
                    link_refs, lint, migrate, new, relate, remotes, repair,
                    reports, site, upgrade)
 
@@ -20,7 +20,7 @@ from luria import (adr_index, cli, collect, concretize, export, init,
 def test_every_command_is_registered():
     assert cli.COMMANDS == {
         "lint": lint.run, "link": link_refs.run, "repair": repair.run,
-        "index": adr_index.run,
+        "index": adr_index.run, "ack": ack.run,
         "new": new.run, "relate": relate.run, "concretize": concretize.run,
         "migrate": migrate.run, "remotes": remotes.run,
         "site": site.run, "export": export.run, "init": init.run, "reports": reports.run,

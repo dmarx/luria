@@ -4,6 +4,9 @@
     luria link [--fix]  rewrite bare references as hyperlinks
     luria repair        write every mechanical source repair: links, a
                         journal entry's missing `created:`
+    luria ack           write an acknowledgement directive from the scan,
+                        with a reason you supply; no code, no reason, and it
+                        prints what could be acknowledged instead
     luria index         regenerate every generated view, badges included
     luria new [kind]    scaffold an entry: the journal by default, or any
                         configured scheme or fragment dir (adr, dp, changelog)
@@ -43,13 +46,15 @@ import sys
 
 import fire
 
-from . import (adr_index, collect, concretize, export, init, link_refs, lint,
-               migrate, new, relate, remotes, repair, reports, site, upgrade)
+from . import (ack, adr_index, collect, concretize, export, init, link_refs,
+               lint, migrate, new, relate, remotes, repair, reports, site,
+               upgrade)
 
 COMMANDS = {
     "lint": lint.run,
     "link": link_refs.run,
     "repair": repair.run,
+    "ack": ack.run,
     "index": adr_index.run,
     "new": new.run,
     "relate": relate.run,
