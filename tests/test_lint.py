@@ -13,8 +13,9 @@ agree. So the guard needs firing, not just provisioning
 ([DP-6](../docs/design-principles.md#dp-6)).
 """
 
-# unresolved-ok-file: ADR-tmpabcde — a fixture temporary code, deliberately
-# naming no document: what is under test is the shape reaching a workflow file.
+# unresolved-ok-file: ADR-tmpabcde, ADR-tmpab12c — fixture temporary codes,
+# deliberately naming no document: what is under test is the shape reaching a
+# workflow file, and (#309) the shape reaching the branch-side check.
 from _config import merged
 import sys
 
@@ -666,3 +667,28 @@ def test_baselines_are_per_class(project, capsys):
     dial_project(project, baseline={"inert-status": 0})
     errors, err = dial_errors(capsys)
     assert "retired documents cited unacknowledged" in err
+
+
+# ── foreign-temp-codes rides the same ladder (#309) ──────────────────────
+
+
+def test_a_foreign_temp_code_is_a_class_of_its_own(project, capsys):
+    """Warn-first like everything else (ADR-035), and separately named so a
+    project can put it in `fail_on` — which is the case #309 makes for it:
+    unlike a retired citation or an illustrative number, a temporary code
+    nobody here mints has no legitimate reading, and the window in which the
+    citation still resolves closes the moment the other branch merges."""
+    dial_project(project)
+    (project / "docs" / "notes.md").write_text(
+        "Still leaning on ADR-012, and on ADR-tmpab12c.\n")
+    errors, err = dial_errors(capsys)
+    assert errors == []
+    assert "ADR-tmpab12c is not minted here" in err
+    assert "temporary code(s) no document here mints" in err
+
+
+def test_foreign_temp_codes_is_promotable(project, capsys):
+    dial_project(project, fail_on='"foreign-temp-codes"')
+    (project / "docs" / "notes.md").write_text("Per ADR-tmpab12c.\n")
+    errors, _ = dial_errors(capsys)
+    assert any("not minted here" in e for e in errors)

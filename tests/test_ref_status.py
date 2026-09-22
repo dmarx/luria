@@ -429,3 +429,64 @@ def test_an_active_temp_document_is_not_flagged(project):
     docs = ref_status.load_docs()
     result = ref_status.scan([project / "notes.md"], docs)
     assert ref_status.flagged(result, docs) == []
+
+
+# ── A temporary code nobody here mints (#309) ────────────────────────────
+
+
+def test_a_foreign_temp_code_is_its_own_finding(project):
+    """The branch-side guard. `concretize --check` asks whether temp codes
+    survive on the trunk, which on a branch is the normal state; nothing asked
+    whether a branch cites one it does not itself mint. Downstream that shipped
+    three dangling references one day and sixteen the next — clean lint both
+    times, because while both branches are open the citation looks fine."""
+    docs, result = scan(project, "per ADR-tmpab12c, we chose this\n")
+    assert ref_status.dangling(result, docs) == [], \
+        "not filed under the generic reading"
+    rows = ref_status.foreign_temp_lines(result, docs)
+    assert len(rows) == 1 and rows[0].startswith("ADR-tmpab12c is not minted")
+
+
+def test_a_temp_code_this_record_mints_is_not_foreign(project):
+    """The whole point of a temporary code is that the contribution which
+    created it may cite it."""
+    temp_decision(project, "tmpab12c", "Proposed")
+    decision(project, 1, "Active")
+    (project / "notes.md").write_text("per ADR-tmpab12c\n")
+    docs = ref_status.load_docs()
+    result = ref_status.scan([project / "notes.md"], docs)
+    assert ref_status.foreign_temp_lines(result, docs) == []
+
+
+def test_the_two_unresolved_readings_do_not_double_count(project):
+    """One code, one row. A foreign temp code resolves to no document and so
+    would land in both sections; `dangling` partitions rather than duplicates,
+    because two counts of the same defect make neither of them mean anything."""
+    docs, result = scan(project, "ADR-777 and ADR-tmpab12c\n")
+    assert [c for c, _, _ in ref_status.dangling(result, docs)] == ["ADR-777"]
+    assert [c for c, _, _ in
+            ref_status.dangling(result, docs, temps=True)] == ["ADR-tmpab12c"]
+
+
+def test_unresolved_ok_excuses_an_illustrative_temp_code(project):
+    """The legitimate case, and the reason this does not get a directive of its
+    own: a temp code in an example is unresolved for the ordinary reason, and
+    the ordinary acknowledgement already covers it."""
+    docs, result = scan(
+        project,
+        "<!-- unresolved-ok: ADR-tmpab12c — a placeholder tail, not a document -->\n"
+        "the shape is ADR-tmpab12c\n")
+    assert ref_status.foreign_temp_lines(result, docs) == []
+    assert ref_status.stale_annotations(result, docs) == []
+
+
+def test_the_acknowledged_counts_are_partitioned_too(project):
+    """Each report accounts for its own rows and neither claims the other's —
+    the counts are printed on a clean run so that "nothing to report" cannot
+    quietly mean "everything was silenced"."""
+    docs, result = scan(
+        project,
+        "<!-- unresolved-ok: ADR-777 ADR-tmpab12c — both deliberate -->\n"
+        "ADR-777 and ADR-tmpab12c\n")
+    assert ref_status.dangling_acknowledged_count(result, docs) == 1
+    assert ref_status.dangling_acknowledged_count(result, docs, temps=True) == 1

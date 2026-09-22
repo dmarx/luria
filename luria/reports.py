@@ -135,6 +135,32 @@ def reference_status(base: Path | None = None) -> str:
                 for c in sorted(sites, key=lambda c: (str(c.path), c.line))]
     out.append("")
 
+    # Partitioned out of the section above, because the reading and the remedy
+    # are different: these resolve to nothing *yet* (#309).
+    foreign = ref_status.dangling(result, docs, temps=True)
+    acked = ref_status.dangling_acknowledged_count(result, docs, temps=True)
+    out += ["## Temporary codes this record does not mint", "",
+            "A temporary code belongs to the contribution that created it, "
+            "and only that contribution can cite it safely. One cited here "
+            "with no document behind it is another branch's — it resolves "
+            "for as long as both are open, and stops the moment the other "
+            "merges and its code is numbered. The trunk never sees the "
+            "spelling this record wrote down.", "",
+            f"**{_n(len(foreign), 'code')} not minted here.** Not listed: "
+            f"{_n(acked, 'mention')} marked deliberate with an "
+            "`unresolved-ok:` comment — an illustrative code in an example "
+            "is the usual one.", ""]
+    if not foreign:
+        out.append("Every temporary code cited here is this record's own. ✅")
+    for code, sites, acked in foreign:
+        tail = (f" · {_n(acked, 'other mention')} marked deliberate"
+                if acked else "")
+        out += ["", f"### {code} — not minted here "
+                    f"({_n(len(sites), 'unmarked site')}{tail})", ""]
+        out += [_site(c, base)
+                for c in sorted(sites, key=lambda c: (str(c.path), c.line))]
+    out.append("")
+
     out += ["## Files that opt out of reference checking", "",
             "`unlinted-file:` exempts a whole document from the reference "
             "machinery — the blunt tool for a fixture-heavy or vendored page. "

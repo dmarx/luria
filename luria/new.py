@@ -385,6 +385,8 @@ DRAFT_BOOKKEEPING = frozenset({"id", "scheme", "command", "unresolved"})
 
 
 def _read_drafts(path: str) -> list[dict]:
+    # unresolved-ok-block: ADR-tmpiylaq — another project's code, quoted to
+    # show what its export writes; this record neither mints nor resolves it.
     """The draft objects in a JSON file: one object, or a `luria-drafts`
     document (`{"format": "luria-drafts", "drafts": [...]}`) as strata-g's
     *Record — luria drafts* export writes it (SG-ADR-tmpiylaq there)."""
