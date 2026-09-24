@@ -1,5 +1,5 @@
 """One staged page's frontmatter: the title Quartz shows and the properties
-it renders (ADR-tmpid0zj).
+it renders (ADR-121).
 
     luria/site_page.py
 

@@ -1,6 +1,6 @@
 # tests/test_site_page.py
 """The staged page's frontmatter — what Quartz titles a page and what its
-properties panel shows (ADR-tmpid0zj).
+properties panel shows (ADR-121).
 
 The bug this module exists for: Quartz 5 parses frontmatter only in its
 `note-properties` plugin, and without it every page was untitled — blank

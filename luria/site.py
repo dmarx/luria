@@ -38,7 +38,7 @@ image is copied so it renders; anything else becomes a `source_url` link, and
 (DP-1).
 
 The one thing composed rather than copied is each page's **frontmatter**
-(`luria/site_page.py`, ADR-tmpid0zj): the keys Quartz reads, a title that carries
+(`luria/site_page.py`, ADR-121): the keys Quartz reads, a title that carries
 the document's code, and the record's facts — status, issue, the
 decisions named in `influenced_by:`, its vocabulary values and its typed
 edges both ways (`luria/edges.py`) — as labelled properties that Quartz's
@@ -160,7 +160,7 @@ plugins:
   # graph nodes labelled with paths (dmarx/anthology-of-the-sota#271).
   #
   # Its panel is the record's facts: `luria site` writes them into the
-  # staged frontmatter under a reader's label (ADR-tmpid0zj), so everything but
+  # staged frontmatter under a reader's label (ADR-121), so everything but
   # Quartz's own keys is shown, in the order luria wrote it.
   - source: "@quartz-community/note-properties"
     enabled: true
