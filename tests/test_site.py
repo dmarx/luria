@@ -118,44 +118,23 @@ def test_site_defaults_stay_empty_without_a_github_issue_url(project):
     assert s.title == project.name
 
 
-def test_record_line_carries_status_date_and_lineage():
-    meta = {"status": "Active", "date": "2026-08-04", "issue": "#9",
-            "influenced_by": ["ADR-005", "ADR-024"]}
-    line = site.record_line(meta, current().schemes["ADR"].dir / "ADR-025.md")
-    assert line.startswith("| | |\n|---|---|\n")
-    assert "| **Status** | Active |" in line
-    assert "| **Filed** | 2026-08-04 |" in line
-    # Wikilinks in, resolved links out — the fixer owns every target (DP-4).
-    assert "[ADR-005](ADR-005.md)" in line
-    assert "[ADR-024](ADR-024.md)" in line
-    assert "[#9](https://github.com/dmarx/luria/issues/9)" in line
-
-
-def test_record_line_reads_every_issue_in_the_field():
-    """`issue: '#21, #23'` is a shape this record actually uses, so the
-    separator is read out of the field rather than assumed."""
-    line = site.record_line({"issue": "#21, #23"}, current().index)
-    assert "issues/21" in line and "issues/23" in line
-
-
-def test_record_line_is_empty_without_frontmatter_facts():
-    assert site.record_line({}, current().index) == ""
-
-
-def test_version_appears_only_when_it_is_not_one():
-    where = current().schemes["ADR"].dir / "ADR-001.md"
-    assert "**Version**" not in site.record_line({"version": 1}, where)
-    assert "| **Version** | 2 |" in site.record_line({"version": 2}, where)
+def _front(page: Path) -> dict:
+    import yaml
+    text = page.read_text()
+    assert text.startswith("---\n")
+    return yaml.safe_load(text[4:text.index("\n---\n", 3)])
 
 
 def test_staged_decision_gets_its_code_as_an_alias(tmp_path):
     site.stage(tmp_path)
-    staged = (tmp_path / "content" / "record" / "decisions.d"
-              / "ADR-025.md").read_text()
-    assert '\naliases:\n- "ADR-025"\n' in staged
-    # The frontmatter that was already there is carried over verbatim.
-    assert "status: Active" in staged
-    assert "| **Status** | Active |" in staged
+    page = tmp_path / "content" / "record" / "decisions.d" / "ADR-025.md"
+    front = _front(page)
+    assert front["aliases"] == ["ADR-025"]
+    assert front["Status"] == "Active"
+    # The title carries the code, and the heading that said so is gone —
+    # Quartz draws the title itself.
+    assert front["title"].startswith("ADR-025: Wikilinks:")
+    assert "\n# ADR-025" not in page.read_text()
 
 
 def test_staging_is_idempotent_and_drops_removed_pages(tmp_path):
@@ -258,15 +237,15 @@ def test_an_unresolvable_influence_is_counted_not_swallowed(project):
 
 
 def test_a_superseded_decision_says_so_on_its_page(project):
-    """Status lives in frontmatter, which renders as nothing — so on a site a
-    retired decision reads as current unless the staging says otherwise."""
+    """Status lives in frontmatter, which a site renders only if it is told
+    to — so a retired decision reads as current unless staging says so."""
     decision(project, 1, "Active")
     decision(project, 2, "Superseded — by [ADR-001](ADR-001.md)")
     out = project / "build" / "site"
     site.stage(out)
-    staged = (out / "content" / "record" / "decisions.d"
-              / "ADR-002.md").read_text()
-    assert "| **Status** | Superseded — by [ADR-001](ADR-001.md) |" in staged
+    front = _front(out / "content" / "record" / "decisions.d" / "ADR-002.md")
+    assert front["Status"] == (
+        "Superseded — by [[record/decisions.d/ADR-001|ADR-001]]")
 
 
 def test_an_html_image_is_staged_beside_its_page(tmp_path):
@@ -602,17 +581,6 @@ def test_an_orphan_in_a_nested_view_directory_is_an_orphan(tmp_path, monkeypatch
     assert any(p.name == "ZZZ.md" for p in adr_index.staleness().orphaned), (
         "an unrendered file in a nested record's view directory went unreported"
     )
-
-
-def test_a_title_that_looks_like_syntax_is_escaped():
-    """A title is data spliced into a markdown table cell that is then
-    wikilink-expanded, so anything in it that reads as syntax has to be
-    escaped. This project's ADR-025 is titled ``Wikilinks: `[[CODE]]` is a
-    typed reference``, and two decisions cite it through `influenced_by:` —
-    unescaped, every one of their pages asked the resolver for a document
-    called `CODE`."""
-    assert site._plain("a | b") == r"a \| b"
-    assert "[[" not in site._plain(site.titles()["ADR-025"])
 
 
 def test_staging_leaves_no_unresolved_wikilink():

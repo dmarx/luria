@@ -18,7 +18,7 @@ from pathlib import Path
 
 import pytest
 
-from luria import adr_index, config, contract, doc_refs, lint, ref_status, site
+from luria import adr_index, config, contract, doc_refs, lint, ref_status, site, site_page
 from luria.config import current
 
 
@@ -387,14 +387,14 @@ def test_indexing_twice_leaves_the_reports_unchanged(tmp_path, monkeypatch):
 
 # --- rendered on the site ----------------------------------------------
 
-def test_the_record_line_shows_the_written_values_not_the_default(tmp_path, monkeypatch):
+def test_the_site_properties_show_the_written_values_not_the_default(tmp_path, monkeypatch):
     root = world(tmp_path, monkeypatch)
     path = scene(root, 1, "worlds:\n- A\n- C")
-    line = site.record_line({"status": "Active", "worlds": ["A", "C"]}, path)
-    assert ("| **Worlds** | <ul>"
-            "<li>[A](../../docs/scenes/worlds/A.md)</li>"
-            "<li>[C](../../docs/scenes/worlds/C.md)</li></ul> |") in line
-    quiet = site.record_line({"status": "Active"}, scene(root, 2))
+    props, _ = site_page.properties({"status": "Active", "worlds": ["A", "C"]},
+                                    path)
+    assert props["Worlds"] == ["[[docs/scenes/worlds/A|A]]",
+                               "[[docs/scenes/worlds/C|C]]"]
+    quiet, _ = site_page.properties({"status": "Active"}, scene(root, 2))
     assert "Worlds" not in quiet
 
 
@@ -425,8 +425,8 @@ luria:
     monkeypatch.setenv("LURIA_ROOT", str(tmp_path))
     config.reset()
     where = current().schemes["ADR"].dir / "ADR-001.md"
-    line = site.record_line({"status": "Active"}, where)
-    assert line.count("**Status**") == 1
+    props, _ = site_page.properties({"status": "Active"}, where)
+    assert list(props) == ["Status"]
 
 
 def test_a_superseded_status_still_reads_its_successor(tmp_path, monkeypatch):
@@ -454,9 +454,10 @@ luria:
     monkeypatch.setenv("LURIA_ROOT", str(tmp_path))
     config.reset()
     where = current().schemes["ADR"].dir / "ADR-001.md"
-    line = site.record_line(
+    props, _ = site_page.properties(
         {"status": "Superseded", "superseded_by": ["ADR-002"]}, where)
-    assert line.count("**Status**") == 1
+    assert list(props) == ["Status"]
+    line = props["Status"]
     # The successor survives; how its code is spelled is the resolver's,
     # and this fixture has no ADR-002 file for it to point at.
     assert "Superseded — by" in line and "ADR-002" in line
