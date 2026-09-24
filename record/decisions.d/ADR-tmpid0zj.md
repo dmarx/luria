@@ -1,0 +1,130 @@
+---
+status: Proposed
+title: 'The site delegates frontmatter to Quartz: luria composes it, the note-properties plugin renders it'
+version: 1
+tags:
+- mechanism
+date: '2026-09-24'
+influenced_by:
+- ADR-101
+summary: >-
+  Quartz 5 parses frontmatter only in its `note-properties` plugin, and
+  [ADR-101](ADR-101.md)'s config left it out — so every published page was untitled (blank
+  search results, graph nodes labelled with paths) and its YAML rendered as a
+  paragraph above the page. The plugin is now configured, and the record
+  table luria drew into each body to make up for frontmatter rendering as
+  nothing is gone: luria composes the staged frontmatter — Quartz's own keys,
+  a title carrying the code, the record's facts as labelled properties with
+  root-relative wikilinks — and Quartz renders it.
+---
+
+# ADR-tmpid0zj: The site delegates frontmatter to Quartz: luria composes it, the note-properties plugin renders it
+
+## Context
+
+`anthology-of-the-sota#271` reported the published site as broken four ways:
+search results that list but show nothing, the frontmatter duplicated as text
+above the record table, graph nodes labelled with paths instead of code and
+title, and codes that mean nothing to a reader.
+
+The first three have one cause, found by building that record with the
+pinned Quartz and reading the output. **Quartz 5 has no frontmatter
+transformer.** Parsing moved into `@quartz-community/note-properties`, which
+is both the parser and a properties panel, and the config [ADR-101](ADR-101.md) wrote does
+not list it. With nothing to parse the YAML:
+
+- remark read it as a paragraph — the "duplicated frontmatter";
+- every page's `title` was empty in `contentIndex.json` — measured on a
+  four-page vault: `''` for every document without the plugin, the real title
+  with it. A search card is its title, so every result was blank; the graph
+  labels a node by title and fell back to its slug; the explorer showed
+  filenames;
+- `aliases:` and `tags:` were never read either.
+
+[ADR-101](ADR-101.md) verified its build by driving popovers, the graph position and 109
+links. None of those reads a page title, which is how the regression passed.
+
+The record table luria drew under each title existed because, in its own
+words, frontmatter "renders as nothing". On Quartz 5 that premise is false.
+
+## Decision
+
+**`note-properties` is configured, as parser and as panel**, ordered before
+every other transformer. Its panel shows every property but Quartz's own keys
+(`title`, `aliases`, `tags`, the date keys, `description` and the like).
+
+**The staged frontmatter is a view, composed by luria** (`luria/site_page.py`)
+rather than the source YAML carried over verbatim:
+
+- the keys Quartz reads, carried from the source;
+- `title:` spelled `CODE: title`, so the code travels wherever the title does
+  — a search card, a graph label, a backlink, the explorer. A page with no
+  frontmatter title is titled by its first `# ` heading outside code, so a
+  generated view is not a blank result either;
+- the record's facts as properties under a reader's label — status (with its
+  successor), version, issue, influences, vocabulary values, and the typed
+  edges both ways — the facts the table carried, less the date (below).
+
+**Links in a property are root-relative wikilinks**,
+`[[record/literature.d/LIT-001|LIT-001]] — Adam: …`. Each is first resolved by
+the record's own resolver, so the fixer still owns every target ([DP-4](../principles.d/DP-004.md)), then
+re-spelled from the vault root, which is the one form the plugin resolves
+without ambiguity. The plugin also hands frontmatter links to `crawl-links`,
+so the typed edges now reach Quartz's graph and backlinks, which the table's
+body links only did incidentally. A nested record's links carry its mount
+point.
+
+**The heading the title repeats is dropped from the body.** Quartz draws the
+title above the page; the source keeps its heading, which the lint checks
+against `title:`.
+
+**The table is removed, not kept beside the panel.** Two renderings of the
+same facts on one page is the duplication the issue reported. The date is
+not a property either: `date:` is carried as Quartz's own key and its page
+header already shows it.
+
+## Alternatives considered
+
+- **Configure the plugin as a parser only, and hide its panel.** One option,
+  `hidePropertiesView: true`, and every symptom but the codes is fixed. It
+  keeps the bespoke table, whose premise no longer holds, and keeps luria
+  owning a rendering the generator now does itself.
+- **Show the source YAML as it stands.** `includeAll` over the raw
+  frontmatter shows `introduced_by: [LIT-001]` — a field name and a bare code
+  where the table said "Introduced by: LIT-001 — Adam: …", and the inbound
+  edges, which are nobody's frontmatter, not at all.
+- **Relative markdown links in properties, as the table used.** The plugin
+  resolves a property's href through a basename-and-suffix matcher written
+  for vault paths, not through `markdownLinkResolution: relative`. The
+  root-relative wikilink was verified against a real build; the relative
+  spelling was not, and matching by suffix is where ambiguity lives.
+- **Keep the source YAML verbatim and append properties to it.** The point
+  of verbatim was that no re-serialization could reorder a field the record
+  is the source of truth for. The staged copy is read by a generator and
+  nothing else; the record's copy is untouched, and appending means the panel
+  shows every raw field too.
+
+## Consequences
+
+Verified on a real build of `anthology-of-the-sota` (1637 pages) driven in a
+browser: every search card carries `CODE: title`, graph and explorer labels
+are titles, backlinks read `SOTA-036: Train a decoder-only transformer …`
+rather than `README`, the frontmatter no longer renders as text, and the
+properties panel shows the same facts the table did with every link
+resolving. `test_every_staged_page_is_titled` holds the whole record to it.
+
+What it costs: the panel's look is Quartz's, not luria's — a many-valued
+property is a list the plugin renders inline, restyled one item per line in
+`custom.scss`. And the published pages move: a record's facts are in a
+collapsible panel rather than a table in the body.
+
+Not addressed:
+
+- **Search is slow to open on a large record.** The search plugin fetches and
+  indexes the whole `contentIndex.json` before attaching any handler — on the
+  anthology, 11 MB and about 14 s headless — and `@quartz-community/search`
+  1.0.0 does the same. That is upstream's; the only local lever is to trim
+  the index, which trades body-text recall for latency, and is a separate
+  decision.
+- **Semantic aliases for codes**, the issue's fourth item, is a question about
+  addresses, not rendering, and is left to its own decision.
