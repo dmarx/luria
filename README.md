@@ -1,3 +1,17 @@
+<p align="center">
+  <img src="assets/branding/luria-brainslug/luria_project_memory_lockup_horizontal.svg"
+       alt="Luria — project memory" width="480">
+</p>
+
+<!-- luria:badges -->
+[![needs decision: 4](https://img.shields.io/badge/needs%20decision-4-orange)](docs/reports/pending-decisions.md)
+[![cited, not in force: 1](https://img.shields.io/badge/cited,%20not%20in%20force-1-orange)](docs/reports/reference-status.md)
+<!-- /luria:badges -->
+
+<!-- luria:site -->
+📖 **[dmarx.github.io/luria](https://dmarx.github.io/luria/)** — this record, published by `luria site`.
+<!-- /luria:site -->
+
 # Luria
 
 **Governed knowledge, kept coherent under change.**
@@ -58,7 +72,7 @@ Then:
 
 ```console
 $ luria init
-$ luria new RFC --title "Introduce durable background jobs"
+$ luria new rfc --title "Introduce durable background jobs"
 $ luria lint
 $ luria index
 ```
@@ -107,7 +121,7 @@ human review
 
 Some suspicious conditions are legitimate. A retrospective may intentionally cite a superseded decision. A remote reference may be temporarily unavailable. A corpus may have a known backlog.
 
-Luria distinguishes findings from enforcement. Warning classes can be promoted to failures, baselined, or explicitly acknowledged without making the acknowledgement disappear from the accounting ([ADR-035](record/decisions.d/ADR-035.md); [DP-1](record/principles.d/DP-001.md)).
+Luria distinguishes findings from enforcement. Warning classes are reported by default and can be promoted to failures ([ADR-035](record/decisions.d/ADR-035.md)), baselined, or explicitly acknowledged — without the acknowledgement disappearing from the accounting ([DP-1](record/principles.d/DP-001.md)).
 
 The useful pattern is:
 
@@ -131,7 +145,7 @@ C corrects A
 D compared_against C
 ```
 
-A Luria **chain** can walk one or more same-scheme succession relations into a generated sequence, add sibling/rival edges, carry vocabulary-backed facets onto each step, and check an invariant across the line.
+A Luria **chain** can walk one or more same-scheme succession relations into a generated sequence, add sibling/rival edges, carry vocabulary-backed facets onto each step, and check an invariant across the line (ADR-083, ADR-106, ADR-113).
 
 > **Authors state the edges. Luria derives the line.**
 
@@ -150,7 +164,7 @@ Luria's major record families are semantically distinct:
 | **Fragment directory** | distributed contributions assembled into another artifact |
 | **Remote** | identities or authorities owned elsewhere |
 
-Generated indexes, chain pages, reports, sites, and exports are **projections**, not competing sources of truth. Luria's [DP-3](record/principles.d/DP-003.md) states the general rule: if a view can be derived from an authoritative source, derive it rather than maintaining a parallel copy ([DP-3](record/principles.d/DP-003.md)).
+Generated indexes, chain pages, reports, sites, and exports are **projections**, not competing sources of truth. [DP-3](record/principles.d/DP-003.md) states the general rule: if a view can be derived from an authoritative source, derive it rather than maintaining a parallel copy.
 
 ## Vocabularies are more than labels
 
@@ -179,15 +193,15 @@ Others govern how claims are represented and changed:
 Every superseded decision names its successor.
 ```
 
-Call the subject-level record \(R\) and the governing knowledge \(M\). A useful conceptual picture is:
+Call the subject-level record *R* and the governing knowledge *M*. The question Luria keeps asking is:
 
-\[
-M;R \vdash x
-\]
+```text
+M; R ⊢ x
+```
 
-Meaning: given the current record and the rules under which it operates, does this object or relation still make sense?
+That is: given the current record and the rules under which it operates, does this object or relation still make sense?
 
-The distinction can remain conceptual, be tagged inside one record, use a separate scheme, or live in a dedicated meta-record. Luria should meet the corpus where it is rather than require one canonical decomposition ([DP-14](record/principles.d/DP-014.md)).
+The distinction can remain conceptual, be tagged inside one record, use a separate scheme, or live in a dedicated meta-record. Luria meets the corpus where it is rather than requiring one canonical decomposition ([DP-14](record/principles.d/DP-014.md)).
 
 ## Documentation is part of the record
 
@@ -197,7 +211,7 @@ This README says that `luria init` is configuration-driven, so it cites [ADR-048
 
 Those are maintenance edges, not decorative footnotes.
 
-If a governing ADR becomes inactive, dependent documentation should become reviewable even if nobody edited the prose.
+When a governing ADR stops being in force, the documentation that cites it becomes reviewable even though nobody edited the prose: `luria lint` reports the citation under the `retired-citations` warning class.
 
 That is the product demonstrating its own thesis.
 
@@ -207,8 +221,8 @@ That is the product demonstrating its own thesis.
 - **Want to see chains:** [Build a lineage with chains](docs/tutorials/chains.md)
 - **Already have a corpus:** [Adopt Luria around an existing corpus](docs/tutorials/adopt-existing-corpus.md)
 - **Understand the model:** [Concepts](docs/concepts/record-model.md)
-- **Do a specific task:** [How-to guides](docs/index.md#how-to-guides)
-- **Look up exact behavior:** [Reference](docs/index.md#reference)
+- **Do a specific task:** [How-to guides](docs/README.md#how-to-guides)
+- **Look up exact behavior:** [Reference](docs/README.md#reference)
 - **Understand why Luria behaves this way:** follow the cited ADRs and DPs.
 
 ## Installation

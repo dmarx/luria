@@ -14,6 +14,7 @@ One binary, `luria`, dispatching to plain functions. Every command takes
 | [`luria index`](#luria-index) | render every generated view |
 | [`luria link`](#luria-link) | turn bare codes and wikilinks into links |
 | [`luria lint`](#luria-lint) | enforce the record's invariants |
+| [`luria ack`](#luria-ack) | acknowledge a cited retired or unresolved code, from the scan |
 | [`luria reports`](#luria-reports) | write the status reports |
 | [`luria collect`](#luria-collect) | assemble fragments into their target |
 | [`luria concretize`](#luria-concretize) | give temporary codes real numbers |
@@ -371,6 +372,36 @@ record says.
 `lint.network` promotes one class on its own: under `network = "require"`,
 `source-unchecked` fails without being named in `fail_on`, because the
 setting already said that a green run means the references were verified.
+
+## luria ack
+
+```
+luria ack [CODE] [--reason TEXT] [--scope line|file] [--until YYYY-MM-DD]
+```
+
+Writes an acknowledgement directive at every site the citation scan
+reports unacknowledged for CODE: `inactive-ok:` for a deliberate citation
+of a document that is not in force, `unresolved-ok:` for a code that names
+nothing on purpose. The code comes from the scan, never from a person — a
+directive transcribed by hand is the one place an acknowledgement can be
+silently wrong. With no code it prints what could be acknowledged and
+writes nothing.
+
+```console
+$ luria ack
+ADR-001 — cited but not in force, 1 unacknowledged site(s)
+    docs/README.md:23
+
+luria ack <CODE> --reason "..." writes the directive at each site above.
+$ luria ack ADR-001 --reason "the decision this page replaced"
+acknowledged ADR-001 at docs/README.md:23
+wrote 1 directive(s)
+```
+
+`--scope` is `line` (one directive per citation, the default) or `file`
+(one per file); `--until` gives the directive an expiry, after which every
+check behaves as though it had never been written. The directive syntax
+itself is in [comment directives](directives.md).
 
 ## luria reports
 
