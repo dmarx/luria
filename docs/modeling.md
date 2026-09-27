@@ -120,7 +120,7 @@ schemes:
 ## Statuses in two schemes
 
 The status words are a vocabulary declared in `luria.yaml`, not fixed by
-the tool (ADR-085, ADR-098): the scaffold ships `Active`, `Proposed`,
+the tool ([ADR-085](../record/decisions.d/ADR-085.md), [ADR-098](../record/decisions.d/ADR-098.md)): the scaffold ships `Active`, `Proposed`,
 `Deferred`, `Superseded` and `Rejected`, and each scheme's `active:` names
 the word that means in force. Two schemes can share one vocabulary and still
 mean different things by it — each value's `blurb` renders as a legend above

@@ -185,7 +185,7 @@ you declare **replaces the shipped family whole**. A project that writes
 
 Every scheme document carries a `status:` from a closed vocabulary that the
 project declares in `luria.yaml` and the scheme names in
-`fields.status.vocabulary` (ADR-085, ADR-098). `luria init` ships five
+`fields.status.vocabulary` ([ADR-085](../record/decisions.d/ADR-085.md), [ADR-098](../record/decisions.d/ADR-098.md)). `luria init` ships five
 words —
 
 > `Active` · `Proposed` · `Deferred` · `Superseded` · `Rejected`
