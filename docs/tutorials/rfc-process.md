@@ -360,7 +360,7 @@ luria: 1 violation(s)
   record/decisions.d/DECISION-001.md: no `superseded_by:` in frontmatter — `superseded_by` names a document in any scheme, because `status: Superseded` (built in: `superseded_by` (ADR-071))
 ```
 
-Every scheme has a built-in `superseded_by` reference, required exactly when `status` is `Superseded` (ADR-071). You do not declare it; declaring your own `superseded_by` in `references` replaces the built-in, and would be required on every entry unless it says `required: false`. Record the successor:
+Every scheme has a built-in `superseded_by` reference, required exactly when `status` is `Superseded` ([ADR-071](../../record/decisions.d/ADR-071.md)). You do not declare it; declaring your own `superseded_by` in `references` replaces the built-in, and would be required on every entry unless it says `required: false`. Record the successor:
 
 ```console
 $ luria relate DECISION-001 superseded_by DECISION-002
@@ -480,7 +480,7 @@ This tutorial claims that:
 - `luria new` is configuration-driven — [ADR-036](../../record/decisions.d/ADR-036.md).
 - correction differs from supersession — [ADR-019](../../record/decisions.d/ADR-019.md).
 - warnings and acknowledgements participate in configurable enforcement — [ADR-035](../../record/decisions.d/ADR-035.md).
-- a superseded document names its successor in `superseded_by:` — ADR-071.
+- a superseded document names its successor in `superseded_by:` — [ADR-071](../../record/decisions.d/ADR-071.md).
 
 Those references are maintenance edges.
 

@@ -130,7 +130,7 @@ For example:
 Which RFC replaced this one?
 ```
 
-That one is built in: every scheme has a `superseded_by` reference, and an entry whose `status` is `Superseded` must fill it (ADR-071). Record it with `luria relate RFC-001 superseded_by RFC-003`.
+That one is built in: every scheme has a `superseded_by` reference, and an entry whose `status` is `Superseded` must fill it ([ADR-071](../../record/decisions.d/ADR-071.md)). Record it with `luria relate RFC-001 superseded_by RFC-003`.
 
 Or:
 
@@ -138,7 +138,7 @@ Or:
 Which decision did this implementation realize?
 ```
 
-Declare a typed `decision` reference in the implementing scheme's `references` table. The field name becomes the relation, checked for shape, scheme and resolution (ADR-071). A declared reference is required unless it says `required: false`.
+Declare a typed `decision` reference in the implementing scheme's `references` table. The field name becomes the relation, checked for shape, scheme and resolution ([ADR-071](../../record/decisions.d/ADR-071.md)). A declared reference is required unless it says `required: false`.
 
 Prefer one relation that pays rent over a large graph nobody uses.
 
