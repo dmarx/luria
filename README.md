@@ -1786,7 +1786,7 @@ And the record itself, dogfooded: [decisions](docs/decisions/README.md) ·
 ```bibtex
 @software{marx_luria,
   author  = {Marx, David},
-  title   = {Luria: Machinery For Constructing Governed Knowledge Systems},
+  title   = {Luria: project memory, kept honest by lint},
   url     = {https://github.com/dmarx/luria},
   license = {MIT},
 }
