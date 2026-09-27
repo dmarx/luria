@@ -52,7 +52,7 @@ is knowledge. Preserve it when it matters.
 
 ## Converse relations
 
-If `extends` and `extended_by` are declared as converses, the reverse edge is not a guess. It is the same relation read from the other endpoint (ADR-084).
+If `extends` and `extended_by` are declared as converses, the reverse edge is not a guess. It is the same relation read from the other endpoint ([ADR-084](../../record/decisions.d/ADR-084.md)).
 
 ```yaml
 references:
@@ -67,7 +67,7 @@ A pair is checked when `luria.yaml` loads, and refused unless:
 
 - both sides name each other,
 - both sides are `many: true`, since either side is written into,
-- the converse is declared on the scheme whose codes the field holds — for a relation that crosses schemes, that is the target scheme, not the declaring one (ADR-097).
+- the converse is declared on the scheme whose codes the field holds — for a relation that crosses schemes, that is the target scheme, not the declaring one ([ADR-097](../../record/decisions.d/ADR-097.md)).
 
 A document that holds only one side of a declared pair is reported as `one-sided-relations`; `luria link --fix` writes the missing side.
 
@@ -85,7 +85,7 @@ extends:
 
 means the relation claims some shared subject vocabulary.
 
-Relation invariants can cross schemes if both ends declare the invariant field (ADR-106).
+Relation invariants can cross schemes if both ends declare the invariant field ([ADR-106](../../record/decisions.d/ADR-106.md)).
 
 An edge whose two ends share no value of the field is reported as `unbound-relations`: either a true value is missing from one end, or the edge is wrong.
 
@@ -155,9 +155,9 @@ A chain can assert an invariant across its line:
 invariant: tags
 ```
 
-This is a stronger claim than a relation invariant (ADR-106). A relation invariant is about each edge; a chain invariant is about the whole line — every member of a connected line holding one value in common. A line that shares nothing is reported as `unbound-lines`, a weaker signal than `unbound-relations`, since each step may share something with its neighbour while nothing runs the whole length. Read the line whole before acting on it.
+This is a stronger claim than a relation invariant ([ADR-106](../../record/decisions.d/ADR-106.md)). A relation invariant is about each edge; a chain invariant is about the whole line — every member of a connected line holding one value in common. A line that shares nothing is reported as `unbound-lines`, a weaker signal than `unbound-relations`, since each step may share something with its neighbour while nothing runs the whole length. Read the line whole before acting on it.
 
-Declaring `invariant` on a chain also shapes its page: the lines are grouped under each value they share, and the lines that share none get a section of their own (ADR-113).
+Declaring `invariant` on a chain also shapes its page: the lines are grouped under each value they share, and the lines that share none get a section of their own ([ADR-113](../../record/decisions.d/ADR-113.md)).
 
 A failure does not automatically mean “bad edge.”
 

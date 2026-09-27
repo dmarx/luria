@@ -73,7 +73,7 @@ It intentionally renders history, including inactive or superseded steps. The pa
 
 ## Sites
 
-`luria site` stages the record for publication as a Quartz vault, under rules that keep it a projection (ADR-042):
+`luria site` stages the record for publication as a Quartz vault, under rules that keep it a projection ([ADR-042](../../record/decisions.d/ADR-042.md)):
 
 - **paths are preserved**, so every relative link the fixer wrote keeps resolving and no second link resolver is needed;
 - **a source that renders into a view is withheld** and the view is published — a journal entry appears in its book, a fragment in its collected file;
@@ -82,7 +82,7 @@ It intentionally renders history, including inactive or superseded steps. The pa
 
 ## Exports
 
-`luria export` writes a SQLite file — documents, field values, typed edges, citations and journal entries — that makes the record convenient to query analytically (ADR-116).
+`luria export` writes a SQLite file — documents, field values, typed edges, citations and journal entries — that makes the record convenient to query analytically ([ADR-116](../../record/decisions.d/ADR-116.md)).
 
 The database is still a projection: rebuilt from scratch on every run through the same readers the lint uses, never written back to, and not committed.
 

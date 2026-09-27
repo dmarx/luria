@@ -44,7 +44,7 @@ Their semantic claim is usually:
 
 A journal entry's identity is temporal rather than a sequential scheme number. Its source persists.
 
-Historical observations should not become stale merely because current doctrine changes, and Luria treats them that way: journal entries and the books they render into are exempt from the reference-status report, so citing a decision that has since been superseded is not reported against a dated entry (ADR-020). The same exemption covers uncollected fragments and any file listed in `code.historical`, such as `CHANGELOG.md`.
+Historical observations should not become stale merely because current doctrine changes, and Luria treats them that way: journal entries and the books they render into are exempt from the reference-status report, so citing a decision that has since been superseded is not reported against a dated entry ([ADR-020](../../record/decisions.d/ADR-020.md)). The same exemption covers uncollected fragments and any file listed in `code.historical`, such as `CHANGELOG.md`.
 
 ### Fragment directories
 

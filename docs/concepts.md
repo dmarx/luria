@@ -36,7 +36,7 @@ because nothing is being judged. `luria lint` reports that state as
 ## Status
 
 Status is an ordinary vocabulary, declared in `luria.yaml` and named by
-each scheme's `fields.status.vocabulary` (ADR-085, ADR-098). `luria init`
+each scheme's `fields.status.vocabulary` ([ADR-085](../record/decisions.d/ADR-085.md), [ADR-098](../record/decisions.d/ADR-098.md)). `luria init`
 ships five words:
 
 `Active` · `Proposed` · `Deferred` · `Superseded` · `Rejected`

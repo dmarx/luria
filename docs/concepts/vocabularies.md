@@ -6,7 +6,7 @@ That language can serve several roles at once.
 
 ## 1. Classification
 
-A vocabulary is declared once, at the top of `luria.yaml`, and a scheme's field names it (ADR-076, ADR-098):
+A vocabulary is declared once, at the top of `luria.yaml`, and a scheme's field names it ([ADR-076](../../record/decisions.d/ADR-076.md), [ADR-098](../../record/decisions.d/ADR-098.md)):
 
 ```yaml
 vocabularies:
@@ -58,7 +58,7 @@ Each value of a vocabulary-backed field gets a page in its scheme's generated in
 
 A scheme's `axis` key is a narrower, real setting: it names the one field whose values head that scheme's index — `tags` in Luria's own record.
 
-Status is a vocabulary like any other (ADR-085). A scheme names its status vocabulary under `fields.status.vocabulary`, and its `active:` key names the one word that means in force.
+Status is a vocabulary like any other ([ADR-085](../../record/decisions.d/ADR-085.md)). A scheme names its status vocabulary under `fields.status.vocabulary`, and its `active:` key names the one word that means in force.
 
 For example:
 
@@ -125,7 +125,7 @@ These constraints make the ontology executable without pretending every semantic
 
 ## Field groups
 
-Several alternative fields can collectively satisfy one requirement (ADR-074).
+Several alternative fields can collectively satisfy one requirement ([ADR-074](../../record/decisions.d/ADR-074.md)).
 
 For example, a literature record might need **a source**, satisfied by at least one of:
 
@@ -156,7 +156,7 @@ and assert:
 invariant: tags
 ```
 
-A chain's `invariant` says every member of a line holds one value of that field in common. A line that shares nothing is reported as `unbound-lines`, and the chain page is grouped by the invariant's values, with the lines that share none in a section of their own (ADR-113). This is distinct from an `invariant` on a relation, which asserts only that the two ends of each edge share a value, and is reported as `unbound-relations` (ADR-106).
+A chain's `invariant` says every member of a line holds one value of that field in common. A line that shares nothing is reported as `unbound-lines`, and the chain page is grouped by the invariant's values, with the lines that share none in a section of their own ([ADR-113](../../record/decisions.d/ADR-113.md)). This is distinct from an `invariant` on a relation, which asserts only that the two ends of each edge share a value, and is reported as `unbound-relations` ([ADR-106](../../record/decisions.d/ADR-106.md)).
 
 This makes vocabulary design part of longitudinal interpretation.
 
