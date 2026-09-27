@@ -145,7 +145,7 @@ C corrects A
 D compared_against C
 ```
 
-A Luria **chain** can walk one or more same-scheme succession relations into a generated sequence, add sibling/rival edges, carry vocabulary-backed facets onto each step, and check an invariant across the line (ADR-083, ADR-106, ADR-113).
+A Luria **chain** can walk one or more same-scheme succession relations into a generated sequence, add sibling/rival edges, carry vocabulary-backed facets onto each step, and check an invariant across the line ([ADR-083](record/decisions.d/ADR-083.md), [ADR-106](record/decisions.d/ADR-106.md), [ADR-113](record/decisions.d/ADR-113.md)).
 
 > **Authors state the edges. Luria derives the line.**
 
