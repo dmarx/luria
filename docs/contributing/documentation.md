@@ -39,7 +39,7 @@ Examples:
     → ADR-035
 ```
 
-In a page, write the bare code — ADR-048 — and run `luria link --fix`; never hand-write the link target. Prose renders into views in other directories, so only the fixer knows the frame a target must resolve from. (The examples above sit in `text` fences, which mask codes: they illustrate the pattern and create no edges. A code in backticks is a mention, not a citation, for the same reason.)
+In a page, write the bare code — [ADR-048](../../record/decisions.d/ADR-048.md) — and run `luria link --fix`; never hand-write the link target. Prose renders into views in other directories, so only the fixer knows the frame a target must resolve from. (The examples above sit in `text` fences, which mask codes: they illustrate the pattern and create no edges. A code in backticks is a mention, not a citation, for the same reason.)
 
 These citations are dependency edges. When the cited ADR stops being in force, `luria lint` reports the citing page under `retired-citations`, so the prose becomes reviewable without anyone having edited it.
 
@@ -119,6 +119,6 @@ $ luria lint
 $ python -m pytest tests -q
 ```
 
-Branches carry no regenerated views: `luria index` runs where merges serialize, in the generation job on the default branch, and `luria index --check` is asked there (ADR-068).
+Branches carry no regenerated views: `luria index` runs where merges serialize, in the generation job on the default branch, and `luria index --check` is asked there ([ADR-068](../../record/decisions.d/ADR-068.md)).
 
 The documentation is dogfood: if its governing citation changes and nothing surfaces, either the dependency was not represented or the mechanism is not doing what the docs claim.
