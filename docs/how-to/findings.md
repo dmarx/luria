@@ -44,7 +44,7 @@ not:
 disable the signal
 ```
 
-DP-1 requires suppressions to remain visible in the accounting rather than becoming silence ([DP-1](../../record/principles.d/DP-001.md)).
+[DP-1](../../record/principles.d/DP-001.md) requires suppressions to remain visible in the accounting rather than becoming silence ([DP-1](../../record/principles.d/DP-001.md)).
 
 ## Promote a warning class
 
@@ -56,7 +56,7 @@ lint:
     - some-class
 ```
 
-Luria's warn-first enforcement model is governed by ADR-035 ([ADR-035](../../record/decisions.d/ADR-035.md)).
+Luria's warn-first enforcement model is governed by [ADR-035](../../record/decisions.d/ADR-035.md) ([ADR-035](../../record/decisions.d/ADR-035.md)).
 
 ## Baseline a known residue
 

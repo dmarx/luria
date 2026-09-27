@@ -75,7 +75,7 @@ An acknowledgement should say:
 - where,
 - why.
 
-DP-1's corollary is important: a suppression must not become silence. Acknowledged findings remain countable, and stale acknowledgements should themselves become visible ([DP-1](../../record/principles.d/DP-001.md)).
+[DP-1](../../record/principles.d/DP-001.md)'s corollary is important: a suppression must not become silence. Acknowledged findings remain countable, and stale acknowledgements should themselves become visible ([DP-1](../../record/principles.d/DP-001.md)).
 
 ## Mechanical repair versus human judgment
 

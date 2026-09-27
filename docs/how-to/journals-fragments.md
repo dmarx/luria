@@ -42,7 +42,7 @@ Contributors write independent fragment files instead of editing the shared targ
 
 `luria collect` assembles them into the target.
 
-The current CLI treats collection primarily as a CI/serialization-point operation, which aligns with DP-2: one shared artifact should have one writer where merges serialize ([DP-2](../../record/principles.d/DP-002.md)).
+The current CLI treats collection primarily as a CI/serialization-point operation, which aligns with [DP-2](../../record/principles.d/DP-002.md): one shared artifact should have one writer where merges serialize ([DP-2](../../record/principles.d/DP-002.md)).
 
 ## Choose by semantics
 

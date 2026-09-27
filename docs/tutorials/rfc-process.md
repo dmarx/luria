@@ -10,7 +10,7 @@ RFC → DECISION → IMPLEMENTATION
        PROCESS
 ```
 
-Your own process may collapse some of these objects, split them differently, or omit them. The point is to learn the mechanics and the modeling questions, not to prescribe a universal RFC ontology. Luria's DP-14 explicitly favors meeting a project where it is over forcing one canonical shape ([DP-14](../../record/principles.d/DP-014.md)).
+Your own process may collapse some of these objects, split them differently, or omit them. The point is to learn the mechanics and the modeling questions, not to prescribe a universal RFC ontology. Luria's [DP-14](../../record/principles.d/DP-014.md) explicitly favors meeting a project where it is over forcing one canonical shape ([DP-14](../../record/principles.d/DP-014.md)).
 
 ## 1. Install Luria
 
@@ -137,7 +137,7 @@ record/rfcs.d/
 docs/rfcs/
 ```
 
-Edit the source and regenerate the view. Do not maintain both independently. That is the concrete application of DP-3: hand-maintained projections drift ([DP-3](../../record/principles.d/DP-003.md)).
+Edit the source and regenerate the view. Do not maintain both independently. That is the concrete application of [DP-3](../../record/principles.d/DP-003.md): hand-maintained projections drift ([DP-3](../../record/principles.d/DP-003.md)).
 
 ## 6. Change standing without erasing history
 
@@ -179,7 +179,7 @@ from:
 commitment resulting from the proposal
 ```
 
-Ask whether they can be cited, revised, or superseded independently. DP-12's general principle is that independently meaningful citable things often deserve independently coherent identities ([DP-12](../../record/principles.d/DP-012.md)).
+Ask whether they can be cited, revised, or superseded independently. [DP-12](../../record/principles.d/DP-012.md)'s general principle is that independently meaningful citable things often deserve independently coherent identities ([DP-12](../../record/principles.d/DP-012.md)).
 
 For this tutorial, add a decision scheme.
 
@@ -356,7 +356,7 @@ explicit process knowledge
 mechanism where useful
 ```
 
-DP-5 describes the general ladder from prose to convention to mechanism to guarantee ([DP-5](../../record/principles.d/DP-005.md)).
+[DP-5](../../record/principles.d/DP-005.md) describes the general ladder from prose to convention to mechanism to guarantee ([DP-5](../../record/principles.d/DP-005.md)).
 
 ## 14. Give process rules identities when that helps
 
@@ -377,10 +377,10 @@ The prose explains **why**. The config expresses what the machine can actually c
 
 This tutorial claims that:
 
-- `luria init` is configuration-driven — ADR-048.
-- `luria new` is configuration-driven — ADR-036.
-- correction differs from supersession — ADR-019.
-- warnings and acknowledgements participate in configurable enforcement — ADR-035.
+- `luria init` is configuration-driven — [ADR-048](../../record/decisions.d/ADR-048.md).
+- `luria new` is configuration-driven — [ADR-036](../../record/decisions.d/ADR-036.md).
+- correction differs from supersession — [ADR-019](../../record/decisions.d/ADR-019.md).
+- warnings and acknowledgements participate in configurable enforcement — [ADR-035](../../record/decisions.d/ADR-035.md).
 
 Those references are maintenance edges.
 

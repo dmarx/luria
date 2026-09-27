@@ -143,7 +143,7 @@ RFC-002
 RFC-003
 ```
 
-Do not hand-maintain that sequence elsewhere. The chain exists specifically to avoid a second prose lineage drifting from the source relations. That is DP-3's source/projection principle applied to history ([DP-3](../../record/principles.d/DP-003.md)).
+Do not hand-maintain that sequence elsewhere. The chain exists specifically to avoid a second prose lineage drifting from the source relations. That is [DP-3](../../record/principles.d/DP-003.md)'s source/projection principle applied to history ([DP-3](../../record/principles.d/DP-003.md)).
 
 ## 6. Add vocabulary-backed facets
 
@@ -263,7 +263,7 @@ The configuration therefore requires:
 - a declared invariant field,
 - an output path.
 
-This is an application of DP-15's concern with silent non-events: “nothing happened” should not be indistinguishable from “everything worked.”
+This is an application of [DP-15](../../record/principles.d/DP-015.md)'s concern with silent non-events: “nothing happened” should not be indistinguishable from “everything worked.”
 
 ## 11. Publish the chain
 

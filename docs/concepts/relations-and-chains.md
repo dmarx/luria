@@ -159,6 +159,6 @@ chain derivation
 generated sequence
 ```
 
-Do not hand-maintain the lineage in parallel. DP-3 applies directly: derive the projection from the authoritative source ([DP-3](../../record/principles.d/DP-003.md)).
+Do not hand-maintain the lineage in parallel. [DP-3](../../record/principles.d/DP-003.md) applies directly: derive the projection from the authoritative source ([DP-3](../../record/principles.d/DP-003.md)).
 
 > **Authors state the edges. Luria derives the line.**

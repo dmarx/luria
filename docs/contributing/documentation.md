@@ -57,7 +57,7 @@ ADR / DP   = why the design exists
 
 Do not copy an ADR's alternatives/rationale into every page that uses the behavior.
 
-That would create hand-maintained projections of the design record, the exact failure DP-3 warns about ([DP-3](../../record/principles.d/DP-003.md)).
+That would create hand-maintained projections of the design record, the exact failure [DP-3](../../record/principles.d/DP-003.md) warns about ([DP-3](../../record/principles.d/DP-003.md)).
 
 ## 4. Normative language is earned
 

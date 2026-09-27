@@ -26,7 +26,7 @@ The new entry receives a visibly temporary code rather than pretending its globa
 
 The temporary identity is first-class on the branch: it can be linted, indexed, and cited.
 
-This behavior is governed by ADR-049 ([ADR-049](../../record/decisions.d/ADR-049.md)).
+This behavior is governed by [ADR-049](../../record/decisions.d/ADR-049.md) ([ADR-049](../../record/decisions.d/ADR-049.md)).
 
 ## Concretize where merges serialize
 

@@ -71,7 +71,7 @@ Introduce a new abstraction only when it reduces more complexity than it creates
 
 A mature record theory contains both.
 
-DP-5 describes the progression from prose toward convention, mechanism, and guarantee when that promotion is warranted ([DP-5](../../record/principles.d/DP-005.md)).
+[DP-5](../../record/principles.d/DP-005.md) describes the progression from prose toward convention, mechanism, and guarantee when that promotion is warranted ([DP-5](../../record/principles.d/DP-005.md)).
 
 ## Self-amendment
 
@@ -89,8 +89,8 @@ A sentence saying:
 
 > `luria init` scaffolds from configuration
 
-depends on ADR-048.
+depends on [ADR-048](../../record/decisions.d/ADR-048.md).
 
-If ADR-048 becomes inactive, the sentence should be surfaced for review.
+If [ADR-048](../../record/decisions.d/ADR-048.md) becomes inactive, the sentence should be surfaced for review.
 
 Documentation citations are therefore maintenance edges, not bibliography.

@@ -14,7 +14,7 @@ docs/
 
 The goal is not to redesign the corpus before Luria can help. Start with one useful semantic distinction and add governance incrementally.
 
-That follows DP-14: Luria should meet the project where it is ([DP-14](../../record/principles.d/DP-014.md)).
+That follows [DP-14](../../record/principles.d/DP-014.md): Luria should meet the project where it is ([DP-14](../../record/principles.d/DP-014.md)).
 
 ## 1. Inventory what already has meaning
 

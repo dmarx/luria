@@ -14,7 +14,7 @@ The CLI contract treats lint as the command that can fail the record check.
 
 Use the current `luria index` check mode, if configured/supported in the version you run, to verify that committed projections are current without making every branch a writer.
 
-DP-2's rule is important here: generated shared artifacts should be written where merges serialize, not independently by every branch ([DP-2](../../record/principles.d/DP-002.md)).
+[DP-2](../../record/principles.d/DP-002.md)'s rule is important here: generated shared artifacts should be written where merges serialize, not independently by every branch ([DP-2](../../record/principles.d/DP-002.md)).
 
 ## Merge-allocated identities
 
@@ -48,7 +48,7 @@ A hermetic CI run and a network-required CI run make different guarantees.
 
 Do not make every new warning fatal by default.
 
-Luria's ADR-035 model supports:
+Luria's [ADR-035](../../record/decisions.d/ADR-035.md) model supports:
 
 - reported classes,
 - `fail_on`,

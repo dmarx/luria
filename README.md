@@ -150,7 +150,7 @@ Luria's major record families are semantically distinct:
 | **Fragment directory** | distributed contributions assembled into another artifact |
 | **Remote** | identities or authorities owned elsewhere |
 
-Generated indexes, chain pages, reports, sites, and exports are **projections**, not competing sources of truth. Luria's DP-3 states the general rule: if a view can be derived from an authoritative source, derive it rather than maintaining a parallel copy ([DP-3](record/principles.d/DP-003.md)).
+Generated indexes, chain pages, reports, sites, and exports are **projections**, not competing sources of truth. Luria's [DP-3](record/principles.d/DP-003.md) states the general rule: if a view can be derived from an authoritative source, derive it rather than maintaining a parallel copy ([DP-3](record/principles.d/DP-003.md)).
 
 ## Vocabularies are more than labels
 
@@ -193,7 +193,7 @@ The distinction can remain conceptual, be tagged inside one record, use a separa
 
 Luria's own documentation should depend on the decisions and principles that make its behavioral claims true.
 
-This README says that `luria init` is configuration-driven, so it cites ADR-048. It says `luria new` derives entry kinds from configuration, so it cites ADR-036.
+This README says that `luria init` is configuration-driven, so it cites [ADR-048](record/decisions.d/ADR-048.md). It says `luria new` derives entry kinds from configuration, so it cites [ADR-036](record/decisions.d/ADR-036.md).
 
 Those are maintenance edges, not decorative footnotes.
 
