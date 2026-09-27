@@ -62,7 +62,7 @@ Suppose a document says:
 Writes are retried because ADR-012 requires at-least-once delivery.
 ```
 
-Later, ADR-012 is superseded.
+Later, [ADR-012](record/decisions.d/ADR-012.md) is superseded.
 
 Nothing happened to the sentence.
 
@@ -482,7 +482,7 @@ and frequently something stronger:
 \mathrm{ADR\text{-}012}.
 \]
 
-If ADR-012 changes standing, the referencing text may need reconsideration even though nobody touched it.
+If [ADR-012](record/decisions.d/ADR-012.md) changes standing, the referencing text may need reconsideration even though nobody touched it.
 
 That is the point.
 
