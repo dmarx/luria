@@ -39,7 +39,7 @@ Examples:
     → ADR-035
 ```
 
-In a page, write the bare code — [ADR-048](../../record/decisions.d/ADR-048.md) — and run `luria link --fix`; never hand-write the link target. Prose renders into views in other directories, so only the fixer knows the frame a target must resolve from. (The examples above sit in `text` fences, which mask codes: they illustrate the pattern and create no edges. A code in backticks is a mention, not a citation, for the same reason.)
+In a page, write the bare code (for example `ADR-048`, shown in backticks here so it stays a mention) and run `luria link --fix`; never hand-write the link target. Prose renders into views in other directories, so only the fixer knows the frame a target must resolve from. (The examples above sit in `text` fences, which mask codes: they illustrate the pattern and create no edges. A code in backticks is a mention, not a citation, for the same reason.)
 
 These citations are dependency edges. When the cited ADR stops being in force, `luria lint` reports the citing page under `retired-citations`, so the prose becomes reviewable without anyone having edited it.
 

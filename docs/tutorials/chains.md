@@ -12,7 +12,7 @@ A chain answers a longitudinal one:
 What line of development is this record a step in?
 ```
 
-Chains walk one or more same-scheme relations transitively and render the resulting sequences as generated views. They can add a sibling/rival relation, carry declared fields as facets, and assert a shared invariant across a line.
+Chains walk one or more same-scheme relations transitively and render the resulting sequences as generated views (ADR-083). They can add a sibling/rival relation, carry declared fields as facets, and assert a shared invariant across a line (ADR-106, ADR-113).
 
 This tutorial uses a small RFC lineage, but the same mechanism can represent research lineages, evolving practices, standards families, policy histories, or explanatory theories.
 
@@ -63,18 +63,20 @@ schemes:
         closed: true
 ```
 
-All three references stay within the `RFC` scheme. That matters because a chain is a sequence within one scheme. Cross-scheme invariants belong on relations instead.
+All three references stay within the `RFC` scheme. That matters because a chain is a sequence within one scheme: a chain whose relation points at another scheme is refused when `luria.yaml` loads, and a cross-scheme invariant belongs on the reference itself (`references.<field>.invariant`, ADR-106).
+
+Each reference says `required: false` on purpose. A declared reference is required unless it says otherwise, and the first step of a line has nothing to extend — without it, RFC-001 fails the lint with ``no `extends:` in frontmatter``.
 
 ## 2. Scaffold and create entries normally
 
 ```console
 $ luria init
-$ luria new RFC --title "Durable jobs with acknowledgements"
-$ luria new RFC --title "Renewable leases for durable jobs"
-$ luria new RFC --title "Lease recovery without global polling"
+$ luria new rfc --title "Durable jobs with acknowledgements" --tags runtime
+$ luria new rfc --title "Renewable leases for durable jobs" --tags runtime
+$ luria new rfc --title "Lease recovery without global polling" --tags runtime
 ```
 
-Fill the records' status and tags normally.
+The kind is the scheme's prefix in lower case. `--tags runtime` replaces the template's `tags: [record]`, which the closed `area` vocabulary would reject; every entry starts at the template's `status: Proposed`.
 
 ## 3. Add semantic edges
 
@@ -87,10 +89,13 @@ RFC-002 extends RFC-001
 RFC-003 corrects RFC-002
 ```
 
-`luria relate` is the CLI surface for writing declared relations into frontmatter. Check its current help for exact argument syntax:
+`luria relate SOURCE FIELD TARGET` writes a declared relation into the source's frontmatter:
 
 ```console
-$ luria relate --help
+$ luria relate RFC-002 extends RFC-001
+record/rfcs.d/RFC-002.md: extends += RFC-001
+$ luria relate RFC-003 corrects RFC-002
+record/rfcs.d/RFC-003.md: corrects += RFC-002
 ```
 
 The important result is local source truth:
@@ -123,9 +128,15 @@ chains:
     title: Durable jobs lineage
 ```
 
-`relation` can name one field or several. Several relations are walked as one spine while preserving the sign of the transition in the source record: “builds on” and “corrects” can both advance one historical line without being flattened into the same semantic edge.
+`relation` can name one field or several. Several relations are unioned into one spine before the walk, so “builds on” and “corrects” both advance one historical line. The chain page does not say which field joined each step; that distinction stays in the source records, where `extends:` and `corrects:` remain different fields.
 
 The `sibling` relation belongs to the line without advancing it.
+
+The output is a page directly in `docs/`, so it must be linked from `docs/README.md` — otherwise `luria lint` fails with `docs/README.md: missing index entry for durable-jobs-lineage.md`. Add a line to the list there:
+
+```markdown
+- [Durable jobs lineage](durable-jobs-lineage.md) — the RFC line, generated from `extends:` and `corrects:`.
+```
 
 ## 5. Generate the view
 
@@ -133,14 +144,18 @@ The `sibling` relation belongs to the line without advancing it.
 $ luria index
 ```
 
-The chain page is generated from declared edges:
+The chain page is generated from declared edges. `docs/durable-jobs-lineage.md` nests each step under the one it follows:
 
-```text
-RFC-001
-   ↓ extends
-RFC-002
-   ↓ corrects
-RFC-003
+```markdown
+# Durable jobs lineage
+
+1 line, walked from `extends:` and `corrects:` on RFC documents. Each step explains itself; this page is the order they came in.
+
+## From Durable jobs with acknowledgements
+
+- [RFC-001](../record/rfcs.d/RFC-001.md) — Durable jobs with acknowledgements *(Proposed)*
+  - [RFC-002](../record/rfcs.d/RFC-002.md) — Renewable leases for durable jobs *(Proposed)*
+    - [RFC-003](../record/rfcs.d/RFC-003.md) — Lease recovery without global polling *(Proposed)*
 ```
 
 Do not hand-maintain that sequence elsewhere. The chain exists specifically to avoid a second prose lineage drifting from the source relations. That is [DP-3](../../record/principles.d/DP-003.md)'s source/projection principle applied to history ([DP-3](../../record/principles.d/DP-003.md)).
@@ -149,7 +164,26 @@ Do not hand-maintain that sequence elsewhere. The chain exists specifically to a
 
 A chain is more useful when each step carries the axes needed to interpret it.
 
-By default, `status` is the natural first facet. You can declare additional fields:
+By default, each step shows its `status`. To show more, declare the field on the scheme first — `facet_by` naming an undeclared field stops `luria index` with `facet_by names 'consensus', which RFC does not declare`:
+
+```yaml
+vocabularies:
+  # rfc-status, area ...
+  consensus:
+    emerging: {}
+    contested: {}
+    converged: {}
+
+schemes:
+  RFC:
+    # ...
+    fields:
+      # status, tags ...
+      consensus:
+        vocabulary: consensus
+```
+
+A declared field is optional unless it says `required: true`. Then name it in the chain:
 
 ```yaml
 chains:
@@ -166,14 +200,12 @@ chains:
     title: Durable jobs lineage
 ```
 
-This assumes `consensus` is a declared field on the scheme, usually vocabulary-backed.
+Set `status:` and `consensus:` in each RFC's frontmatter (RFC-001 and RFC-002 `Accepted`, `converged` and `contested`; RFC-003 stays `Proposed`, `emerging`) and run `luria index`. Each step now carries both facets:
 
-The distinction matters. A chain may contain:
-
-```text
-RFC-001   Accepted     converged
-RFC-002   Accepted     contested
-RFC-003   Proposed     emerging
+```markdown
+- [RFC-001](../record/rfcs.d/RFC-001.md) — Durable jobs with acknowledgements *(Accepted, converged)*
+  - [RFC-002](../record/rfcs.d/RFC-002.md) — Renewable leases for durable jobs *(Accepted, contested)*
+    - [RFC-003](../record/rfcs.d/RFC-003.md) — Lease recovery without global polling *(Proposed, emerging)*
 ```
 
 The sequence is the same graph either way, but the interpretation is not.
@@ -184,7 +216,7 @@ Vocabularies therefore serve at least three roles:
 2. constrain admissible values,
 3. facet higher-order views.
 
-See [Vocabularies and epistemic axes](../concepts/vocabularies.md).
+See [Vocabularies and independent dimensions](../concepts/vocabularies.md).
 
 ## 7. Add a chain invariant
 
@@ -199,15 +231,20 @@ chains:
     relation:
       - extends
       - corrects
+    sibling: compared_against
     invariant: tags
+    facet_by:
+      - status
+      - consensus
     output: docs/durable-jobs-lineage.md
+    title: Durable jobs lineage
 ```
 
 Now the line itself asserts something:
 
 > These records are not merely connected; they are steps in one subject lineage.
 
-If a step shares no tag with the line, Luria can surface that as a finding.
+A chain's invariant asserts each edge it walks and the line as a whole (ADR-106). The page is also organized by it: after `luria index`, the line appears under a `## runtime` heading, the value its members share (ADR-113). If a step shares no tag with the line, `luria lint` reports it.
 
 ## 8. Treat an invariant failure as diagnosis, not a verdict
 
@@ -219,7 +256,16 @@ RFC-002 tags: [runtime]
 RFC-003 tags: [security]
 ```
 
-but `RFC-003 corrects RFC-002`.
+but `RFC-003 corrects RFC-002`. Change RFC-003's tag to `security` and run `luria index` and `luria lint`. The lint still passes — these are warnings — and reports:
+
+```text
+luria: 1 relation(s) assert an invariant neither end holds — either the field is missing a value that is true, or the relation is wrong (`luria reports` for the table)
+  RFC-002 ↔ RFC-003 share no `tags` (durable-jobs; each holds: runtime / security)
+luria: 1 sequence(s) share no value across every member, though each step may — the weaker signal, to read whole before acting on
+  RFC-001, RFC-002, RFC-003 share no `tags` across the whole line (durable-jobs)
+```
+
+The chain page moves the line under a `` ## Sharing no `tags` `` heading.
 
 An invariant finding can mean several different things:
 
@@ -238,11 +284,20 @@ If the real shared concept is `job-lifecycle`, adding that vocabulary term may b
 
 Suppose another RFC proposes an incompatible approach:
 
-```text
-RFC-004 compared_against RFC-002
+```console
+$ luria new rfc --title "Durable jobs on an external broker" --tags runtime
+$ luria relate RFC-004 compared_against RFC-002
+$ luria index
 ```
 
-A sibling relation allows the generated view to show that comparison without pretending `RFC-004` is the next successor.
+A sibling relation allows the generated view to show that comparison without pretending `RFC-004` is the next successor. It joins the line as an `alongside:` entry, not a nested step:
+
+```markdown
+- [RFC-001](../record/rfcs.d/RFC-001.md) — Durable jobs with acknowledgements *(Accepted, converged)*
+  - [RFC-002](../record/rfcs.d/RFC-002.md) — Renewable leases for durable jobs *(Accepted, contested)*
+    - [RFC-003](../record/rfcs.d/RFC-003.md) — Lease recovery without global polling *(Proposed, emerging)*
+- alongside: [RFC-004](../record/rfcs.d/RFC-004.md) — Durable jobs on an external broker *(Proposed)*
+```
 
 This distinction keeps the graph semantically honest:
 
@@ -272,7 +327,7 @@ A chain's output is a generated projection and participates in the publishing su
 A published chain is especially useful because it answers questions that per-document pages cannot:
 
 - Where did this line start?
-- Which step corrected which predecessor?
+- Which step followed which predecessor?
 - Where did a rival branch appear?
 - Which parts are active, contested, or provisional?
 - What subject invariant binds the line?
