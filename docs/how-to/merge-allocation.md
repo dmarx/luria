@@ -19,14 +19,16 @@ schemes:
 ## Create records normally
 
 ```console
-$ luria new ADR --title "..."
+$ luria new adr --title "..."
 ```
 
-The new entry receives a visibly temporary code rather than pretending its global sequence number is already known.
+The kind is the scheme's prefix in lowercase.
+
+The new entry receives a visibly temporary code — the reserved `tmp` prefix plus a random suffix where the number would go — rather than pretending its global sequence number is already known.
 
 The temporary identity is first-class on the branch: it can be linted, indexed, and cited.
 
-This behavior is governed by [ADR-049](../../record/decisions.d/ADR-049.md) ([ADR-049](../../record/decisions.d/ADR-049.md)).
+This behavior is governed by [ADR-049](../../record/decisions.d/ADR-049.md).
 
 ## Concretize where merges serialize
 

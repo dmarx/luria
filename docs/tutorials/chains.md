@@ -12,7 +12,7 @@ A chain answers a longitudinal one:
 What line of development is this record a step in?
 ```
 
-Chains walk one or more same-scheme relations transitively and render the resulting sequences as generated views (ADR-083). They can add a sibling/rival relation, carry declared fields as facets, and assert a shared invariant across a line (ADR-106, ADR-113).
+Chains walk one or more same-scheme relations transitively and render the resulting sequences as generated views ([ADR-083](../../record/decisions.d/ADR-083.md)). They can add a sibling/rival relation, carry declared fields as facets, and assert a shared invariant across a line ([ADR-106](../../record/decisions.d/ADR-106.md), [ADR-113](../../record/decisions.d/ADR-113.md)).
 
 This tutorial uses a small RFC lineage, but the same mechanism can represent research lineages, evolving practices, standards families, policy histories, or explanatory theories.
 
@@ -63,7 +63,7 @@ schemes:
         closed: true
 ```
 
-All three references stay within the `RFC` scheme. That matters because a chain is a sequence within one scheme: a chain whose relation points at another scheme is refused when `luria.yaml` loads, and a cross-scheme invariant belongs on the reference itself (`references.<field>.invariant`, ADR-106).
+All three references stay within the `RFC` scheme. That matters because a chain is a sequence within one scheme: a chain whose relation points at another scheme is refused when `luria.yaml` loads, and a cross-scheme invariant belongs on the reference itself (`references.<field>.invariant`, [ADR-106](../../record/decisions.d/ADR-106.md)).
 
 Each reference says `required: false` on purpose. A declared reference is required unless it says otherwise, and the first step of a line has nothing to extend — without it, RFC-001 fails the lint with ``no `extends:` in frontmatter``.
 
@@ -244,7 +244,7 @@ Now the line itself asserts something:
 
 > These records are not merely connected; they are steps in one subject lineage.
 
-A chain's invariant asserts each edge it walks and the line as a whole (ADR-106). The page is also organized by it: after `luria index`, the line appears under a `## runtime` heading, the value its members share (ADR-113). If a step shares no tag with the line, `luria lint` reports it.
+A chain's invariant asserts each edge it walks and the line as a whole ([ADR-106](../../record/decisions.d/ADR-106.md)). The page is also organized by it: after `luria index`, the line appears under a `## runtime` heading, the value its members share ([ADR-113](../../record/decisions.d/ADR-113.md)). If a step shares no tag with the line, `luria lint` reports it.
 
 ## 8. Treat an invariant failure as diagnosis, not a verdict
 

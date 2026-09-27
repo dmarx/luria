@@ -235,7 +235,7 @@ $ pip install luria
 
 ## License
 
-MIT.
+MIT — see [LICENSE](LICENSE).
 
 ---
 

@@ -8,7 +8,9 @@ Publishing should derive views from the record, not create a competing source.
 $ luria index
 ```
 
-This covers generated indexes and chain outputs.
+This rewrites every generated view committed in the repository: the decision index and tag pages, the principles document, the devlog books, the status reports, the README badges, and chain outputs.
+
+It does not stage the site, export the database, or collect fragments. Those are separate commands — `luria site`, `luria export` and `luria collect` — each run on its own.
 
 ## Stage a published site
 
@@ -16,15 +18,24 @@ This covers generated indexes and chain outputs.
 $ luria site
 ```
 
-Luria stages the record as a site-ready vault according to the configured publishing settings.
+Luria stages the record as a [Quartz](https://quartz.jzhao.xyz/) vault — `content/`, `quartz.config.yaml`, `custom.scss` and `static/` — under `build/site/` (`--out DIR` puts it elsewhere). Staging is not building: the vault is input for Quartz. To build it by hand, lay it over a Quartz checkout the way the site action below does (`content/` replacing Quartz's own, `quartz.config.yaml` at the root, `custom.scss` into `quartz/styles/`, `static/` merged into `quartz/static/`), then run `npm ci` and `npx quartz build` there.
+
+In CI, the scaffolded `.github/workflows/pages.yml` does it for you: the `dmarx/luria/actions/site` action stages the vault and builds it with a pinned Quartz, and the workflow's deploy job publishes the result to GitHub Pages. It runs after the Docs workflow completes on the default branch, so it builds from the views that job just committed. Pages must be enabled in the repository settings with "GitHub Actions" as the source. [Adopting](../adopting.md#pagesyml--publish-the-site) has the details.
 
 The governing design preserves repository-relative link semantics and distinguishes source files from the views they render into ([ADR-042](../../record/decisions.d/ADR-042.md)).
 
 ## Configure whether the record is published
 
-The `site` table controls publishing, title/base/source URLs, exclusions, and optional branding.
+The `site` table controls publishing, title/base/source URLs, exclusions, and optional branding; the [configuration reference](../configuration.md) lists its keys.
 
-A record can opt out of web publication while remaining fully governed in its repository.
+A record can opt out of web publication while remaining fully governed in its repository:
+
+```yaml
+site:
+  publish: false
+```
+
+`publish: false` changes what the lint expects, not what `luria site` does: the lint stops reporting that the README never links the site (`unlinked-site`), and stops warning when `site.exclude` withholds pages that citations resolve to. `luria site` still stages a vault if you run it; not publishing means not running the Pages workflow.
 
 ## Export for analytical querying
 
@@ -32,7 +43,7 @@ A record can opt out of web publication while remaining fully governed in its re
 $ luria export
 ```
 
-The current CLI exposes a SQLite export.
+This writes a SQLite database to `build/record.sqlite` (`--out PATH` puts it elsewhere): every document, field, typed edge, citation and journal entry, rebuilt from scratch on each run.
 
 Treat that database as a projection:
 
@@ -42,7 +53,7 @@ repository source record
 SQLite
 ```
 
-Do not make the export an independent authority.
+Do not make the export an independent authority, and do not commit it.
 
 ## Publish chains
 

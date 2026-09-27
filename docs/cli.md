@@ -496,7 +496,7 @@ may be known, and `lint.network` says how far the lint may go:
 
 | | |
 |---|---|
-| `auto` (default) | ask about identifiers the lockfile has no answer for — normally the one citation a contribution just added — and write what comes back. Falls back to `source-unchecked` when the network is not there. |
+| `auto` (default) | ask about identifiers the lockfile has no answer for — normally the one citation a contribution just added — and report what comes back. The lint never writes the lockfile; `luria remotes --resolve` does, where merges serialize ([ADR-112](../record/decisions.d/ADR-112.md)). Falls back to `source-unchecked` when the network is not there. |
 | `never` | answer only from the lockfile. The hermetic build. |
 | `require` | not being able to ask is a finding, promoted to a failure without needing `fail_on`. A green CI run then means the references were verified rather than remembered. |
 

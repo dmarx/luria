@@ -4,15 +4,19 @@ A chain derives a longitudinal view from same-scheme relations.
 
 ## Minimal chain
 
-Given:
+Given an `RFC` scheme (for example from `luria init --schemes RFC`) whose table in `luria.yaml` declares the relation:
 
 ```yaml
 schemes:
   RFC:
+    # dir, output, fields … as scaffolded
     references:
       extends:
         scheme: RFC
+        required: false
 ```
+
+A reference field is required unless it says otherwise, and the first RFC in a line extends nothing — without `required: false` every root is a violation.
 
 declare:
 
@@ -25,11 +29,24 @@ chains:
     title: RFC lineage
 ```
 
-Then:
+`docs/lineage.md` is a new page in `docs/`, and every page there must be listed in the docs index, so add a line for it to `docs/README.md`:
+
+```markdown
+- [RFC lineage](lineage.md) — each line of RFCs that extend one another.
+```
+
+Then file entries that relate, and render:
 
 ```console
+$ luria new rfc --title "Base" --tags record
+record/rfcs.d/RFC-001.md
+$ luria new rfc --title "Next" --tags record --extends RFC-001
+record/rfcs.d/RFC-002.md
 $ luria index
+$ luria lint
 ```
+
+The chain machinery is described in [ADR-083](../../record/decisions.d/ADR-083.md).
 
 ## Multiple spine relations
 
@@ -88,7 +105,7 @@ A chain:
 - requires an output,
 - names only declared facet/invariant fields.
 
-Cross-scheme shared-field constraints belong on the reference invariant, not on a chain.
+Cross-scheme shared-field constraints belong on the reference invariant, not on a chain ([ADR-106](../../record/decisions.d/ADR-106.md)).
 
 ## Publishing
 
