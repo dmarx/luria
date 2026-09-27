@@ -5,6 +5,8 @@
 
 # Luria
 
+Luria is machinery for constructing governed knowledge systems.
+
 **A record of what your project knows — and of what it no longer believes.**
 
 Projects forget, and they forget *silently*. The wiki still renders. The
