@@ -47,13 +47,17 @@ A hand-maintained copy can become wrong without producing any signal.
 
 [DP-3](../../record/principles.d/DP-003.md) states Luria's general rule: a projection of an authoritative source should be derived whenever possible ([DP-3](../../record/principles.d/DP-003.md)).
 
-That is why:
+That is why projections are rebuilt by commands rather than edited:
 
 ```console
-$ luria index
+$ luria index      # scheme indexes and value pages, journal books, chain pages,
+                   # status reports, the record and configuration pages
+$ luria collect    # fragments into their shared file, such as CHANGELOG.md
+$ luria site       # the record staged as a site
+$ luria export     # the record as a SQLite file
 ```
 
-regenerates views rather than treating them as separately authored documents.
+`luria index` covers the committed views; the other three are separate commands with separate outputs. None of them treats its output as a separately authored document. See the [CLI reference](../cli.md).
 
 ## Generated views and concurrency
 
@@ -69,12 +73,17 @@ It intentionally renders history, including inactive or superseded steps. The pa
 
 ## Sites
 
-`luria site` stages the record for publication. Publishing should preserve source semantics rather than create a second resolver or a second authoritative representation.
+`luria site` stages the record for publication as a Quartz vault, under rules that keep it a projection (ADR-042):
+
+- **paths are preserved**, so every relative link the fixer wrote keeps resolving and no second link resolver is needed;
+- **a source that renders into a view is withheld** and the view is published — a journal entry appears in its book, a fragment in its collected file;
+- **a link that leaves the published set goes to the repository** rather than being emitted dead;
+- **frontmatter is surfaced**: each document's status and edges are rendered onto its page, so a superseded decision does not read as current on the web.
 
 ## Exports
 
-A SQLite export can make the record convenient to query analytically.
+`luria export` writes a SQLite file — documents, field values, typed edges, citations and journal entries — that makes the record convenient to query analytically (ADR-116).
 
-The database is still a projection.
+The database is still a projection: rebuilt from scratch on every run through the same readers the lint uses, never written back to, and not committed.
 
 The authoritative facts remain in the repository-native source record.

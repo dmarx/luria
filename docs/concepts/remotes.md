@@ -22,7 +22,7 @@ The composed code preserves ownership.
 
 ## Arbitrary identifier namespaces
 
-A remote can also describe a non-Luria namespace using recognition and URL rules.
+A remote can also describe a non-Luria namespace: a `uid` pattern says what one of its identifiers looks like, and a `url` template says where it lives (ADR-024).
 
 Examples:
 
@@ -37,13 +37,15 @@ The record can then treat those references structurally rather than as handwritt
 
 Remote checking has a different failure surface from local checking.
 
-A project may choose whether lint:
+A remote can also declare how to ask what one of its identifiers *is* — for example, the title upstream gives a paper — so the lint can report a citation whose identifier names a different document than the one filed (ADR-080). What upstream said is recorded in `remotes.lock.json`.
 
-- uses the network when needed,
-- remains hermetic and trusts a lock/cache,
-- requires successful remote verification.
+`lint.network` in `luria.yaml` says how far the lint may reach to check that:
 
-The policy should make clear what a green lint actually guarantees.
+- `auto` (the default) asks only about identifiers the lockfile has no answer for, and reports them unchecked when the network is not there,
+- `never` answers from the lockfile alone — the hermetic build,
+- `require` makes an unreachable remote a failure, so a green run means the references were verified rather than remembered.
+
+Whatever the setting, the lint never writes the lockfile. `luria remotes --resolve` does, and it runs where merges serialize — the default-branch generation job — so concurrent branches do not collide on one shared file and a branch's result does not depend on one contributor's network (ADR-112).
 
 ## Pinning
 
@@ -55,7 +57,9 @@ A pin says:
 
 > the external content I depended on had this content identity.
 
-If upstream content changes, the local record can surface drift.
+`luria remotes --pin` fetches the document and records the hash of its bytes as **endorsed**. `luria remotes --refresh` re-fetches and records what upstream serves now as **seen**. The lint never fetches for pins: it compares the two committed hashes, offline, and reports each pinned document whose content moved on as `remote-drift` (ADR-066). So drift shows up once a `--refresh` has recorded the new hash and it is committed, not the moment upstream changes.
+
+Reviewing the change and running `luria remotes --pin CODE` again is the acknowledgement: it endorses the new content, and the two hashes agree.
 
 That extends truth maintenance across repository boundaries:
 

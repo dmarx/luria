@@ -35,13 +35,18 @@ because nothing is being judged. `luria lint` reports that state as
 
 ## Status
 
-The vocabulary is closed to five words:
+Status is an ordinary vocabulary, declared in `luria.yaml` and named by
+each scheme's `fields.status.vocabulary` (ADR-085, ADR-098). `luria init`
+ships five words:
 
 `Active` · `Proposed` · `Deferred` · `Superseded` · `Rejected`
 
-a superseded document naming its successor in `superseded_by:`, and any
-of them optionally qualified by a `status_note:`, a prose field in its
-own right.
+and they are a default, not a law: a scheme's `active:` key names the one
+word that means in force, and a scheme whose words are `Kept` and `Dropped`
+works the same way. A superseded document names its successor in
+`superseded_by:` (a scheme can rename that pair with `retires_on` and
+`successor`), and any status is optionally qualified by a `status_note:`, a
+prose field in its own right.
 
 Closed because an audit of 121 entries found an open vocabulary had drifted
 into roughly thirty forms — not toward one wrong value but toward *variety*,

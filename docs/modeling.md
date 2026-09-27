@@ -119,9 +119,13 @@ schemes:
 
 ## Statuses in two schemes
 
-The five words are fixed — `Active`, `Proposed`, `Deferred`, `Superseded`,
-`Rejected` ([ADR-003](../record/decisions.d/ADR-003.md)). What they *mean* is per scheme, declared in a
-`statuses.yaml` beside the sources and rendered as a legend above the index.
+The status words are a vocabulary declared in `luria.yaml`, not fixed by
+the tool (ADR-085, ADR-098): the scaffold ships `Active`, `Proposed`,
+`Deferred`, `Superseded` and `Rejected`, and each scheme's `active:` names
+the word that means in force. Two schemes can share one vocabulary and still
+mean different things by it — each value's `blurb` renders as a legend above
+the index, and a scheme that needs a different reading can name a vocabulary
+of its own.
 
 In the anthology, `Rejected` means two different things in two schemes, and
 saying so is the point. On a paper it means the attic: retired from the

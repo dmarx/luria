@@ -27,7 +27,9 @@ The declaration allows Luria to check that the value:
 3. belongs to the intended scheme,
 4. resolves to a document.
 
-A relation can also declare a converse, cardinality, conditional requirement, label/blurb, and invariant.
+A declared reference is **required by default**: a document that leaves the field empty is a violation unless the declaration says `required: false` (or makes it conditional with `required_when`). Vocabulary-backed and plain fields are the other way round — optional unless they say `required: true`.
+
+A relation can also declare a converse, cardinality (`many`), conditional requirement (`required_when`), label/blurb, and invariant.
 
 The difference between:
 
@@ -50,9 +52,24 @@ is knowledge. Preserve it when it matters.
 
 ## Converse relations
 
-If `extends` and `extended_by` are declared as converses, the reverse edge is not a guess. It is the same relation read from the other endpoint.
+If `extends` and `extended_by` are declared as converses, the reverse edge is not a guess. It is the same relation read from the other endpoint (ADR-084).
 
-A symmetric relation such as `compared_against` may name itself as its converse.
+```yaml
+references:
+  extends:          {scheme: RFC, many: true, converse: extended_by, required: false}
+  extended_by:      {scheme: RFC, many: true, converse: extends, required: false}
+  compared_against: {scheme: RFC, many: true, converse: compared_against, required: false}
+```
+
+A symmetric relation such as `compared_against` names itself as its converse.
+
+A pair is checked when `luria.yaml` loads, and refused unless:
+
+- both sides name each other,
+- both sides are `many: true`, since either side is written into,
+- the converse is declared on the scheme whose codes the field holds — for a relation that crosses schemes, that is the target scheme, not the declaring one (ADR-097).
+
+A document that holds only one side of a declared pair is reported as `one-sided-relations`; `luria link --fix` writes the missing side.
 
 ## Relation invariants
 
@@ -68,7 +85,9 @@ extends:
 
 means the relation claims some shared subject vocabulary.
 
-Relation invariants can cross schemes if both ends declare the invariant field.
+Relation invariants can cross schemes if both ends declare the invariant field (ADR-106).
+
+An edge whose two ends share no value of the field is reported as `unbound-relations`: either a true value is missing from one end, or the edge is wrong.
 
 ## Chains are longitudinal interpretations
 
@@ -106,7 +125,7 @@ Both relations continue one line, but they carry different signs:
 
 Flattening both into `parent` would discard meaning.
 
-A chain composes them without erasing their local semantics.
+The chain does not erase that meaning, because it never owns it: the relations are unioned into one spine before the walk, so the chain page shows the order of the line, not which relation joined each step. The sign of each step stays in the fields of the documents it joins, where a reader of either document finds it.
 
 ## Facets
 
@@ -136,6 +155,10 @@ A chain can assert an invariant across its line:
 invariant: tags
 ```
 
+This is a stronger claim than a relation invariant (ADR-106). A relation invariant is about each edge; a chain invariant is about the whole line — every member of a connected line holding one value in common. A line that shares nothing is reported as `unbound-lines`, a weaker signal than `unbound-relations`, since each step may share something with its neighbour while nothing runs the whole length. Read the line whole before acting on it.
+
+Declaring `invariant` on a chain also shapes its page: the lines are grouped under each value they share, and the lines that share none get a section of their own (ADR-113).
+
 A failure does not automatically mean “bad edge.”
 
 It may indicate:
@@ -145,7 +168,7 @@ It may indicate:
 - an invariant too strong for the intended line,
 - or an ontology that lacks the concept binding the lineage.
 
-This is one of the places where Luria can expose pressure on the ontology itself.
+This is one of the places where a finding can be evidence about the ontology itself, not only about the documents.
 
 ## Chains are projections
 

@@ -8,7 +8,7 @@ That distinction gives Luria a natural two-level interpretation.
 
 ## Subject record
 
-Call the subject-level knowledge \(R\).
+Call the subject-level knowledge `R`.
 
 Examples:
 
@@ -20,7 +20,7 @@ Policy P applies to contractors.
 
 ## Governing knowledge
 
-Call the governing knowledge \(M\).
+Call the governing knowledge `M`.
 
 Examples:
 
@@ -32,9 +32,9 @@ Generated views are not authoritative sources.
 
 Then the rough judgment:
 
-\[
-M;R \vdash x
-\]
+```text
+M; R ⊢ x
+```
 
 means:
 
@@ -79,7 +79,7 @@ Once process rules themselves have identity and standing, the record can preserv
 
 A process rule may even govern how process rules are changed.
 
-That does not require an infinite tower of meta-records. In practice, a corpus can support controlled self-governance.
+That does not require an infinite tower of meta-records, and Luria has no special machinery for it. It is a modelling pattern: a project that files its process rules as ordinary scheme documents — this repository's decisions and design principles are an example — gets identity, standing, supersession and citation checking for its governance from the same mechanisms that serve its subject record.
 
 ## Documentation as a governed dependent
 

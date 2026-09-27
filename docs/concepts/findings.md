@@ -6,13 +6,13 @@ It is a mechanism for making changes in the record produce visible consequences 
 
 ## Contextual invalidation
 
-At time \(t\):
+At one time:
 
 ```text
 IMPLEMENTATION-004 → DECISION-012 [Active]
 ```
 
-At time \(t+1\):
+Later:
 
 ```text
 DECISION-012 [Superseded]
@@ -38,32 +38,32 @@ A finding can indicate:
 - relation/converse inconsistencies,
 - invariant violations,
 - stale or expired acknowledgement directives,
-- unbound chains,
+- invariants nothing binds (`unbound-relations` for an edge, `unbound-lines` for a whole chain line),
 - other declared contract failures.
 
 Not every finding has the same epistemic force.
 
+## Violations and warnings
+
+`luria lint` prints two kinds of finding.
+
+**Violations** always fail the build. They are the checks whose failure is always wrong and mechanically fixable: a value outside a closed vocabulary, a missing required field, a superseded document with no `superseded_by:`, a `title:` that disagrees with the heading, a code cited in prose without a link, a docs page missing from its index, a hand-written file inside a generated view. No setting turns them off.
+
+**Warnings** belong to named classes — `retired-citations`, `unresolved-codes`, `broken-targets`, `remote-drift`, `one-sided-relations`, `unbound-relations` and the rest — and by default they are reported without failing.
+
 ## Warn first, enforce deliberately
 
-Luria's enforcement dial separates:
+Warning classes sit on an enforcement dial ([ADR-035](../../record/decisions.d/ADR-035.md)), set under `lint:` in `luria.yaml`:
 
-```text
-reported
-```
+- `fail_on` promotes a class to a failure, when that class is ready to become a guarantee;
+- `baseline` holds a class to a count — the build fails only when the class grows past it;
+- `mute` stops the lint printing a class. `luria reports` still renders the full accounting, so muting changes what the command prints, not what the record says.
 
-from:
-
-```text
-fatal
-```
-
-A project can promote selected warning classes to failures when that class is ready to become a guarantee ([ADR-035](../../record/decisions.d/ADR-035.md)).
-
-Baselines support a related statement:
+A baseline states:
 
 > this is the known residue; do not allow regression beyond it.
 
-That is often more useful for an adopting corpus than either “fail immediately” or “hide the class.”
+That is often more useful for an adopting corpus than either “fail immediately” or “hide the class.” The violations and the warning classes are listed under [`luria lint`](../cli.md#luria-lint); the three dials are in [Configuration](../configuration.md).
 
 ## Acknowledgements
 
@@ -93,7 +93,7 @@ semantic decision
 
 `luria repair` can apply source changes the tool can determine safely.
 
-`luria ack` can write an acknowledgement from an actual finding when the user supplies the reason.
+`luria ack` writes an acknowledgement directive from an actual finding when the user supplies the reason: the code comes from the citation scan, never from a person. It covers the two directives that scan answers — `inactive-ok:` for a deliberate citation of a retired document and `unresolved-ok:` for a code that names nothing on purpose. Other acknowledgements are written by hand; see [Comment directives](../directives.md).
 
 The linter should not invent semantic conclusions merely because it discovered the condition.
 

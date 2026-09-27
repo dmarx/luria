@@ -322,8 +322,7 @@ The contract, in two halves.
   (`exactly-one`, `at-most-one`, `excluded_by`), a field group's
   `at-least-one`, a value outside a closed vocabulary, a reference field
   holding something that is not a resolvable code of the scheme it names,
-  a relation's declared `invariant` disagreeing across the edge, or a
-  field marked `unique` whose value appears on a second document of the
+  or a field marked `unique` whose value appears on a second document of the
   same scheme
 - a `version:` above 1 with no `history:`, or history that ends on a
   different version than the document claims
@@ -344,11 +343,13 @@ The contract, in two halves.
 its acknowledgement route (see [directives](directives.md)) and listed in
 full in the [reports](reports/reference-status.md):
 
-`retired-citations` · `unresolved-codes` · `unresolved-citations` ·
+`retired-citations` · `unresolved-codes` · `foreign-temp-codes` ·
+`unresolved-citations` ·
 `hand-written-urls` · `broken-targets` · `remote-drift` ·
 `source-mismatch` · `source-unchecked` · `inert-status` ·
 `legacy-spellings` · `narrow-titles` · `stale-directives` ·
 `template-drift` · `broken-chains` · `one-sided-relations` ·
+`unbound-relations` · `unbound-lines` ·
 `spent-upgrades` · `pending-documents` · `unlinted-files` ·
 `workflow-temp-codes` · `unlinked-site`
 

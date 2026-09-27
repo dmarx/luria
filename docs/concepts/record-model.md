@@ -4,16 +4,16 @@ A Luria record is a repository-native body of knowledge with declared structure,
 
 A useful abstraction is:
 
-\[
-\mathcal K=(O,M,R,E)
-\]
+```text
+K = (O, M, R, E)
+```
 
 where:
 
-- \(O\) — ontology: what kinds of things and distinctions exist,
-- \(M\) — governing knowledge: rules about how the record is interpreted and changed,
-- \(R\) — subject-level knowledge,
-- \(E\) — executable machinery: lint, indexing, chains, reports, publication, export.
+- `O` — ontology: what kinds of things and distinctions exist,
+- `M` — governing knowledge: rules about how the record is interpreted and changed,
+- `R` — subject-level knowledge,
+- `E` — executable machinery: lint, indexing, chains, reports, publication, export.
 
 You do not need this notation to use Luria. It helps explain why the tool is more than a document generator.
 
@@ -44,7 +44,7 @@ Their semantic claim is usually:
 
 A journal entry's identity is temporal rather than a sequential scheme number. Its source persists.
 
-Historical observations generally should not become stale merely because current doctrine changes.
+Historical observations should not become stale merely because current doctrine changes, and Luria treats them that way: journal entries and the books they render into are exempt from the reference-status report, so citing a decision that has since been superseded is not reported against a dated entry (ADR-020). The same exemption covers uncollected fragments and any file listed in `code.historical`, such as `CHANGELOG.md`.
 
 ### Fragment directories
 
@@ -128,7 +128,9 @@ Findings are observations about the record:
 - suspicious citations,
 - invariant violations,
 - stale acknowledgements,
-- ontology/chain pressure.
+- invariants nothing binds.
+
+Some of these point past the document at the model: an invariant that nothing binds may mean the vocabulary lacks a concept, not that the document is wrong. That is a way of reading findings, not a separate kind of finding.
 
 A finding is not necessarily a verdict. Luria's design intentionally leaves contextual judgment with humans while making the condition visible.
 

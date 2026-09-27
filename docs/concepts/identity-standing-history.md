@@ -22,7 +22,9 @@ Identity should remain stable enough that other knowledge can cite it.
 What is this object's current state or authority?
 ```
 
-For a decision scheme:
+Mechanically, standing is the document's `status:`, a value from a vocabulary the scheme names in `fields.status.vocabulary` (ADR-085). One word in it — the scheme's `active:`, `Active` by default — means **in force**. Every other value means out of force, and citing an out-of-force document is what the lint reports as a retired citation.
+
+For a decision scheme, `luria init` ships:
 
 ```text
 Proposed
@@ -31,6 +33,8 @@ Deferred
 Superseded
 Rejected
 ```
+
+These are defaults, not laws. A scheme whose words are `Kept` and `Dropped` sets `active: Kept` and works the same way. The retirement pair is configurable too: `retires_on` names the status that means replaced (default `Superseded`) and `successor` the field that names the replacement (default `superseded_by`). A document carrying the `retires_on` status must fill that field — a superseded document with no `superseded_by:` is a violation (ADR-071).
 
 For another domain, the vocabulary may mean something else entirely.
 
@@ -59,13 +63,15 @@ Luria's own decision doctrine distinguishes two changes ([ADR-019](../../record/
 
 The choice is unchanged; the historical account is wrong or incomplete.
 
-The document can be revised visibly.
+The document is revised in place, visibly: its `version:` is bumped and a `history:` entry says what the previous version claimed and why that was wrong. The lint checks that `version:` agrees with `history:`. A silent rewrite is what this rules out; being wrong out loud is not.
 
 ### Supersede the choice
 
 The choice itself changes.
 
-Create a successor and retire the old standing.
+Create a successor, set the old document's status to `Superseded`, and name the successor in its `superseded_by:`.
+
+The test for which case applies: would a reader who acted on the old version have done something different? If yes, the choice changed — supersede.
 
 This keeps history epistemically honest.
 
