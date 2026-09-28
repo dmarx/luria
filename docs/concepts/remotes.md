@@ -33,19 +33,13 @@ Examples:
 
 The record can then treat those references structurally rather than as handwritten URLs.
 
-## Network policy
+## Hermeticity
 
-Remote checking has a different failure surface from local checking.
+Remote checking has a different failure surface from local checking: the network may be down, and upstream may change underneath a record that did not.
 
-A remote can also declare how to ask what one of its identifiers *is* — for example, the title upstream gives a paper — so the lint can report a citation whose identifier names a different document than the one filed ([ADR-080](../../record/decisions.d/ADR-080.md)). What upstream said is recorded in `remotes.lock.json`.
+A remote can declare how to ask what one of its identifiers *is* — the title upstream gives a paper, say — so a citation whose identifier names a different document than the one filed can be reported ([ADR-080](../../record/decisions.d/ADR-080.md)). What upstream answered is recorded in a committed lockfile, so a check can be answered from the record instead of the network. A project chooses how far the lint may reach: from "never, answer from the record alone" to "always, and fail if you cannot".
 
-`lint.network` in `luria.yaml` says how far the lint may reach to check that:
-
-- `auto` (the default) asks only about identifiers the lockfile has no answer for, and reports them unchecked when the network is not there,
-- `never` answers from the lockfile alone — the hermetic build,
-- `require` makes an unreachable remote a failure, so a green run means the references were verified rather than remembered.
-
-Whatever the setting, the lint never writes the lockfile. `luria remotes --resolve` does, and it runs where merges serialize — the default-branch generation job — so concurrent branches do not collide on one shared file and a branch's result does not depend on one contributor's network ([ADR-112](../../record/decisions.d/ADR-112.md)).
+The lint asks; it does not record. The answers are written in one place, where merges serialize, so concurrent branches do not collide on one shared file and a branch's result does not depend on one contributor's network ([ADR-112](../../record/decisions.d/ADR-112.md)).
 
 ## Pinning
 
@@ -57,9 +51,7 @@ A pin says:
 
 > the external content I depended on had this content identity.
 
-`luria remotes --pin` fetches the document and records the hash of its bytes as **endorsed**. `luria remotes --refresh` re-fetches and records what upstream serves now as **seen**. The lint never fetches for pins: it compares the two committed hashes, offline, and reports each pinned document whose content moved on as `remote-drift` ([ADR-066](../../record/decisions.d/ADR-066.md)). So drift shows up once a `--refresh` has recorded the new hash and it is committed, not the moment upstream changes.
-
-Reviewing the change and running `luria remotes --pin CODE` again is the acknowledgement: it endorses the new content, and the two hashes agree.
+A pin keeps two facts apart: the content the record **endorsed**, and the content upstream was last **seen** serving. Drift is the difference between them, compared offline from what the record has committed rather than by fetching during the lint ([ADR-066](../../record/decisions.d/ADR-066.md)). Re-endorsing after review is the acknowledgement. The commands are in [Reference remote knowledge](../how-to/remotes.md).
 
 That extends truth maintenance across repository boundaries:
 

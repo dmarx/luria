@@ -3,9 +3,11 @@
 Entries, citations, and the status field the rest of it hangs off.
 
 The [quickstart](quickstart.md) has you filing entries and seeing a finding.
-This page is what was underneath that. It is the shortest complete account;
-[designing a record](modeling.md) is how to choose between the options it
-describes, and [project memory](project-memory.md) is the reference.
+This page is what was underneath that. It is the shortest complete mental
+model. The [focused concept pages](README.md#concepts) take one distinction
+each in depth; [designing a record](modeling.md) is how to choose between the
+options it describes; [project memory](project-memory.md) walks the whole
+machine through one application, a software project's memory.
 
 ## The engine
 

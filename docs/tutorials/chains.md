@@ -158,7 +158,7 @@ The chain page is generated from declared edges. `docs/durable-jobs-lineage.md` 
     - [RFC-003](../record/rfcs.d/RFC-003.md) — Lease recovery without global polling *(Proposed)*
 ```
 
-Do not hand-maintain that sequence elsewhere. The chain exists specifically to avoid a second prose lineage drifting from the source relations. That is [DP-3](../../record/principles.d/DP-003.md)'s source/projection principle applied to history ([DP-3](../../record/principles.d/DP-003.md)).
+Do not hand-maintain that sequence elsewhere. The chain exists specifically to avoid a second prose lineage drifting from the source relations. That is [DP-3](../../record/principles.d/DP-003.md)'s source/projection principle applied to history.
 
 ## 6. Add vocabulary-backed facets
 

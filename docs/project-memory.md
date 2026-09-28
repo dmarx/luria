@@ -1,7 +1,15 @@
 # Project memory
 
-How Luria models a project's memory. The [quickstart](quickstart.md) shows
-the commands; this page explains the machine they drive.
+Luria governs any body of knowledge whose meaning changes over time — a
+literature, a policy corpus, a standards family, an investigation. A
+software project's memory (its decisions, principles, changelog and
+devlog) is one application of it, the one Luria ships as a default and
+uses for itself. This page walks the machine through that application; the
+general model is in [Concepts](concepts.md), and [Designing a
+record](modeling.md) covers shaping a record for other material.
+
+The [quickstart](quickstart.md) shows the commands; this page explains the
+machine they drive.
 
 ## Sources and views
 

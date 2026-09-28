@@ -45,7 +45,7 @@ source ↔ projection
 
 A hand-maintained copy can become wrong without producing any signal.
 
-[DP-3](../../record/principles.d/DP-003.md) states Luria's general rule: a projection of an authoritative source should be derived whenever possible ([DP-3](../../record/principles.d/DP-003.md)).
+[DP-3](../../record/principles.d/DP-003.md) states Luria's general rule: a projection of an authoritative source should be derived whenever possible.
 
 That is why projections are rebuilt by commands rather than edited:
 
@@ -61,7 +61,7 @@ $ luria export     # the record as a SQLite file
 
 ## Generated views and concurrency
 
-[DP-2](../../record/principles.d/DP-002.md) adds another dimension: when a shared artifact must be generated, the writer belongs where merges serialize, not on every branch ([DP-2](../../record/principles.d/DP-002.md)).
+[DP-2](../../record/principles.d/DP-002.md) adds another dimension: when a shared artifact must be generated, the writer belongs where merges serialize, not on every branch.
 
 This prevents “generated but still conflicted” artifacts from becoming a hidden shared-file lock.
 

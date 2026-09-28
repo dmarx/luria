@@ -71,7 +71,7 @@ Introduce a new abstraction only when it reduces more complexity than it creates
 
 A mature record theory contains both.
 
-[DP-5](../../record/principles.d/DP-005.md) describes the progression from prose toward convention, mechanism, and guarantee when that promotion is warranted ([DP-5](../../record/principles.d/DP-005.md)).
+[DP-5](../../record/principles.d/DP-005.md) describes the progression from prose toward convention, mechanism, and guarantee when that promotion is warranted.
 
 ## Self-amendment
 

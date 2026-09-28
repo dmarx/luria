@@ -20,15 +20,15 @@ schemes:
     fields:
       area:
         vocabulary: area
-        many: true       # a list of values; default false, one value
-        required: true   # default false; required + many means non-empty
+        many: true
+        required: true
 ```
 
 Declaring the vocabulary centrally is what lets two schemes share one list without the lists drifting apart. A record can then classify itself using terms whose meaning is shared across the corpus.
 
 ## 2. Constraint
 
-A vocabulary is closed by default: a value it does not list is a lint violation. `closed: false` on the field opens it — the declared values still carry their labels and pages, and other values are accepted unchecked.
+A vocabulary is closed unless the field opens it: a value it does not list is a violation, not a warning. (An open field keeps its declared values' labels and pages and accepts others unchecked; the keys are in [Configuration](../configuration.md).)
 
 A closed vocabulary turns misspellings and undeclared categories into visible findings rather than silently creating new concepts.
 
@@ -55,8 +55,6 @@ force reality into the least-wrong category
 ## 3. Interpretation
 
 Each value of a vocabulary-backed field gets a page in its scheme's generated index, and a chain can show vocabulary fields beside each step of a line (`facet_by`; see [Relations and chains](relations-and-chains.md#facets)).
-
-A scheme's `axis` key is a narrower, real setting: it names the one field whose values head that scheme's index — `tags` in Luria's own record.
 
 Status is a vocabulary like any other ([ADR-085](../../record/decisions.d/ADR-085.md)). A scheme names its status vocabulary under `fields.status.vocabulary`, and its `active:` key names the one word that means in force.
 

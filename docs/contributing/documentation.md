@@ -17,6 +17,18 @@ Do not blur these categories.
 
 ## 2. Behavioral prose cites its governing record
 
+If prose states behavior whose continued truth depends on an ADR or DP,
+cite that record at the point of dependency. The purpose is not
+attribution; it is maintenance:
+
+```text
+governing decision changes
+        ↓
+dependent prose surfaces
+        ↓
+documentation is reviewed
+```
+
 Examples:
 
 ```text
@@ -54,6 +66,17 @@ Concept    = how to understand the model
 Reference  = exact current behavior
 ADR / DP   = why the design exists
 ```
+
+Keep the boundary strict, because it is what keeps each kind of page stable as the implementation moves:
+
+```text
+Concept    what distinction exists, and why it matters
+How-to     how a user accomplishes the task
+Reference  exact fields, flags, defaults, failure behavior
+ADR / DP   why Luria chose the behavior
+```
+
+A concept page explains foreign identity, hermeticity or content drift; the lockfile's write behavior belongs in a how-to or the reference. A concept page explains why an acknowledgement differs from silence; the directive syntax belongs in [Comment directives](../directives.md).
 
 Do not copy an ADR's alternatives/rationale into every page that uses the behavior.
 
@@ -95,21 +118,27 @@ luria index
 
 as appropriate.
 
-## 6. Never edit a generated file
+## 6. Run every recipe verbatim
+
+Before a change to a tutorial or how-to guide merges, type its commands and configuration into a fresh `git init` + `luria init` repository exactly as the page shows them, and check that each command succeeds and prints what the page says. Reading a recipe is not enough: the first pass of this documentation read fluently, cited accurately, and failed on the first command of several pages.
+
+When a recipe fails because the tool is wrong rather than the page, file the bug and fix the interface. A tutorial does not teach around an accidental product defect as though it were the design.
+
+## 7. Never edit a generated file
 
 Anything stamped `GENERATED` — [the configuration reference](../configuration.md), [the record](../record.md), the decision index and tag pages, [the design principles](../design-principles.md), the devlog books, the reports, and the README badge and site regions — is rebuilt by `luria index`. Edit the source (for the configuration reference, the dataclasses in `luria/config.py`) and rerun it.
 
 The same goes for new reference material: CLI signatures, finding-class inventories and config-schema details drift fastest, so extend what is generated rather than writing a parallel hand-maintained list.
 
-## 7. Every page is on the map
+## 8. Every page is on the map
 
 `luria lint` checks that every page under `docs/` (one directory level deep) is linked from [the docs map](../README.md). A new page — including a chain page or any other generated output you add to `docs/` — gets an entry there in the same change, or the lint fails.
 
-## 8. Tag the decisions the docs depend on
+## 9. Tag the decisions the docs depend on
 
 A decision cited by a hand-written page (or by prose that renders into one) carries the `docs` tag, so whoever retires it can see that a page has to change with it. Add the tag in the same change that adds the citation. Nothing checks this yet; it is a convention.
 
-## 9. Documentation changes lint cleanly
+## 10. Documentation changes lint cleanly
 
 Before merging documentation:
 

@@ -12,11 +12,11 @@ docs/
   incident-2026-04.md
 ```
 
-The goal is not to redesign the corpus before Luria can help. Start with one useful semantic distinction and add governance incrementally.
+The goal is not to redesign the corpus into a Luria-shaped repository before Luria can help. Identify one distinction or dependency worth making explicit, wrap Luria around it, and add governance as it earns its keep.
 
 This page is the short path. [Adopting Luria](../adopting.md) covers the scaffold and CI in depth, and [Importing an existing corpus](../importing.md) covers converting material in bulk.
 
-That follows [DP-14](../../record/principles.d/DP-014.md): Luria should meet the project where it is ([DP-14](../../record/principles.d/DP-014.md)).
+That is [DP-14](../../record/principles.d/DP-014.md) made operational: meet the project where it is.
 
 ## 1. Inventory what already has meaning
 

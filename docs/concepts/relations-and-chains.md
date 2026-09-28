@@ -1,6 +1,11 @@
 # Concept: Relations and chains
 
-Relations and chains are two levels of structure.
+Relations and chains are two levels of structure:
+
+```text
+relation = a local semantic edge, stated by an author
+chain    = a declared longitudinal interpretation of those edges, derived by Luria
+```
 
 ## Relations are local semantic edges
 
@@ -27,9 +32,7 @@ The declaration allows Luria to check that the value:
 3. belongs to the intended scheme,
 4. resolves to a document.
 
-A declared reference is **required by default**: a document that leaves the field empty is a violation unless the declaration says `required: false` (or makes it conditional with `required_when`). Vocabulary-backed and plain fields are the other way round — optional unless they say `required: true`.
-
-A relation can also declare a converse, cardinality (`many`), conditional requirement (`required_when`), label/blurb, and invariant.
+A relation can also declare whether it is required, its cardinality, a converse, and an invariant. The keys and their defaults are in [Configuration](../configuration.md); [Model and add relations](../how-to/relations.md) walks through them, including the one that surprises people — a declared reference is required unless it says otherwise.
 
 The difference between:
 
@@ -63,13 +66,7 @@ references:
 
 A symmetric relation such as `compared_against` names itself as its converse.
 
-A pair is checked when `luria.yaml` loads, and refused unless:
-
-- both sides name each other,
-- both sides are `many: true`, since either side is written into,
-- the converse is declared on the scheme whose codes the field holds — for a relation that crosses schemes, that is the target scheme, not the declaring one ([ADR-097](../../record/decisions.d/ADR-097.md)).
-
-A document that holds only one side of a declared pair is reported as `one-sided-relations`; `luria link --fix` writes the missing side.
+Because the two fields are one relation, the converse belongs to the scheme whose codes the field holds — for a relation that crosses schemes, the target scheme ([ADR-097](../../record/decisions.d/ADR-097.md)). And because either side can be derived from the other, a document holding only one side is a mechanical gap, not a judgement call: the lint reports it and `luria link --fix` fills it. The rules a pair must satisfy are in [Model and add relations](../how-to/relations.md).
 
 ## Relation invariants
 
@@ -182,6 +179,6 @@ chain derivation
 generated sequence
 ```
 
-Do not hand-maintain the lineage in parallel. [DP-3](../../record/principles.d/DP-003.md) applies directly: derive the projection from the authoritative source ([DP-3](../../record/principles.d/DP-003.md)).
+Do not hand-maintain the lineage in parallel. [DP-3](../../record/principles.d/DP-003.md) applies directly: derive the projection from the authoritative source.
 
 > **Authors state the edges. Luria derives the line.**

@@ -9,6 +9,12 @@ This page is the map, organized by what you are trying to do. (`luria lint`
 checks that every page in `docs/` is listed here, so the map cannot
 silently rot.)
 
+**Already have a corpus?** You do not need to redesign it into a
+Luria-shaped repository. Pick one distinction or dependency worth making
+explicit, wrap Luria around it, and add governance as it earns its keep:
+start with [Adopt Luria around an existing corpus](tutorials/adopt-existing-corpus.md),
+then [Adopting Luria](adopting.md) and [Importing an existing corpus](importing.md).
+
 ## Tutorials
 
 Learn Luria by building a working record, start to finish.
@@ -27,13 +33,13 @@ Learn Luria by building a working record, start to finish.
 
 ## Concepts
 
-Understand the model and the distinctions Luria preserves.
+Understand the model and the distinctions Luria preserves. Read
+[Concepts](concepts.md) first; go to a focused page when you need one
+distinction in depth; go to [Designing a record](modeling.md) when you are
+making modeling choices for your own record.
 
-- [Concepts](concepts.md) — the shortest complete account: entries,
+- [Concepts](concepts.md) — the shortest complete mental model: entries,
   citations, the status field everything hangs off, and what a finding is.
-- [Project memory](project-memory.md) — the machine in one page: sources
-  and views; the four families (schemes, journals, fragments, remotes);
-  statuses; constraints; how references are found, linked, and kept honest.
 - [The record model](concepts/record-model.md) — what a record holds, and
   why the families mean different things.
 - [Identity, standing, and history](concepts/identity-standing-history.md)
@@ -50,9 +56,13 @@ Understand the model and the distinctions Luria preserves.
   whose subject includes their own rules.
 - [External knowledge and remotes](concepts/remotes.md) — citing
   identities owned elsewhere.
-- [Designing a record](modeling.md) — what belongs in a record, which
-  family fits which material, when two kinds of entry are two schemes, and
-  what the schema can be made to refuse.
+- [Designing a record](modeling.md) — how to make modeling choices: what
+  belongs in a record, which family fits which material, when two kinds of
+  entry are two schemes, and what the schema can be made to refuse.
+- [Project memory](project-memory.md) — one application of Luria, not its
+  definition: a software project's decisions, principles, changelog and
+  devlog, walked through the machine end to end (sources and views, the
+  four families, statuses, constraints, references).
 
 ## How-to guides
 

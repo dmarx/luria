@@ -10,7 +10,7 @@ RFC → DECISION → IMPLEMENTATION
        PROCESS
 ```
 
-Your own process may collapse some of these objects, split them differently, or omit them. The point is to learn the mechanics and the modeling questions, not to prescribe a universal RFC ontology. Luria's [DP-14](../../record/principles.d/DP-014.md) explicitly favors meeting a project where it is over forcing one canonical shape ([DP-14](../../record/principles.d/DP-014.md)).
+Your own process may collapse some of these objects, split them differently, or omit them. The point is to learn the mechanics and the modeling questions, not to prescribe a universal RFC ontology. Luria's [DP-14](../../record/principles.d/DP-014.md) explicitly favors meeting a project where it is over forcing one canonical shape.
 
 ## 1. Install Luria
 
@@ -155,7 +155,7 @@ record/rfcs.d/
 docs/rfcs/
 ```
 
-Edit the source and regenerate the view. Do not maintain both independently. A view directory carries its own generated index, so it needs no entry in `docs/README.md`; a page you write by hand directly in `docs/` does, or lint fails with `missing index entry`. That is the concrete application of [DP-3](../../record/principles.d/DP-003.md): hand-maintained projections drift ([DP-3](../../record/principles.d/DP-003.md)).
+Edit the source and regenerate the view. Do not maintain both independently. A view directory carries its own generated index, so it needs no entry in `docs/README.md`; a page you write by hand directly in `docs/` does, or lint fails with `missing index entry`. That is the concrete application of [DP-3](../../record/principles.d/DP-003.md): hand-maintained projections drift.
 
 ## 6. Change standing without erasing history
 
@@ -199,7 +199,7 @@ from:
 commitment resulting from the proposal
 ```
 
-Ask whether they can be cited, revised, or superseded independently. [DP-12](../../record/principles.d/DP-012.md)'s general principle is that independently meaningful citable things often deserve independently coherent identities ([DP-12](../../record/principles.d/DP-012.md)).
+Ask whether they can be cited, revised, or superseded independently. [DP-12](../../record/principles.d/DP-012.md)'s general principle is that independently meaningful citable things often deserve independently coherent identities.
 
 For this tutorial, add a decision scheme.
 
@@ -438,7 +438,7 @@ explicit process knowledge
 mechanism where useful
 ```
 
-[DP-5](../../record/principles.d/DP-005.md) describes the general ladder from prose to convention to mechanism to guarantee ([DP-5](../../record/principles.d/DP-005.md)).
+[DP-5](../../record/principles.d/DP-005.md) describes the general ladder from prose to convention to mechanism to guarantee.
 
 ## 14. Give process rules identities when that helps
 

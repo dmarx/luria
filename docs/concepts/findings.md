@@ -63,7 +63,7 @@ A baseline states:
 
 > this is the known residue; do not allow regression beyond it.
 
-That is often more useful for an adopting corpus than either “fail immediately” or “hide the class.” The violations and the warning classes are listed under [`luria lint`](../cli.md#luria-lint); the three dials are in [Configuration](../configuration.md).
+That is often more useful for an adopting corpus than either “fail immediately” or “hide the class.” The full list of violations and warning classes is under [`luria lint`](../cli.md#luria-lint); the syntax for the dials is in [Configuration](../configuration.md).
 
 ## Acknowledgements
 
@@ -75,7 +75,7 @@ An acknowledgement should say:
 - where,
 - why.
 
-[DP-1](../../record/principles.d/DP-001.md)'s corollary is important: a suppression must not become silence. Acknowledged findings remain countable, and stale acknowledgements should themselves become visible ([DP-1](../../record/principles.d/DP-001.md)).
+[DP-1](../../record/principles.d/DP-001.md)'s corollary is important: a suppression must not become silence. Acknowledged findings remain countable, and stale acknowledgements should themselves become visible.
 
 ## Mechanical repair versus human judgment
 
@@ -93,7 +93,7 @@ semantic decision
 
 `luria repair` can apply source changes the tool can determine safely.
 
-`luria ack` writes an acknowledgement directive from an actual finding when the user supplies the reason: the code comes from the citation scan, never from a person. It covers the two directives that scan answers — `inactive-ok:` for a deliberate citation of a retired document and `unresolved-ok:` for a code that names nothing on purpose. Other acknowledgements are written by hand; see [Comment directives](../directives.md).
+An acknowledgement divides the work the same way: *which* condition is accepted is mechanical, so `luria ack` takes it from the finding itself; *why* it is acceptable is judgement, so the reason comes from a person. A hand-transcribed acknowledgement is the one place a suppression can be silently wrong — it can vouch for the wrong code and quiet nothing. The directive syntax is in [Comment directives](../directives.md); the workflow is in [Resolve, repair, and acknowledge findings](../how-to/findings.md).
 
 The linter should not invent semantic conclusions merely because it discovered the condition.
 

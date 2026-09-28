@@ -63,7 +63,7 @@ which can be assembled into:
 CHANGELOG.md
 ```
 
-Fragments solve a different problem from journals: their source contributions may be consumed into the shared artifact. [DP-2](../../record/principles.d/DP-002.md) captures the broader concurrency principle: hand out independent contributions and generate/collect the shared artifact where merges serialize ([DP-2](../../record/principles.d/DP-002.md)).
+Fragments solve a different problem from journals: their source contributions may be consumed into the shared artifact. [DP-2](../../record/principles.d/DP-002.md) captures the broader concurrency principle: hand out independent contributions and generate/collect the shared artifact where merges serialize.
 
 ### Remotes
 
@@ -140,4 +140,4 @@ Indexes, reports, chain pages, published sites, and exports are derived from the
 
 The source remains authoritative.
 
-[DP-3](../../record/principles.d/DP-003.md) gives the general rule: derive projections from the source rather than maintaining parallel copies that drift ([DP-3](../../record/principles.d/DP-003.md)).
+[DP-3](../../record/principles.d/DP-003.md) gives the general rule: derive projections from the source rather than maintaining parallel copies that drift.
