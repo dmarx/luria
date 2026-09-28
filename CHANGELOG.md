@@ -5,6 +5,289 @@ Assembled from `changelog.d/` fragments on a cadence — never hand-edited
 
 <!-- luria-insert-here -->
 
+## 2026-09-28
+
+### Documentation
+
+- **Documentation organized by reader intent.** A shorter README, and new
+  tutorials (a governed RFC process, chains, adopting an existing corpus),
+  concept pages, and how-to guides (relations, chains, findings,
+  merge-time allocation, journals and fragments, remotes, publishing, CI)
+  under `docs/`. They are placed alongside the existing pages on the one
+  docs map, `docs/README.md`. Every tutorial and how-to recipe was run
+  verbatim against the current CLI.
+- `docs/cli.md` documents `luria ack`, lists the `foreign-temp-codes`,
+  `unbound-relations` and `unbound-lines` warning classes, and no longer
+  calls a broken relation invariant a violation or says the lint writes
+  the remotes lockfile.
+- `concepts.md`, `modeling.md` and `project-memory.md` no longer claim the
+  status words are fixed in a `statuses.yaml`: each scheme declares its
+  own in `luria.yaml`.
+- The docs map gives each overlapping page an explicit role, and
+  `project-memory.md` is framed as one application of Luria rather than
+  its definition. `contributing/documentation.md` states the citation rule,
+  the concept / how-to / reference boundary, and that recipes are run
+  verbatim before they merge.
+
+### Fixed
+
+- **The published site titles every page again.** Quartz 5 parses
+  frontmatter only in its `note-properties` plugin, which the generated
+  config left out — so every page was untitled: search results listed as
+  blank cards, graph nodes were labelled with their paths, the explorer
+  showed filenames, and each page's YAML rendered as a paragraph above it
+  (`anthology-of-the-sota#271`). The plugin is now configured, and every page
+  is titled `CODE: title` — a generated view by its first heading.
+
+### Changed
+
+- **A record's facts are Quartz properties, not a table luria draws**
+  ([ADR-121](record/decisions.d/ADR-121.md)). `luria site` composes each page's frontmatter — status,
+  version, issue, influences, vocabulary values and typed edges both ways,
+  under a reader's label — and Quartz's properties panel renders it. The
+  links are root-relative wikilinks, so the typed edges also reach Quartz's
+  graph and backlinks. The date is no longer repeated: Quartz shows it from
+  `date:`.
+
+### Removed
+
+- The record table under each title, and `site.record_line`, replaced by
+  `site_page.properties`. The heading the title repeats is dropped from the
+  staged body, since Quartz draws the title itself.
+
+### Added
+
+- **`unbound-relations` and `unbound-lines` are lint classes** ([#311](https://github.com/dmarx/luria/issues/311)). A relation
+  that declares an `invariant:` asserts its two ends have something in common;
+  where they do not, the row now reaches the lint instead of only the report.
+
+  ```yaml
+  lint:
+    baseline:
+      unbound-relations: 5
+  ```
+
+  Two classes rather than one, because they are not the same strength and
+  `unbound-lineage.md` already says which is weaker: an unbound **edge** is two
+  documents joined directly with nothing in common, while an unbound **line** is
+  a whole sequence with no value common to every member — which happens while
+  every single step is expressed, since a component's intersection only shrinks
+  as the component grows.
+
+  Each row names the documents, the field, what declared the invariant and what
+  each side actually holds, because the lint prints lines and not tables and a
+  reader has to be able to choose between the two readings without opening
+  either file.
+
+### Changed
+
+- **An invariant can be declared over a residue.** Until now the unbound
+  findings were a report and nothing else — no class, so `lint.fail_on`,
+  `lint.mute` and `lint.baseline` all passed them by, and declaring an
+  `invariant:` had no build consequence at all. That made it all-or-nothing:
+  assertable only over a corpus already at zero.
+
+  [#311](https://github.com/dmarx/luria/issues/311) proposed an `unbound-ok:` directive for this, which `ADR-049` had
+  already rejected on the grounds that a row has exactly two readings — the
+  invariant is missing, or the relation is wrong — and never a third. **A
+  baseline asserts something different from a directive**: not "this row is
+  fine" but "this record has *this many* rows it has not resolved." One is a
+  claim about a relation, the other about the backlog, and the second is the
+  one a project wanted to make. No row is retired, so `ADR-049` stands
+  unamended.
+
+  Adopters already declaring an invariant may see new warnings. Measured
+  downstream on `anthology-of-the-sota`: 0 unbound relations and 1 unbound
+  line, which had been in its report all along and never in its lint.
+
+### Added
+
+- **`luria ack`** — write an acknowledgement directive from the scan rather
+  than from recall ([#308](https://github.com/dmarx/luria/issues/308)).
+
+  ```
+  luria ack                                   # what could be acknowledged
+  luria ack ADR-012 --reason "the decision this page replaced"
+  luria ack ADR-012 --reason "..." --scope file --until 2026-12-01
+  ```
+
+  The code, the directive name (`inactive-ok:` for a retired document,
+  `unresolved-ok:` for a code that resolves to nothing), the comment syntax and
+  the line all come from `ref_status.Scan` and the file itself. **The reason is
+  the one thing a person supplies**, and the command refuses without it.
+
+  Acknowledgements are the escape hatch under `lint.fail_on`, which makes them
+  the one place a mistake is silent: an unresolvable code inside an HTML
+  comment is not the finding an unresolvable code in prose is. Four directive
+  failures in one day of filing work downstream were all transcription errors
+  between a report that had the right answer and a file edited by hand — one
+  vouching for a document no longer retired, one naming a code that did not
+  exist, one stale on arrival over an `Active` document, and one citing a
+  number before it was allocated.
+
+  **The refusals are the feature.** Three states have no acknowledgement to
+  write, and each now says which:
+
+  - a document **in force** — the directive would be a `stale-directives`
+    finding the moment it landed;
+  - a code **nothing cites** — it would govern nothing;
+  - a citation **already covered** — a second directive is noise.
+
+  Called with no code it is a report: every row an acknowledgement could take,
+  with its sites, printed where it is about to be used. It writes nothing.
+
+  Line scope by default, because an acknowledgement is a claim about that
+  sentence; `--scope file` is offered rather than guessed, and lands below
+  frontmatter, since a comment above the opening `---` is not a comment.
+
+  There is deliberately **no bulk mode and no `--fix`**. A generated reason
+  vouches for nothing, which is the failure the directives exist to prevent —
+  and it is not in `luria repair`, whose contract is that a second run changes
+  nothing, which a judgement can never satisfy.
+
+### Added
+
+- **`foreign-temp-codes`** — a temporary code cited in this tree that no
+  document in it mints ([#309](https://github.com/dmarx/luria/issues/309)). The branch-side guard: `concretize --check`
+  guards the trunk, and `legacy-spellings` reports the aftermath once it is too
+  late to be cheap.
+
+  A temp code belongs to the contribution that created it. Cite another
+  contribution's and the reference resolves for exactly as long as both
+  branches are open — then the other merges, its code is numbered, and yours
+  names a spelling the trunk never saw. Downstream that shipped three dangling
+  references one day and sixteen the next, clean lint both times.
+
+  The rule is local: no git, no network, no knowledge of other branches. A temp
+  code nothing here mints is another contribution's or a typo, and both are
+  defects. Warn-first and in `FAILABLE` like every other class, and a better
+  candidate than most for `fail_on` — unlike a retired citation there is no
+  legitimate reading, and the window in which the mistake is invisible closes
+  on somebody else's schedule.
+
+  `luria reports` grows the matching section, so the sites stay findable.
+
+### Changed
+
+- **`unresolved-codes` no longer reports temporary codes**, which now go to
+  `foreign-temp-codes` instead. They were always in that class — a foreign temp
+  code resolves to no document — but read as one of the three things that class
+  mixes, and its remedy is not "acknowledge or fix" but "wait for the other
+  branch or stop citing it".
+
+  Partitioned rather than duplicated, deliberately: two counts of one defect
+  make neither of them mean anything. `ref_status.dangling()` and
+  `dangling_acknowledged_count()` take a `temps` flag and the two callers select
+  opposite halves.
+
+  A project with `fail_on` or `baseline` set over `unresolved-codes` will see a
+  smaller count and a new class beside it. A baseline that is now too high says
+  so on the run ([#307](https://github.com/dmarx/luria/issues/307)).
+
+- **No new directive.** An illustrative temp code in a docstring or a fixture is
+  unresolved for the ordinary reason, so `unresolved-ok:` already covers it —
+  measured on this repository, where the two rows the change surfaced were
+  cleared by editing two existing directives.
+
+### Fixed
+
+- **`luria repair` now upgrades an already-concretized old spelling**
+  ([#312](https://github.com/dmarx/luria/issues/312)), and the `legacy-spellings` finding names it rather than
+  `luria link --fix`, which reaches one shape of three ([#310](https://github.com/dmarx/luria/issues/310)).
+
+  The gap was structural rather than a bug in any one command. `concretize`
+  applies a *pending* rename, so once the other branch has numbered its code
+  there is nothing left to sweep. `link --fix` takes the bare form and is
+  designed to leave a code span and an existing link alone. `repair` reported
+  `repaired 0 file(s)`. Three commands, and the row belonged to none of them —
+  so it was hand-edited, sixteen citations one day and three the next,
+  downstream.
+
+  `repair` is the right home because the work is mechanical: `legacy_spellings`
+  already computes `CODE → CODE-NOW` from the alias table and no writer was
+  reading it. Same alias gating, so a temp-shaped string resolving to no
+  document — a live temp code, or prose noise — is still untouched.
+
+  Two shapes are taken: the **bare** code, and a code inside an **existing
+  link**, in the label or the target or both. A link pointing at
+  `ADR-tmpxxxxx.md` is broken and a label spelling a retired name says
+  something untrue; neither reads as a deliberate quotation.
+
+  `formerly:` is skipped, as `legacy_spellings` already skips it. That block is
+  the alias record rather than a citation, and rewriting it would replace a
+  document's memory of its own former spelling with its current one —
+  destroying the provenance the field exists to hold. In-tree the question
+  never arises, since `concretize` writes `formerly:` *after* its sweep; it
+  arises here because `repair` runs long afterwards. [#312](https://github.com/dmarx/luria/issues/312) flagged this as the
+  thing to be careful about, having watched it destroy five documents'
+  provenance during the downstream hand-fix.
+
+### Documentation
+
+- **A code span stays quoted, and the reason is a retraction.** The fixer was
+  implemented the other way first, on an argument that looked decisive:
+  `concretize._rewrite_files` is a plain `str.replace` over the whole file, so
+  in-tree a sweep flattens backticks and fences too, and sparing one in
+  `repair` makes the fixer disagree with the concretizer about the same text.
+
+  The first live run refuted it, on this repository's own `CHANGELOG.md`:
+
+  > `ADR-111` landed on main as a live `` `ADR-tmpxxxxx` `` in the example
+
+  That sentence is *about* the old spelling. Upgraded it reads "landed on main
+  as a live `ADR-111`", which is false. The concretizer would indeed have
+  flattened it — which is a thing the concretizer gets wrong on the rare prose
+  that quotes a code, not a licence to repeat it in a command that runs long
+  after the quotation was written on purpose.
+
+  The residue is that a quoted spelling is reported with no remedy, which is
+  how a warning class becomes wallpaper. That is the status quo rather than a
+  regression, and it is [#314](https://github.com/dmarx/luria/issues/314): a `legacy-ok:` directive, which is what this
+  record already does everywhere a check is right to see what a fixer is right
+  to leave.
+
+### Added
+
+- **`lint.baseline`** — a per-class standing count, so the exit code carries
+  signal in a record whose warning set is not empty ([#307](https://github.com/dmarx/luria/issues/307)). A class at or
+  below its number reports exactly as before; above it, the excess is a
+  violation naming both figures and the rows still print. Below it, the run
+  says so, and a class that has cleared entirely is reported too — the one
+  state where the number is certainly stale is the one that yields no section
+  and would otherwise never be mentioned.
+
+  ```yaml
+  lint:
+    baseline:
+      retired-citations: 7
+      broken-targets: 184
+  ```
+
+  The third dial on `ADR-035`'s posture, beside `fail_on` and `mute`, and it
+  exists because neither of those can say what a maintained record needs to
+  say. `fail_on` fails at the first row, which a class with a legitimate
+  residue can never satisfy. `mute` hides the class including its new rows.
+  Only a number distinguishes *standing* from *worse*.
+
+  A class named with a count of `0` is `fail_on` in this dial's dialect, and
+  that is fine; naming a class in **both** is a configuration error, because
+  one of the two numbers would have to be a lie. Naming it in `baseline` and
+  `mute` is an error for the reason `fail_on` and `mute` together already are.
+  An unknown class or a negative count is reported once and then **ignored for
+  gating** — a dial that cannot hold a line must not bury its own error under
+  every row of the class it mis-describes (`DP-1`).
+
+### Documentation
+
+- **Where the gap showed.** A day of filing work on `anthology-of-the-sota`
+  checked every contribution against a remembered `7 warnings / 184 targets /
+  0 unbound relations / 1 unbound line`, because `EXIT=0` is what that record
+  returns at 7 warnings and at 20. It held four times and failed once: a stale
+  directive shipped in [that record's #263](https://github.com/dmarx/anthology-of-the-sota/pull/263),
+  because the summary line sits at
+  the bottom of a long report and got skimmed. A baseline is that remembered
+  number, written down where the tool can read it.
+
 ## 2026-09-21
 
 ### Added
