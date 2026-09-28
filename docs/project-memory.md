@@ -1,7 +1,15 @@
 # Project memory
 
-How Luria models a project's memory. The [quickstart](quickstart.md) shows
-the commands; this page explains the machine they drive.
+Luria governs any body of knowledge whose meaning changes over time — a
+literature, a policy corpus, a standards family, an investigation. A
+software project's memory (its decisions, principles, changelog and
+devlog) is one application of it, the one Luria ships as a default and
+uses for itself. This page walks the machine through that application; the
+general model is in [Concepts](concepts.md), and [Designing a
+record](modeling.md) covers shaping a record for other material.
+
+The [quickstart](quickstart.md) shows the commands; this page explains the
+machine they drive.
 
 ## Sources and views
 
@@ -181,20 +189,22 @@ you declare **replaces the shipped family whole**. A project that writes
 `schemes.RFC` and nothing else has exactly one scheme; the default
 `ADR` is simply absent. Declare a family and it is yours entirely.
 
-## The five statuses
+## Statuses
 
-Every scheme document carries a `status:` from a closed vocabulary —
+Every scheme document carries a `status:` from a closed vocabulary that the
+project declares in `luria.yaml` and the scheme names in
+`fields.status.vocabulary` ([ADR-085](../record/decisions.d/ADR-085.md), [ADR-098](../record/decisions.d/ADR-098.md)). `luria init` ships five
+words —
 
 > `Active` · `Proposed` · `Deferred` · `Superseded` · `Rejected`
 
-— with `superseded_by:` naming a superseded document's successor (a
-reference field: checked, resolved, an edge) and an optional
-`status_note:` for anything the field cannot say, which is prose: a code
-in it is a citation, linked by the fixer. The words
-are Luria's; what they *mean* for a scheme is the project's, declared per
-scheme: the `active` key names which status counts as **in force**, and an
-optional `statuses.yaml` beside the sources narrows the vocabulary and
-gives each status a legend line rendered above the index.
+— but they are the project's to change: the scheme's `active` key names
+which word counts as **in force**, and each value's `blurb` is the legend
+line rendered above the index. A superseded document names its successor
+in `superseded_by:` (a reference field: checked, resolved, an edge; a
+scheme can rename the pair with `retires_on` and `successor`), and an
+optional `status_note:` holds anything the field cannot say, which is
+prose: a code in it is a citation, linked by the fixer.
 
 Status is what makes the record more than a pile of prose. Only an in-force
 document is a safe thing to cite as justification; `Proposed` and

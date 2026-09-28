@@ -3,9 +3,11 @@
 Entries, citations, and the status field the rest of it hangs off.
 
 The [quickstart](quickstart.md) has you filing entries and seeing a finding.
-This page is what was underneath that. It is the shortest complete account;
-[designing a record](modeling.md) is how to choose between the options it
-describes, and [project memory](project-memory.md) is the reference.
+This page is what was underneath that. It is the shortest complete mental
+model. The [focused concept pages](README.md#concepts) take one distinction
+each in depth; [designing a record](modeling.md) is how to choose between the
+options it describes; [project memory](project-memory.md) walks the whole
+machine through one application, a software project's memory.
 
 ## The engine
 
@@ -35,13 +37,18 @@ because nothing is being judged. `luria lint` reports that state as
 
 ## Status
 
-The vocabulary is closed to five words:
+Status is an ordinary vocabulary, declared in `luria.yaml` and named by
+each scheme's `fields.status.vocabulary` ([ADR-085](../record/decisions.d/ADR-085.md), [ADR-098](../record/decisions.d/ADR-098.md)). `luria init`
+ships five words:
 
 `Active` · `Proposed` · `Deferred` · `Superseded` · `Rejected`
 
-a superseded document naming its successor in `superseded_by:`, and any
-of them optionally qualified by a `status_note:`, a prose field in its
-own right.
+and they are a default, not a law: a scheme's `active:` key names the one
+word that means in force, and a scheme whose words are `Kept` and `Dropped`
+works the same way. A superseded document names its successor in
+`superseded_by:` (a scheme can rename that pair with `retires_on` and
+`successor`), and any status is optionally qualified by a `status_note:`, a
+prose field in its own right.
 
 Closed because an audit of 121 entries found an open vocabulary had drifted
 into roughly thirty forms — not toward one wrong value but toward *variety*,

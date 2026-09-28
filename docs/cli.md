@@ -14,6 +14,7 @@ One binary, `luria`, dispatching to plain functions. Every command takes
 | [`luria index`](#luria-index) | render every generated view |
 | [`luria link`](#luria-link) | turn bare codes and wikilinks into links |
 | [`luria lint`](#luria-lint) | enforce the record's invariants |
+| [`luria ack`](#luria-ack) | acknowledge a cited retired or unresolved code, from the scan |
 | [`luria reports`](#luria-reports) | write the status reports |
 | [`luria collect`](#luria-collect) | assemble fragments into their target |
 | [`luria concretize`](#luria-concretize) | give temporary codes real numbers |
@@ -321,8 +322,7 @@ The contract, in two halves.
   (`exactly-one`, `at-most-one`, `excluded_by`), a field group's
   `at-least-one`, a value outside a closed vocabulary, a reference field
   holding something that is not a resolvable code of the scheme it names,
-  a relation's declared `invariant` disagreeing across the edge, or a
-  field marked `unique` whose value appears on a second document of the
+  or a field marked `unique` whose value appears on a second document of the
   same scheme
 - a `version:` above 1 with no `history:`, or history that ends on a
   different version than the document claims
@@ -343,11 +343,13 @@ The contract, in two halves.
 its acknowledgement route (see [directives](directives.md)) and listed in
 full in the [reports](reports/reference-status.md):
 
-`retired-citations` · `unresolved-codes` · `unresolved-citations` ·
+`retired-citations` · `unresolved-codes` · `foreign-temp-codes` ·
+`unresolved-citations` ·
 `hand-written-urls` · `broken-targets` · `remote-drift` ·
 `source-mismatch` · `source-unchecked` · `inert-status` ·
 `legacy-spellings` · `narrow-titles` · `stale-directives` ·
 `template-drift` · `broken-chains` · `one-sided-relations` ·
+`unbound-relations` · `unbound-lines` ·
 `spent-upgrades` · `pending-documents` · `unlinted-files` ·
 `workflow-temp-codes` · `unlinked-site`
 
@@ -371,6 +373,36 @@ record says.
 `lint.network` promotes one class on its own: under `network = "require"`,
 `source-unchecked` fails without being named in `fail_on`, because the
 setting already said that a green run means the references were verified.
+
+## luria ack
+
+```
+luria ack [CODE] [--reason TEXT] [--scope line|file] [--until YYYY-MM-DD]
+```
+
+Writes an acknowledgement directive at every site the citation scan
+reports unacknowledged for CODE: `inactive-ok:` for a deliberate citation
+of a document that is not in force, `unresolved-ok:` for a code that names
+nothing on purpose. The code comes from the scan, never from a person — a
+directive transcribed by hand is the one place an acknowledgement can be
+silently wrong. With no code it prints what could be acknowledged and
+writes nothing.
+
+```console
+$ luria ack
+ADR-001 — cited but not in force, 1 unacknowledged site(s)
+    docs/README.md:23
+
+luria ack <CODE> --reason "..." writes the directive at each site above.
+$ luria ack ADR-001 --reason "the decision this page replaced"
+acknowledged ADR-001 at docs/README.md:23
+wrote 1 directive(s)
+```
+
+`--scope` is `line` (one directive per citation, the default) or `file`
+(one per file); `--until` gives the directive an expiry, after which every
+check behaves as though it had never been written. The directive syntax
+itself is in [comment directives](directives.md).
 
 ## luria reports
 
@@ -464,7 +496,7 @@ may be known, and `lint.network` says how far the lint may go:
 
 | | |
 |---|---|
-| `auto` (default) | ask about identifiers the lockfile has no answer for — normally the one citation a contribution just added — and write what comes back. Falls back to `source-unchecked` when the network is not there. |
+| `auto` (default) | ask about identifiers the lockfile has no answer for — normally the one citation a contribution just added — and report what comes back. The lint never writes the lockfile; `luria remotes --resolve` does, where merges serialize ([ADR-112](../record/decisions.d/ADR-112.md)). Falls back to `source-unchecked` when the network is not there. |
 | `never` | answer only from the lockfile. The hermetic build. |
 | `require` | not being able to ask is a finding, promoted to a failure without needing `fail_on`. A green CI run then means the references were verified rather than remembered. |
 
