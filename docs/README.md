@@ -40,8 +40,6 @@ making modeling choices for your own record.
 
 - [Concepts](concepts.md) — the shortest complete mental model: entries,
   citations, the status field everything hangs off, and what a finding is.
-- [The record model](concepts/record-model.md) — what a record holds, and
-  why the families mean different things.
 - [Identity, standing, and history](concepts/identity-standing-history.md)
   — a name that persists while its standing changes; supersede vs. correct.
 - [Relations and chains](concepts/relations-and-chains.md) — typed

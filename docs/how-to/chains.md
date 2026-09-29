@@ -86,7 +86,10 @@ Use facets for axes that change how a reader interprets each step.
 invariant: tags
 ```
 
-A chain invariant asserts shared structure across the line.
+A chain invariant asserts shared structure across the line ([ADR-106](../../record/decisions.d/ADR-106.md)). When an
+invariant is declared, the generated chain page is also organized by the
+values that bind each line, with unbound lines called out separately
+([ADR-113](../../record/decisions.d/ADR-113.md)).
 
 When it fails, investigate:
 

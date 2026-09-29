@@ -220,7 +220,7 @@ That is the product demonstrating its own thesis.
 - **New to Luria:** [Build a governed RFC process](docs/tutorials/rfc-process.md)
 - **Want to see chains:** [Build a lineage with chains](docs/tutorials/chains.md)
 - **Already have a corpus:** [Adopt Luria around an existing corpus](docs/tutorials/adopt-existing-corpus.md)
-- **Understand the model:** [Concepts](docs/concepts/record-model.md)
+- **Understand the model:** [Concepts](docs/concepts.md)
 - **Do a specific task:** [How-to guides](docs/README.md#how-to-guides)
 - **Look up exact behavior:** [Reference](docs/README.md#reference)
 - **Understand why Luria behaves this way:** follow the cited ADRs and DPs.
