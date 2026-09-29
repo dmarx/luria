@@ -125,6 +125,7 @@ outlive what they excuse.
 | `target-ok:` | a relative link target that resolves to nothing from where the prose renders (`broken-targets`) | the exact target |
 | `source-ok:` | an identifier whose upstream title is not the one recorded (`source-mismatch`) — a preferred nickname, a trimmed subtitle, a title that changed between versions | the identifier(s) |
 | `broad-ok:` | a term flagged by `narrow-titles`, used in a legitimately broad sense | the term(s) |
+| `unexplained-ok:` | a relation declared `explain: true` whose code the body deliberately never cites (`unexplained-relations`) — the title or the relation name already says everything the prose would | the code(s) |
 | `unlinted-file:` | opts the entire file out of reference checking — the blunt tool for fixture-heavy or vendored pages. File-scoped by design; counted in the report rather than hidden | — |
 | `unexempt:` | the reverse of an exemption: makes the linker treat code regions as prose again, for pages *about* the reference syntax | `codeblock`, `inline-code` |
 | `pin:` | not an acknowledgement — a *registration*: marks a cited URL for content pinning, so `luria remotes --pin` endorses its bytes and the lint reports when they change (`remote-drift`) | the URL(s) |

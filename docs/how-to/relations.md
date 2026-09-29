@@ -119,7 +119,54 @@ wrote 1 back-reference(s) in 1 file(s)
 
 `luria relate --draft FILE` reads relations instead of taking them as arguments: FILE is a JSON drafts file whose `relations` list holds `{"source", "field", "target"}` entries, each written as above.
 
-## 7. Lint the result
+## 7. State the relation where you explain it
+
+A relation is often clearest in the sentence that justifies it. Annotate the
+citation with the relation's name and an arrow, and the prose states the edge:
+
+```markdown
+Nothing here is new (see [[RFC-2]]{--extends-->here}).
+The recovery path is [[RFC-7]]{here--extends-->}'s, generalised.
+```
+
+`{--F-->here}` reads left to right: the cited document stands in relation `F`
+to this one. `{here--F-->}` is the other direction. `F` is a reference field
+declared on the scheme of the document at the arrow's tail. The annotation
+follows the link, so `luria link --fix` turning `[[RFC-2]]` into a markdown
+link keeps it attached; one in a code span, fence or comment is a specimen and
+states nothing ([ADR-tmp3gms4](../../record/decisions.d/ADR-tmp3gms4.md)).
+
+**Pushing up.** An annotated edge missing from frontmatter is
+`unrecorded-relations`, and `luria link --fix` writes it: into this
+document's field for `{here--F-->}`, and for `{--F-->here}` into this
+document's converse field when `F` declares one, otherwise into the cited
+document's `F`. The converse completion in the same run writes the far side.
+
+**Pushing down.** A reference declared `explain: true` asks for the reverse —
+every code the field holds cited in the body, annotated:
+
+```yaml
+references:
+  extends:
+    scheme: RFC
+    required: false
+    many: true
+    converse: extended_by
+    explain: true
+```
+
+A plain citation of a code the field holds is `unannotated-relations`, and the
+fixer annotates it. A code the body never cites is `unexplained-relations`, a
+report rather than a fix: the explanation is prose only you can write. Write
+it, or acknowledge the code with `<!-- unexplained-ok: RFC-2 — the title says
+it -->`.
+
+An annotation the record cannot hold as written — attached to no citation,
+naming a relation the scheme does not declare, pointing into the wrong scheme,
+or contradicting a single-valued field that already holds another code — is
+`bad-annotations`.
+
+## 8. Lint the result
 
 ```console
 $ luria lint
@@ -131,9 +178,10 @@ Check for:
 - wrong target scheme,
 - converse inconsistencies,
 - invariant failures,
+- relations stated in prose and missing from frontmatter, or the reverse,
 - standing-related findings.
 
-## 8. If the relation forms a longitudinal sequence
+## 9. If the relation forms a longitudinal sequence
 
 Do not maintain a prose lineage by hand.
 

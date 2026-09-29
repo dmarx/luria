@@ -489,6 +489,12 @@ class Reference:
     blurb: str = ""
     # When the requirement applies, if not always (see `RequiredWhen`).
     required_when: RequiredWhen | None = None
+    # Whether the relation must be explained where it is stated: every code
+    # the field holds cited in the document's body with an inline annotation
+    # naming the relation (`[[X]]{--extends-->here}`). Off by default, because
+    # a relation's justification is prose a person writes, and a record that
+    # never asked for it would otherwise meet a finding per edge (#333).
+    explain: bool = False
 
 
 @dataclass(frozen=True)
@@ -1625,7 +1631,8 @@ def _references(prefix: str, raw: dict) -> tuple[Reference, ...]:
                                blurb=str(spec.get("blurb", "")),
                                invariant=str(spec.get("invariant", "")).strip(),
                                required_when=_required_when(where, spec,
-                                                            required)))
+                                                            required),
+                               explain=bool(spec.get("explain", False))))
     return tuple(found)
 
 

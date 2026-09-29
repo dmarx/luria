@@ -59,9 +59,9 @@ import sys
 from pathlib import Path
 
 from . import adr_index as builder
-from . import (adr_pending, badges, chains, ci, contract, directives, doc_refs,
-               frontmatter_shape, invariants, journal, referents,
-               link_targets, narrow_titles, pins, ref_status, remotes,
+from . import (adr_pending, annotations, badges, chains, ci, contract,
+               directives, doc_refs, frontmatter_shape, invariants, journal,
+               referents, link_targets, narrow_titles, pins, ref_status, remotes,
                relations, sources, statuses, templates)
 from . import aliases as aliases_mod
 from . import anchors as anchors_mod
@@ -672,6 +672,8 @@ FAILABLE = ("retired-citations", "unresolved-codes", "foreign-temp-codes",
             "legacy-spellings", "narrow-titles", "stale-directives",
             "template-drift", "broken-chains",
             "one-sided-relations", "unbound-relations", "unbound-lines",
+            "unrecorded-relations", "unannotated-relations",
+            "unexplained-relations", "bad-annotations",
             "spent-upgrades",
             "pending-documents", "unlinted-files", "workflow-temp-codes",
             "unlinked-site")
@@ -943,6 +945,27 @@ def status_sections() -> list[tuple[str, str, list[str]]]:
             "one-sided-relations",
             f"{len(lopsided)} declared relation(s) are held by one side "
             "only (`luria link --fix` writes the other)", lopsided))
+
+    # A relation stated in prose and one stated in frontmatter are the same
+    # fact (#333). Two of the four ways they part are mechanical — the fixer
+    # is in the wording — and the other two are not: prose explaining a
+    # relation is a person's to write, and an annotation the record cannot
+    # hold as written is a person's to correct.
+    stated = annotations.survey()
+    for name, found, headline in (
+            ("unrecorded-relations", stated.unrecorded,
+             "relation(s) annotated in prose are missing from frontmatter "
+             "(`luria link --fix` writes them)"),
+            ("unannotated-relations", stated.unannotated,
+             "citation(s) of an explained relation do not say which relation "
+             "they are (`luria link --fix` annotates them)"),
+            ("unexplained-relations", stated.unexplained,
+             "relation(s) declared `explain: true` are never cited in the "
+             "body (`unexplained-ok:` acknowledges a deliberate one)"),
+            ("bad-annotations", stated.bad,
+             "relation annotation(s) the record cannot hold as written")):
+        if found:
+            sections.append((name, f"{len(found)} {headline}", sorted(found)))
 
     # A relation that declares an `invariant:` asserts the two ends have
     # something in common. Where neither holds a value the other does, the

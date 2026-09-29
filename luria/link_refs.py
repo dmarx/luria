@@ -22,7 +22,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from . import doc_refs, relations
+from . import annotations, doc_refs, relations
 from .config import current
 
 
@@ -111,6 +111,14 @@ def run(*paths: str, fix: bool = False, links_only: bool = False) -> None:
               f"published site's router")
     if links_only:
         return
+    # Before the converse completion, so a relation an annotation writes on
+    # one side gains its other side in the same run.
+    stated = annotations.complete(fix=fix)
+    if stated.writes or stated.inserts:
+        did = "wrote" if fix else "would write"
+        print(f"{did} {len(set(stated.writes))} annotated relation(s) into "
+              f"frontmatter and {len(stated.inserts)} annotation(s) into "
+              f"prose")
     repairs = relations.complete(fix=fix)
     if repairs:
         files = len({str(r.path) for r in repairs})

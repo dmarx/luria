@@ -350,6 +350,8 @@ full in the [reports](reports/reference-status.md):
 `legacy-spellings` · `narrow-titles` · `stale-directives` ·
 `template-drift` · `broken-chains` · `one-sided-relations` ·
 `unbound-relations` · `unbound-lines` ·
+`unrecorded-relations` · `unannotated-relations` ·
+`unexplained-relations` · `bad-annotations` ·
 `spent-upgrades` · `pending-documents` · `unlinted-files` ·
 `workflow-temp-codes` · `unlinked-site`
 
