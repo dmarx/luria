@@ -32,7 +32,9 @@ from .config import current
 
 TARGET_OK = "target-ok"
 
-LINK_RE = re.compile(r"\[[^\]\n]*\]\(([^)\s]+)\)")
+# A `"title"` after the target — where a relation annotation lives (#333) —
+# once hid the link from this check entirely.
+LINK_RE = re.compile(r'\[[^\]\n]*\]\(([^)\s]+)(?:\s+"[^"\n]*")?\)')
 
 # Anything that is not a path this repo can check: a URL scheme, a
 # protocol-relative host, a root-anchored path (whose meaning depends on where

@@ -50,7 +50,7 @@ HIDDEN_PROPERTIES = QUARTZ_KEYS
 # title's literal `[[` as a link. This project's ADR-025 is titled
 # ``Wikilinks: `[[CODE]]` is a typed reference``.
 _ZWSP = "​"
-MD_LINK_RE = re.compile(r"\[([^\]\n]*)\]\(([^)\s]+)\)")
+MD_LINK_RE = re.compile(r'\[([^\]\n]*)\]\(([^)\s]+)(?:\s+"[^"\n]*")?\)')
 H1_RE = re.compile(r"^# (.+?)\s*$", re.MULTILINE)
 
 

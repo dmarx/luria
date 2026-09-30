@@ -29,7 +29,7 @@ status: 'Proposed'
 # What the index shows in place of the code. Repeat it as the body's `# ADR-tmp3gms4:`
 # heading — someone reading the file alone needs one — and `luria lint` checks
 # that the two agree, because two copies of a string is a projection that drifts.
-title: 'A citation can state the relation it stands in, and a relation can require prose'
+title: 'A citation can name the relation it stands in, and a relation can require prose'
 
 # Which revision of this decision's claim you are reading. Standard frontmatter
 # for every scheme, and it moves rarely here: a decision that CHANGES is
@@ -58,19 +58,21 @@ issue: '#333'
 # frontmatter is data and stays plain. (`origin:` on a principle is
 # prose for the same reason — the generator renders it.)
 summary: >-
-  A citation may carry an annotation naming the relation it stands in,
-  `[[X]]{--F-->here}` or `[[X]]{here--F-->}`. An annotated edge missing from
-  frontmatter is `unrecorded-relations`, and `luria link --fix` writes it,
-  as this document's converse when one is declared. A reference declared
-  `explain: true` wants each code it holds cited in the body: a plain
-  citation is `unannotated-relations` and the fixer annotates it, and an
-  uncited code is `unexplained-relations`, a report acknowledged with
-  `unexplained-ok:`. An annotation the record cannot hold is
-  `bad-annotations`. Rejected: requiring prose for every relation, always
-  writing into the cited document, and an annotation without a direction.
+  A citation may name the relation it stands in, as `[[extends::X]]` or a
+  link titled with the field name, `[X](X.md "extends")`. The name is a
+  reference field of the citing document, declared or built in, so a
+  relation read the other way is named by its converse. A named relation
+  missing from frontmatter is `unrecorded-relations`, and `luria link --fix`
+  writes it. A reference declared `explain: true` wants each code it holds
+  cited in the body with the relation named: a plain citation is
+  `unannotated-relations` and the fixer names it, and an uncited code is
+  `unexplained-relations`, a report acknowledged with `unexplained-ok:`. A
+  named relation the record cannot hold is `bad-annotations`. Rejected: an
+  arrow notation after the link, requiring prose for every relation, and
+  writing citations into prose.
 ---
 
-# ADR-tmp3gms4: A citation can state the relation it stands in, and a relation can require prose
+# ADR-tmp3gms4: A citation can name the relation it stands in, and a relation can require prose
 
 ## Context
 
@@ -80,62 +82,72 @@ prose was always a mention, even when the sentence around it said "this
 builds on that", and a relation in frontmatter could stand with nothing in
 the body explaining it. The issue asked for both directions: state a
 relation inline and have it pushed up into frontmatter, and have a declared
-relation pushed down into prose.
+relation pushed down into prose. It proposed an arrow notation after the
+link, `[[X]]{--F-->here}`, and left the notation open.
 
 ## Decision
 
-A citation may carry an annotation naming the relation it stands in:
-`[[X]]{--F-->here}` (X stands in `F` to this document) or
-`[[X]]{here--F-->}` (this document stands in `F` to X). `F` is a declared
-reference field on the scheme at the arrow's tail. The annotation attaches
-to a wikilink, a markdown link or a bare code, so the link fixer rewriting
-the first into the second leaves it in place.
+A citation names its relation with the field that holds it in *this*
+document's frontmatter:
 
-- **Push up** is mechanical. An annotated edge missing from frontmatter is
-  `unrecorded-relations`, and `luria link --fix` writes it. For
-  `{--F-->here}` with a declared converse, the fact is written *here*, as
-  the converse, so the document whose prose asserted it is the one that
-  changes. The converse completion ([ADR-084](ADR-084.md)) writes the far side in the same
-  run. Without a converse there is no field here to hold it, so it goes
-  into the cited document's `F`.
+- `[[extends::X]]` or `[[extends::X|label]]` as a wikilink. `F::` ahead of
+  the target is Semantic MediaWiki's spelling of a typed link.
+- `[label](X.md "extends")` as a markdown link. This is what the link fixer
+  expands the wikilink into, and it can be written by hand. The title counts
+  as a relation only when it is shaped like a field name. A title with a
+  space or a capital is an ordinary tooltip.
+
+Any reference field is a relation here, the declared ones and the built-in
+successor alike. Nothing in the mechanism knows one relation's name.
+
+- **Push up** is mechanical. A named relation missing from frontmatter is
+  `unrecorded-relations`, and `luria link --fix` writes it into the citing
+  document. The converse completion ([ADR-084](ADR-084.md)) writes the far side in the same
+  run.
 - **Push down** is opt-in per reference (`explain: true`) and splits in two.
   A code the field holds that the body cites plainly is
-  `unannotated-relations`, and the fixer annotates the first such citation.
-  A code the body never cites is `unexplained-relations`. That one is a
-  report, acknowledged per code with `unexplained-ok:`, because the prose
+  `unannotated-relations`, and the fixer names the relation on the first
+  such citation. A bare code becomes a typed wikilink, which the same run
+  links. A code the body never cites is `unexplained-relations`. That one is
+  a report, acknowledged per code with `unexplained-ok:`, because the prose
   that explains a relation is a person's to write.
-- An annotation the record cannot hold as written is `bad-annotations`: it
-  follows no citation, names an undeclared relation, points into a scheme
-  the relation does not hold, names no local document, or contradicts a
-  single-valued field that already holds another code. None of these has a
-  right answer the machine can pick.
+- A named relation the record cannot hold as written is `bad-annotations`:
+  a relation the scheme does not declare, a code in a scheme the field does
+  not hold, a code naming no document here, or a single-valued field that
+  already holds another code. None of these has a right answer the machine
+  can pick.
 
 All four are ordinary warning classes, so `fail_on` and `mute` reach them.
 
 ## Consequences
 
-- An annotation renders literally in every view that shows the body
-  (`{--extends-->here}` after the link). That is legible, but it is noise
-  in a published page. Stripping or styling it in views is left for when
-  someone uses annotations enough to mind.
+- The relation renders as a link title: invisible in the running text,
+  shown on hover, and understood by every markdown renderer. The link
+  patterns that assumed a link has no title are widened, including the
+  target checker, which used to skip a titled link without saying so.
+- A relation whose field lives only on the *cited* document, with no
+  converse declared, cannot be named from this side. That is deliberate.
+  To state it from here, declare the converse. An undeclared converse is a
+  reverse edge the record has chosen not to know ([ADR-084](ADR-084.md)).
 - The issue's last example shows the fixer writing a whole citation into a
-  body that had none. That was deliberately not done. Which sentence the
-  citation belongs in is the non-deterministic part the same issue says
-  must be a report, so the fixer only annotates citations that already
-  exist.
-- One citation carries one annotation. When two explained relations hold
-  the same code, the fixer annotates one citation and reports the other
-  relation until the author cites it a second time.
+  body that had none. That was not done. Which sentence the citation
+  belongs in is the non-deterministic part the same issue says must be a
+  report, so the fixer only names relations on citations that exist.
+- One citation names one relation. When two explained relations hold the
+  same code, the fixer names one and reports the other until the author
+  cites the code a second time.
 
 ## Rejected
 
+- **The arrow notation, `[[X]]{--F-->here}` / `[[X]]{here--F-->}`.** It was
+  built first and replaced before review. It needs a direction the author
+  has to get right, and a relation already carries its direction in its
+  name (`extends` vs `extended_by`). It also rendered as literal braces in
+  every view, and it put the relation in a slot that no markdown renderer
+  knows.
 - **Making every declared reference owe prose.** Every existing record
   would get one finding per edge on upgrade, and most relations need no
   explanation beyond their name.
-- **Always writing push-up into the tail document.** For `{--F-->here}`
-  that edits a file the author was not working in, while the converse
-  exists so the fact can be held on either side. The tail is used only
-  when there is no converse.
-- **Annotating by field name alone (`[[X]]{extends}`).** That form cannot
-  say which way the edge runs, and the direction is the one thing the
-  field name does not carry.
+- **Naming the field on the cited side.** That would edit a file the author
+  was not working in. The field on this side is the one the prose is
+  about.

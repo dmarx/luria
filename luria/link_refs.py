@@ -114,11 +114,15 @@ def run(*paths: str, fix: bool = False, links_only: bool = False) -> None:
     # Before the converse completion, so a relation an annotation writes on
     # one side gains its other side in the same run.
     stated = annotations.complete(fix=fix)
-    if stated.writes or stated.inserts:
+    if stated.writes or stated.rewrites:
         did = "wrote" if fix else "would write"
-        print(f"{did} {len(set(stated.writes))} annotated relation(s) into "
-              f"frontmatter and {len(stated.inserts)} annotation(s) into "
-              f"prose")
+        print(f"{did} {len(set(stated.writes))} named relation(s) into "
+              f"frontmatter and named {len(stated.rewrites)} relation(s) on "
+              f"citations")
+    if fix and stated.rewrites:
+        # A bare code gains its relation as a wikilink, which is the linker's
+        # to expand — the linking pass above has already run.
+        linkify_files(sorted({r.path for r in stated.rewrites}), fix)
     repairs = relations.complete(fix=fix)
     if repairs:
         files = len({str(r.path) for r in repairs})

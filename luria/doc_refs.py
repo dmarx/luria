@@ -557,6 +557,14 @@ class Wikilink:
     end: int
     line: int
     target: str | None      # resolved URL/path, or None
+    # `[[extends::LIT-2]]` — the relation this citation stands in (#333),
+    # carried into the expanded link as its title.
+    relation: str = ""
+
+
+# `relation::` ahead of the code: Semantic MediaWiki's spelling of a typed
+# link, and the field name this document's frontmatter would hold it under.
+RELATION_PREFIX_RE = re.compile(r"^\s*([A-Za-z_][\w-]*)\s*::\s*")
 
 
 def wikilink_target(inner: str, source: Path) -> str | None:
@@ -623,10 +631,13 @@ def wikilinks(text: str, source: Path = ANY_MD) -> list[Wikilink]:
         if any(a <= m.start() < b for a, b in skip):
             continue
         inner = m.group(1).strip()
+        relation = ""
+        if typed := RELATION_PREFIX_RE.match(inner):
+            relation, inner = typed.group(1), inner[typed.end():].strip()
         label = (m.group(2) or inner).strip()
         out.append(Wikilink(inner, label, m.start(), m.end(),
                             text.count("\n", 0, m.start()) + 1,
-                            wikilink_target(inner, source)))
+                            wikilink_target(inner, source), relation))
     return out
 
 
@@ -641,9 +652,11 @@ def expand_wikilinks(text: str, source: Path) -> tuple[str, int]:
             continue
         out.append(text[cursor:w.start])
         if in_html_block(w.start, html):
-            out.append(f'<a href="{w.target}">{w.label}</a>')
+            title = f' title="{w.relation}"' if w.relation else ""
+            out.append(f'<a href="{w.target}"{title}>{w.label}</a>')
         else:
-            out.append(f"[{w.label}]({w.target})")
+            title = f' "{w.relation}"' if w.relation else ""
+            out.append(f"[{w.label}]({w.target}{title})")
         cursor = w.end
         n += 1
     out.append(text[cursor:])
@@ -691,7 +704,11 @@ def dp_anchors() -> dict[int, str]:
     return anchors
 
 
-MD_LINK_RE = re.compile(r"\[([^\]]*)\]\(([^)\s]+)\)")
+# The optional `"title"` is where a relation annotation lives
+# (`[LIT-2](LIT-002.md "extends")`, #333), so a link carrying one is still a
+# link to every reader of this pattern.
+LINK_TITLE = r'(?:\s+"([^"\n]*)")?'
+MD_LINK_RE = re.compile(r"\[([^\]]*)\]\(([^)\s]+)" + LINK_TITLE + r"\)")
 
 
 def _anchor_number(scheme, anchor: str) -> int | None:
@@ -763,7 +780,8 @@ def retarget_view_citations(text: str, source: Path) -> tuple[str, int]:
             if document is None or document == source:
                 continue
             out.append(text[cursor:m.start()])
-            out.append(f"[{m.group(1)}]({_relative(document, base)})")
+            title = f' "{m.group(3)}"' if m.group(3) is not None else ""
+            out.append(f"[{m.group(1)}]({_relative(document, base)}{title})")
             cursor = m.end()
             moved += 1
             break

@@ -490,8 +490,8 @@ class Reference:
     # When the requirement applies, if not always (see `RequiredWhen`).
     required_when: RequiredWhen | None = None
     # Whether the relation must be explained where it is stated: every code
-    # the field holds cited in the document's body with an inline annotation
-    # naming the relation (`[[X]]{--extends-->here}`). Off by default, because
+    # the field holds cited in the document's body with the relation named on
+    # the citation (`[[extends::X]]`). Off by default, because
     # a relation's justification is prose a person writes, and a record that
     # never asked for it would otherwise meet a finding per edge (#333).
     explain: bool = False

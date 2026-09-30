@@ -5,40 +5,41 @@ A reference field says *that* two documents are related; the body is where a
 reader learns *why*. Until now the two never met: a citation in prose was a
 mention, however plainly the sentence around it said "this builds on that",
 and a relation in frontmatter could stand with nothing in the body saying
-what it meant. An annotation on the citation joins them:
+what it meant. Naming the relation on the citation joins them:
 
-    Nothing here is new (see [[LIT-012]]{--extended_by-->here}).
-    The recovery path is [[LIT-007]]{here--extends-->}'s, generalised.
+    The recovery path is [[extends::LIT-7]]'s, generalised.
+    Nothing here is new (see [[extended_by::LIT-12|the follow-up]]).
 
-`{--F-->here}` reads left to right: the cited document stands in relation `F`
-to this one. `{here--F-->}` is the other direction: this document stands in
-`F` to the cited one. `F` is a reference field declared on the scheme of the
-document on the arrow's tail, which is the document whose frontmatter would
-hold the fact.
+`relation::` is Semantic MediaWiki's spelling of a typed link, and the name
+is the frontmatter field of *this* document that holds the fact — so there
+is no direction to read and no arrow to get backwards. A relation that runs
+the other way is named by its converse, which is what a converse is for.
+`luria link --fix` expands the wikilink into a markdown link carrying the
+relation as its title, `[LIT-7](LIT-007.md "extends")`, which renders as an
+ordinary link with the relation on hover; that committed form is read back
+the same way, and a hand-written link may use it directly. Any reference
+field works — declared ones and the built-in successor alike. A title that
+is not identifier-shaped (`"the paper, 2019"`) is an ordinary tooltip.
 
 Two directions, one fact each way:
 
-- **Push up.** An annotation states an edge, and an edge belongs in
+- **Push up.** A named relation states an edge, and an edge belongs in
   frontmatter, where the index, the chains and the converse completion read
-  it. Which field and which code is fully determined by the annotation, so
-  one missing there is `unrecorded-relations` and `luria link --fix` writes
-  it. When the cited document is the tail and the relation has a declared
-  converse, the fact is written *here*, as the converse — the document whose
-  prose asserted it is the one that changes, and `relations.complete` writes
-  the far side as it would for any one-sided pair.
+  it. The field and the code are fully determined, so one missing there is
+  `unrecorded-relations` and `luria link --fix` writes it; the converse
+  completion then writes the far side, as for any one-sided pair.
 - **Push down.** A reference declared `explain: true` asks for the reverse:
-  every code the field holds cited in the body, annotated. A citation that is
-  there without its annotation is mechanical — `unannotated-relations`, and
-  the fixer annotates the first one. A code the body never cites is not: the
-  explanation is prose only a person can write, so it is
+  every code the field holds cited in the body, with the relation named. A
+  plain citation of it is mechanical — `unannotated-relations`, and the fixer
+  names the relation on the first one. A code the body never cites is not:
+  the explanation is prose only a person can write, so it is
   `unexplained-relations`, a report, acknowledged per code with
   `<!-- unexplained-ok: LIT-012 — why this needs no prose -->`.
 
-An annotation the fixer cannot act on — attached to nothing, naming a
-relation the scheme does not declare, pointing across schemes the relation
-does not, contradicting a scalar field that already holds another code — is
-`bad-annotations`, because each of those is a claim the record cannot hold
-as written.
+A named relation the record cannot hold — one the scheme does not declare,
+into a scheme the field does not hold, naming no document here, or
+contradicting a single-valued field that already holds another code — is
+`bad-annotations`.
 """
 
 from __future__ import annotations
@@ -50,38 +51,43 @@ from pathlib import Path
 from . import directives, doc_refs, relations
 from .adr_index import Adr, load_scheme
 from .config import TEMP_TAIL, current
-from .contract import ANY_SCHEME, local_scheme, reference_code
+from .contract import ANY_SCHEME, for_scheme, local_scheme, reference_code
 from .field_edit import add_to_field
 
 ACK = "unexplained-ok"
 
-# A relation name is a field name; the hyphen is allowed only between word
-# characters, so `extends-->` never reads its arrow's first dash as part of
-# the name. One dash either side is tolerated — the issue that asked for this
-# wrote both `->` and `-->`.
-_NAME = r"[A-Za-z_]\w*(?:-\w+)*"
-ANNOTATION_RE = re.compile(
-    r"\{\s*(?:(?P<out>here)\s*--?\s*(?P<of>" + _NAME + r")\s*--?>"
-    r"|--?\s*(?P<if>" + _NAME + r")\s*--?>\s*(?P<in>here))\s*\}")
+# A link title names a relation only when it could be a field name. Anything
+# with a space or a capital is prose, and prose in a title is a tooltip.
+RELATION_TITLE_RE = re.compile(r"[a-z_][\w-]*")
 
-# What an annotation attaches to: a wikilink, an inline link, or a bare code
-# (which the bare-reference lint will ask to have linked — the annotation
-# survives that rewrite because it follows the link either way).
+# What can carry a relation: a wikilink or an inline link. A bare code
+# cannot, but it is still a citation push-down can annotate.
 CITE_RE = re.compile(
     r"\[\[(?P<wiki>[^\][|]+?)(?:\|[^\][]+)?\]\]"
-    r"|!?\[(?P<label>[^\]]*)\]\((?P<target>[^)\s]*)\)"
+    r"|!?\[(?P<label>[^\]]*)\]\((?P<target>[^)\s]*)"
+    r"(?:\s+\"(?P<title>[^\"\n]*)\")?\)"
     r"|(?<![\w/#.-])(?P<bare>[A-Z]{2,}(?:-[A-Z]+)*-(?:\d{1,4}|"
     + TEMP_TAIL + r"))(?!\w)")
 
 
 @dataclass(frozen=True)
 class Citation:
-    """One citation in a body, with the annotation it carries if any."""
+    """One citation in a body, and the relation it names if any."""
     code: str
-    end: int               # where an annotation attaches
+    start: int
+    end: int
     line: int
-    relation: str = ""     # "" when unannotated
-    incoming: bool = False  # `{--F-->here}` rather than `{here--F-->}`
+    kind: str              # "wiki", "link" or "bare"
+    relation: str = ""
+
+    def named(self, text: str, relation: str) -> str:
+        """This citation's source text with `relation` named on it."""
+        token = text[self.start:self.end]
+        if self.kind == "wiki":
+            return f"[[{relation}::{token[2:]}"
+        if self.kind == "link":
+            return f'{token[:-1]} "{relation}")'
+        return f"[[{relation}::{token}]]"
 
 
 @dataclass(frozen=True)
@@ -94,17 +100,18 @@ class Write:
 
 
 @dataclass(frozen=True)
-class Insert:
-    """One annotation to add after one citation."""
+class Rewrite:
+    """One citation to replace with its annotated spelling."""
     path: Path
-    at: int
+    start: int
+    end: int
     text: str
 
 
 @dataclass
 class Survey:
     writes: list[Write]
-    inserts: list[Insert]
+    rewrites: list[Rewrite]
     unrecorded: list[str]
     unannotated: list[str]
     unexplained: list[str]
@@ -124,17 +131,23 @@ def canonical(token: str) -> str | None:
     return code
 
 
-def _code_of(m: re.Match) -> str | None:
+def _read(m: re.Match) -> tuple[str | None, str, str]:
+    """(code, relation, kind) for one citation match."""
     if m.group("wiki") is not None:
-        return canonical(m.group("wiki"))
+        inner, relation = m.group("wiki"), ""
+        if typed := doc_refs.RELATION_PREFIX_RE.match(inner):
+            relation, inner = typed.group(1), inner[typed.end():]
+        return canonical(inner), relation, "wiki"
     if m.group("bare") is not None:
-        return canonical(m.group("bare"))
+        return canonical(m.group("bare")), "", "bare"
     # The label first: a remote link's target is a URL that may well end in
     # a filename shaped like a local code. A target is read only when the
     # label names nothing (`[the delivery decision](ADR-012.md)`).
-    target = m.group("target")
-    return (canonical(m.group("label"))
+    target, title = m.group("target"), m.group("title") or ""
+    code = (canonical(m.group("label"))
             or (canonical(target) if "://" not in target else None))
+    relation = title if RELATION_TITLE_RE.fullmatch(title) else ""
+    return code, relation, "link"
 
 
 def _body_start(text: str) -> int:
@@ -144,38 +157,22 @@ def _body_start(text: str) -> int:
     return 0 if end == -1 else end + 5
 
 
-def scan(text: str) -> tuple[list[Citation], list[int]]:
-    """Every citation in the body, and the lines of annotations attached to
-    none. Quoted regions and comments are specimens, never statements."""
+def scan(text: str) -> list[Citation]:
+    """Every citation in the body. Quoted regions and comments are
+    specimens, never statements."""
     start = _body_start(text)
     skip = doc_refs.code_spans(text) + [
         m.span() for m in doc_refs.COMMENT_RE.finditer(text)]
-
-    def quoted(pos: int) -> bool:
-        return any(a <= pos < b for a, b in skip)
-
-    def line(pos: int) -> int:
-        return text.count("\n", 0, pos) + 1
-
-    cites: list[Citation] = []
-    attached: set[int] = set()
+    out: list[Citation] = []
     for m in CITE_RE.finditer(text, start):
-        if quoted(m.start()):
+        if any(a <= m.start() < b for a, b in skip):
             continue
-        code = _code_of(m)
-        if code is None:
-            continue
-        a = ANNOTATION_RE.match(text, m.end())
-        if a:
-            attached.add(a.start())
-            cites.append(Citation(code, m.end(), line(m.start()),
-                                  a.group("of") or a.group("if"),
-                                  bool(a.group("in"))))
-        else:
-            cites.append(Citation(code, m.end(), line(m.start())))
-    orphans = [line(a.start()) for a in ANNOTATION_RE.finditer(text, start)
-               if a.start() not in attached and not quoted(a.start())]
-    return cites, orphans
+        code, relation, kind = _read(m)
+        if code is not None:
+            out.append(Citation(code, m.start(), m.end(),
+                                text.count("\n", 0, m.start()) + 1,
+                                kind, relation))
+    return out
 
 
 def _listed(raw) -> list[str]:
@@ -189,14 +186,6 @@ def _values(doc: Adr, field: str) -> set[str]:
             if c}
 
 
-def _reference(code: str, field: str):
-    prefix = local_scheme(code)
-    if prefix is None:
-        return None
-    return next((r for r in current().schemes[prefix].references
-                 if r.field == field), None)
-
-
 def _acknowledged(path: Path, text: str) -> set[str]:
     return {c for d in directives.find(path, text, {ACK})
             for c in (canonical(a) for a in d.args) if c}
@@ -204,89 +193,74 @@ def _acknowledged(path: Path, text: str) -> set[str]:
 
 def _push_up(doc: Adr, code: str, cite: Citation, docs: dict[str, Adr],
              s: Survey) -> None:
-    """What one annotation asks of frontmatter."""
-    rel = current().rel(doc.path)
-    where = f"{rel}:{cite.line}"
-    tail, head = (cite.code, code) if cite.incoming else (code, cite.code)
-    arrow = (f"{{--{cite.relation}-->here}}" if cite.incoming
-             else f"{{here--{cite.relation}-->}}")
+    """What one named relation asks of this document's frontmatter."""
+    cfg = current()
+    where = f"{cfg.rel(doc.path)}:{cite.line}"
+    said = f"`{cite.relation}::{cite.code}`"
+    spec = next((f for f in for_scheme(doc.scheme).fields
+                 if f.name == cite.relation and f.reference), None)
+    if spec is None:
+        s.bad.append(f"{where}: {said} — {doc.prefix} declares no reference "
+                     f"`{cite.relation}`, so {code} cannot hold it")
+        return
     if cite.code not in docs:
-        s.bad.append(f"{where}: `{cite.code}{arrow}` — {cite.code} is no "
-                     f"document in this record, so there is no edge to hold")
+        s.bad.append(f"{where}: {said} — {cite.code} is no document in this "
+                     f"record, so there is no edge to hold")
         return
-    if tail == head:
-        s.bad.append(f"{where}: `{arrow}` relates {code} to itself")
+    if cite.code == code:
+        s.bad.append(f"{where}: {said} relates {code} to itself")
         return
-    ref = _reference(tail, cite.relation)
-    if ref is None:
-        s.bad.append(f"{where}: `{arrow}` — {local_scheme(tail)} declares no "
-                     f"reference `{cite.relation}`, so {tail} cannot hold it")
+    if spec.reference != ANY_SCHEME and local_scheme(cite.code) != spec.reference:
+        s.bad.append(f"{where}: {said} — `{cite.relation}` holds "
+                     f"{spec.reference} codes, and {cite.code} is not one")
         return
-    if ref.scheme != ANY_SCHEME and local_scheme(head) != ref.scheme:
-        s.bad.append(f"{where}: `{arrow}` — `{cite.relation}` holds "
-                     f"{ref.scheme} codes, and {head} is not one")
+    back = relations.converse_of(doc.prefix, cite.relation)
+    if cite.code in _values(doc, cite.relation) or (
+            back and code in _values(docs[cite.code], back)):
         return
-    back = relations.converse_of(local_scheme(tail), cite.relation)
-    if head in _values(docs[tail], cite.relation) or (
-            back and tail in _values(docs[head], back)):
+    if not spec.many and _listed(doc.meta.get(cite.relation)):
+        s.bad.append(f"{where}: {said} contradicts `{cite.relation}: "
+                     f"{doc.meta[cite.relation]}`, which holds one code")
         return
-    # Written here, as the converse, when there is one to write: the prose
-    # that asserted the edge is in this document, and the far side is the
-    # converse completion's to write.
-    if cite.incoming and back:
-        write = Write(doc.path, back, cite.code, True)
-    else:
-        write = Write(docs[tail].path, cite.relation, head, ref.many)
-    target = docs[tail] if write.path == docs[tail].path else doc
-    if not write.many and _listed(target.meta.get(write.field)):
-        s.bad.append(f"{where}: `{arrow}` contradicts "
-                     f"`{write.field}: {target.meta[write.field]}` in "
-                     f"{current().rel(write.path)}, which holds one code")
-        return
-    if write.many:
-        blocked = relations._blocked(
-            "", {}, [relations.Repair(write.path, write.field, write.code)])[1]
+    if spec.many:
+        blocked = relations._blocked("", {}, [relations.Repair(
+            doc.path, cite.relation, cite.code)])[1]
         if blocked:
-            s.bad.append(f"{where}: `{arrow}` — writing `{write.field}: "
-                         f"{write.code}` would leave "
-                         f"{current().rel(write.path)} in breach of its "
-                         f"scheme ({blocked[0][1].split(': ', 1)[-1]})")
+            s.bad.append(f"{where}: {said} — writing it would leave this "
+                         f"document in breach of its scheme "
+                         f"({blocked[0][1].split(': ', 1)[-1]})")
             return
-    s.writes.append(write)
+    s.writes.append(Write(doc.path, cite.relation, cite.code, spec.many))
     s.unrecorded.append(
-        f"{where}: `{cite.code}{arrow}` is not in frontmatter — "
-        f"`luria link --fix` writes `{write.field}: {write.code}` into "
-        f"{current().rel(write.path)}")
+        f"{where}: {said} is not in frontmatter — `luria link --fix` writes "
+        f"`{cite.relation}: {cite.code}`")
 
 
-def _push_down(doc: Adr, code: str, cites: list[Citation], text: str,
+def _push_down(doc: Adr, cites: list[Citation], text: str,
                s: Survey) -> None:
     """What each explained relation this document holds asks of its body."""
     rel = current().rel(doc.path)
     acked = None
-    # A citation carries one annotation, so one annotated here is spent.
+    # A citation names one relation, so one annotated here is spent.
     spent: set[int] = set()
     for ref in doc.scheme.references:
         if not ref.explain:
             continue
-        back = relations.converse_of(doc.prefix, ref.field)
         for target in sorted(_values(doc, ref.field)):
-            if any(c.code == target and (
-                    (not c.incoming and c.relation == ref.field)
-                    or (c.incoming and back and c.relation == back))
+            if any(c.code == target and c.relation == ref.field
                    for c in cites):
                 continue
             plain = next((c for c in cites if c.code == target
-                          and not c.relation and c.end not in spent), None)
+                          and not c.relation and c.start not in spent), None)
             if plain is not None:
-                spent.add(plain.end)
-                note = (f"{{--{back}-->here}}" if back
-                        else f"{{here--{ref.field}-->}}")
-                s.inserts.append(Insert(doc.path, plain.end, note))
+                spent.add(plain.start)
+                new = plain.named(text, ref.field)
+                s.rewrites.append(Rewrite(doc.path, plain.start, plain.end,
+                                          new))
                 s.unannotated.append(
-                    f"{rel}:{plain.line}: cites {target} without saying it "
-                    f"is the `{ref.field}` relation — `luria link --fix` "
-                    f"annotates it `{note}`")
+                    f"{rel}:{plain.line}: cites {target} without naming the "
+                    f"`{ref.field}` relation — `luria link --fix` writes "
+                    f"`{new}`")
                 continue
             if acked is None:
                 acked = _acknowledged(doc.path, text)
@@ -295,15 +269,13 @@ def _push_down(doc: Adr, code: str, cites: list[Citation], text: str,
             s.unexplained.append(
                 f"{rel}: `{ref.field}: {target}` is never explained — the "
                 f"body does not cite {target}; say what the relation means "
-                f"there (`[[{target}]]"
-                + (f"{{--{back}-->here}}" if back
-                   else f"{{here--{ref.field}-->}}")
-                + f"`), or acknowledge it with `{ACK}:`")
+                f"there (`[[{ref.field}::{target}]]`), or acknowledge it "
+                f"with `{ACK}:`")
 
 
 def survey() -> Survey:
-    """Every annotation against frontmatter, and every explained relation
-    against its body — one reading of the record."""
+    """Every named relation against frontmatter, and every explained
+    relation against its body — one reading of the record."""
     s = Survey([], [], [], [], [], [])
     docs: dict[str, Adr] = {}
     for scheme in current().schemes.values():
@@ -313,15 +285,11 @@ def survey() -> Survey:
         text = doc.path.read_text(encoding="utf-8")
         if doc_refs.unlinted(doc.path, text):
             continue
-        cites, orphans = scan(text)
-        for line in orphans:
-            s.bad.append(f"{current().rel(doc.path)}:{line}: a relation "
-                         f"annotation follows no citation, so it names an "
-                         f"edge with one end")
+        cites = scan(text)
         for cite in cites:
             if cite.relation:
                 _push_up(doc, code, cite, docs, s)
-        _push_down(doc, code, cites, text, s)
+        _push_down(doc, cites, text, s)
     return s
 
 
@@ -333,18 +301,17 @@ def _set_scalar(text: str, name: str, code: str) -> str:
 def complete(fix: bool = False) -> Survey:
     """Write what the survey found mechanical; report it without `fix`.
 
-    Per file, annotations first — their offsets are into the text as read —
+    Per file, citations first — their offsets are into the text as read —
     and frontmatter after, which only moves text below the fence."""
     s = survey()
     if not fix:
         return s
-    paths = {w.path for w in s.writes} | {i.path for i in s.inserts}
-    for path in paths:
+    for path in {w.path for w in s.writes} | {r.path for r in s.rewrites}:
         text = path.read_text(encoding="utf-8")
-        for ins in sorted((i for i in s.inserts if i.path == path),
-                          key=lambda i: i.at, reverse=True):
-            text = text[:ins.at] + ins.text + text[ins.at:]
-        # Two annotations of one edge are one write.
+        for r in sorted((r for r in s.rewrites if r.path == path),
+                        key=lambda r: r.start, reverse=True):
+            text = text[:r.start] + r.text + text[r.end:]
+        # Two citations naming one edge are one write.
         for w in dict.fromkeys(w for w in s.writes if w.path == path):
             text = (add_to_field(text, w.field, w.code) if w.many
                     else _set_scalar(text, w.field, w.code))

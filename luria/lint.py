@@ -954,16 +954,17 @@ def status_sections() -> list[tuple[str, str, list[str]]]:
     stated = annotations.survey()
     for name, found, headline in (
             ("unrecorded-relations", stated.unrecorded,
-             "relation(s) annotated in prose are missing from frontmatter "
+             "relation(s) named on a citation are missing from frontmatter "
              "(`luria link --fix` writes them)"),
             ("unannotated-relations", stated.unannotated,
-             "citation(s) of an explained relation do not say which relation "
-             "they are (`luria link --fix` annotates them)"),
+             "citation(s) of an explained relation do not name it "
+             "(`luria link --fix` names it)"),
             ("unexplained-relations", stated.unexplained,
              "relation(s) declared `explain: true` are never cited in the "
              "body (`unexplained-ok:` acknowledges a deliberate one)"),
             ("bad-annotations", stated.bad,
-             "relation annotation(s) the record cannot hold as written")):
+             "relation(s) named on a citation the record cannot hold as "
+             "written")):
         if found:
             sections.append((name, f"{len(found)} {headline}", sorted(found)))
 
