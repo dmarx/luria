@@ -119,6 +119,26 @@ def test_a_statement_is_a_directive_named_by_the_field(tmp_path, monkeypatch):
                          ("extended_by", "LIT-004")]
 
 
+DOI_REMOTE = r"""
+remotes:
+  DOI:
+    uid: 10\.\d{4,9}/[^\s\]\)>,;]+
+    delim: ':'
+    url: https://doi.org/{uid}
+"""
+
+
+def test_a_remote_code_with_no_hyphen_is_read_not_crashed_on(
+        tmp_path, monkeypatch):
+    """A DOI composes with `:`, so its code has no `-` to split a tail
+    from. `luria lint` on the anthology died here, with nothing opted in."""
+    project(tmp_path, monkeypatch, PAIRED + DOI_REMOTE)
+    text = ("---\ntitle: x\n---\n\n"
+            "[DOI:10.1109/72.238311](https://doi.org/10.1109/72.238311)\n")
+    assert [c.code for c in annotations.citations(text)] == [
+        "DOI:10.1109/72.238311"]
+
+
 def test_quoted_and_frontmatter_statements_say_nothing(tmp_path, monkeypatch):
     root = project(tmp_path, monkeypatch)
     a = note(root, 1, "`<!-- ref::extends: LIT-2 -->`\n\n"

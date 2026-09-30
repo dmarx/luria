@@ -124,8 +124,10 @@ def canonical(token: str) -> str | None:
     if not code:
         return None
     prefix = local_scheme(code)
+    if not prefix:
+        return code  # a remote code's tail is opaque: `DOI:10.1109/72.238311`
     tail = code.rsplit("-", 1)[1]
-    if prefix and tail.isdigit():
+    if tail.isdigit():
         return current().schemes[prefix].code(tail)
     return code
 
