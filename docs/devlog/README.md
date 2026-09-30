@@ -6,6 +6,7 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 
 ## Currently — [September 2026](2026-09.md)
 
+- [30 Sep 06:34 — explain: gains a weaker strength, and true now means it](2026-09.md#explain-gains-a-weaker-strength-and-true-now-means-it)
 - [30 Sep 05:17 — Relation statements move into a ref:: namespace](2026-09.md#relation-statements-move-into-a-ref-namespace)
 - [30 Sep 05:06 — Relation statements folded into the directive grammar](2026-09.md#relation-statements-folded-into-the-directive-grammar)
 - [30 Sep 03:31 — A second review, a patch bundle, and a proposed principle](2026-09.md#a-second-review-a-patch-bundle-and-a-proposed-principle)
@@ -90,9 +91,9 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 
 ## All books
 
-127 entries across 2 books, newest first.
+128 entries across 2 books, newest first.
 
 | Book | Entries | First | Last |
 |---|--:|---|---|
-| [2026-09](2026-09.md) | 81 | 2026-09-03 | 2026-09-30 |
+| [2026-09](2026-09.md) | 82 | 2026-09-03 | 2026-09-30 |
 | [2026-08](2026-08.md) | 46 | 2026-08-03 | 2026-08-28 |

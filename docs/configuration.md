@@ -292,7 +292,7 @@ relation that crosses schemes, since a chain may not (ADR-106, #272).
 | `label` | `str` | *unset* |
 | `blurb` | `str` | *unset* |
 | `required_when` | `RequiredWhen \| None` | *unset* |
-| `explain` | `bool` | `False` |
+| `explain` | `str` | *unset* |
 
 ## Tag groups — `schemes.X.fields.<field>.groups.<name>`
 
