@@ -162,11 +162,9 @@ Nobody touched `docs/api.md`. It is now wrong, and the record says so:
 
 ```console
 $ luria index && luria lint
-luria: 1 warning(s) — retired documents cited unacknowledged from current docs/code
+luria: 1 warning(s) — retired documents cited unacknowledged from current docs/code (`inactive-ok:` at a site acknowledges it)
   ADR-001 is Superseded, cited 1× in 1 file(s) — Errors carry a machine-readable code
-
-$ luria reports
-docs/api.md:3
+    docs/api.md:3
 ```
 
 That is the whole mechanism: **one field moved, and a page nobody opened

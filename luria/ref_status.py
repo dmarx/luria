@@ -545,19 +545,28 @@ def dangling(result: Scan | None = None,
     return sorted(rows, key=lambda r: (-len(r[1]), r[0]))
 
 
+def _sites(loud: list[Citation]) -> str:
+    """Every site as continuation lines of one row. The row stays one row, so
+    `baseline` and `fail_on`, which count rows, count what they always did."""
+    return "".join(f"\n    {c}"
+                   for c in sorted(loud, key=lambda c: (str(c.path), c.line)))
+
+
 def dangling_lines(result: Scan | None = None,
-                   docs: dict[str, Doc] | None = None) -> list[str]:
+                   docs: dict[str, Doc] | None = None,
+                   sites: bool = False) -> list[str]:
     out = []
     for code, loud, excused in dangling(result, docs):
         files = len({c.path for c in loud})
         tail = f", {excused} acknowledged" if excused else ""
         out.append(f"{code} resolves to no document, cited {len(loud)}× in "
-                   f"{files} file(s){tail}")
+                   f"{files} file(s){tail}" + (_sites(loud) if sites else ""))
     return out
 
 
 def foreign_temp_lines(result: Scan | None = None,
-                       docs: dict[str, Doc] | None = None) -> list[str]:
+                       docs: dict[str, Doc] | None = None,
+                       sites: bool = False) -> list[str]:
     """The `foreign-temp-codes` rows: a temporary code cited here that nothing
     here mints (#309).
 
@@ -571,7 +580,7 @@ def foreign_temp_lines(result: Scan | None = None,
         files = len({c.path for c in loud})
         tail = f", {excused} acknowledged" if excused else ""
         out.append(f"{code} is not minted here, cited {len(loud)}× in "
-                   f"{files} file(s){tail}")
+                   f"{files} file(s){tail}" + (_sites(loud) if sites else ""))
     return out
 
 
@@ -674,15 +683,18 @@ def stale_annotations(result: Scan | None = None,
 
 
 def summary_lines(result: Scan | None = None,
-                  docs: dict[str, Doc] | None = None) -> list[str]:
-    """One line per flagged document — what `luria lint` prints. Every count
-    is real; the sites are what's elided, and `luria reports` has them."""
+                  docs: dict[str, Doc] | None = None,
+                  sites: bool = False) -> list[str]:
+    """One row per flagged document. `luria lint` asks for its `sites` too:
+    a finding that names a count and not a place sends the reader to rerun
+    something else before they can fix anything."""
     out = []
     for doc, loud, excused in flagged(result, docs):
         files = len({c.path for c in loud})
         tail = f", {excused} acknowledged" if excused else ""
         out.append(f"{doc.code} is {doc.status}, cited {len(loud)}× in "
-                   f"{files} file(s){tail} — {doc.title}")
+                   f"{files} file(s){tail} — {doc.title}"
+                   + (_sites(loud) if sites else ""))
     return out
 
 

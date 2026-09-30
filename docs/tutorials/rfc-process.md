@@ -378,8 +378,9 @@ DECISION-001 ──superseded_by──► DECISION-002
 The target exists and the edge resolves, but its standing changed. Run `luria index`, then `luria lint`. It passes, and reports:
 
 ```text
-luria: 1 warning(s) — retired documents cited unacknowledged from current docs/code (`luria reports` for the sites, `inactive-ok:` to acknowledge one)
+luria: 1 warning(s) — retired documents cited unacknowledged from current docs/code (`inactive-ok:` at a site acknowledges it)
   DECISION-001 is Superseded, cited 1× in 1 file(s) — Adopt durable background jobs
+    record/implementations.d/IMPLEMENTATION-001.md:25
 ```
 
 That is exactly the condition Luria is meant to expose:
