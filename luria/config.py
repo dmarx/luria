@@ -489,6 +489,13 @@ class Reference:
     blurb: str = ""
     # When the requirement applies, if not always (see `RequiredWhen`).
     required_when: RequiredWhen | None = None
+    # Whether the relation must be explained where it is stated: every code
+    # the field holds stated in the body (`<!-- ref::extends: X -->`, or the
+    # `[[extends::X]]` shorthand that expands to it) beside a citation of X or
+    # with a reason. Off by default, because
+    # a relation's justification is prose a person writes, and a record that
+    # never asked for it would otherwise meet a finding per edge (#333).
+    explain: bool = False
 
 
 @dataclass(frozen=True)
@@ -1615,6 +1622,14 @@ def _references(prefix: str, raw: dict) -> tuple[Reference, ...]:
                 f"luria.yaml: schemes.{prefix}.references.{field} needs a "
                 f"`scheme` — it names which scheme's codes the field holds")
         where = f"luria.yaml: schemes.{prefix}.references.{field}"
+        # A relation is stated in prose as `<!-- ref::<field>: X -->` (#333),
+        # and a directive's scope is a suffix on its name: a field ending in
+        # one would read as a narrower statement of a different field.
+        if str(field).endswith(("-block", "-file")):
+            raise ValueError(
+                f"{where}: a field name may not end in `-block` or `-file` — "
+                f"`<!-- ref::{field}: … -->` would read as a scoped statement "
+                f"of a different field")
         required = bool(spec.get("required", True))
         found.append(Reference(field=str(field),
                                scheme=str(spec["scheme"]).upper(),
@@ -1625,7 +1640,8 @@ def _references(prefix: str, raw: dict) -> tuple[Reference, ...]:
                                blurb=str(spec.get("blurb", "")),
                                invariant=str(spec.get("invariant", "")).strip(),
                                required_when=_required_when(where, spec,
-                                                            required)))
+                                                            required),
+                               explain=bool(spec.get("explain", False))))
     return tuple(found)
 
 

@@ -59,9 +59,9 @@ import sys
 from pathlib import Path
 
 from . import adr_index as builder
-from . import (adr_pending, badges, chains, ci, contract, directives, doc_refs,
-               frontmatter_shape, invariants, journal, referents,
-               link_targets, narrow_titles, pins, ref_status, remotes,
+from . import (adr_pending, annotations, badges, chains, ci, contract,
+               directives, doc_refs, frontmatter_shape, invariants, journal,
+               referents, link_targets, narrow_titles, pins, ref_status, remotes,
                relations, sources, statuses, templates)
 from . import aliases as aliases_mod
 from . import anchors as anchors_mod
@@ -548,7 +548,13 @@ def check_wikilinks(errors: list[str]) -> None:
         text = path.read_text(encoding="utf-8")
         for w in doc_refs.wikilinks(text, path):
             rel = cfg.rel(path)
-            if w.target is None:
+            if w.relation and not annotations.holds(path, w.relation):
+                errors.append(
+                    f"{rel}:{w.line}: [[{w.relation}::{w.inner}]] names "
+                    f"`{w.relation}`, which is no reference field this "
+                    "document's scheme has — there is nowhere to hold the "
+                    "relation it states")
+            elif w.target is None:
                 errors.append(
                     f"{rel}:{w.line}: [[{w.inner}]] resolves to nothing this "
                     "project can link — a typo, an unregistered prefix, or a "
@@ -672,6 +678,8 @@ FAILABLE = ("retired-citations", "unresolved-codes", "foreign-temp-codes",
             "legacy-spellings", "narrow-titles", "stale-directives",
             "template-drift", "broken-chains",
             "one-sided-relations", "unbound-relations", "unbound-lines",
+            "unrecorded-relations", "unannotated-relations",
+            "unexplained-relations", "bad-annotations",
             "spent-upgrades",
             "pending-documents", "unlinted-files", "workflow-temp-codes",
             "unlinked-site")
@@ -942,6 +950,27 @@ def status_sections() -> list[tuple[str, str, list[str]]]:
             "one-sided-relations",
             f"{len(lopsided)} declared relation(s) are held by one side "
             "only (`luria link --fix` writes the other)", lopsided))
+
+    # A relation stated in prose and one stated in frontmatter are the same
+    # fact (#333). Two of the four ways they part are mechanical — the fixer
+    # is in the wording — and the other two are not: prose explaining a
+    # relation is a person's to write, and a statement the record cannot
+    # hold as written is a person's to correct.
+    stated = annotations.survey()
+    for name, found, headline in (
+            ("unrecorded-relations", stated.unrecorded,
+             "relation(s) stated in prose are missing from frontmatter "
+             "(`luria link --fix` writes them)"),
+            ("unannotated-relations", stated.unannotated,
+             "citation(s) of an explained relation have no statement of it "
+             "(`luria link --fix` writes one)"),
+            ("unexplained-relations", stated.unexplained,
+             "relation(s) declared `explain: true` are explained nowhere in "
+             "the body (a statement's `— reason` counts)"),
+            ("bad-annotations", stated.bad,
+             "relation statement(s) the record cannot hold as written")):
+        if found:
+            sections.append((name, f"{len(found)} {headline}", sorted(found)))
 
     # A relation that declares an `invariant:` asserts the two ends have
     # something in common. Where neither holds a value the other does, the

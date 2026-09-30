@@ -127,7 +127,67 @@ wrote 1 back-reference(s) in 1 file(s)
 
 `luria relate --draft FILE` reads relations instead of taking them as arguments: FILE is a JSON drafts file whose `relations` list holds `{"source", "field", "target"}` entries, each written as above.
 
-## 7. Lint the result
+## 7. State the relation where you explain it
+
+A relation is often clearest in the sentence that justifies it. State it
+there, with the same comment-directive grammar every acknowledgement uses:
+the `ref::` namespace, then the field that holds the relation.
+
+```markdown
+The recovery path is RFC-007's, generalised. <!-- ref::extends: RFC-007 -->
+
+<!-- ref::extended_by-block: RFC-012, RFC-015 — both carry the retry loop on -->
+Two later designs picked this up...
+```
+
+The name after `ref::` is a reference field of *this* document, either one
+your scheme declares or the built-in `superseded_by`. There is no direction to
+choose, because a relation read the other way has its own name, its converse.
+The namespace keeps these names apart from the fixed directive vocabulary, so
+a field may be called anything but a name ending in `-block` or `-file`, which
+would read as a scope. It also means a misspelt field is reported rather
+than ignored.
+
+Everything a [directive](../directives.md) has comes with it: line, `-block` and
+`-file` scope, a `— reason`, and `until <date>`. An example in a code span
+or fence states nothing, and a statement in frontmatter comments is ignored
+([ADR-tmp3gms4](../../record/decisions.d/ADR-tmp3gms4.md)).
+
+`[[extends::RFC-7]]` is shorthand for a citation plus its statement.
+`luria link --fix` expands it to `[RFC-7](RFC-007.md)<!-- ref::extends: RFC-007 -->`.
+A shorthand naming a field this document doesn't have is left unexpanded and
+fails the lint, and a `ref::` statement naming one is `bad-annotations`.
+
+**Pushing up.** A stated relation missing from frontmatter is
+`unrecorded-relations`, and `luria link --fix` writes it into this document's
+field. The converse completion in the same run writes the far side.
+
+**Pushing down.** A reference declared `explain: true` asks for the reverse:
+every code the field holds stated in the body and explained there.
+
+```yaml
+references:
+  extends:
+    scheme: RFC
+    required: false
+    many: true
+    converse: extended_by
+    explain: true
+```
+
+A statement is explained by a citation of the code within its scope, or by
+its own `— reason`. A `-file` statement with a reason is how you say the
+relation needs no more prose than that. A citation with no statement is
+`unannotated-relations`, and the fixer writes the statement after it. A code
+with neither is `unexplained-relations`, a report rather than a fix, since
+the explanation is prose only you can write.
+
+A statement the record can't hold as written is `bad-annotations`. That
+covers an argument that isn't a code, a code naming no document here, a code
+in a scheme the field doesn't hold, and a single-valued field that already
+holds another code.
+
+## 8. Lint the result
 
 ```console
 $ luria lint
@@ -139,9 +199,10 @@ Check for:
 - wrong target scheme,
 - converse inconsistencies,
 - invariant failures,
+- relations stated in prose and missing from frontmatter, or the reverse,
 - standing-related findings.
 
-## 8. If the relation forms a longitudinal sequence
+## 9. If the relation forms a longitudinal sequence
 
 Do not maintain a prose lineage by hand.
 

@@ -276,7 +276,7 @@ def hand_links(files: list[Path] | None = None
     from . import directives, doc_refs, ref_status
     if not current().remotes:
         return [], []
-    link_re = re.compile(r"\[([^\]\s]+)\]\(([^)\s]+)\)")
+    link_re = re.compile(r'\[([^\]\s]+)\]\(([^)\s]+)(?:\s+"[^"\n]*")?\)')
     cfg = current()
     flagged: list[str] = []
     stale: list[str] = []
