@@ -1,5 +1,25 @@
 # Concept: Record theory and self-governance
 
+A useful abstraction for a Luria record is:
+
+```text
+K = (O, M, R, E)
+```
+
+where:
+
+- `O` is the ontology: the schemes, vocabularies, relations and fields the
+  record can express;
+- `M` is governing knowledge: rules about how the record is interpreted and
+  changed;
+- `R` is subject-level knowledge;
+- `E` is executable machinery: lint, indexing, chains, reports, publication
+  and export.
+
+The notation is not required to use Luria. It names the distinction this page
+develops: a record contains both knowledge about a subject and knowledge about
+how that knowledge is represented, checked, and revised.
+
 Some knowledge describes a subject.
 
 Some knowledge describes how knowledge about that subject should be represented, interpreted, and changed.

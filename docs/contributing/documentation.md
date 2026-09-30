@@ -15,11 +15,14 @@ A documentation claim should be identifiable as one of:
 
 Do not blur these categories.
 
-## 2. Behavioral prose cites its governing record
+## 2. Make mutable premises explicit dependencies
 
-If prose states behavior whose continued truth depends on an ADR or DP,
-cite that record at the point of dependency. The purpose is not
-attribution; it is maintenance:
+If a claim's continued truth depends on a mutable premise in the record, cite
+that premise at the point of reliance. Documentation is the clearest case:
+prose whose truth depends on an ADR or DP cites that record where the claim
+is made.
+
+The purpose is not attribution; it is maintenance:
 
 ```text
 governing decision changes
@@ -54,6 +57,14 @@ Examples:
 In a page, write the bare code (for example `ADR-048`, shown in backticks here so it stays a mention) and run `luria link --fix`; never hand-write the link target. Prose renders into views in other directories, so only the fixer knows the frame a target must resolve from. (The examples above sit in `text` fences, which mask codes: they illustrate the pattern and create no edges. A code in backticks is a mention, not a citation, for the same reason.)
 
 These citations are dependency edges. When the cited ADR stops being in force, `luria lint` reports the citing page under `retired-citations`, so the prose becomes reviewable without anyone having edited it.
+
+The rule is broader than documentation: an implementation note, policy,
+runbook or recommendation that is only valid while another record stands
+carries the dependency where it relies on it. That is what gives contextual
+invalidation something concrete to propagate through. The general form is
+proposed as a design principle, *Make mutable premises explicit
+dependencies*, filed as `Proposed` through the normal principle workflow;
+once it is accepted, this section cites it.
 
 ## 3. Do not duplicate rationale
 

@@ -1,0 +1,68 @@
+---
+status: Proposed
+title: 'Make mutable premises explicit dependencies'
+version: 1
+tags:
+- record
+date: '2026-09-29'
+influenced_by: []
+origin: >-
+  The documentation rewrite in dmarx/luria#327 began citing the ADRs and DPs
+  that make each behavioral claim true, and tagging them `docs`; the rule
+  generalized as soon as it was written down, because the same edge is what
+  lets any dependent claim become reviewable when its premise changes.
+summary: >-
+  A claim can go stale without changing, because the thing it relied on
+  changed instead. Luria can only surface that if the reliance is an edge in
+  the record, so a claim whose continued truth depends on a mutable premise
+  cites that premise at the point of reliance. That is maintenance, not
+  attribution: the test is whether superseding the premise could make the
+  claim false or misleading.
+---
+
+# DP-tmpl7i7u: Make mutable premises explicit dependencies
+
+If a claim's continued validity depends on a mutable premise, make that
+dependency explicit at the point of reliance.
+
+A claim can become stale without changing. The thing it relied on changed
+instead. That is the failure Luria is built to expose, but the mechanism has
+nothing to propagate through unless the dependency is represented. A sentence
+saying "`luria init` scaffolds from configuration" depends on the decision
+that makes that behavior true. An implementation note saying "this retry
+exists because `DECISION-014` requires at-least-once delivery" depends on that
+decision remaining the governing choice. A recommendation saying "use X
+because `LIT-042` shows Y" depends on the evidence relation staying
+meaningful. Written as an edge, each one is surfaced when its premise leaves
+force; written as prose alone, each one stays silently wrong.
+
+```text
+premise changes
+      ↓
+dependent claim is surfaced
+      ↓
+review / repair
+```
+
+This is not attribution. A bibliography tells a reader where an idea came
+from. A dependency tells the record which other claim, changing, would make
+this one questionable.
+
+Applied here: the documentation cites the decision behind each behavioral
+claim — the README's account of `luria init` cites [ADR-048](../record/decisions.d/ADR-048.md) — and when a cited
+decision stops being in force, `luria lint` reports the citing page under
+`retired-citations`, so the prose is reviewed without anyone having edited
+it. The decisions the documentation depends on carry the `docs` tag, so
+whoever retires one can see that a page has to change with it.
+
+The boundary test: *if this premise were superseded, could this claim become
+false or misleading?* If not, the citation is provenance rather than a
+maintenance edge, and nothing is lost by leaving it out.
+
+The corollary is the expensive half: cite the premise, do not restate it. A
+dependent claim that copies its premise's rationale has become a
+hand-maintained projection of it, which [DP-3](../record/principles.d/DP-003.md) already says will drift. The edge
+has to point at the authoritative record, so that there is exactly one place
+for the change to happen and one edge for it to travel along. Where the rule
+keeps being applied by hand, [DP-5](../record/principles.d/DP-005.md) says where it goes next: a
+mechanism that checks it.

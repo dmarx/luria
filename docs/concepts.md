@@ -48,7 +48,7 @@ word that means in force, and a scheme whose words are `Kept` and `Dropped`
 works the same way. A superseded document names its successor in
 `superseded_by:` (a scheme can rename that pair with `retires_on` and
 `successor`), and any status is optionally qualified by a `status_note:`, a
-prose field in its own right.
+prose field in its own right ([ADR-071](../record/decisions.d/ADR-071.md)).
 
 Closed because an audit of 121 entries found an open vocabulary had drifted
 into roughly thirty forms — not toward one wrong value but toward *variety*,
@@ -57,16 +57,25 @@ which is worse, because a reader cannot learn what the field means.
 **What each word means is yours, and differs by scheme.** `Rejected` on a
 decision means considered and declined. On a reading list it can mean *retired
 from the shelf, and here is why*. On a scheme of terms it can mean *this word
-picks nothing out*. Say which in a `statuses.yaml` beside the entries, and the
-meanings render above the index table they explain:
+picks nothing out*. Declare those meanings in a vocabulary in `luria.yaml`;
+the scheme points its `status` field at that vocabulary, and the meanings
+render above the index table they explain ([ADR-085](../record/decisions.d/ADR-085.md), [ADR-098](../record/decisions.d/ADR-098.md)):
 
 ```yaml
-Active:
-  label: In force
-  blurb: safe to cite as justification
-Rejected:
-  label: Retired
-  blurb: no longer believed, and the body says why
+vocabularies:
+  decision-status:
+    Active:
+      label: In force
+      blurb: safe to cite as justification
+    Rejected:
+      label: Retired
+      blurb: no longer believed, and the body says why
+
+schemes:
+  ADR:
+    fields:
+      status:
+        vocabulary: decision-status
 ```
 
 Declaring is also narrowing: an entry whose status the scheme does not declare
@@ -106,9 +115,10 @@ Reported by default. Naming one in `lint.fail_on` promotes it to a
 build failure, per class, so a project can enforce what it cares about while
 it works through the rest.
 
-**Every finding can be answered where it is raised.** A citation of a retired
-entry that is deliberate — history, or a rejection worth pointing at — takes an
-`inactive-ok:` comment at the citing site, carrying the reason:
+**Warnings with an acknowledgement directive can be answered where they are
+raised.** A deliberate citation of a retired entry — history, or a rejection
+worth pointing at — takes an `inactive-ok:` comment at the citing site,
+carrying the reason ([ADR-035](../record/decisions.d/ADR-035.md), [DP-1](../record/principles.d/DP-001.md)):
 
 ```markdown
 <!-- inactive-ok: ADR-012 — the decision this one replaced -->
@@ -129,7 +139,10 @@ Four kinds of table in `luria.yaml`, and none of their names is in the code:
   `render` key, and [which one you want](modeling.md#index-or-document) is a
   question about how the set is read rather than about the output.
 - **Journals** — dated entries that persist and are never revised, rendered
-  into books.
+  into books. An entry records what was observed when, so it does not go
+  stale when doctrine changes later: journals and their books, uncollected
+  fragments, and files listed in `code.historical` are exempt from the
+  reference-status report ([ADR-020](../record/decisions.d/ADR-020.md)).
 - **Fragment directories** — pieces written now and assembled later, which is
   how a changelog stops being a file every branch has to touch.
 - **Remotes** — another namespace, cited by prefix. `LU-ADR-013` is another

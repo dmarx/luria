@@ -73,20 +73,28 @@ compared_against:
 
 A half-declared pair — a converse that is not a declared field of the target scheme, does not name the original back, or is not `many: true` — is refused when `luria.yaml` loads.
 
-## 4. Add conditional requirements when standing makes the edge necessary
+## 4. Use conditional requirements for state-dependent fields
 
-Example:
+Every scheme already has a successor relation: its `successor` field defaults
+to `superseded_by`, and an entry carrying the scheme's `retires_on` status
+(default `Superseded`) must fill it ([ADR-071](../../record/decisions.d/ADR-071.md)). Do **not** redeclare
+`superseded_by` merely to make that rule conditional.
+
+For your own field or relation, `required_when` expresses the same general
+shape. For example, a proposed or deferred recommendation can be required to
+say what would settle it:
 
 ```yaml
-superseded_by:
-  scheme: DECISION
-  required: false
-  required_when:
-    status:
-      - Superseded
+fields:
+  promote_when:
+    required_when:
+      status:
+        - Proposed
+        - Deferred
 ```
 
-This says the relation is not universally required; it is required when another declared axis reaches a specific value.
+The field is required only in the named states: an entry at `status: Proposed`
+with no `promote_when:` fails the lint, and an `Active` one does not.
 
 ## 5. Add an invariant when the edge implies shared structure
 
