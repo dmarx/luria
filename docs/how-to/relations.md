@@ -162,8 +162,8 @@ fails the lint, and a `ref::` statement naming one is `bad-annotations`.
 `unrecorded-relations`, and `luria link --fix` writes it into this document's
 field. The converse completion in the same run writes the far side.
 
-**Pushing down.** A reference declared `explain: true` asks for the reverse:
-every code the field holds stated in the body and explained there.
+**Pushing down.** A reference declared `explain:` asks for the reverse: every
+code the field holds accounted for in the body. There are two strengths.
 
 ```yaml
 references:
@@ -172,15 +172,23 @@ references:
     required: false
     many: true
     converse: extended_by
-    explain: true
+    explain: true      # or: cited (the same), stated (stricter)
 ```
 
-A statement is explained by a citation of the code within its scope, or by
-its own `— reason`. A `-file` statement with a reason is how you say the
-relation needs no more prose than that. A citation with no statement is
-`unannotated-relations`, and the fixer writes the statement after it. A code
-with neither is `unexplained-relations`, a report rather than a fix, since
-the explanation is prose only you can write.
+- **`explain: true` (or `cited`)** asks that the body cite each code
+  somewhere, and takes the citation as serving the relation. A code the body
+  never cites is `unexplained-relations`, a report rather than a fix, since
+  the explanation is prose only you can write. This is the useful default: it
+  finds the relation nothing in the prose mentions, and leaves alone the
+  citations whose sentence already says what the relation is.
+- **`explain: stated`** also asks that each citation carry a statement of the
+  relation, a `ref::` statement governing it. A citation with no statement is
+  `unannotated-relations`, and the fixer writes the statement after it. Use
+  it when the relation's name adds something the prose would not.
+
+At either strength, a statement's `— reason` counts as the explanation, so a
+`-file` statement with a reason is how you say the relation needs no more
+prose than that.
 
 A statement the record can't hold as written is `bad-annotations`. That
 covers an argument that isn't a code, a code naming no document here, a code

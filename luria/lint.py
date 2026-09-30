@@ -965,8 +965,8 @@ def status_sections() -> list[tuple[str, str, list[str]]]:
              "citation(s) of an explained relation have no statement of it "
              "(`luria link --fix` writes one)"),
             ("unexplained-relations", stated.unexplained,
-             "relation(s) declared `explain: true` are explained nowhere in "
-             "the body (a statement's `— reason` counts)"),
+             "relation(s) declared `explain:` are explained nowhere in the "
+             "body (a statement's `— reason` counts)"),
             ("bad-annotations", stated.bad,
              "relation statement(s) the record cannot hold as written")):
         if found:
