@@ -41,12 +41,12 @@ Make mutable premises explicit dependencies
 
 A reference the reader cannot follow: the code names no document in this record. A typo, a number carried in from another project, and an illustrative code in an example all look identical from here — telling them apart takes a human, so this is a report, not an error.
 
-**5 codes unaccounted for.** Not listed: 81 mentions marked deliberate with an `unresolved-ok:` comment (same syntax and scopes as `inactive-ok:` above).
+**5 codes unaccounted for.** Not listed: 82 mentions marked deliberate with an `unresolved-ok:` comment (same syntax and scopes as `inactive-ok:` above).
 
 
 ### ADR-000 — resolves to nothing (2 unmarked sites · 4 other mentions marked deliberate)
 
-- [`tests/test_lint.py:470`](../../tests/test_lint.py)
+- [`tests/test_lint.py:491`](../../tests/test_lint.py)
 - [`tests/test_relate.py:155`](../../tests/test_relate.py)
 
 ### ADR-231 — resolves to nothing (2 unmarked sites)
@@ -71,7 +71,7 @@ A reference the reader cannot follow: the code names no document in this record.
 
 A temporary code belongs to the contribution that created it, and only that contribution can cite it safely. One cited here with no document behind it is another branch's — it resolves for as long as both are open, and stops the moment the other merges and its code is numbered. The trunk never sees the spelling this record wrote down.
 
-**0 codes not minted here.** Not listed: 47 mentions marked deliberate with an `unresolved-ok:` comment — an illustrative code in an example is the usual one.
+**0 codes not minted here.** Not listed: 48 mentions marked deliberate with an `unresolved-ok:` comment — an illustrative code in an example is the usual one.
 
 Every temporary code cited here is this record's own. ✅
 
