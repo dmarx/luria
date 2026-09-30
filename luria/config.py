@@ -489,13 +489,21 @@ class Reference:
     blurb: str = ""
     # When the requirement applies, if not always (see `RequiredWhen`).
     required_when: RequiredWhen | None = None
-    # Whether the relation must be explained where it is stated: every code
-    # the field holds stated in the body (`<!-- ref::extends: X -->`, or the
-    # `[[extends::X]]` shorthand that expands to it) beside a citation of X or
-    # with a reason. Off by default, because
-    # a relation's justification is prose a person writes, and a record that
-    # never asked for it would otherwise meet a finding per edge (#333).
-    explain: bool = False
+    # How strongly the body must account for each code the field holds
+    # (#333). Two strengths, because they ask for different things:
+    #
+    # - `cited` (or `true`) — the body cites the code somewhere, and the
+    #   citation is taken to serve the relation. What it catches is the
+    #   relation nothing in the prose mentions, which is where an
+    #   explanation is missing.
+    # - `stated` — each citation also carries the relation explicitly, as a
+    #   `<!-- ref::extends: X -->` statement (or the `[[extends::X]]`
+    #   shorthand) beside it, or a statement with a reason.
+    #
+    # Off by default, because a relation's justification is prose a person
+    # writes, and a record that never asked for it would otherwise meet a
+    # finding per edge.
+    explain: str = ""
 
 
 @dataclass(frozen=True)
@@ -1641,8 +1649,28 @@ def _references(prefix: str, raw: dict) -> tuple[Reference, ...]:
                                invariant=str(spec.get("invariant", "")).strip(),
                                required_when=_required_when(where, spec,
                                                             required),
-                               explain=bool(spec.get("explain", False))))
+                               explain=_explain(where, spec)))
     return tuple(found)
+
+
+EXPLAIN_CITED, EXPLAIN_STATED = "cited", "stated"
+
+
+def _explain(where: str, spec: dict) -> str:
+    """`explain:` as a strength — `cited`, `stated`, or "" for off. `true` is
+    `cited`: asking for an explanation at all is asking that the prose
+    mention the relation, and the stronger form is the one to spell out."""
+    raw = spec.get("explain", False)
+    if raw is True:
+        return EXPLAIN_CITED
+    if raw in (False, None, ""):
+        return ""
+    if raw in (EXPLAIN_CITED, EXPLAIN_STATED):
+        return raw
+    raise ValueError(
+        f"{where}: `explain: {raw}` is not a strength — use `cited` (the body "
+        f"cites each code) or `stated` (each citation also states the "
+        f"relation); `true` means `cited`")
 
 
 def _required_when(where: str, spec: dict, required: bool) -> RequiredWhen | None:

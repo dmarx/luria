@@ -6,10 +6,11 @@ named by the field that holds it: `<!-- ref::extends: LIT-2 -->`. `[[extends::X]
 is shorthand the link fixer expands into a link plus that statement.
 
 Push up: a statement missing from frontmatter is the fixer's to write. Push
-down: a reference declared `explain: true` wants each code it holds stated
-and explained in the body — a citation the statement governs, or its
-`— reason`. Nothing here is special to any one relation: every fixture
-relation is user-declared, and the built-in successor works too.
+down: a reference declared `explain:` wants each code it holds accounted for
+in the body — cited anywhere (`cited`, or `true`), or cited with a statement
+governing the citation (`stated`); at either strength a statement's `—
+reason` also counts. Nothing here is special to any one relation: every
+fixture relation is user-declared, and the built-in successor works too.
 """
 
 from __future__ import annotations
@@ -58,7 +59,7 @@ schemes:
         required: false
         many: true
         converse: extended_by
-        explain: true
+        explain: stated
       extended_by:
         scheme: LIT
         required: false
@@ -68,7 +69,7 @@ schemes:
         scheme: LIT
         required: false
         many: true
-        explain: true
+        explain: stated
 """
 
 
@@ -377,3 +378,56 @@ def test_every_class_is_a_lint_class(tmp_path, monkeypatch):
     for name in ("unrecorded-relations", "unannotated-relations",
                  "unexplained-relations", "bad-annotations"):
         assert name in lint.FAILABLE and name in names
+
+
+# --- strengths ---------------------------------------------------------------
+
+CITED = EXPLAINED.replace("explain: stated", "explain: cited")
+
+
+def test_explain_takes_a_strength(tmp_path, monkeypatch):
+    for raw, want in (("cited", "cited"), ("stated", "stated"),
+                      ("true", "cited"), ("false", "")):
+        project(tmp_path, monkeypatch,
+                EXPLAINED.replace("explain: stated", f"explain: {raw}"))
+        refs = {r.field: r.explain
+                for r in config.current().schemes["LIT"].references}
+        assert refs["cites"] == want
+
+
+def test_an_unknown_strength_is_refused(tmp_path, monkeypatch):
+    with pytest.raises(ValueError, match="not a strength"):
+        project(tmp_path, monkeypatch,
+                EXPLAINED.replace("explain: stated", "explain: always"))
+        config.current()
+
+
+def test_cited_takes_any_citation_as_the_explanation(tmp_path, monkeypatch):
+    """The weaker strength: a plain citation serves the relation, so there is
+    nothing to annotate and nothing for the fixer to write."""
+    root = project(tmp_path, monkeypatch, CITED)
+    note(root, 1, extended_by=["LIT-002"])
+    b = note(root, 2, "Nothing here is new (see [[LIT-1]]).",
+             extends=["LIT-001"], cites=["LIT-001"])
+    before = b.read_text()
+    s = annotations.complete(fix=True)
+    assert (s.unannotated, s.unexplained, s.inserts) == ([], [], [])
+    assert b.read_text() == before
+
+
+def test_cited_still_reports_a_relation_the_prose_never_mentions(
+        tmp_path, monkeypatch):
+    root = project(tmp_path, monkeypatch, CITED)
+    note(root, 1)
+    note(root, 3)
+    note(root, 2, "Only LIT-3 comes up here.", cites=["LIT-001", "LIT-003"])
+    rows = annotations.survey().unexplained
+    assert len(rows) == 1 and "never cites LIT-001" in rows[0]
+
+
+def test_cited_accepts_a_statement_with_a_reason(tmp_path, monkeypatch):
+    root = project(tmp_path, monkeypatch, CITED)
+    note(root, 1)
+    note(root, 2, "<!-- ref::cites-file: LIT-1 — the method section is its -->",
+         cites=["LIT-001"])
+    assert annotations.survey().unexplained == []

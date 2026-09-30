@@ -32,15 +32,22 @@ Two directions, one fact each way:
   it. The field and the code are fully determined, so one missing there is
   `unrecorded-relations` and `luria link --fix` writes it; the converse
   completion then writes the far side, as for any one-sided pair.
-- **Push down.** A reference declared `explain: true` asks for the reverse:
-  every code the field holds stated in the body, and explained there — by a
-  citation of the code the statement governs, or by the statement's own
-  `— reason`. A citation without a statement is mechanical:
-  `unannotated-relations`, and the fixer writes the statement after the
-  first one. A code with neither is not: the explanation is prose only a
-  person can write, so it is `unexplained-relations`, a report. A statement
-  with a reason is how a person says the relation needs no more prose than
-  that — the acknowledgement and the statement are one directive.
+- **Push down.** A reference declared `explain:` asks for the reverse, at
+  one of two strengths. `explain: cited` (or `true`) asks only that the body cite each
+  code the field holds, and takes the citation as serving the relation; a
+  code the body never cites is `unexplained-relations`, a report, because
+  the explanation is prose only a person can write. `explain: stated` asks
+  more: the citation must carry a statement of the relation
+  (a statement governing it, or one with a `— reason`). A citation without
+  one is mechanical — `unannotated-relations`, and the fixer writes the
+  statement after the first one. At either strength, a statement with a
+  reason is how a person says the relation needs no more prose than that —
+  the acknowledgement and the statement are one directive.
+
+  The weaker strength exists because the stronger one, run over a real
+  record, mostly annotated citations whose sentence already said what the
+  relation was. What earned its keep was the relation nothing in the prose
+  mentioned, and `cited` finds exactly that.
 
 A statement the record cannot hold — naming a field the document does not
 have, naming no document here, a code in a scheme the field does not hold,
@@ -56,7 +63,7 @@ from pathlib import Path
 
 from . import directives, doc_refs, relations
 from .adr_index import Adr, load_scheme
-from .config import TEMP_TAIL, current
+from .config import EXPLAIN_CITED, TEMP_TAIL, current
 from .contract import ANY_SCHEME, for_scheme, local_scheme, reference_code
 from .field_edit import add_to_field
 
@@ -275,6 +282,18 @@ def _push_down(doc: Adr, cites: list[Citation], stated: list[Statement],
             cited = [c for c in cites if c.code == target]
             if any(st.reason or any(c.line in st.lines for c in cited)
                    for st in mine):
+                continue
+            if ref.explain == EXPLAIN_CITED:
+                # The weaker strength takes a citation as serving the
+                # relation. What it exists to catch is the edge the prose
+                # never mentions — the one with no explanation at all.
+                if cited:
+                    continue
+                s.unexplained.append(
+                    f"{rel}: `{ref.field}: {target}` is never explained — the "
+                    f"body never cites {target}. Cite it where you say why, or "
+                    f"give a statement a reason "
+                    f"(`<!-- {PREFIX}{ref.field}-file: {target} — why -->`)")
                 continue
             if cited and not mine:
                 first = cited[0]
