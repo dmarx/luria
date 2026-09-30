@@ -354,6 +354,27 @@ def test_the_default_posture_is_warn_only(project, capsys):
     assert "retired documents cited unacknowledged" in err
 
 
+def test_a_status_finding_names_its_sites(project, capsys):
+    """The lint names where to look, not only how many: a count that sends
+    the reader to `luria reports` is a rerun between the finding and the
+    fix."""
+    dial_project(project)
+    (project / "docs" / "more.md").write_text("x\n\nAgain ADR-012.\n")
+    _, err = dial_errors(capsys)
+    assert "docs/notes.md:1" in err and "docs/more.md:3" in err
+
+
+def test_sites_ride_on_their_row_so_counts_are_unchanged(project, capsys):
+    """`baseline` and `fail_on` count rows — one per cited document — so
+    the sites are continuation lines of the row, never rows themselves."""
+    dial_project(project, '"retired-citations"')
+    (project / "docs" / "more.md").write_text("Again ADR-012.\n")
+    errors, _ = dial_errors(capsys)
+    rows = [e for e in errors if e.startswith("ADR-012")]
+    assert len(rows) == 1
+    assert "docs/notes.md:1" in rows[0] and "docs/more.md:1" in rows[0]
+
+
 def test_a_promoted_class_fails_instead_of_printing(project, capsys):
     dial_project(project, '"retired-citations"')
     errors, err = dial_errors(capsys)

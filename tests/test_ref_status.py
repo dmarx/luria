@@ -447,6 +447,14 @@ def test_a_foreign_temp_code_is_its_own_finding(project):
     assert len(rows) == 1 and rows[0].startswith("ADR-tmpab12c is not minted")
 
 
+def test_unresolved_and_foreign_rows_name_their_sites(project):
+    docs, result = scan(project, "x\nper ADR-tmpab12c and ADR-920\n")
+    (row,) = ref_status.foreign_temp_lines(result, docs, sites=True)
+    assert row.endswith("notes.md:2")
+    (row,) = ref_status.dangling_lines(result, docs, sites=True)
+    assert row.endswith("notes.md:2")
+
+
 def test_a_temp_code_this_record_mints_is_not_foreign(project):
     """The whole point of a temporary code is that the contribution which
     created it may cite it."""

@@ -749,30 +749,29 @@ def status_sections() -> list[tuple[str, str, list[str]]]:
     result = ref_status.scan(docs=docs)
     sections: list[tuple[str, str, list[str]]] = []
 
-    lines = ref_status.summary_lines(result, docs)
+    lines = ref_status.summary_lines(result, docs, sites=True)
     if lines:
         sections.append((
             "retired-citations",
             f"{len(lines)} warning(s) — retired documents cited "
-            "unacknowledged from current docs/code (`luria reports` for "
-            "the sites, `inactive-ok:` to acknowledge one)", lines))
+            "unacknowledged from current docs/code (`inactive-ok:` at a "
+            "site acknowledges it)", lines))
 
     # A code that resolves to nothing is a reference the reader can't follow
     # and the fixer can't link — until this existed it was silently dropped.
-    loose = ref_status.dangling_lines(result, docs)
+    loose = ref_status.dangling_lines(result, docs, sites=True)
     if loose:
         sections.append((
             "unresolved-codes",
             f"{len(loose)} code(s) resolve to no document "
-            "(`luria reports` for the sites, `unresolved-ok:` for the "
-            "deliberate ones)", loose))
+            "(`unresolved-ok:` for the deliberate ones)", loose))
 
     # The same rows, partitioned off because they read differently and have a
     # deadline: a temporary code nothing here mints belongs to another open
     # branch, and resolves fine until that branch merges and numbers it (#309).
     # `concretize --check` guards the trunk; this is the branch-side guard, and
     # `legacy-spellings` is what reports the same defect once it is too late.
-    foreign = ref_status.foreign_temp_lines(result, docs)
+    foreign = ref_status.foreign_temp_lines(result, docs, sites=True)
     if foreign:
         sections.append((
             "foreign-temp-codes",
