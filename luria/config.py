@@ -490,8 +490,9 @@ class Reference:
     # When the requirement applies, if not always (see `RequiredWhen`).
     required_when: RequiredWhen | None = None
     # Whether the relation must be explained where it is stated: every code
-    # the field holds cited in the document's body with the relation named on
-    # the citation (`[[extends::X]]`). Off by default, because
+    # the field holds stated in the body (`<!-- extends: X -->`, or the
+    # `[[extends::X]]` shorthand that expands to it) beside a citation of X or
+    # with a reason. Off by default, because
     # a relation's justification is prose a person writes, and a record that
     # never asked for it would otherwise meet a finding per edge (#333).
     explain: bool = False
@@ -1621,6 +1622,17 @@ def _references(prefix: str, raw: dict) -> tuple[Reference, ...]:
                 f"luria.yaml: schemes.{prefix}.references.{field} needs a "
                 f"`scheme` — it names which scheme's codes the field holds")
         where = f"luria.yaml: schemes.{prefix}.references.{field}"
+        # A relation is stated in prose as a directive named by its field
+        # (`<!-- extends: LIT-7 -->`, #333), so a field named like another
+        # directive would be read as that directive.
+        from .directives import reserved
+        if reserved(str(field)):
+            raise ValueError(
+                f"{where}: the name is taken by the comment-directive "
+                f"vocabulary (`-ok` acknowledgements, `-block`/`-file` "
+                f"scopes, `unlinted`, `unexempt`, `pin`), and a relation is "
+                f"stated in prose as a directive named by its field — "
+                f"rename the field")
         required = bool(spec.get("required", True))
         found.append(Reference(field=str(field),
                                scheme=str(spec["scheme"]).upper(),

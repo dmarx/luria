@@ -548,7 +548,13 @@ def check_wikilinks(errors: list[str]) -> None:
         text = path.read_text(encoding="utf-8")
         for w in doc_refs.wikilinks(text, path):
             rel = cfg.rel(path)
-            if w.target is None:
+            if w.relation and not annotations.holds(path, w.relation):
+                errors.append(
+                    f"{rel}:{w.line}: [[{w.relation}::{w.inner}]] names "
+                    f"`{w.relation}`, which is no reference field this "
+                    "document's scheme has — there is nowhere to hold the "
+                    "relation it states")
+            elif w.target is None:
                 errors.append(
                     f"{rel}:{w.line}: [[{w.inner}]] resolves to nothing this "
                     "project can link — a typo, an unregistered prefix, or a "
@@ -949,22 +955,21 @@ def status_sections() -> list[tuple[str, str, list[str]]]:
     # A relation stated in prose and one stated in frontmatter are the same
     # fact (#333). Two of the four ways they part are mechanical — the fixer
     # is in the wording — and the other two are not: prose explaining a
-    # relation is a person's to write, and an annotation the record cannot
+    # relation is a person's to write, and a statement the record cannot
     # hold as written is a person's to correct.
     stated = annotations.survey()
     for name, found, headline in (
             ("unrecorded-relations", stated.unrecorded,
-             "relation(s) named on a citation are missing from frontmatter "
+             "relation(s) stated in prose are missing from frontmatter "
              "(`luria link --fix` writes them)"),
             ("unannotated-relations", stated.unannotated,
-             "citation(s) of an explained relation do not name it "
-             "(`luria link --fix` names it)"),
+             "citation(s) of an explained relation have no statement of it "
+             "(`luria link --fix` writes one)"),
             ("unexplained-relations", stated.unexplained,
-             "relation(s) declared `explain: true` are never cited in the "
-             "body (`unexplained-ok:` acknowledges a deliberate one)"),
+             "relation(s) declared `explain: true` are explained nowhere in "
+             "the body (a statement's `— reason` counts)"),
             ("bad-annotations", stated.bad,
-             "relation(s) named on a citation the record cannot hold as "
-             "written")):
+             "relation statement(s) the record cannot hold as written")):
         if found:
             sections.append((name, f"{len(found)} {headline}", sorted(found)))
 

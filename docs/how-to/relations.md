@@ -121,31 +121,39 @@ wrote 1 back-reference(s) in 1 file(s)
 
 ## 7. State the relation where you explain it
 
-A relation is often clearest in the sentence that justifies it. Name it on the
-citation, and the prose states the edge:
+A relation is often clearest in the sentence that justifies it. State it
+there, with the same comment-directive grammar every acknowledgement uses,
+named by the field that holds it:
 
 ```markdown
-The recovery path is [[extends::RFC-7]]'s, generalised.
-Nothing here is new (see [[extended_by::RFC-2|the follow-up]]).
+The recovery path is RFC-007's, generalised. <!-- extends: RFC-007 -->
+
+<!-- extended_by-block: RFC-012, RFC-015 — both carry the retry loop on -->
+Two later designs picked this up...
 ```
 
-The name before `::` is a reference field of *this* document: the field its
-frontmatter holds the fact in. Any reference works, the ones your scheme
-declares and the built-in `superseded_by` alike. There is no direction to
-choose, because a relation read the other way has its own name, its
-converse. `luria link --fix` expands the wikilink into a markdown link with
-the relation as its title, `[RFC-7](RFC-007.md "extends")`, which renders as
-an ordinary link and shows the relation on hover. You can write that form by
-hand too. A title that isn't shaped like a field name (`"see the appendix"`)
-is an ordinary tooltip. A citation in a code span, fence or comment is a
-specimen and states nothing ([ADR-tmp3gms4](../../record/decisions.d/ADR-tmp3gms4.md)).
+The name is a reference field of *this* document, either one your scheme
+declares or the built-in `superseded_by`. There is no direction to choose,
+because a relation read the other way has its own name, its converse.
+Everything a [directive](../directives.md) has comes with it: line, `-block` and
+`-file` scope, a `— reason`, and `until <date>`. An example in a code span
+or fence states nothing, and a statement in frontmatter comments is ignored
+([ADR-tmp3gms4](../../record/decisions.d/ADR-tmp3gms4.md)).
 
-**Pushing up.** A named relation missing from frontmatter is
+`[[extends::RFC-7]]` is shorthand for a citation plus its statement.
+`luria link --fix` expands it to `[RFC-7](RFC-007.md)<!-- extends: RFC-007 -->`.
+A shorthand naming a field this document doesn't have is left unexpanded and
+fails the lint, because it would otherwise become a comment nothing reads.
+A reference field may not be named like another directive (an `-ok` name, a
+`-block`/`-file` suffix, `unlinted`, `unexempt`, `pin`), and `luria.yaml`
+refuses one that is.
+
+**Pushing up.** A stated relation missing from frontmatter is
 `unrecorded-relations`, and `luria link --fix` writes it into this document's
 field. The converse completion in the same run writes the far side.
 
 **Pushing down.** A reference declared `explain: true` asks for the reverse:
-every code the field holds cited in the body, with the relation named.
+every code the field holds stated in the body and explained there.
 
 ```yaml
 references:
@@ -157,16 +165,17 @@ references:
     explain: true
 ```
 
-A plain citation of a code the field holds is `unannotated-relations`, and the
-fixer names the relation on it. A code the body never cites is
-`unexplained-relations`, a report rather than a fix: the explanation is prose
-only you can write. Write it, or acknowledge the code with
-`<!-- unexplained-ok: RFC-2 — the title says it -->`.
+A statement is explained by a citation of the code within its scope, or by
+its own `— reason`. A `-file` statement with a reason is how you say the
+relation needs no more prose than that. A citation with no statement is
+`unannotated-relations`, and the fixer writes the statement after it. A code
+with neither is `unexplained-relations`, a report rather than a fix, since
+the explanation is prose only you can write.
 
-A named relation the record cannot hold as written is `bad-annotations`. That
-covers a relation the scheme doesn't declare, a code in a scheme the field
-doesn't hold, a code naming no document here, and a single-valued field that
-already holds another code.
+A statement the record can't hold as written is `bad-annotations`. That
+covers an argument that isn't a code, a code naming no document here, a code
+in a scheme the field doesn't hold, and a single-valued field that already
+holds another code.
 
 ## 8. Lint the result
 

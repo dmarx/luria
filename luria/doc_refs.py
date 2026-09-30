@@ -558,7 +558,7 @@ class Wikilink:
     line: int
     target: str | None      # resolved URL/path, or None
     # `[[extends::LIT-2]]` — the relation this citation stands in (#333),
-    # carried into the expanded link as its title.
+    # written after the expanded link as the statement it abbreviates.
     relation: str = ""
 
 
@@ -645,18 +645,27 @@ def expand_wikilinks(text: str, source: Path) -> tuple[str, int]:
     """Rewrite every resolvable wikilink as a markdown link (an `<a href>`
     inside a raw-HTML block, where markdown wouldn't render). Unresolvable
     ones are left in place for the lint to name."""
+    from . import annotations                     # local: avoids a cycle
     html = html_block_spans(text)
     out, cursor, n = [], 0, 0
     for w in wikilinks(text, source):
         if w.target is None:
             continue
+        # A relation this document cannot hold would expand into a comment
+        # nothing reads — a statement silently dropped. Left for the lint.
+        if w.relation and not annotations.holds(source, w.relation):
+            continue
         out.append(text[cursor:w.start])
         if in_html_block(w.start, html):
-            title = f' title="{w.relation}"' if w.relation else ""
-            out.append(f'<a href="{w.target}"{title}>{w.label}</a>')
+            out.append(f'<a href="{w.target}">{w.label}</a>')
         else:
-            title = f' "{w.relation}"' if w.relation else ""
-            out.append(f"[{w.label}]({w.target}{title})")
+            out.append(f"[{w.label}]({w.target})")
+        # `[[extends::LIT-2]]` is shorthand for a citation plus the relation
+        # statement beside it — the same directive grammar as every
+        # acknowledgement, so it gets their scopes and `— reason` for free.
+        if w.relation:
+            code = annotations.canonical(w.inner) or w.inner
+            out.append(f"<!-- {w.relation}: {code} -->")
         cursor = w.end
         n += 1
     out.append(text[cursor:])
