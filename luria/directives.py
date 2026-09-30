@@ -103,10 +103,12 @@ from pathlib import Path
 
 LINE, BLOCK, FILE = "line", "block", "file"
 
-# A name may carry `_` because a relation statement is named by the field it
-# states (`<!-- extended_by: LIT-12 -->`, #333), and field names do.
+# A name may open with a `namespace::`, and may carry `_`, because a relation
+# statement is named by the field it states under the `ref::` namespace
+# (`<!-- ref::extended_by: LIT-12 -->`, #333), and field names do. The
+# namespace keeps a family of user-defined names out of the fixed vocabulary.
 DIRECTIVE_RE = re.compile(
-    r"^(?P<name>[a-z][\w-]*?)(?P<scope>-block|-file)?:"
+    r"^(?P<name>(?:[a-z][\w-]*::)?[a-z][\w-]*?)(?P<scope>-block|-file)?:"
     r"(?P<args>[^\n]*?)(?:—|-->|\*/|$)",
     re.IGNORECASE,
 )
@@ -122,20 +124,10 @@ COMMENT_MARKER_RE = re.compile(r"//|/\*|^\s*\*|#|--")
 # not cited, and an example of a directive in a fenced block or a docstring is
 # no more a citation than the real one is.
 SHAPED_RE = re.compile(
-    r"\b[a-z][\w-]*?(?:-block|-file)?:[^\n]*?(?=—|-->|\*/|$)",
+    r"\b(?:[a-z][\w-]*::)?[a-z][\w-]*?(?:-block|-file)?:[^\n]*?"
+    r"(?=—|-->|\*/|$)",
     re.IGNORECASE | re.MULTILINE,
 )
-
-# The names the vocabulary spends on itself. A relation statement is a
-# directive named by a reference field, so a field may not take one of these —
-# or a scope suffix, which would read as a narrower statement of another field.
-RESERVED = ("unlinted", "unexempt", "pin")
-
-
-def reserved(name: str) -> bool:
-    """Whether a reference field named `name` would be read as some other
-    directive, or as a scoped form of one."""
-    return (name in RESERVED or name.endswith(("-ok", "-block", "-file")))
 
 
 def _split_expiry(args: tuple[str, ...]) -> tuple[tuple[str, ...], "dt.date | None", str | None]:
@@ -519,7 +511,8 @@ def shaped_spans(text: str, names: set[str]) -> list[tuple[int, int]]:
     """Char spans of every directive-shaped run naming one of `names`."""
     out = []
     for m in SHAPED_RE.finditer(text):
-        head = m.group(0).split(":", 1)[0].lower()
+        # The name ends at the first `:` that is not half of a `::`.
+        head = re.split(r"(?<!:):(?!:)", m.group(0), maxsplit=1)[0].lower()
         if head.removesuffix("-block").removesuffix("-file") in names:
             out.append((m.start(), m.end()))
     return out

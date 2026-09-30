@@ -665,7 +665,7 @@ def expand_wikilinks(text: str, source: Path) -> tuple[str, int]:
         # acknowledgement, so it gets their scopes and `— reason` for free.
         if w.relation:
             code = annotations.canonical(w.inner) or w.inner
-            out.append(f"<!-- {w.relation}: {code} -->")
+            out.append(f"<!-- {annotations.PREFIX}{w.relation}: {code} -->")
         cursor = w.end
         n += 1
     out.append(text[cursor:])

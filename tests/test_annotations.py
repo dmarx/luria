@@ -2,7 +2,7 @@
 """A relation stated in prose, and prose owed to a relation (#333).
 
 A relation is stated with the directive grammar every acknowledgement uses,
-named by the field that holds it: `<!-- extends: LIT-2 -->`. `[[extends::X]]`
+named by the field that holds it: `<!-- ref::extends: LIT-2 -->`. `[[extends::X]]`
 is shorthand the link fixer expands into a link plus that statement.
 
 Push up: a statement missing from frontmatter is the fixer's to write. Push
@@ -113,16 +113,16 @@ def stated(path: Path) -> list[tuple[str, str]]:
 
 def test_a_statement_is_a_directive_named_by_the_field(tmp_path, monkeypatch):
     root = project(tmp_path, monkeypatch)
-    a = note(root, 1, "Builds on it. <!-- extends: LIT-2, LIT-3 -->\n\n"
-                      "<!-- extended_by-file: LIT-4 — the follow-up -->")
+    a = note(root, 1, "Builds on it. <!-- ref::extends: LIT-2, LIT-3 -->\n\n"
+                      "<!-- ref::extended_by-file: LIT-4 — the follow-up -->")
     assert stated(a) == [("extends", "LIT-002"), ("extends", "LIT-003"),
                          ("extended_by", "LIT-004")]
 
 
 def test_quoted_and_frontmatter_statements_say_nothing(tmp_path, monkeypatch):
     root = project(tmp_path, monkeypatch)
-    a = note(root, 1, "`<!-- extends: LIT-2 -->`\n\n"
-                      "```\n<!-- extends: LIT-2 -->\n```")
+    a = note(root, 1, "`<!-- ref::extends: LIT-2 -->`\n\n"
+                      "```\n<!-- ref::extends: LIT-2 -->\n```")
     text = a.read_text().replace("date:", "# extends: LIT-2\ndate:")
     a.write_text(text)
     assert stated(a) == []
@@ -135,7 +135,7 @@ def test_a_typed_wikilink_expands_to_a_link_and_a_statement(
     a = note(root, 1, "Builds on [[extends::LIT-2|the base]].")
     new, n = doc_refs.expand_wikilinks(a.read_text(), a)
     assert n == 1
-    assert "[the base](LIT-002.md)<!-- extends: LIT-002 -->" in new
+    assert "[the base](LIT-002.md)<!-- ref::extends: LIT-002 -->" in new
 
 
 def test_a_typed_wikilink_this_document_cannot_hold_is_not_expanded(
@@ -149,9 +149,9 @@ def test_a_typed_wikilink_this_document_cannot_hold_is_not_expanded(
     assert any("`refutes`" in e for e in errors)
 
 
-def test_a_field_may_not_take_a_directive_name(tmp_path, monkeypatch):
-    for name in ("pin", "broad-ok", "extends-block"):
-        with pytest.raises(ValueError, match="directive"):
+def test_a_field_may_not_end_in_a_scope_suffix(tmp_path, monkeypatch):
+    for name in ("extends-block", "notes-file"):
+        with pytest.raises(ValueError, match="-block. or .-file"):
             project(tmp_path, monkeypatch, f"""
                                            schemes:
                                              LIT:
@@ -161,6 +161,32 @@ def test_a_field_may_not_take_a_directive_name(tmp_path, monkeypatch):
                                                    required: false
                                            """)
             config.current()
+
+
+def test_the_namespace_frees_the_directive_vocabulary(tmp_path, monkeypatch):
+    """`pin` is a directive; `ref::pin` is a relation. A field may take any
+    name the fixed vocabulary spends."""
+    root = project(tmp_path, monkeypatch, """
+                                          schemes:
+                                            LIT:
+                                              references:
+                                                pin:
+                                                  scheme: LIT
+                                                  required: false
+                                                  many: true
+                                          """)
+    note(root, 2)
+    a = note(root, 1, "<!-- ref::pin: LIT-2 -->")
+    annotations.complete(fix=True)
+    assert meta(a)["pin"] == ["LIT-002"]
+
+
+def test_a_misspelt_field_is_reported_not_ignored(tmp_path, monkeypatch):
+    root = project(tmp_path, monkeypatch)
+    note(root, 2)
+    note(root, 1, "<!-- ref::extnds: LIT-2 -->")
+    bad = annotations.survey().bad
+    assert len(bad) == 1 and "`ref::extnds` names no reference field" in bad[0]
 
 
 def test_a_titled_link_is_still_checked_for_its_target(tmp_path, monkeypatch):
@@ -178,18 +204,18 @@ def test_a_stated_relation_is_written_into_this_documents_field(
     a = note(root, 1)
     b = note(root, 2, "Builds on [[extends::LIT-1]].")
     s = annotations.survey()
-    assert len(s.unrecorded) == 1 and "`extends: LIT-001`" in s.unrecorded[0]
+    assert len(s.unrecorded) == 1 and "`ref::extends: LIT-001`" in s.unrecorded[0]
     link_refs.run(fix=True)
     assert meta(b)["extends"] == ["LIT-001"]
     assert meta(a)["extended_by"] == ["LIT-002"]       # the converse, too
-    assert "[LIT-1](LIT-001.md)<!-- extends: LIT-001 -->" in b.read_text()
+    assert "[LIT-1](LIT-001.md)<!-- ref::extends: LIT-001 -->" in b.read_text()
     s = annotations.survey()
     assert (s.unrecorded, s.bad) == ([], [])
 
 
 def test_the_converse_name_states_the_other_direction(tmp_path, monkeypatch):
     root = project(tmp_path, monkeypatch)
-    a = note(root, 1, "Carried further. <!-- extended_by: LIT-2 -->")
+    a = note(root, 1, "Carried further. <!-- ref::extended_by: LIT-2 -->")
     b = note(root, 2)
     link_refs.run(fix=True)
     assert meta(a)["extended_by"] == ["LIT-002"]
@@ -199,7 +225,7 @@ def test_the_converse_name_states_the_other_direction(tmp_path, monkeypatch):
 def test_an_edge_held_by_the_converse_side_is_already_recorded(
         tmp_path, monkeypatch):
     root = project(tmp_path, monkeypatch)
-    note(root, 1, "Carried further. <!-- extended_by: LIT-2 -->")
+    note(root, 1, "Carried further. <!-- ref::extended_by: LIT-2 -->")
     note(root, 2, extends=["LIT-001"])
     assert annotations.survey().unrecorded == []
 
@@ -207,7 +233,7 @@ def test_an_edge_held_by_the_converse_side_is_already_recorded(
 def test_a_scalar_relation_is_written_as_a_scalar(tmp_path, monkeypatch):
     root = project(tmp_path, monkeypatch)
     note(root, 1)
-    b = note(root, 2, "From it. <!-- source: LIT-1 -->")
+    b = note(root, 2, "From it. <!-- ref::source: LIT-1 -->")
     annotations.complete(fix=True)
     assert meta(b)["source"] == "LIT-001"
 
@@ -216,7 +242,7 @@ def test_the_builtin_successor_is_a_relation_like_any_other(
         tmp_path, monkeypatch):
     root = project(tmp_path, monkeypatch)
     note(root, 2)
-    a = note(root, 1, "Replaced. <!-- superseded_by: LIT-2 -->")
+    a = note(root, 1, "Replaced. <!-- ref::superseded_by: LIT-2 -->")
     annotations.complete(fix=True)
     assert meta(a)["superseded_by"] == ["LIT-002"]
 
@@ -226,7 +252,7 @@ def test_a_scalar_already_holding_another_code_is_not_overwritten(
     root = project(tmp_path, monkeypatch)
     note(root, 1)
     note(root, 3)
-    b = note(root, 2, "<!-- source: LIT-1 -->", source="LIT-003")
+    b = note(root, 2, "<!-- ref::source: LIT-1 -->", source="LIT-003")
     s = annotations.complete(fix=True)
     assert s.writes == [] and "contradicts" in s.bad[0]
     assert meta(b)["source"] == "LIT-003"
@@ -235,17 +261,17 @@ def test_a_scalar_already_holding_another_code_is_not_overwritten(
 def test_what_the_record_cannot_hold_is_a_bad_annotation(tmp_path, monkeypatch):
     root = project(tmp_path, monkeypatch)
     note(root, 1)
-    note(root, 2, "<!-- extends: LIT-9, LIT-2, nonsense -->")
+    note(root, 2, "<!-- ref::extends: LIT-9, LIT-2, nonsense -->")
     bad = " ".join(annotations.survey().bad)
     assert "LIT-009 is no document" in bad
     assert "to itself" in bad
-    assert "`extends: nonsense` names no code" in bad
+    assert "`ref::extends: nonsense` names no code" in bad
 
 
 def test_an_expired_statement_states_nothing(tmp_path, monkeypatch):
     root = project(tmp_path, monkeypatch)
     note(root, 1)
-    note(root, 2, "<!-- extends: LIT-1 until 2000-01-01 -->")
+    note(root, 2, "<!-- ref::extends: LIT-1 until 2000-01-01 -->")
     assert annotations.survey().unrecorded == []
 
 
@@ -263,8 +289,8 @@ def test_a_plain_citation_of_an_explained_relation_gains_its_statement(
     assert len(s.unannotated) == 2 and s.unexplained == []
     link_refs.run(fix=True)
     text = b.read_text()
-    assert "<!-- extends: LIT-001 -->" in text
-    assert "<!-- cites: LIT-001 -->" in text
+    assert "<!-- ref::extends: LIT-001 -->" in text
+    assert "<!-- ref::cites: LIT-001 -->" in text
     s = annotations.survey()
     assert (s.unannotated, s.unexplained) == ([], [])
 
@@ -272,7 +298,7 @@ def test_a_plain_citation_of_an_explained_relation_gains_its_statement(
 def test_a_statement_governs_the_paragraph_it_introduces(tmp_path, monkeypatch):
     root = project(tmp_path, monkeypatch, EXPLAINED)
     note(root, 1)
-    note(root, 2, "<!-- cites-block: LIT-1 -->\n"
+    note(root, 2, "<!-- ref::cites-block: LIT-1 -->\n"
                   "The whole paragraph is about\nwhat [LIT-1](LIT-001.md) did.",
          cites=["LIT-001"])
     s = annotations.survey()
@@ -283,7 +309,7 @@ def test_a_statement_far_from_any_citation_explains_nothing(
         tmp_path, monkeypatch):
     root = project(tmp_path, monkeypatch, EXPLAINED)
     note(root, 1)
-    note(root, 2, "<!-- cites: LIT-1 -->\n\nfoo.\n\nLater: LIT-1.",
+    note(root, 2, "<!-- ref::cites: LIT-1 -->\n\nfoo.\n\nLater: LIT-1.",
          cites=["LIT-001"])
     rows = annotations.survey().unexplained
     assert len(rows) == 1 and "no citation beside it" in rows[0]
@@ -292,7 +318,7 @@ def test_a_statement_far_from_any_citation_explains_nothing(
 def test_a_statements_reason_is_its_explanation(tmp_path, monkeypatch):
     root = project(tmp_path, monkeypatch, EXPLAINED)
     note(root, 1)
-    note(root, 2, "<!-- cites-file: LIT-1 — the method section is its -->",
+    note(root, 2, "<!-- ref::cites-file: LIT-1 — the method section is its -->",
          cites=["LIT-001"])
     s = annotations.survey()
     assert (s.unannotated, s.unexplained) == ([], [])
@@ -325,7 +351,7 @@ def test_every_class_is_a_lint_class(tmp_path, monkeypatch):
     note(root, 1)
     note(root, 3)
     note(root, 4)
-    note(root, 2, "<!-- extends: LIT-1, LIT-9 --> LIT-3",
+    note(root, 2, "<!-- ref::extends: LIT-1, LIT-9 --> LIT-3",
          cites=["LIT-003", "LIT-004"])
     names = {n for n, _, _ in lint.status_sections()}
     for name in ("unrecorded-relations", "unannotated-relations",

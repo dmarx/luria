@@ -8,18 +8,22 @@ and a relation in frontmatter could stand with nothing in the body saying
 what it meant.
 
 A relation is stated in the body with the grammar every acknowledgement
-already uses — a comment directive, named by the field that holds it:
+already uses — a comment directive, in the `ref::` namespace, named by the
+field that holds it:
 
-    The recovery path is LIT-007's, generalised. <!-- extends: LIT-007 -->
-    <!-- extended_by-block: LIT-012, LIT-015 — both carry the retry loop on -->
+    The recovery path is LIT-007's, generalised. <!-- ref::extends: LIT-007 -->
+    <!-- ref::extended_by-block: LIT-012, LIT-015 — both carry the retry loop on -->
 
-The name is a reference field of *this* document, declared or built in, so
-there is no direction to choose: the other direction is the converse's name.
-Everything a directive already has comes with it — line, `-block` and `-file`
-scope, `— reason`, `until <date>` — and so does the rule that a quoted
-example is not a statement. `[[extends::LIT-7]]` is shorthand: `luria link
---fix` expands it into the link and the statement beside it,
-`[LIT-7](LIT-007.md)<!-- extends: LIT-7 -->`.
+The name after `ref::` is a reference field of *this* document, declared or
+built in, so there is no direction to choose: the other direction is the
+converse's name. The namespace keeps these user-defined names apart from the
+fixed vocabulary, and it is what lets a misspelt field be reported rather
+than read as no directive at all. Everything a directive already has comes
+with it — line, `-block` and `-file` scope, `— reason`, `until <date>` — and
+so does the rule that a quoted example is not a statement.
+`[[extends::LIT-7]]` is shorthand: `luria link --fix` expands it into the
+link and the statement beside it,
+`[LIT-7](LIT-007.md)<!-- ref::extends: LIT-007 -->`.
 
 Two directions, one fact each way:
 
@@ -38,9 +42,10 @@ Two directions, one fact each way:
   with a reason is how a person says the relation needs no more prose than
   that — the acknowledgement and the statement are one directive.
 
-A statement the record cannot hold — naming no document here, a code in a
-scheme the field does not hold, or contradicting a single-valued field that
-already holds another code — is `bad-annotations`.
+A statement the record cannot hold — naming a field the document does not
+have, naming no document here, a code in a scheme the field does not hold,
+or contradicting a single-valued field that already holds another code — is
+`bad-annotations`.
 """
 
 from __future__ import annotations
@@ -54,6 +59,9 @@ from .adr_index import Adr, load_scheme
 from .config import TEMP_TAIL, current
 from .contract import ANY_SCHEME, for_scheme, local_scheme, reference_code
 from .field_edit import add_to_field
+
+# The namespace a relation statement's name lives in: `<!-- ref::F: X -->`.
+PREFIX = "ref::"
 
 # What counts as citing a code: a wikilink, an inline link, or a bare code.
 CITE_RE = re.compile(
@@ -175,22 +183,28 @@ def citations(text: str) -> list[Citation]:
 
 def statements(path: Path, text: str, names: set[str]
                ) -> tuple[list[Statement], list[str]]:
-    """Every relation stated in the body — directives, and typed wikilinks
-    not yet expanded into one — and the arguments that name no code."""
+    """Every relation stated in the body — `ref::` directives, and typed
+    wikilinks not yet expanded into one — and what is wrong with the rest:
+    a field `names` does not hold, or an argument that is no code."""
     body_line = text.count("\n", 0, _body_start(text)) + 1
     out: list[Statement] = []
     junk: list[str] = []
-    for d in directives.find(path, text, names):
-        if d.line < body_line:           # a frontmatter comment says nothing
+    for d in directives.find(path, text):
+        if not d.name.startswith(PREFIX) or d.line < body_line:
+            continue                     # a frontmatter comment says nothing
+        relation = d.name[len(PREFIX):]
+        if relation not in names:
+            junk.append(f"{d.line}: `{d.name}` names no reference field this "
+                        f"document holds")
             continue
         for arg in d.args:
             code = canonical(arg)
             if code is None:
-                junk.append(f"{d.line}: `{d.name}: {arg}`")
+                junk.append(f"{d.line}: `{d.name}: {arg}` names no code")
                 continue
             lines = (frozenset(range(1, text.count("\n") + 2))
                      if d.scope == directives.FILE else d.lines)
-            out.append(Statement(d.name, code, d.line, lines, d.reason))
+            out.append(Statement(relation, code, d.line, lines, d.reason))
     for w in doc_refs.wikilinks(text, path):
         if w.relation in names and (code := canonical(w.inner)):
             out.append(Statement(w.relation, code, w.line,
@@ -213,7 +227,7 @@ def _push_up(doc: Adr, code: str, st: Statement, spec,
              docs: dict[str, Adr], s: Survey) -> None:
     """What one statement asks of this document's frontmatter."""
     where = f"{current().rel(doc.path)}:{st.line}"
-    said = f"`{st.relation}: {st.code}`"
+    said = f"`{PREFIX}{st.relation}: {st.code}`"
     if st.code not in docs:
         s.bad.append(f"{where}: {said} — {st.code} is no document in this "
                      f"record, so there is no edge to hold")
@@ -262,7 +276,7 @@ def _push_down(doc: Adr, cites: list[Citation], stated: list[Statement],
                 continue
             if cited and not mine:
                 first = cited[0]
-                note = f"<!-- {ref.field}: {target} -->"
+                note = f"<!-- {PREFIX}{ref.field}: {target} -->"
                 s.inserts.append(Insert(doc.path, first.end, note))
                 s.unannotated.append(
                     f"{rel}:{first.line}: cites {target} without stating the "
@@ -275,7 +289,7 @@ def _push_down(doc: Adr, cites: list[Citation], stated: list[Statement],
                 f"{rel}: `{ref.field}: {target}` is never explained — the "
                 f"body {why}. Cite it where you say why "
                 f"(`[[{ref.field}::{target}]]`), or give the statement a "
-                f"reason (`<!-- {ref.field}-file: {target} — why -->`)")
+                f"reason (`<!-- {PREFIX}{ref.field}-file: {target} — why -->`)")
 
 
 def survey() -> Survey:
@@ -293,7 +307,7 @@ def survey() -> Survey:
         fields = fields_of(doc.path)
         stated, junk = statements(doc.path, text, set(fields))
         for entry in junk:
-            s.bad.append(f"{current().rel(doc.path)}:{entry} names no code")
+            s.bad.append(f"{current().rel(doc.path)}:{entry}")
         for st in stated:
             _push_up(doc, code, st, fields[st.relation], docs, s)
         _push_down(doc, citations(text), stated, s)

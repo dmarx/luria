@@ -29,7 +29,7 @@ status: 'Proposed'
 # What the index shows in place of the code. Repeat it as the body's `# ADR-tmp3gms4:`
 # heading — someone reading the file alone needs one — and `luria lint` checks
 # that the two agree, because two copies of a string is a projection that drifts.
-title: 'A relation is stated in prose as a directive named by its field'
+title: 'A relation is stated in prose as a `ref::` directive named by its field'
 
 # Which revision of this decision's claim you are reading. Standard frontmatter
 # for every scheme, and it moves rarely here: a decision that CHANGES is
@@ -59,9 +59,10 @@ issue: '#333'
 # prose for the same reason — the generator renders it.)
 summary: >-
   A relation is stated in a document's body with the comment-directive
-  grammar every acknowledgement uses, named by the reference field that
-  holds it (`<!-- extends: LIT-007 -->`), so it inherits line, block and file
-  scope, a reason and an expiry. `[[extends::X]]` is shorthand the link
+  grammar every acknowledgement uses, in a `ref::` namespace and named by
+  the reference field that holds it (`<!-- ref::extends: LIT-007 -->`), so
+  it inherits line, block and file scope, a reason and an expiry, and a
+  misspelt field is reported. `[[extends::X]]` is shorthand the link
   fixer expands into a link plus that statement. A statement missing from
   frontmatter is `unrecorded-relations`, and `luria link --fix` writes it. A
   reference declared `explain: true` wants each code it holds explained in
@@ -69,12 +70,12 @@ summary: >-
   reason: a bare citation is `unannotated-relations` and the fixer writes
   the statement, and a code with neither is `unexplained-relations`, a
   report. A statement the record cannot hold is `bad-annotations`. Rejected:
-  an arrow after the link, the relation as a link title, a separate
-  acknowledgement for unexplained relations, and requiring prose for every
-  relation.
+  an arrow after the link, the relation as a link title, a directive named
+  by the bare field, a separate acknowledgement for unexplained relations,
+  and requiring prose for every relation.
 ---
 
-# ADR-tmp3gms4: A relation is stated in prose as a directive named by its field
+# ADR-tmp3gms4: A relation is stated in prose as a `ref::` directive named by its field
 
 ## Context
 
@@ -97,25 +98,28 @@ a second one.
 
 ## Decision
 
-A relation is a directive named by the reference field that holds it in
-*this* document's frontmatter:
+A relation is a directive in the `ref::` namespace, named by the reference
+field that holds it in *this* document's frontmatter:
 
-    The recovery path is LIT-007's, generalised. <!-- extends: LIT-007 -->
-    <!-- extended_by-block: LIT-012, LIT-015 — both carry the retry loop on -->
+    The recovery path is LIT-007's, generalised. <!-- ref::extends: LIT-007 -->
+    <!-- ref::extended_by-block: LIT-012, LIT-015 — both carry the retry loop on -->
 
 Any reference field works, whether declared in `references:` or the built-in
 successor. Nothing in the mechanism knows one relation's name. Direction is
-the field's name, so the other direction is written with the converse. The
-directive grammar's name pattern now admits `_`, because field names use
-it. A reference field may not take a name the directive vocabulary already
-spends (an `-ok` acknowledgement, a `-block`/`-file` scope suffix,
-`unlinted`, `unexempt`, `pin`), and `luria.yaml` refuses one that does.
+the field's name, so the other direction is written with the converse.
+
+The directive grammar's name pattern now admits a `namespace::` prefix and
+`_`, because field names use it. The namespace is what separates a family
+of user-defined names from the fixed vocabulary. Every `ref::` directive is
+a relation claim, so one naming a field the document does not hold is a
+finding, not a comment nothing reads. A field may take any name except one
+ending in `-block` or `-file`, which would read as a scope suffix, and
+`luria.yaml` refuses those.
 
 `[[extends::X]]` (Semantic MediaWiki's typed-link spelling) is shorthand for
 a citation plus its statement. The link fixer expands it to
-`[X](X.md)<!-- extends: X -->`. A shorthand naming a field the document
-cannot hold is not expanded: it would become a comment nothing reads. The
-wikilink lint fails on it instead.
+`[X](X.md)<!-- ref::extends: X -->`. A shorthand naming a field the
+document cannot hold is not expanded, and the wikilink lint fails on it.
 
 - **Push up** is mechanical. A statement missing from frontmatter is
   `unrecorded-relations`, and `luria link --fix` writes it. The converse
@@ -123,11 +127,11 @@ wikilink lint fails on it instead.
 - **Push down** is opt-in per reference (`explain: true`). A code the field
   holds is explained when a statement of it governs a citation of the code,
   or when the statement has a `— reason`. A citation with no statement is
-  `unannotated-relations`, and the fixer writes `<!-- F: X -->` after the
+  `unannotated-relations`, and the fixer writes `<!-- ref::F: X -->` after the
   first citation. A code with neither is `unexplained-relations`, a report,
   because the explanation is prose only a person can write.
-- A statement the record cannot hold as written is `bad-annotations`: an
-  argument that is not a code, a code naming no document here, a code in a
+- A statement the record cannot hold as written is `bad-annotations`: a
+  field the document does not hold, an argument that is not a code, a code naming no document here, a code in a
   scheme the field does not hold, a document naming itself, or a
   single-valued field that already holds another code.
 
@@ -139,15 +143,15 @@ All four are ordinary warning classes, so `fail_on` and `mute` reach them.
   directive. The prose around the citation is what a reader sees, and the
   statement is what the tooling reads.
 - The acknowledgement and the statement are one directive. A statement's
-  reason is its explanation, so `<!-- cites-file: LIT-001 — the method
-  section is its -->` both states the relation and says it needs no more
+  reason is its explanation, so `<!-- ref::cites-file: LIT-001 — the
+  method section is its -->` both states the relation and says it needs no more
   prose. No separate "unexplained-ok" is needed.
 - A citation can carry any number of statements, so two explained relations
   holding one code no longer compete for a single citation.
-- A misspelt field in a hand-written statement (`<!-- extnds: X -->`) is
-  read as no directive at all, the same as a misspelt acknowledgement is
-  today. The shorthand is checked; the long form is exactly as checked as
-  the rest of the vocabulary.
+- A misspelt field (`<!-- ref::extnds: X -->`) is reported, because the
+  namespace says a relation was meant. A misspelt *namespace*
+  (`<!-- rf::extends: X -->`) is still read as no directive at all, the
+  same as a misspelt acknowledgement is today.
 - The issue's last example has the fixer writing a whole citation into a
   body that had none. That was not done. Which sentence the citation
   belongs in is the non-deterministic part the same issue says must be a
@@ -163,6 +167,11 @@ All four are ordinary warning classes, so `fail_on` and `mute` reach them.
   second draft. It rendered well, but it was a second annotation grammar
   beside the directive one: no scope, no reason, no expiry. It also gave a
   meaning to a slot that markdown authors use for tooltips.
+- **A directive named by the bare field, `<!-- extends: LIT-007 -->`.**
+  This was the third draft. The field names then shared a namespace with
+  the fixed vocabulary, so a field could not be called `pin` or anything
+  ending in `-ok`. A misspelt field was also indistinguishable from an
+  unrelated comment, so it could only be ignored.
 - **A separate acknowledgement for an unexplained relation.** The
   statement's own reason says the same thing in the same place.
 - **Making every declared reference owe prose.** Every existing record

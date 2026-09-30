@@ -122,31 +122,33 @@ wrote 1 back-reference(s) in 1 file(s)
 ## 7. State the relation where you explain it
 
 A relation is often clearest in the sentence that justifies it. State it
-there, with the same comment-directive grammar every acknowledgement uses,
-named by the field that holds it:
+there, with the same comment-directive grammar every acknowledgement uses:
+the `ref::` namespace, then the field that holds the relation.
 
 ```markdown
-The recovery path is RFC-007's, generalised. <!-- extends: RFC-007 -->
+The recovery path is RFC-007's, generalised. <!-- ref::extends: RFC-007 -->
 
-<!-- extended_by-block: RFC-012, RFC-015 — both carry the retry loop on -->
+<!-- ref::extended_by-block: RFC-012, RFC-015 — both carry the retry loop on -->
 Two later designs picked this up...
 ```
 
-The name is a reference field of *this* document, either one your scheme
-declares or the built-in `superseded_by`. There is no direction to choose,
-because a relation read the other way has its own name, its converse.
+The name after `ref::` is a reference field of *this* document, either one
+your scheme declares or the built-in `superseded_by`. There is no direction to
+choose, because a relation read the other way has its own name, its converse.
+The namespace keeps these names apart from the fixed directive vocabulary, so
+a field may be called anything but a name ending in `-block` or `-file`, which
+would read as a scope. It also means a misspelt field is reported rather
+than ignored.
+
 Everything a [directive](../directives.md) has comes with it: line, `-block` and
 `-file` scope, a `— reason`, and `until <date>`. An example in a code span
 or fence states nothing, and a statement in frontmatter comments is ignored
 ([ADR-tmp3gms4](../../record/decisions.d/ADR-tmp3gms4.md)).
 
 `[[extends::RFC-7]]` is shorthand for a citation plus its statement.
-`luria link --fix` expands it to `[RFC-7](RFC-007.md)<!-- extends: RFC-007 -->`.
+`luria link --fix` expands it to `[RFC-7](RFC-007.md)<!-- ref::extends: RFC-007 -->`.
 A shorthand naming a field this document doesn't have is left unexpanded and
-fails the lint, because it would otherwise become a comment nothing reads.
-A reference field may not be named like another directive (an `-ok` name, a
-`-block`/`-file` suffix, `unlinted`, `unexempt`, `pin`), and `luria.yaml`
-refuses one that is.
+fails the lint, and a `ref::` statement naming one is `bad-annotations`.
 
 **Pushing up.** A stated relation missing from frontmatter is
 `unrecorded-relations`, and `luria link --fix` writes it into this document's
