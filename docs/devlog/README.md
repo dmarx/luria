@@ -6,7 +6,11 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 
 ## Currently — [September 2026](2026-09.md)
 
+- [30 Sep 05:17 — Relation statements move into a ref:: namespace](2026-09.md#relation-statements-move-into-a-ref-namespace)
+- [30 Sep 05:06 — Relation statements folded into the directive grammar](2026-09.md#relation-statements-folded-into-the-directive-grammar)
 - [30 Sep 03:31 — A second review, a patch bundle, and a proposed principle](2026-09.md#a-second-review-a-patch-bundle-and-a-proposed-principle)
+- [30 Sep 00:38 — Relation annotations: the arrow notation, replaced by the field name](2026-09.md#relation-annotations-the-arrow-notation-replaced-by-the-field-name)
+- [29 Sep 22:11 — Relation annotations, fired on the constitution example](2026-09.md#relation-annotations-fired-on-the-constitution-example)
 - [27 Sep 21:59 — Reviewing an imported docs draft by running it](2026-09.md#reviewing-an-imported-docs-draft-by-running-it)
 - [20 Sep 07:01 — A document's prose reaches luria through --body](2026-09.md#a-documents-prose-reaches-luria-through---body)
 - [19 Sep 07:57 — A backend for the record turned out to be a view](2026-09.md#a-backend-for-the-record-turned-out-to-be-a-view)
@@ -86,9 +90,9 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 
 ## All books
 
-123 entries across 2 books, newest first.
+127 entries across 2 books, newest first.
 
 | Book | Entries | First | Last |
 |---|--:|---|---|
-| [2026-09](2026-09.md) | 77 | 2026-09-03 | 2026-09-30 |
+| [2026-09](2026-09.md) | 81 | 2026-09-03 | 2026-09-30 |
 | [2026-08](2026-08.md) | 46 | 2026-08-03 | 2026-08-28 |

@@ -151,7 +151,7 @@ than ignored.
 Everything a [directive](../directives.md) has comes with it: line, `-block` and
 `-file` scope, a `— reason`, and `until <date>`. An example in a code span
 or fence states nothing, and a statement in frontmatter comments is ignored
-([ADR-tmp3gms4](../../record/decisions.d/ADR-tmp3gms4.md)).
+([ADR-122](../../record/decisions.d/ADR-122.md)).
 
 `[[extends::RFC-7]]` is shorthand for a citation plus its statement.
 `luria link --fix` expands it to `[RFC-7](RFC-007.md)<!-- ref::extends: RFC-007 -->`.

@@ -5,11 +5,11 @@
 
 `Proposed` and `Deferred` both describe an open question. Neither says *since when*, and that is the signal: a decision proposed last week is pending; the same one a year later was either overdue or settled in code and never written back.
 
-**5 document(s) awaiting a decision.**
+**6 document(s) awaiting a decision.**
 
 ## ADRs
 
-4 of the 5.
+5 of the 6.
 
 | Open since | Status | Code | Cited | Unack. | Title |
 |---|---|---|--:|--:|---|
@@ -17,10 +17,11 @@
 | 2026-09-22 | Proposed | [ADR-119](../../record/decisions.d/ADR-119.md) | 0 | 0 | luria ack: the code comes from the scan, the reason from a person |
 | 2026-09-22 | Proposed | [ADR-120](../../record/decisions.d/ADR-120.md) | 0 | 0 | Unbound relations reach the lint, so an invariant can be declared over a residue |
 | 2026-09-24 | Proposed | [ADR-121](../../record/decisions.d/ADR-121.md) | 4 | 4 | The site delegates frontmatter to Quartz: luria composes it, the note-properties plugin renders it |
+| 2026-09-29 | Proposed | [ADR-122](../../record/decisions.d/ADR-122.md) | 1 | 1 | A relation is stated in prose as a `ref::` directive named by its field |
 
 ## DPs
 
-1 of the 5.
+1 of the 6.
 
 | Open since | Status | Code | Cited | Unack. | Title |
 |---|---|---|--:|--:|---|

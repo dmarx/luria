@@ -4,7 +4,7 @@
 
 **Load-bearing** — fixes something an adopting record must write: a frontmatter field, a path on disk, the spelling of a code, or directive syntax in prose. Reversing it does not just change luria's behaviour, it invalidates records that have already been filed.
 
-20 of 121 decisions. Back to the [full index](../README.md).
+21 of 122 decisions. Back to the [full index](../README.md).
 
 | # | Title | Summary | Status |
 |---|---|---|---|
@@ -28,3 +28,4 @@
 | [ADR-098](../../../record/decisions.d/ADR-098.md) | One config file, one format, vocabularies declared once | Config was TOML, vocabularies were YAML files beside each scheme's records, and the lockfile was JSON — three formats for one system, with no reason any of them could state. Worse, a vocabulary two schemes share had to be two files: in the corpus that motivated this, ten of thirteen entries had silently drifted. Moves to one `luria.yaml` with a central `vocabularies:` table, omegaconf underneath the existing validation rather than in place of it. Rejects keeping vocabularies local, and rejects letting structured configs replace the semantic checks. | Active |
 | [ADR-104](../../../record/decisions.d/ADR-104.md) | A directive's argument list is syntax; its reason is prose |  | Active |
 | [ADR-105](../../../record/decisions.d/ADR-105.md) | A mention is not a citation, and says nothing about status |  | Active |
+| [ADR-122](../../../record/decisions.d/ADR-122.md) | A relation is stated in prose as a `ref::` directive named by its field | A relation is stated in a document's body with the comment-directive grammar every acknowledgement uses, in a `ref::` namespace and named by the reference field that holds it (`<!-- ref::extends: LIT-007 -->`), so it inherits line, block and file scope, a reason and an expiry, and a misspelt field is reported. `[[extends::X]]` is shorthand the link fixer expands into a link plus that statement. A statement missing from frontmatter is `unrecorded-relations`, and `luria link --fix` writes it. A reference declared `explain: true` wants each code it holds explained in the body, by a citation in a statement's scope or by the statement's reason: a bare citation is `unannotated-relations` and the fixer writes the statement, and a code with neither is `unexplained-relations`, a report. A statement the record cannot hold is `bad-annotations`. Rejected: an arrow after the link, the relation as a link title, a directive named by the bare field, a separate acknowledgement for unexplained relations, and requiring prose for every relation. | Proposed |
