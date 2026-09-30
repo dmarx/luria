@@ -6,6 +6,7 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 
 ## Currently — [September 2026](2026-09.md)
 
+- [30 Sep 03:31 — A second review, a patch bundle, and a proposed principle](2026-09.md#a-second-review-a-patch-bundle-and-a-proposed-principle)
 - [27 Sep 21:59 — Reviewing an imported docs draft by running it](2026-09.md#reviewing-an-imported-docs-draft-by-running-it)
 - [20 Sep 07:01 — A document's prose reaches luria through --body](2026-09.md#a-documents-prose-reaches-luria-through---body)
 - [19 Sep 07:57 — A backend for the record turned out to be a view](2026-09.md#a-backend-for-the-record-turned-out-to-be-a-view)
@@ -85,9 +86,9 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 
 ## All books
 
-122 entries across 2 books, newest first.
+123 entries across 2 books, newest first.
 
 | Book | Entries | First | Last |
 |---|--:|---|---|
-| [2026-09](2026-09.md) | 76 | 2026-09-03 | 2026-09-27 |
+| [2026-09](2026-09.md) | 77 | 2026-09-03 | 2026-09-30 |
 | [2026-08](2026-08.md) | 46 | 2026-08-03 | 2026-08-28 |

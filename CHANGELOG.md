@@ -739,7 +739,7 @@ Assembled from `changelog.d/` fragments on a cadence — never hand-edited
 
 - **Four deliberately-acknowledged citations had silently stopped being
   acknowledged.** `luria/doc_refs.py` carried one `unresolved-ok-file:`
-  naming four illustrative codes — ADR-919, ADR-157, [DP-017](record/principles.d/DP-017.md), DP-018. When a
+  naming four illustrative codes — ADR-919, ADR-157, [DP-017](record/principles.d/DP-017.md), [DP-018](record/principles.d/DP-018.md). When a
   principle was later written at [DP-017](record/principles.d/DP-017.md) that code began resolving, which gave
   the annotation a `problem`, and `ref_status.scan` only excuses a citation
   with an annotation that has none:

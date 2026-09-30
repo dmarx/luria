@@ -5,7 +5,11 @@
 
 `Proposed` and `Deferred` both describe an open question. Neither says *since when*, and that is the signal: a decision proposed last week is pending; the same one a year later was either overdue or settled in code and never written back.
 
-**4 document(s) awaiting a decision.**
+**5 document(s) awaiting a decision.**
+
+## ADRs
+
+4 of the 5.
 
 | Open since | Status | Code | Cited | Unack. | Title |
 |---|---|---|--:|--:|---|
@@ -13,6 +17,14 @@
 | 2026-09-22 | Proposed | [ADR-119](../../record/decisions.d/ADR-119.md) | 0 | 0 | luria ack: the code comes from the scan, the reason from a person |
 | 2026-09-22 | Proposed | [ADR-120](../../record/decisions.d/ADR-120.md) | 0 | 0 | Unbound relations reach the lint, so an invariant can be declared over a residue |
 | 2026-09-24 | Proposed | [ADR-121](../../record/decisions.d/ADR-121.md) | 4 | 4 | The site delegates frontmatter to Quartz: luria composes it, the note-properties plugin renders it |
+
+## DPs
+
+1 of the 5.
+
+| Open since | Status | Code | Cited | Unack. | Title |
+|---|---|---|--:|--:|---|
+| 2026-09-29 | Proposed | [DP-018](../../record/principles.d/DP-018.md) | 7 | 2 | Make mutable premises explicit dependencies |
 
 The citation count is the second axis, and it flips the priority: an old proposal nothing references is a stalled idea worth closing, while an old proposal many files cite is a decision the codebase has already made and hasn't written down.
 

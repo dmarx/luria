@@ -9,7 +9,7 @@ Every reference in the record is a claim — "this is why things are the way the
 
 Only an `Active` document is in force. `Proposed` and `Deferred` mean *not in force yet* — an open question, being cited as if it were settled — while `Superseded` and `Rejected` mean *no longer in force*, which is often a perfectly good thing to cite: history, or a rejection worth pointing at. Either way the citation should be deliberate, and this section lists the ones nobody has vouched for yet.
 
-**1 document cited without acknowledgement.** Not listed: 55 citations someone has already vouched for with an `inactive-ok:` comment at the citing site.
+**2 documents cited without acknowledgement.** Not listed: 60 citations someone has already vouched for with an `inactive-ok:` comment at the citing site.
 
 To vouch for one, put the reason where the citation is — `inactive-ok:` covers its own line and the line below it, `inactive-ok-block:` its paragraph, `inactive-ok-file:` the whole page:
 
@@ -28,11 +28,20 @@ The site delegates frontmatter to Quartz: luria composes it, the note-properties
 - [`luria/site_page.py:2`](../../luria/site_page.py)
 - [`tests/test_site_page.py:3`](../../tests/test_site_page.py)
 
+### [DP-018](../../record/principles.d/DP-018.md) — Proposed
+
+Make mutable premises explicit dependencies
+
+2 citations in 2 files await a look; 5 other citations of it are acknowledged.
+
+- [`luria/remotes.py:122`](../../luria/remotes.py)
+- [`record/decisions.d/ADR-040.md:46`](../../record/decisions.d/ADR-040.md)
+
 ## Codes that resolve to no document
 
 A reference the reader cannot follow: the code names no document in this record. A typo, a number carried in from another project, and an illustrative code in an example all look identical from here — telling them apart takes a human, so this is a report, not an error.
 
-**5 codes unaccounted for.** Not listed: 88 mentions marked deliberate with an `unresolved-ok:` comment (same syntax and scopes as `inactive-ok:` above).
+**5 codes unaccounted for.** Not listed: 81 mentions marked deliberate with an `unresolved-ok:` comment (same syntax and scopes as `inactive-ok:` above).
 
 
 ### ADR-000 — resolves to nothing (2 unmarked sites · 4 other mentions marked deliberate)
@@ -74,4 +83,5 @@ None. Every scanned file is checked. ✅
 
 ## Directives that no longer apply
 
-None. Every annotation still governs something. ✅
+- luria/remotes.py:120: annotation names DP-018, which does resolve here
+- record/decisions.d/ADR-040.md:28: annotation names DP-018, which does resolve here
