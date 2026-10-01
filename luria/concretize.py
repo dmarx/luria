@@ -40,9 +40,10 @@ always wrong and mechanically fixable — run this command — so it fails
 outright, which is ADR-035's bar for a check that may fail a build.
 """
 
-# unresolved-ok-file: ADR-tmp47fje, ADR-123 — demonstration codes in the
+# mention-ok-file: ADR-tmp47fje, ADR-123 — demonstration codes in the
 # docstring above: ADR-049's worked example of the temporary shape, and the
-# number it stands in for once concretized. Neither names a document.
+# number it stands in for once concretized. Named for their spelling, not
+# cited; ADR-123 has since been allocated, which is why this is mention-ok.
 
 from __future__ import annotations
 
