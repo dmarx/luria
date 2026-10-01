@@ -70,9 +70,9 @@ operations:
 $ luria migrate 0001 --dry-run
 migration: Areas become a scheme
   promote vocabulary area -> AREA (record/areas.d, docs/areas)
-  runtime -> AREA-001
-  storage -> AREA-002
-  queues -> AREA-003
+  runtime -> AREA-001 (cited as AREA-runtime)
+  storage -> AREA-002 (cited as AREA-storage)
+  queues -> AREA-003 (cited as AREA-queues)
   RFC.area: vocabulary -> grouped reference to AREA
   would sweep 0 file(s)
 ```
@@ -96,7 +96,11 @@ What changed:
 
 - `record/areas.d/` holds one document per value. A value's `label` became
   the title and its `blurb` the summary and body. Its old spelling is kept as
-  `slug:`, declared `unique`. The directory also gets the `_template.md` and
+  `slug:`, declared `unique`, and the scheme derives an alias from it
+  (`alias: AREA-{slug}`, [ADR-088](../../record/decisions.d/ADR-088.md)): `AREA-runtime` names AREA-001 anywhere a
+  code would. A value an alias cannot spell (a space, an underscore) is
+  slugged, so `long_term` becomes `AREA-long-term`. The directory also gets
+  the `_template.md` and
   `README.stub` a declared scheme starts with, so the next term is
   `luria new area`.
 - The field became a reference:
@@ -114,9 +118,11 @@ What changed:
   required unless it says otherwise. `group: true`, or the field being the
   scheme's `axis` as here, keeps the views: each term gets a page listing
   the RFCs that cite it, at `docs/rfcs/area/AREA-001.md`.
-- The documents hold codes (`area: [AREA-001, AREA-003]`). Only that
-  frontmatter field is rewritten; prose is never swept for a value's
-  spelling.
+- The documents hold each term's alias: `area: [AREA-runtime, AREA-queues]`.
+  That is a typed reference the lint checks, and it still reads as the value
+  did. Only that frontmatter field is rewritten; prose is never swept for a
+  value's spelling. New documents can cite either spelling, and
+  `luria link --fix` leaves an alias as written.
 - The `area` vocabulary is gone. If it described itself (the nested
   `label`/`blurb`/`terms` form), that description became the scheme's
   `title` and `blurb`.
@@ -141,13 +147,14 @@ chains:
 ```
 
 ```console
-$ luria relate AREA-003 broader AREA-001
-record/areas.d/AREA-003.md: broader += AREA-001
+$ luria relate AREA-queues broader AREA-runtime
+record/areas.d/AREA-003.md: broader += AREA-runtime
 $ luria link --fix
 wrote 1 back-reference(s) in 1 file(s)
 ```
 
-`luria link --fix` writes the converse (`narrower: [AREA-003]` on AREA-001).
+`luria link --fix` writes the converse, in the alias spelling:
+`narrower: [AREA-queues]` on AREA-001.
 List the chain page in `docs/README.md`, as every page in `docs/` must be,
 then `luria index` renders the tree:
 
@@ -171,7 +178,10 @@ the record never silently checks less ([DP-1](../../record/principles.d/DP-001.m
 - a field with a `default`, `groups`, a `derive`, an `alert`, or any other
   key a reference does not have;
 - a value declaring `primary_for`;
-- a target prefix that already names a scheme.
+- a target prefix that already names a scheme;
+- two values whose aliases would be the same spelling (`net_work` and
+  `net work`), or a value that would read as a number (`7` → `AREA-7` is a
+  code, and a code outranks an alias).
 
 Each refusal names the field and the key. Remove it, or carry it into the
 new scheme by hand, then run the migration again.

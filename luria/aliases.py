@@ -130,6 +130,28 @@ def alias_map(cfg: Config | None = None) -> dict[str, Alias]:
     return out
 
 
+def derived_code(spelling: str) -> str | None:
+    """The code a scheme's derived alias names — `AREA-runtime` → `AREA-001`
+    — or None for anything else.
+
+    Derived spellings only. A `formerly:` spelling is a past the fixer
+    rewrites away, so a value written that way stays the `legacy-spellings`
+    finding it already is rather than quietly becoming valid."""
+    found = alias_map().get(spelling.strip())
+    return found.code if found and found.kind == ALSO_KNOWN_AS else None
+
+
+def readable(code: str) -> str:
+    """The spelling a person would write for `code`: its scheme's derived
+    alias when there is one (`AREA-001` → `AREA-runtime`), else the code.
+    What a tool writes into a document a person reads should be the
+    spelling they would have chosen."""
+    for spelling, alias in alias_map().items():
+        if alias.code == code and alias.kind == ALSO_KNOWN_AS:
+            return spelling
+    return code
+
+
 def reset() -> None:
     """Drop the cache — for the migration executor, which edits the very
     frontmatter this map is derived from."""

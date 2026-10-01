@@ -21,6 +21,8 @@ Now `decision` is not an arbitrary string field. It is a declared relation to `D
 
 A reference field is required unless it says `required: false`, so spell that out for an optional edge — `required: true` above only restates the default.
 
+A value may be the target's code or, where the target scheme declares an `alias` template, its derived alias (`AREA-runtime` for `AREA-001`, [ADR-088](../../record/decisions.d/ADR-088.md)). The two are the same relation everywhere it is read: the lint, the views, chains, invariants and `luria relate`. `luria link --fix` leaves an alias as written, and writes a missing converse in the alias spelling.
+
 If the field is a taxonomy — the documents it points at are categories a
 reader browses by, as a promoted vocabulary's terms are — add `group: true`.
 Each target then gets a page listing the documents that cite it, the way a

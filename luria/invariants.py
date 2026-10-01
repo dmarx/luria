@@ -102,7 +102,12 @@ def held(doc: Adr, field: str) -> set[str]:
     if raw in (None, ""):
         return set()
     values = raw if isinstance(raw, list) else [raw]
-    return {str(v).strip() for v in values if v not in (None, "")}
+    # A derived alias and the code it names are one value (#219), or two
+    # documents in the same area would share nothing when one wrote
+    # `AREA-runtime` and the other `AREA-001`.
+    from .aliases import derived_code
+    return {derived_code(str(v)) or str(v).strip()
+            for v in values if v not in (None, "")}
 
 
 def shared(docs, field: str) -> set[str]:

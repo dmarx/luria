@@ -17,7 +17,10 @@ summary: >-
   `promote_vocabulary` migration turns one into a scheme, one document per
   value, and every field that drew from it into a reference. A reference can
   now be grouped (`group: true`) or be a scheme's `axis`, so the views the
-  vocabulary had survive as a page per target. Rejected: union vocabularies
+  vocabulary had survive as a page per target. A reference field accepts a
+  derived alias, and the promoted scheme derives one from each value's old
+  spelling, so documents read `area: AREA-runtime`, not `AREA-001`. Rejected:
+  union vocabularies
   ([#298](https://github.com/dmarx/luria/issues/298)), and a `broader:` hierarchy inside vocabularies.
 ---
 
@@ -69,14 +72,19 @@ operations:
 - One document per value, numbered in the vocabulary's order, then any value
   in use that an open vocabulary never declared, sorted. The value's `label`
   becomes the title, its `blurb` the summary and body, and its old spelling
-  is kept as `slug:` — declared `unique`, because it was an identity.
+  is kept as `slug:` — declared `unique`, because it was an identity. The
+  scheme derives its alias from it (`alias: AREA-{slug}`, [ADR-088](ADR-088.md)); a value
+  an alias tail cannot spell is slugged (`long_term` → `long-term`), and two
+  values slugging alike, or a value that would read as a number, are
+  refused.
 - Every field drawing from the vocabulary becomes a reference to the new
   scheme with `group: true`. `required` is written out, because the two
   defaults differ: a reference is required unless it says otherwise, a
   vocabulary field was optional unless it said so.
-- Documents now hold codes. Only that frontmatter field is rewritten. Prose
-  is never swept for a value's spelling: a word in a sentence is not a
-  citation of it.
+- Documents now hold each term's alias, `AREA-runtime`: a typed reference
+  that still reads as the value did. Only that frontmatter field is
+  rewritten. Prose is never swept for a value's spelling: a word in a
+  sentence is not a citation of it.
 - The vocabulary is removed. Its own `label` and `blurb`, if it had them,
   become the scheme's `title` and `blurb`. The new directory gets the
   `_template.md` and `README.stub` `luria init` would have written, so the
@@ -98,6 +106,17 @@ none. Off by default, because most relations (`extends`, `superseded_by`)
 are not taxonomies. This is what makes promotion lossless: without it, the
 move a record should make would cost it its views, and the shorthand would
 win by default.
+
+**A reference field accepts a derived alias.** [ADR-088](ADR-088.md) kept a derived
+alias as a first-class spelling in prose, but a reference field still
+demanded the code, so `area: AREA-runtime` was "not a code". That would have
+forced promotion to trade every interpretable value for an opaque number.
+Now one resolution, `aliases.derived_code`, serves every reader of a
+reference value: the lint, the index's grouping, typed edges, relation and
+chain walks, invariants and `luria relate`. A tool writing a reference (the
+converse fixer) writes the alias where the target scheme declares one, and
+the fixer leaves an alias as written. A `formerly:` spelling is not accepted
+in a reference field: it is a past the fixer rewrites, not a name to keep.
 
 A hierarchy, then, is a scheme of terms with a `broader` relation (and its
 converse), cited through a grouped reference and drawn by a chain.
@@ -128,6 +147,10 @@ converse), cited through a grouped reference and drawn by a chain.
 - **Promotion without reference grouping.** Smaller, and it makes the right
   move cost a record its per-value pages. A mechanism that punishes the
   repair teaches people not to make it.
+- **Deriving the alias from the title.** Titles are labels: they carry
+  spaces and capitals, and may differ from the value outright (`A` labelled
+  "The unbroken line"). An alias from the title would change every value
+  documents already hold. The slug *is* the value, so the alias keeps it.
 - **A `luria promote` command.** It rewrites the config and documents
   mechanically, wants a dry run and a blame-ignore entry, and its spec is an
   audit trail worth keeping: that is a migration, and [ADR-040](ADR-040.md) already

@@ -582,8 +582,9 @@ scaffolds one). Three operations:
 - `move_doc` — move one document into another scheme, where it gets a
   temporary code for the next concretize.
 - `promote_vocabulary` — turn a vocabulary into a scheme: one document per
-  value (its old spelling kept as `slug:`), every field that drew from it
-  becomes a grouped reference, and the documents' values become codes.
+  value (its old spelling kept as `slug:`, from which the scheme derives an
+  alias such as `AREA-runtime`), every field that drew from it becomes a
+  grouped reference, and the documents' values become those aliases.
   What a reference cannot carry is refused rather than dropped
   ([how to](how-to/promote-vocabulary.md), [ADR-tmppzon2](../record/decisions.d/ADR-tmppzon2.md)).
 

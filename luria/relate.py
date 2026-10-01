@@ -66,8 +66,15 @@ def relatable_fields(scheme) -> dict[str, Field]:
     return fields
 
 
+def _resolved(spelling: str) -> str:
+    """The code a spelling names: itself, or the code a derived alias stands
+    for (`AREA-runtime` → `AREA-001`, #219)."""
+    from .contract import reference_code
+    return reference_code(spelling) or spelling
+
+
 def _scheme_of(code: str):
-    prefix = local_scheme(code)
+    prefix = local_scheme(_resolved(code))
     return current().schemes.get(prefix) if prefix else None
 
 
@@ -78,10 +85,11 @@ def _check_target(field: Field, target: str, where: str) -> None:
             return  # a citation the remote machinery verifies (ADR-016)
         sys.exit(f"{where}: {field.name} names a {field.reference} document, "
                  f"and {target} is a remote code")
-    if field.reference != ANY_SCHEME and not target.startswith(f"{field.reference}-"):
+    if field.reference != ANY_SCHEME and \
+            not _resolved(target).startswith(f"{field.reference}-"):
         sys.exit(f"{where}: {field.name} names a {field.reference} document, "
                  f"not {target}")
-    if _scheme_of(target) is None or path_of(target) is None:
+    if _scheme_of(target) is None or path_of(_resolved(target)) is None:
         sys.exit(f"{where}: {target} resolves to no document in this record")
 
 
@@ -97,7 +105,7 @@ def relate(source: str, field: str, target: str) -> Related:
     """Write `target` into `field` of the document `source` names."""
     source, field, target = source.strip(), field.strip(), target.strip()
     where = f"luria relate {source} {field} {target}"
-    path = path_of(source)
+    path = path_of(_resolved(source))
     scheme = _scheme_of(source)
     if path is None or scheme is None:
         sys.exit(f"{where}: {source} resolves to no document in this record")
@@ -106,7 +114,7 @@ def relate(source: str, field: str, target: str) -> Related:
         sys.exit(f"{where}: {field!r} is not a relation of {scheme.prefix} "
                  f"(this scheme relates through: {', '.join(sorted(fields))})")
     spec = fields[field]
-    if target == source:
+    if _resolved(target) == _resolved(source):
         sys.exit(f"{where}: a document cannot relate to itself")
     _check_target(spec, target, where)
 
@@ -123,7 +131,9 @@ def relate(source: str, field: str, target: str) -> Related:
     if converse and converse != field:
         notes.append(f"`luria repair` writes the converse ({converse}) on {target}")
 
-    if target in held:
+    # A second spelling of a target already held is the same relation. The
+    # spelling written is the one given: a readable alias stays readable.
+    if _resolved(target) in {_resolved(h) for h in held}:
         return Related(path, field, target, "present", tuple(notes))
     if not spec.many and held:
         sys.exit(f"{where}: {field} holds one document and already names "

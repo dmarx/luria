@@ -147,10 +147,13 @@ def _targets(field) -> dict[str, object]:
 
 
 def _canon(code: str) -> str:
-    """`AREA-1` and `AREA-001` name one target, and its page is the
-    canonical spelling's. A temporary code (ADR-049) passes through."""
+    """`AREA-1`, `AREA-001` and a derived alias such as `AREA-runtime` name
+    one target, and its page is the canonical spelling's. A temporary code
+    (ADR-049) passes through."""
     from .aliases import canon
-    return canon(code) or code.strip()
+    from .contract import reference_code
+    resolved = reference_code(code) or code.strip()
+    return canon(resolved) or resolved
 
 
 def _reference_meta(field) -> dict[str, dict]:

@@ -21,12 +21,16 @@ shorthand. Promotion writes it:
   value in use that the vocabulary never declared (an open field's), sorted.
   The value's `label` becomes the title, its `blurb` the summary, and its old
   spelling is kept as `slug:` — a unique field, because it was an identity.
+  The scheme derives an alias from it (`alias: "AREA-{slug}"`, #219), so the
+  documents go on citing `AREA-runtime` rather than an opaque `AREA-001`.
 - **Every field that drew from the vocabulary becomes a reference** to the
   new scheme, `group: true`, so the views it had — a page per value, the
   scheme's `axis` — survive as a page per target. `required` is written out:
   a reference is required unless it says otherwise, a vocabulary field was
   optional unless it said so.
-- **Documents now hold codes.** Only the frontmatter field is rewritten;
+- **Documents now hold the term's alias**, `AREA-runtime` for `runtime`: a
+  typed reference that still reads as the value did. Only the frontmatter
+  field is rewritten;
   prose is never swept for a value's spelling, because a word in a sentence
   is not a citation of it.
 - **The vocabulary is removed**, and its own `label`/`blurb`, if it had
@@ -64,8 +68,10 @@ class Promotion:
     output: str
     status_vocabulary: str
     active: str
-    # (slug, {label, blurb}) in document order.
-    values: tuple[tuple[str, dict], ...]
+    # (value as written, its alias-safe slug, {label, blurb}), in document
+    # order. The slug is the value unless the value holds a character an
+    # alias cannot (a space, an underscore), in which case it is slugged.
+    values: tuple[tuple[str, str, dict], ...]
     # (scheme prefix, field name) for every field drawing from the vocabulary.
     fields: tuple[tuple[str, str], ...]
     # The vocabulary's own description, for the scheme's title and blurb.
@@ -74,13 +80,30 @@ class Promotion:
     @property
     def mapping(self) -> dict[str, str]:
         """Slug → code, in the order the documents are filed."""
-        return {slug: f"{self.prefix}-{n:03d}"
-                for n, (slug, _) in enumerate(self.values, start=1)}
+        return {value: f"{self.prefix}-{n:03d}"
+                for n, (value, _, _) in enumerate(self.values, start=1)}
+
+    @property
+    def spellings(self) -> dict[str, str]:
+        """Value → the alias documents cite it by, `AREA-runtime`."""
+        return {value: f"{self.prefix}-{slug}"
+                for value, slug, _ in self.values}
 
 
 def _raw() -> dict:
     return yaml.safe_load((current().root / "luria.yaml")
                           .read_text(encoding="utf-8")) or {}
+
+
+def alias_slug(value: str) -> str:
+    """The value as an alias tail can spell it: unchanged when it already
+    can (letters, digits, dots, hyphens), otherwise lower-cased with every
+    other run of characters collapsed to one hyphen."""
+    import re
+    from .aliases import ALIAS_RE
+    if ALIAS_RE.match(f"X-{value}"):
+        return value
+    return re.sub(r"[^a-z0-9.]+", "-", value.lower()).strip("-.")
 
 
 def _slug(prefix: str) -> str:
@@ -165,6 +188,25 @@ def plan(op: dict) -> Promotion:
                 f"{where}: {active!r} is not a word of {status_vocabulary!r} "
                 f"— name the in-force word with `active:`")
 
+    from .aliases import ALIAS_RE, canon
+    slugged: dict[str, str] = {}
+    for value, _ in ordered:
+        tail = alias_slug(value)
+        if not tail or not ALIAS_RE.match(f"{prefix}-{tail}"):
+            raise SystemExit(f"{where}: value {value!r} has no spelling an "
+                             f"alias can carry")
+        if canon(f"{prefix}-{tail}") is not None:
+            raise SystemExit(
+                f"{where}: value {value!r} reads as a code ({prefix}-{tail}), "
+                f"and a code outranks an alias — it would cite whatever "
+                f"document holds that number; rename the value first")
+        if tail in slugged:
+            raise SystemExit(
+                f"{where}: values {slugged[tail]!r} and {value!r} both spell "
+                f"the alias {prefix}-{tail} — rename one first")
+        slugged[tail] = value
+    triples = [(value, alias_slug(value), meta) for value, meta in ordered]
+
     slug = _slug(prefix)
     about = cfg.vocabulary_meta.get(name) or {}
     return Promotion(
@@ -172,7 +214,7 @@ def plan(op: dict) -> Promotion:
         dir=str(op.get("dir") or f"record/{slug}.d"),
         output=str(op.get("output") or f"docs/{slug}"),
         status_vocabulary=status_vocabulary, active=active,
-        values=tuple(ordered), fields=tuple(fields),
+        values=tuple(triples), fields=tuple(fields),
         about=tuple((k, str(v)) for k, v in about.items()
                     if k in ("label", "blurb") and v))
 
@@ -180,7 +222,8 @@ def plan(op: dict) -> Promotion:
 def describe(p: Promotion) -> list[str]:
     lines = [f"  promote vocabulary {p.vocabulary} -> {p.prefix} "
              f"({p.dir}, {p.output})"]
-    lines += [f"  {slug} -> {code}" for slug, code in p.mapping.items()]
+    lines += [f"  {value} -> {code} (cited as {p.spellings[value]})"
+              for value, code in p.mapping.items()]
     lines += [f"  {scheme}.{field}: vocabulary -> grouped reference to "
               f"{p.prefix}" for scheme, field in p.fields]
     return lines
@@ -189,7 +232,8 @@ def describe(p: Promotion) -> list[str]:
 def _config_edit(p: Promotion) -> None:
     path = current().root / "luria.yaml"
     data = yaml_edit.load(path.read_text(encoding="utf-8"))
-    entry: dict = {"dir": p.dir, "output": p.output, "render": "index"}
+    entry: dict = {"dir": p.dir, "output": p.output, "render": "index",
+                   "alias": f"{p.prefix}-{{slug}}"}
     about = dict(p.about)
     if about.get("label"):
         entry["title"] = about["label"]
@@ -240,13 +284,13 @@ def _file_documents(p: Promotion) -> None:
     template's placeholder prose is for a person starting from nothing, and
     these documents start from something."""
     from .new import _drop_field, new_scheme_doc
-    for slug, meta in p.values:
+    for value, slug, meta in p.values:
         reset()  # the next number is read off the directory
         blurb = str(meta.get("blurb") or "").strip()
         values = {"title": str(meta.get("label") or slug), "slug": slug,
                   "status": p.active,
                   "body": blurb or (f"Promoted from the `{p.vocabulary}` "
-                                    f"vocabulary, where it was `{slug}`.")}
+                                    f"vocabulary, where it was `{value}`.")}
         if blurb:
             values["summary"] = blurb
         scheme = current().schemes[p.prefix]
@@ -259,7 +303,7 @@ def _file_documents(p: Promotion) -> None:
 
 def _rewrite(path: Path, field: str, many: bool,
              mapping: dict[str, str]) -> bool:
-    """Swap one frontmatter field's values for their codes. Text surgery on
+    """Swap one frontmatter field's values for their aliases. Text surgery on
     the frontmatter alone, so the body and every other field are untouched."""
     from .new import _sub_line
     text = path.read_text(encoding="utf-8")
@@ -285,7 +329,7 @@ def apply(p: Promotion) -> int:
     _scaffold(p)
     _file_documents(p)
     reset()
-    cfg, mapping, rewritten = current(), p.mapping, 0
+    cfg, mapping, rewritten = current(), p.spellings, 0
     for scheme_prefix, field in p.fields:
         scheme = cfg.schemes[scheme_prefix]
         ref = next(r for r in scheme.references if r.field == field)

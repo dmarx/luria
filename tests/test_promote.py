@@ -106,6 +106,10 @@ def test_the_vocabulary_becomes_a_scheme(tmp_path, monkeypatch):
     # The value's old spelling is kept on the document it became, and can
     # name only one: it was an identity.
     assert area["fields"]["slug"] == {"unique": True}
+    # And it is how the documents go on citing a term: `AREA-runtime` is
+    # the readable spelling of `AREA-001` (#219), so promotion does not
+    # trade an interpretable value for a number.
+    assert area["alias"] == "AREA-{slug}"
 
 
 def test_the_config_keeps_its_comments(tmp_path, monkeypatch):
@@ -146,7 +150,8 @@ def test_an_open_vocabularys_undeclared_values_become_documents_too(
     config.reset()
     migrate.run("0001")
     assert _front(root / "record/areas.d/AREA-004.md")["slug"] == "billing"
-    assert _front(root / "record/rfcs.d/RFC-004.md")["area"] == ["AREA-004"]
+    assert _front(root / "record/rfcs.d/RFC-004.md")["area"] == \
+        ["AREA-billing"]
 
 
 def test_fields_become_grouped_references(tmp_path, monkeypatch):
@@ -164,14 +169,18 @@ def test_fields_become_grouped_references(tmp_path, monkeypatch):
     assert rfc["axis"] == "area"
 
 
-def test_documents_now_hold_codes(tmp_path, monkeypatch):
+def test_documents_keep_a_readable_spelling(tmp_path, monkeypatch):
+    """The value becomes the term's alias, so `runtime` reads `AREA-runtime`
+    rather than `AREA-001`: typed, and still interpretable."""
     root = project(tmp_path, monkeypatch)
     migrate.run("0001")
     rfcs = root / "record/rfcs.d"
-    assert _front(rfcs / "RFC-001.md")["area"] == ["AREA-001", "AREA-002"]
-    assert _front(rfcs / "RFC-002.md")["area"] == ["AREA-001"]
+    assert _front(rfcs / "RFC-001.md")["area"] == ["AREA-runtime",
+                                                   "AREA-storage"]
+    assert _front(rfcs / "RFC-002.md")["area"] == ["AREA-runtime"]
     assert "area" not in _front(rfcs / "RFC-003.md")
-    assert _front(root / "record/notes.d/NOTE-001.md")["area"] == "AREA-002"
+    assert _front(root / "record/notes.d/NOTE-001.md")["area"] == \
+        "AREA-storage"
     # The body is prose, and prose is never swept for a value's spelling.
     assert "area: this line is prose" in (rfcs / "RFC-001.md").read_text()
 
@@ -195,7 +204,7 @@ def test_a_dry_run_writes_nothing(tmp_path, monkeypatch, capsys):
     migrate.run("0001", dry_run=True)
     said = capsys.readouterr().out
     assert "area -> AREA" in said
-    assert "runtime -> AREA-001" in said
+    assert "runtime -> AREA-001 (cited as AREA-runtime)" in said
     assert "RFC.area" in said and "NOTE.area" in said
     assert (root / "luria.yaml").read_text() == before
     assert not (root / "record/areas.d").exists()
@@ -268,3 +277,46 @@ def test_the_new_scheme_starts_like_a_declared_one(tmp_path, monkeypatch):
     assert one.rstrip().endswith("the execution engine")
     assert "Promoted from the `area` vocabulary, where it was `storage`." \
         in (d / "AREA-002.md").read_text()
+
+
+def test_a_value_an_alias_cannot_spell_is_slugged(tmp_path, monkeypatch):
+    """An alias tail is letters, digits, dots and hyphens. A value with a
+    space or an underscore keeps its readable form, slugged — and the slug
+    is what `slug:` records, since it is what the alias renders from."""
+    root = project(tmp_path, monkeypatch)
+    text = (root / "luria.yaml").read_text().replace(
+        "    network: {}\n", "    network: {}\n    long_term: {}\n")
+    (root / "luria.yaml").write_text(text)
+    _doc(root / "record/rfcs.d/RFC-004.md", "RFC-004", "Plans",
+         "area:\n- long_term\n")
+    config.reset()
+    migrate.run("0001")
+    assert _front(root / "record/areas.d/AREA-004.md")["slug"] == "long-term"
+    assert _front(root / "record/rfcs.d/RFC-004.md")["area"] == \
+        ["AREA-long-term"]
+
+
+def test_two_values_one_slug_is_refused(tmp_path, monkeypatch):
+    """Two terms answering to one spelling would make the alias ambiguous,
+    and an ambiguous alias resolves for one of them silently."""
+    root = project(tmp_path, monkeypatch)
+    text = (root / "luria.yaml").read_text().replace(
+        "    network: {}\n", "    network: {}\n    net_work: {}\n"
+        "    net work: {}\n")
+    (root / "luria.yaml").write_text(text)
+    config.reset()
+    with pytest.raises(SystemExit, match="net-work"):
+        migrate.run("0001")
+
+
+def test_a_value_that_would_read_as_a_number_is_refused(
+        tmp_path, monkeypatch):
+    """`AREA-7` is a code, and a code outranks an alias — so a value `7`
+    would silently cite whatever document is numbered 7."""
+    root = project(tmp_path, monkeypatch)
+    text = (root / "luria.yaml").read_text().replace(
+        "    network: {}\n", "    network: {}\n    '7': {}\n")
+    (root / "luria.yaml").write_text(text)
+    config.reset()
+    with pytest.raises(SystemExit, match="reads as a code"):
+        migrate.run("0001")

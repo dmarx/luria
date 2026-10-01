@@ -43,8 +43,9 @@ from pathlib import Path
 
 from .adr_index import Adr, load_scheme, parse_frontmatter, read_document
 from .config import current
-from .contract import (ANY_SCHEME, for_scheme, resolvable, values_of,
+from .contract import (ANY_SCHEME, codes_of, for_scheme, resolvable,
                        violations)
+from .aliases import readable
 from .field_edit import add_to_field, drop_from_field
 
 
@@ -84,7 +85,7 @@ def _codes(doc: Adr, name: str, contract) -> list[str]:
     spec = next((f for f in contract.fields if f.name == name), None)
     if spec is None:
         return []
-    return [str(v).strip() for v in (values_of(spec, doc.meta.get(name)) or [])]
+    return codes_of(spec, doc.meta.get(name))
 
 
 def _documents(prefix: str) -> dict[str, Adr]:
@@ -461,9 +462,15 @@ def complete(fix: bool = False) -> list[Repair]:
         for path, entries in by_path.items():
             text = path.read_text(encoding="utf-8")
             for entry in entries:
-                text = (add_to_field(text, entry.field, entry.code)
-                        if entry.op == "add"
-                        else drop_from_field(text, entry.field, entry.code))
+                # Written in the spelling a person would choose, and removed
+                # in whichever spelling it was written: a derived alias and
+                # its code are one value (#219).
+                if entry.op == "add":
+                    text = add_to_field(text, entry.field,
+                                        readable(entry.code))
+                else:
+                    for spelling in {entry.code, readable(entry.code)}:
+                        text = drop_from_field(text, entry.field, spelling)
             path.write_text(text, encoding="utf-8")
     return todo
 
