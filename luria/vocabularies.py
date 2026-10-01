@@ -108,12 +108,19 @@ def _listing(scheme, docs) -> list[tuple[str, object, object, dict[str, list]]]:
     from .contract import effective_values
     out = []
     for name, vocab, field in _fields(scheme):
-        loose_ok = field.vocabulary is None or not field.closed
-        under: dict[str, list] = {v: [] for v in field.values}
+        # A reference's values are its target scheme's documents, and the set
+        # is closed by construction: a code that resolves to nothing is the
+        # lint's to report, and a page would publish the mistake.
+        targets = _targets(field) if field.reference else None
+        loose_ok = targets is None and (field.vocabulary is None
+                                        or not field.closed)
+        values = list(targets) if targets is not None else field.values
+        under: dict[str, list] = {v: [] for v in values}
         loose: dict[str, list] = {}
         for doc in docs:
             for value in effective_values(field, doc.meta.get(name)) or []:
-                value = str(value)
+                value = _canon(str(value)) if targets is not None \
+                    else str(value)
                 if value in under:
                     under[value].append(doc)
                 elif loose_ok:
@@ -123,11 +130,46 @@ def _listing(scheme, docs) -> list[tuple[str, object, object, dict[str, list]]]:
     return out
 
 
+def _targets(field) -> dict[str, object]:
+    """A grouped reference's values: `{code: document}` for every document
+    of the scheme it names, in that scheme's index order.
+
+    The documents stand where a vocabulary's declared values stood — a
+    vocabulary is a shorthand for a tiny scheme, and this is the long form.
+    A target nobody references still gets its row and its page, as a
+    declared value nobody uses does."""
+    from .adr_index import load_scheme
+    from .config import current
+    target = current().schemes.get(field.reference)
+    if target is None:
+        return {}
+    return {d.code: d for d in load_scheme(target)}
+
+
+def _canon(code: str) -> str:
+    """`AREA-1` and `AREA-001` name one target, and its page is the
+    canonical spelling's. A temporary code (ADR-049) passes through."""
+    from .aliases import canon
+    return canon(code) or code.strip()
+
+
+def _reference_meta(field) -> dict[str, dict]:
+    """A grouped reference's `{code: {label, blurb, doc}}`: each target's
+    title and summary, read off the target document, in the places a
+    vocabulary value's label and blurb go."""
+    return {code: {"label": f"{doc.title}" or code,
+                   "blurb": str(doc.meta.get("summary") or "").strip(),
+                   "doc": doc}
+            for code, doc in _targets(field).items()}
+
+
 def _noun(scheme) -> str:
     return "decisions" if scheme.prefix == "ADR" else f"{scheme.prefix} documents"
 
 
-def _meta_of(vocab) -> dict[str, dict]:
+def _meta_of(vocab, field=None) -> dict[str, dict]:
+    if field is not None and field.reference:
+        return _reference_meta(field)
     return declared(vocab.values_by_name) if vocab is not None else {}
 
 
@@ -146,7 +188,7 @@ def index_blocks(scheme, docs) -> str:
     prefix = prefix_for(scheme, scheme.view)
     blocks = []
     for name, vocab, field, under in _listing(scheme, docs):
-        meta = _meta_of(vocab)
+        meta = _meta_of(vocab, field)
         if name == (getattr(scheme, "axis", "") or ""):
             for value, listed in under.items():
                 info = meta.get(value, {})
@@ -188,13 +230,19 @@ def pages(scheme, docs) -> dict[Path, str]:
     out: dict[Path, str] = {}
     noun = _noun(scheme)
     for name, vocab, field, under in _listing(scheme, docs):
-        meta = _meta_of(vocab)
+        meta = _meta_of(vocab, field)
         where = scheme.vocab_dir(name)
         prefix = prefix_for(scheme, where)
         for value, listed in under.items():
             info = meta.get(value, {})
             label = _label(info, value)
             raw = str(info.get("blurb") or "")
+            # A reference's target is a document a reader can open, so its
+            # label links there; a vocabulary value has nowhere to go.
+            if info.get("doc") is not None:
+                import os
+                label = (f"[{value}: {label}]"
+                         f"({os.path.relpath(info['doc'].path, where)})")
             blurb = f"**{label}**" + (f" — {raw}" if raw else "") + ".\n\n"
             default = (f" — the default when `{name}:` is absent"
                        if field.default and value in field.default else "")

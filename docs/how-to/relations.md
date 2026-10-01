@@ -21,6 +21,13 @@ Now `decision` is not an arbitrary string field. It is a declared relation to `D
 
 A reference field is required unless it says `required: false`, so spell that out for an optional edge — `required: true` above only restates the default.
 
+If the field is a taxonomy — the documents it points at are categories a
+reader browses by, as a promoted vocabulary's terms are — add `group: true`.
+Each target then gets a page listing the documents that cite it, the way a
+vocabulary value does; naming the field as the scheme's `axis` does the same
+and heads the index with it. Most relations (`extends`, `superseded_by`) are
+not taxonomies and stay ungrouped.
+
 ## 2. Decide cardinality
 
 Use:

@@ -161,3 +161,18 @@ This makes vocabulary design part of longitudinal interpretation.
 An invariant failure can even reveal that the vocabulary lacks a shared concept the line needs.
 
 That is not merely validation. It is ontology feedback.
+
+## When a vocabulary is not enough
+
+A vocabulary is a shorthand for a tiny constrained scheme. Its values are entries with a name, a label and a blurb, and nothing else: no standing, no history, no relations of their own, no parent.
+
+So a record that needs a value to carry more is not asking for a richer vocabulary. It is showing a type error: the thing being stored is not the kind of thing the field was typed as. Common forms of the symptom:
+
+- the values form a hierarchy (a `queues` area belongs under `runtime`);
+- a value can be retired, and replaced by another;
+- a value needs relations, evidence, or a history worth keeping;
+- the vocabulary's blurbs have grown into paragraphs nobody can cite.
+
+The repair is the long form. A vocabulary can be **promoted** to a scheme: one document per value, and every field that drew from the vocabulary becomes a reference to it ([ADR-tmppzon2](../../record/decisions.d/ADR-tmppzon2.md)). Nothing about how the record browses is lost, because a reference can be grouped exactly as a vocabulary field is — each target gets a page listing the documents that cite it. What is gained is everything a document has and a value does not: a status, a version, a citable code, relations, and a place in a chain. A hierarchy is then just a `broader` relation between terms, drawn as a chain.
+
+Start with a vocabulary; it is the right size for most fields, and meeting a record where it is beats designing for a future it may not have ([DP-14](../../record/principles.d/DP-014.md)). Promote when the shorthand starts losing information. [How to promote a vocabulary](../how-to/promote-vocabulary.md) walks through it.

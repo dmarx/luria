@@ -512,6 +512,15 @@ class Reference:
     # writes, and a record that never asked for it would otherwise meet a
     # finding per edge.
     explain: str = ""
+    # Whether a view groups documents by this field, a page per target, the
+    # way it groups by a vocabulary field. A vocabulary is a shorthand for a
+    # tiny scheme; once a record needs more than a value can carry, the
+    # vocabulary is promoted to a scheme and the field that drew from it
+    # becomes a reference — and the views it had must not be the price.
+    # Off by default: most relations (`extends`, `superseded_by`) are not
+    # taxonomies, and a page per target for each would be noise. Naming the
+    # field as the scheme's `axis` groups it too.
+    group: bool = False
 
 
 @dataclass(frozen=True)
@@ -866,6 +875,8 @@ class Scheme:
         # the `fields:` table is written in whatever order reads best, and
         # that is not an answer about which taxonomy comes first.
         named = [v.field for v in self.vocabularies if v.field != self.axis]
+        named += [r.field for r in self.references
+                  if r.group and r.field != self.axis]
         return tuple(([self.axis] if self.axis else []) + named)
 
     @property
@@ -1657,7 +1668,8 @@ def _references(prefix: str, raw: dict) -> tuple[Reference, ...]:
                                invariant=str(spec.get("invariant", "")).strip(),
                                required_when=_required_when(where, spec,
                                                             required),
-                               explain=_explain(where, spec)))
+                               explain=_explain(where, spec),
+                               group=bool(spec.get("group", False))))
     return tuple(found)
 
 
@@ -2819,12 +2831,15 @@ def _schemes(raw: dict, root: Path, scaffolding: bool = False,
                     f"it belongs to the field it describes, at "
                     f"`schemes.{prefix}.{goes}`")
         axis = str(spec.get("axis", "") or "")
-        declared_fields = set(spec.get("fields") or {})
+        # A reference heads an index as well as a vocabulary field does: the
+        # targets are the values, titled by their own documents.
+        declared_fields = (set(spec.get("fields") or {})
+                           | set(spec.get("references") or {}))
         if axis and axis not in declared_fields and not scaffolding:
             raise ValueError(
                 f"luria.yaml: schemes.{prefix}.axis names {axis!r}, which "
-                f"{prefix} does not declare under `fields:` — an axis is one "
-                f"of the scheme's own fields "
+                f"{prefix} does not declare under `fields:` or "
+                f"`references:` — an axis is one of the scheme's own fields "
                 f"(declared: {', '.join(sorted(declared_fields)) or 'none'})")
         # `status` is a field like any other — `fields.status.vocabulary` is
         # where its vocabulary is named, and the only place. A second

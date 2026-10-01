@@ -310,23 +310,26 @@ MIGRATION_TEMPLATE = '''\
 # A migration spec (ADR-040): the executable plan and the audit trail in one
 # artifact. `luria migrate {number} --dry-run` prints what it would do.
 # This file is deliberately never swept — its mapping remembers the old
-# spellings, which is its job.
-title = "{title}"
-issue = ""
+# spellings, which is its job. Uncomment the operations you need.
+title: "{title}"
+issue: ""
 
-# [[operations]]
-# op = "rename_scheme"
-# from = "OLD"
-# to = "NEW"
-# output = "docs/new-view.md"       # optional: the rendered view moves too
-# remotes = []                      # remotes that mirror THIS project
-# configs = []                      # extra config files carrying the scheme
-
-# [[operations]]
-# op = "move_doc"
-# doc = "OLD-4"
-# to = "NEW"                        # auto-numbered in the target scheme
-# strategy = "supersede"            # optional: copy + tombstone, no rewrite
+# operations:
+# - op: rename_scheme
+#   from: OLD
+#   to: NEW
+#   output: docs/new-view.md        # optional: the rendered view moves too
+#   remotes: []                     # remotes that mirror THIS project
+#   configs: []                     # extra config files carrying the scheme
+# - op: move_doc
+#   doc: OLD-4
+#   to: NEW                         # auto-numbered in the target scheme
+#   strategy: supersede             # optional: copy + tombstone, no rewrite
+# - op: promote_vocabulary
+#   vocabulary: area                # a vocabulary that needs to say more
+#   to: AREA                        # the scheme it becomes, one doc per value
+#   dir: record/areas.d             # optional: defaults from the prefix
+#   output: docs/areas              # optional: defaults from the prefix
 '''
 
 
