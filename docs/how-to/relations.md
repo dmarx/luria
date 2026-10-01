@@ -172,10 +172,10 @@ references:
     required: false
     many: true
     converse: extended_by
-    explain: true      # or: cited (the same), stated (stricter)
+    explain: cited     # or: stated (stricter); `true` means cited
 ```
 
-- **`explain: true` (or `cited`)** asks that the body cite each code
+- **`explain: cited`** (or `true`, which means the same) asks that the body cite each code
   somewhere, and takes the citation as serving the relation. A code the body
   never cites is `unexplained-relations`, a report rather than a fix, since
   the explanation is prose only you can write. This is the useful default: it
@@ -199,6 +199,19 @@ surnames, identifiers, a title and venue, and almost no prose left over. An
 entry followed by a sentence about the work, an annotated entry, is prose and
 does count ([ADR-123](../../record/decisions.d/ADR-123.md)).
 
+**What to write.** Say what the relation is for this pair: what the source
+measured or showed and which part of the claim it supports, what an
+extension took from its parent and what it changed, who compared what with
+what and what came out. A sentence that only names the work (`as shown in
+LIT-012`) passes the check and explains nothing.
+
+**When there is nothing to write.** Clearing these findings means reading
+the cited work, and sometimes the reading finds that the relation is wrong:
+the source never makes the claim, the comparison was never run, or the
+origin is an earlier paper the cited one credits. Then fix the relation
+(repoint it, or remove it on both sides) instead of writing prose for it.
+The finding clears either way. Only the second leaves the record true.
+
 A statement the record can't hold as written is `bad-annotations`. That
 covers an argument that isn't a code, a code naming no document here, a code
 in a scheme the field doesn't hold, and a single-valued field that already
@@ -217,6 +230,7 @@ Check for:
 - converse inconsistencies,
 - invariant failures,
 - relations stated in prose and missing from frontmatter, or the reverse,
+- relations declared `explain:` that the body never explains,
 - standing-related findings.
 
 ## 9. If the relation forms a longitudinal sequence
