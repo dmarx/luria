@@ -218,7 +218,9 @@ uncommitted view cannot be stale.)
 luria link [PATHS…] [--fix] [--links-only]
 ```
 
-Spells out what the record left implicit, in two places.
+Spells out what the record left implicit, in three places: link text,
+the far side of a relation, and a relation stated in prose but missing
+from frontmatter.
 
 **Links.** Finds every linkable reference in the given files (default:
 every non-generated markdown file the record knows about): bare codes
@@ -301,6 +303,17 @@ Completion reads every document of a scheme, because that is what
 `--links-only` skips it entirely — the behaviour `--fix` had before
 completion existed, for a run that must touch nothing but link text.
 
+**Stated relations.** A relation stated in the body with a `ref::`
+directive, `<!-- ref::extends: RFC-007 -->`, and missing from this
+document's frontmatter is the `unrecorded-relations` finding; `--fix` writes
+it into the field, and the completion above then writes the far side. The
+`[[extends::RFC-007]]` shorthand expands to a link plus that statement. For
+a field declared `explain: stated`, a citation with no statement is
+`unannotated-relations`, and `--fix` writes the statement after it. The
+reverse gap, a relation the body never explains, is reported and not fixed,
+because the explanation is prose. See
+[relations](how-to/relations.md#7-state-the-relation-where-you-explain-it).
+
 ## luria lint
 
 ```
@@ -340,8 +353,11 @@ The contract, in two halves.
   `mute`, or the same class in both
 
 **Warnings**, printed but passing — each is a judgement call, surfaced with
-its acknowledgement route (see [directives](directives.md)) and listed in
-full in the [reports](reports/reference-status.md):
+its acknowledgement route (see [directives](directives.md)). A row lists
+what it found beneath it, `path:line` for each unacknowledged site, so
+fixing one needs no second command; `pending-documents` alone is a headline,
+with its table in `luria reports`. The [reports](reports/reference-status.md)
+add the narrative and say how many sites are already acknowledged:
 
 `retired-citations` · `unresolved-codes` · `foreign-temp-codes` ·
 `unresolved-citations` ·

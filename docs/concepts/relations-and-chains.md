@@ -86,6 +86,39 @@ Relation invariants can cross schemes if both ends declare the invariant field (
 
 An edge whose two ends share no value of the field is reported as `unbound-relations`: either a true value is missing from one end, or the edge is wrong.
 
+## A relation is held twice: as data and as prose
+
+Frontmatter says *that* a relation holds: `extends: [RFC-007]`. Only the
+body can say *what* it amounts to, which part of `RFC-007` this one carries
+on and what it changes. Both are the record's, and Luria keeps them from
+drifting apart in both directions:
+
+- **Up, from prose to frontmatter.** A relation stated where it is
+  justified, with a `ref::` directive or the `[[extends::RFC-007]]`
+  shorthand, belongs in the frontmatter too. A stated relation the
+  frontmatter lacks is `unrecorded-relations`, and `luria link --fix`
+  writes it, because the statement already says exactly what to write.
+- **Down, from frontmatter to prose.** A reference declared `explain:` asks
+  that the body account for every code the field holds. A code the body
+  never explains is `unexplained-relations`, and nothing writes the
+  explanation for you, because it is prose only a person can write.
+
+What counts as an explanation is deliberately weak: a citation of the code
+in the body, outside a reference entry ([ADR-123](../../record/decisions.d/ADR-123.md)). A bibliography line,
+`Kingma et al. (2014), LIT-001 — ARXIV-1412.6980.`, names the work and says
+nothing about it, so it does not count. That holds wherever the line sits,
+because entries are recognised by their shape rather than by a heading. The
+check can tell whether the body mentions the code. It cannot tell whether
+the sentence says anything, and a sentence written to clear the finding
+passes it and defeats it.
+
+So treat an unexplained relation as a question about the relation, not only
+about the prose. When reading the cited work turns up nothing to write
+(the source never makes the claim, the comparison was never run, the
+origin is older), the relation is what is wrong. Correct it rather than
+writing a sentence for it. The [how-to](../how-to/relations.md#7-state-the-relation-where-you-explain-it) has
+the syntax and the two strengths.
+
 ## Chains are longitudinal interpretations
 
 A chain walks one or more same-scheme relations transitively.

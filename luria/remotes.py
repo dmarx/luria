@@ -117,7 +117,7 @@ def references(text: str) -> list[RemoteRef]:
     return sorted(found, key=lambda r: r.start)
 
 
-# unresolved-ok-block: DP-018 — the parsed-tail spelling in the example below
+# mention-ok-block: DP-018 — the parsed-tail spelling in the example below, named and not cited
 def parse_code(text: str) -> tuple[Remote, str] | None:
     """`SG-DP-18` → (the SG remote, "DP-018"); None when no remote matches the
     whole string. The one reader of a composed code's anatomy — annotation
