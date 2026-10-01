@@ -281,6 +281,14 @@ rendered page, neither of which a relation needs in order to mean
 something. Declaring it here is also the only way to assert it over a
 relation that crosses schemes, since a chain may not (ADR-106, #272).
 
+`explain` asks the body to account for every code the field holds, at
+one of two strengths. `cited` (`true` is accepted and means the same)
+asks that the body cite each code somewhere outside a reference entry,
+and takes the citation as serving the relation. `stated` also asks that
+each citation carry a `ref::` statement of the relation. A code the body
+never explains is `unexplained-relations`, a report and not a fix,
+because the explanation is prose only a person can write (#333, ADR-123).
+
 | key | type | default |
 |---|---|---|
 | `field` | `str` | *required* |
