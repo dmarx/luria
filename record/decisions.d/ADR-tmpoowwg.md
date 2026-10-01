@@ -1,0 +1,100 @@
+---
+status: Proposed
+title: 'A reference entry is not an explanation, and is found by its shape'
+version: 1
+tags:
+- mechanism
+- load-bearing
+date: '2026-10-01'
+summary: >-
+  `explain:` counts only citations in prose. A citation inside a reference
+  entry (`Kingma et al. (2014), LIT-001 — ARXIV-1412.6980.`) names a work and
+  says nothing about it, so it no longer satisfies the relation, at either
+  strength. Entries are found by `luria/bibliography.py`, a standalone
+  detector that reads a block's morphology (an author/year lead, identifiers,
+  title and venue, and how much lower-case prose is left over) and never a
+  heading. Rejected: keying on a heading such as `## Source` (one record's
+  convention, and it would exclude prose filed under it), and a per-line
+  word count (it splits an explanation that wraps onto the next line).
+---
+
+# ADR-tmpoowwg: A reference entry is not an explanation, and is found by its shape
+
+## Context
+
+[ADR-122](ADR-122.md) introduced `explain:`, which pushes a relation down into prose: a code
+an explained field holds must be accounted for in the body. Its `cited`
+strength takes any citation of the code as serving the relation. On the
+anthology, whose practices and theories open with a reference line naming
+their evidence, that turned the check into a formality. About half of the
+1427 explained relations were satisfied by the bibliography line alone. The
+feature was meant to force prose, and the bibliography answered for it.
+
+## Decision
+
+**A citation inside a reference entry does not explain a relation.** It is
+still a citation (links, retired-citation checks and everything else read it
+as before), but `explain:` sets it aside at both strengths. Under `cited`, a
+code cited only in an entry is `unexplained-relations`, and the row names the
+entry's line. Under `stated`, the fixer no longer writes a statement after an
+entry, which would have called the bibliography line the explanation.
+
+**Entries are detected by shape, in a module that knows nothing about
+relations.** `luria/bibliography.py` takes a body and returns the spans of
+the blocks that are reference entries. A block is a paragraph or a single
+list item; headings, tables, fences and comments are never entries. A block
+is an entry when it is one of these:
+
+- **only pointers:** links, codes, identifiers and URLs, with at most two
+  words of glue (`Read from LIT-378 — ARXIV-…`);
+- **a cited work with little prose left over:** it opens with an author lead
+  that ends at a year (`Evci, Ioannou, Keskin and Dauphin (2020)`, `Shi et
+  al., Meta (2023)`, `Kingma, D. P., & Ba, J. (2014).`) or with a classic
+  author list (`A. Vaswani, N. Shazeer, et al.`). The title is dropped when a
+  venue or identifier follows it, then the venue and identifiers are dropped.
+  What remains does not read as prose.
+
+"Reads as prose" counts **lower-case words**: eight of them, or five tied
+together by at least two connectives. Names, initials, acronyms and numbers
+are capitalised or numeric, so authors surviving from a second entry on the
+same line cost nothing. A telegraphic annotation ("Two groups, three months
+apart, the same bug and two different fixes.") still counts as prose.
+
+**An annotated entry is prose, not an entry.** `…, LIT-017 — ARXIV-…. Where
+the critical batch size is defined, and given a measurement procedure…`
+begins as an entry and goes on to say what the paper contributes. That
+annotation is exactly the explanation the check asks for, so the block is
+judged as a whole and counts.
+
+## Alternatives considered
+
+- **Key on the heading** (`## Source`, `## References`). This was the obvious
+  first move, and it is wrong twice. The heading is one record's convention:
+  others use "Sources", "Bibliography", "Reading", or no heading at all. And
+  it would set aside the prose a record files under that heading, such as an
+  annotated entry, along with the bare references.
+- **Count words per line.** This was the measurement that first found the
+  problem. On the anthology it flagged 133 relations that the block-level
+  reading finds explained, because an
+  explanation that wraps (`LIT-671 found the confound,` / `separated it into
+  four conditions…`) reads as a bare line. Judging the block fixed it.
+- **A configurable list of sections to exclude.** It is the heading approach
+  with a dial, and it puts the burden on every record to describe its own
+  layout to a check whose job is to read it.
+- **Status quo.** `cited` keeps answering for prose that was never written,
+  which is the failure this decision exists to end.
+
+## Consequences
+
+- On the anthology, the 10 explained fields go from 0 findings to **590**:
+  `SOTA.source` 267, `SOTA.introduced_by` 253, `THEORY.source` 70. Every
+  other explained field was already written about in prose. In 38 of the 590,
+  the prose names the paper's first author but never writes its code. The
+  remedy there is to add the code, which the record's linking rules already
+  ask for.
+- The thresholds (eight words, five with two connectives, two words of glue)
+  were fitted on the anthology and tested on classic formats (APA, numbered,
+  markdown link lists). A record that writes its bibliography in a shape not
+  tested here may need a case added to `tests/test_bibliography.py`. That
+  file is the specification.
+- The detector is standalone, so other checks can use it. None does yet.

@@ -190,6 +190,15 @@ At either strength, a statement's `— reason` counts as the explanation, so a
 `-file` statement with a reason is how you say the relation needs no more
 prose than that.
 
+At either strength, a citation inside a **reference entry** does not count.
+A line like `Kingma et al. (2014), LIT-001 — ARXIV-1412.6980.` names the work
+and says nothing about it. A code cited only there is `unexplained-relations`,
+and the row gives the entry's line. Entries are found by their shape, not by
+the heading they sit under: an author/year lead or a list of initials and
+surnames, identifiers, a title and venue, and almost no prose left over. An
+entry followed by a sentence about the work, an annotated entry, is prose and
+does count ([ADR-tmpoowwg](../../record/decisions.d/ADR-tmpoowwg.md)).
+
 A statement the record can't hold as written is `bad-annotations`. That
 covers an argument that isn't a code, a code naming no document here, a code
 in a scheme the field doesn't hold, and a single-valued field that already
