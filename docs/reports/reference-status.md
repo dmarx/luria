@@ -9,13 +9,26 @@ Every reference in the record is a claim — "this is why things are the way the
 
 Only an `Active` document is in force. `Proposed` and `Deferred` mean *not in force yet* — an open question, being cited as if it were settled — while `Superseded` and `Rejected` mean *no longer in force*, which is often a perfectly good thing to cite: history, or a rejection worth pointing at. Either way the citation should be deliberate, and this section lists the ones nobody has vouched for yet.
 
-**3 documents cited without acknowledgement.** Not listed: 60 citations someone has already vouched for with an `inactive-ok:` comment at the citing site.
+**4 documents cited without acknowledgement.** Not listed: 60 citations someone has already vouched for with an `inactive-ok:` comment at the citing site.
 
 To vouch for one, put the reason where the citation is — `inactive-ok:` covers its own line and the line below it, `inactive-ok-block:` its paragraph, `inactive-ok-file:` the whole page:
 
 ```
 <!-- inactive-ok: ADR-012 — why this citation is right -->
 ```
+
+### [ADR-123](../../record/decisions.d/ADR-123.md) — Proposed
+
+A reference entry is not an explanation, and is found by its shape
+
+6 citations in 4 files await a look.
+
+- [`docs/how-to/relations.md:200`](../how-to/relations.md)
+- [`luria/concretize.py:19`](../../luria/concretize.py)
+- [`record/decisions.d/ADR-014.md:52`](../../record/decisions.d/ADR-014.md)
+- [`record/decisions.d/ADR-014.md:54`](../../record/decisions.d/ADR-014.md)
+- [`record/decisions.d/ADR-049.md:32`](../../record/decisions.d/ADR-049.md)
+- [`record/decisions.d/ADR-049.md:54`](../../record/decisions.d/ADR-049.md)
 
 ### [ADR-121](../../record/decisions.d/ADR-121.md) — Proposed
 
@@ -28,6 +41,15 @@ The site delegates frontmatter to Quartz: luria composes it, the note-properties
 - [`luria/site_page.py:2`](../../luria/site_page.py)
 - [`tests/test_site_page.py:3`](../../tests/test_site_page.py)
 
+### [ADR-122](../../record/decisions.d/ADR-122.md) — Proposed
+
+A relation is stated in prose as a `ref::` directive named by its field
+
+2 citations in 2 files await a look.
+
+- [`docs/how-to/relations.md:154`](../how-to/relations.md)
+- [`record/decisions.d/ADR-123.md:28`](../../record/decisions.d/ADR-123.md)
+
 ### [DP-018](../../record/principles.d/DP-018.md) — Proposed
 
 Make mutable premises explicit dependencies
@@ -37,19 +59,11 @@ Make mutable premises explicit dependencies
 - [`luria/remotes.py:122`](../../luria/remotes.py)
 - [`record/decisions.d/ADR-040.md:46`](../../record/decisions.d/ADR-040.md)
 
-### [ADR-122](../../record/decisions.d/ADR-122.md) — Proposed
-
-A relation is stated in prose as a `ref::` directive named by its field
-
-1 citation in 1 file awaits a look.
-
-- [`docs/how-to/relations.md:154`](../how-to/relations.md)
-
 ## Codes that resolve to no document
 
 A reference the reader cannot follow: the code names no document in this record. A typo, a number carried in from another project, and an illustrative code in an example all look identical from here — telling them apart takes a human, so this is a report, not an error.
 
-**5 codes unaccounted for.** Not listed: 82 mentions marked deliberate with an `unresolved-ok:` comment (same syntax and scopes as `inactive-ok:` above).
+**8 codes unaccounted for.** Not listed: 74 mentions marked deliberate with an `unresolved-ok:` comment (same syntax and scopes as `inactive-ok:` above).
 
 
 ### ADR-000 — resolves to nothing (2 unmarked sites · 4 other mentions marked deliberate)
@@ -67,6 +81,18 @@ A reference the reader cannot follow: the code names no document in this record.
 - [`luria/new.py:377`](../../luria/new.py)
 - [`luria/relate.py:5`](../../luria/relate.py)
 
+### ADR-158 — resolves to nothing (1 unmarked site · 1 other mention marked deliberate)
+
+- [`record/decisions.d/ADR-014.md:52`](../../record/decisions.d/ADR-014.md)
+
+### ADR-187 — resolves to nothing (1 unmarked site)
+
+- [`record/decisions.d/ADR-014.md:52`](../../record/decisions.d/ADR-014.md)
+
+### ADR-188 — resolves to nothing (1 unmarked site · 1 other mention marked deliberate)
+
+- [`record/decisions.d/ADR-014.md:52`](../../record/decisions.d/ADR-014.md)
+
 ### ADR-919 — resolves to nothing (1 unmarked site · 14 other mentions marked deliberate)
 
 - [`tests/test_documents_cache.py:125`](../../tests/test_documents_cache.py)
@@ -79,9 +105,12 @@ A reference the reader cannot follow: the code names no document in this record.
 
 A temporary code belongs to the contribution that created it, and only that contribution can cite it safely. One cited here with no document behind it is another branch's — it resolves for as long as both are open, and stops the moment the other merges and its code is numbered. The trunk never sees the spelling this record wrote down.
 
-**0 codes not minted here.** Not listed: 48 mentions marked deliberate with an `unresolved-ok:` comment — an illustrative code in an example is the usual one.
+**1 code not minted here.** Not listed: 47 mentions marked deliberate with an `unresolved-ok:` comment — an illustrative code in an example is the usual one.
 
-Every temporary code cited here is this record's own. ✅
+
+### ADR-tmp47fje — not minted here (1 unmarked site · 10 other mentions marked deliberate)
+
+- [`luria/concretize.py:8`](../../luria/concretize.py)
 
 ## Files that opt out of reference checking
 
@@ -91,5 +120,8 @@ None. Every scanned file is checked. ✅
 
 ## Directives that no longer apply
 
+- luria/concretize.py:43: annotation names ADR-123, which does resolve here — so it excuses nothing, leaving ADR-tmp47fje (1 site) unacknowledged
 - luria/remotes.py:120: annotation names DP-018, which does resolve here
+- record/decisions.d/ADR-014.md:27: annotation names ADR-123, which does resolve here — so it excuses nothing, leaving ADR-158 (1 site), ADR-187 (1 site), ADR-188 (1 site) unacknowledged
 - record/decisions.d/ADR-040.md:28: annotation names DP-018, which does resolve here
+- record/decisions.d/ADR-049.md:44: annotation names ADR-123, which does resolve here

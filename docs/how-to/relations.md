@@ -197,7 +197,7 @@ and the row gives the entry's line. Entries are found by their shape, not by
 the heading they sit under: an author/year lead or a list of initials and
 surnames, identifiers, a title and venue, and almost no prose left over. An
 entry followed by a sentence about the work, an annotated entry, is prose and
-does count ([ADR-tmpoowwg](../../record/decisions.d/ADR-tmpoowwg.md)).
+does count ([ADR-123](../../record/decisions.d/ADR-123.md)).
 
 A statement the record can't hold as written is `bad-annotations`. That
 covers an argument that isn't a code, a code naming no document here, a code
