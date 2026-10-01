@@ -431,3 +431,41 @@ def test_cited_accepts_a_statement_with_a_reason(tmp_path, monkeypatch):
     note(root, 2, "<!-- ref::cites-file: LIT-1 — the method section is its -->",
          cites=["LIT-001"])
     assert annotations.survey().unexplained == []
+
+
+# --- reference entries are not explanations ----------------------------------
+
+def test_a_citation_in_a_reference_entry_explains_nothing(tmp_path, monkeypatch):
+    """`Kingma et al. (2014), LIT-001 — ARXIV-…` cites the code and says
+    nothing about it; a record whose documents open with such a line would
+    otherwise satisfy every relation before a sentence is written."""
+    root = project(tmp_path, monkeypatch, CITED)
+    note(root, 1)
+    b = note(root, 2, "Kingma et al. (2014), LIT-001 — ARXIV-1412.6980.\n\n"
+                      "Adam is the default here.", cites=["LIT-001"])
+    line = b.read_text().split("\n").index(
+        "Kingma et al. (2014), LIT-001 — ARXIV-1412.6980.") + 1
+    rows = annotations.survey().unexplained
+    assert len(rows) == 1
+    assert "only in a reference entry" in rows[0] and f":{line}" in rows[0]
+
+
+def test_an_annotated_entry_is_the_explanation(tmp_path, monkeypatch):
+    root = project(tmp_path, monkeypatch, CITED)
+    note(root, 1)
+    note(root, 2, "Kingma et al. (2014), LIT-001 — ARXIV-1412.6980. The bias "
+                  "correction is the part this practice relies on, because the "
+                  "early second-moment estimate is otherwise near zero.",
+         cites=["LIT-001"])
+    assert annotations.survey().unexplained == []
+
+
+def test_stated_does_not_annotate_a_reference_entry(tmp_path, monkeypatch):
+    """The fixer would otherwise write a statement after the bibliography
+    line and call the relation explained."""
+    root = project(tmp_path, monkeypatch, EXPLAINED)
+    note(root, 1, extended_by=["LIT-002"])
+    note(root, 2, "Kingma et al. (2014), LIT-001 — ARXIV-1412.6980.",
+         extends=["LIT-001"])
+    s = annotations.survey()
+    assert s.inserts == [] and len(s.unexplained) == 1

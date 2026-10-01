@@ -61,7 +61,7 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
-from . import directives, doc_refs, relations
+from . import bibliography, directives, doc_refs, relations
 from .adr_index import Adr, load_scheme
 from .config import EXPLAIN_CITED, TEMP_TAIL, current
 from .contract import ANY_SCHEME, for_scheme, local_scheme, reference_code
@@ -81,10 +81,12 @@ CITE_RE = re.compile(
 @dataclass(frozen=True)
 class Citation:
     """One citation in a body. `line` is where it ends, which is where a
-    statement written after it sits."""
+    statement written after it sits. `listed` when it sits in a reference
+    entry, which cites a work without saying anything about it."""
     code: str
     end: int
     line: int
+    listed: bool = False
 
 
 @dataclass(frozen=True)
@@ -177,16 +179,21 @@ def _body_start(text: str) -> int:
 
 def citations(text: str) -> list[Citation]:
     """Every citation in the body. Quoted regions and comments are
-    specimens, never statements."""
+    specimens, never statements; one inside a reference entry is marked
+    `listed`."""
     skip = doc_refs.code_spans(text) + [
         m.span() for m in doc_refs.COMMENT_RE.finditer(text)]
+    start = _body_start(text)
+    entries = [(a + start, b + start)
+               for a, b in bibliography.regions(text[start:])]
     out: list[Citation] = []
-    for m in CITE_RE.finditer(text, _body_start(text)):
+    for m in CITE_RE.finditer(text, start):
         if any(a <= m.start() < b for a, b in skip):
             continue
         if (code := _code_of(m)) is not None:
             out.append(Citation(code, m.end(),
-                                text.count("\n", 0, m.end() - 1) + 1))
+                                text.count("\n", 0, m.end() - 1) + 1,
+                                bibliography.within(m.start(), entries)))
     return out
 
 
@@ -279,7 +286,13 @@ def _push_down(doc: Adr, cites: list[Citation], stated: list[Statement],
         for target in sorted(_values(doc, ref.field)):
             mine = [st for st in stated
                     if st.relation == ref.field and st.code == target]
-            cited = [c for c in cites if c.code == target]
+            # A reference entry names the work and says nothing about it, so
+            # only a citation in prose can serve the relation.
+            cited = [c for c in cites if c.code == target and not c.listed]
+            listed = [c for c in cites if c.code == target and c.listed]
+            unsaid = (f"cites {target} only in a reference entry "
+                      f"(line {listed[0].line}), which says nothing about it"
+                      if listed else f"never cites {target}")
             if any(st.reason or any(c.line in st.lines for c in cited)
                    for st in mine):
                 continue
@@ -289,9 +302,10 @@ def _push_down(doc: Adr, cites: list[Citation], stated: list[Statement],
                 # never mentions — the one with no explanation at all.
                 if cited:
                     continue
+                where = f"{rel}:{listed[0].line}" if listed else rel
                 s.unexplained.append(
-                    f"{rel}: `{ref.field}: {target}` is never explained — the "
-                    f"body never cites {target}. Cite it where you say why, or "
+                    f"{where}: `{ref.field}: {target}` is never explained — the "
+                    f"body {unsaid}. Cite it where you say why, or "
                     f"give a statement a reason "
                     f"(`<!-- {PREFIX}{ref.field}-file: {target} — why -->`)")
                 continue
@@ -305,9 +319,10 @@ def _push_down(doc: Adr, cites: list[Citation], stated: list[Statement],
                     f"`{note}` after it")
                 continue
             why = ("states it with no citation beside it and no reason"
-                   if mine else "never cites it")
+                   if mine else unsaid)
+            where = f"{rel}:{listed[0].line}" if listed and not mine else rel
             s.unexplained.append(
-                f"{rel}: `{ref.field}: {target}` is never explained — the "
+                f"{where}: `{ref.field}: {target}` is never explained — the "
                 f"body {why}. Cite it where you say why "
                 f"(`[[{ref.field}::{target}]]`), or give the statement a "
                 f"reason (`<!-- {PREFIX}{ref.field}-file: {target} — why -->`)")
