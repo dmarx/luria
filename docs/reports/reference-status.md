@@ -32,12 +32,12 @@ A reference the reader cannot follow: the code names no document in this record.
 
 ### ADR-231 — resolves to nothing (2 unmarked sites)
 
-- [`luria/new.py:380`](../../luria/new.py)
+- [`luria/new.py:430`](../../luria/new.py)
 - [`luria/relate.py:5`](../../luria/relate.py)
 
 ### ADR-245 — resolves to nothing (2 unmarked sites)
 
-- [`luria/new.py:380`](../../luria/new.py)
+- [`luria/new.py:430`](../../luria/new.py)
 - [`luria/relate.py:5`](../../luria/relate.py)
 
 ### ADR-919 — resolves to nothing (1 unmarked site · 14 other mentions marked deliberate)
