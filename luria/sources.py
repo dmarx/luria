@@ -80,11 +80,65 @@ from .fetch import request
 
 SOURCE_OK = "source-ok"
 
-# A title survives rewrapping, case and punctuation; it does not survive being
-# a different paper. Comparing on words alone is what lets a recorded title
-# keep its own capitalisation and line breaks.
+# TeX that changes how a title is typeset, not what it says. A formatting
+# command keeps its argument; an accent macro is dropped and leaves its letter.
+_TEX_FORMATTING = re.compile(
+    r"\\(?:text(?:bf|it|rm|sf|tt|sc|up)?|emph|math(?:rm|bf|it|sf|tt|cal|bb|"
+    r"frak)?|operatorname|mbox|boldsymbol)\b")
+# `\"o`, `\'e`, `\^o`: a backslash and one non-letter. Covers the escaped
+# punctuation too (`\&`), which is punctuation either way.
+_TEX_SYMBOL_ACCENT = re.compile(r"\\[^a-zA-Z]")
+# `\v{c}`, `\c{c}`, `\H{o}`: the accents TeX spells with a letter, which only
+# read as accents when they take an argument.
+_TEX_LETTER_ACCENT = re.compile(r"\\[vcHukrdb](?=\s*\{)")
+_GREEK_NOISE = {"GREEK", "SMALL", "CAPITAL", "LETTER", "FINAL", "SYMBOL",
+                "LUNATE"}
+
+
+def _greek(ch: str) -> str:
+    """`μ` → `mu`, so a TeX `\\mu` and a Unicode mu meet. Anything else is
+    returned unchanged."""
+    import unicodedata
+    name = unicodedata.name(ch, "")
+    if not name.startswith("GREEK"):
+        return ch
+    words = [w for w in name.split() if w not in _GREEK_NOISE]
+    return " " + "".join(words).lower() + " " if words else ch
+
+
+def _tex_word(m: re.Match) -> str:
+    """A TeX control word reads as its name: `\\mu` is `mu`, `\\varepsilon` is
+    `epsilon`, because the variant glyph is the same letter."""
+    word = m.group(1)
+    if word.startswith("var") and len(word) > 3:
+        word = word[3:]
+    return f" {word} "
+
+
 def normalize(title: str) -> str:
-    return " ".join(re.sub(r"[^0-9a-z]+", " ", title.lower()).split())
+    """The title's words, with spelling folded out (#340).
+
+    A title survives rewrapping, case and punctuation; it does not survive
+    being a different paper. It also survives being *typed* differently:
+    arXiv returns `$O(n^2)$` where a person writes `O(n²)`, `$\\mu$P` for
+    `µP`, `Schr\\"odinger` for `Schrödinger`. Those are one title, so TeX is
+    unwrapped, Unicode is decomposed and its marks dropped, Greek letters are
+    named, and what is left is compared with every separator removed — `n²`
+    and `n^2` agree because `^` is a separator. Equating `data set` with
+    `dataset` is the cost, and for "is this the same paper" it is a feature.
+
+    Still equality, not similarity: a nickname, a trimmed subtitle or a
+    different letter is a different string, and `source-ok:` is how a
+    deliberate one is kept."""
+    import unicodedata
+    text = _TEX_FORMATTING.sub(" ", title)
+    text = _TEX_LETTER_ACCENT.sub("", text)
+    text = _TEX_SYMBOL_ACCENT.sub("", text)
+    text = re.sub(r"\\([a-zA-Z]+)", _tex_word, text)
+    text = unicodedata.normalize("NFKD", text)
+    text = "".join(_greek(c) for c in text
+                   if not unicodedata.combining(c))
+    return re.sub(r"[^0-9a-z]+", "", text.casefold())
 
 
 @dataclass(frozen=True)

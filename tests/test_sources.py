@@ -12,6 +12,8 @@ lockfile, exactly as the lint reads them.
 from _config import merged
 import json
 
+import pytest
+
 from luria import config, lint, sources
 import urllib.error
 
@@ -352,3 +354,52 @@ def test_a_real_outage_is_still_unreachable(project, monkeypatch):
     _project(project)
     monkeypatch.setattr(sources.urllib.request, "urlopen", _raises(500))
     assert sources._once("https://example.test/x", "(.*)").status == "unreachable"
+
+
+# --- Spelling is not disagreement (#340) -----------------------------------
+#
+# Found when arXiv began returning `LIT-655`'s title in TeX and a build went red
+# on a paper the PR never touched. Each pair below is one title spelled two
+# ways; none is a judgement call, so none should need a `source-ok:`.
+
+@pytest.mark.parametrize("recorded, upstream", [
+    # TeX math against a Unicode superscript.
+    ("Self-attention Does Not Need O(n²) Memory",
+     "Self-attention Does Not Need $O(n^2)$ Memory"),
+    # A TeX control word for a symbol against the symbol (micro sign and mu).
+    ("u-µP: The Unit-Scaled Maximal Update Parametrization",
+     "u-$\\mu$P: The Unit-Scaled Maximal Update Parametrization"),
+    ("u-μP: The Unit-Scaled Maximal Update Parametrization",
+     "u-$\\mu$P: The Unit-Scaled Maximal Update Parametrization"),
+    # Accents, as a TeX macro and as Unicode, against the bare letter.
+    ("Schrodinger Bridges for Generative Modeling",
+     "Schr\\\"odinger Bridges for Generative Modeling"),
+    ("Schrodinger Bridges for Generative Modeling",
+     "Schrödinger Bridges for Generative Modeling"),
+    ("Schrödinger Bridges for Generative Modeling",
+     "Schr\\\"{o}dinger Bridges for Generative Modeling"),
+])
+def test_one_title_spelled_two_ways_is_one_title(recorded, upstream):
+    assert sources.normalize(recorded) == sources.normalize(upstream)
+
+
+def test_a_tex_spelling_upstream_is_silent_end_to_end(project):
+    """The motivating case, through the lint's own path."""
+    _project(project)
+    _note(project, 655, "Self-attention Does Not Need O(n²) Memory", "2112.05682")
+    _resolved(project, {
+        "ARXIV/2112.05682": "Self-attention Does Not Need $O(n^2)$ Memory"})
+    assert sources.mismatch_lines() == ([], [], [])
+
+
+@pytest.mark.parametrize("a, b", [
+    # A different Greek letter is a different word.
+    ("$\\mu$P", "$\\nu$P"),
+    # A different digit is a different claim.
+    ("O(n^2) Memory", "O(n^3) Memory"),
+    # A nickname is not a spelling.
+    ("AdamW: Decoupled Weight Decay Regularization",
+     "Decoupled Weight Decay Regularization"),
+])
+def test_folding_spelling_does_not_fold_meaning(a, b):
+    assert sources.normalize(a) != sources.normalize(b)
