@@ -439,3 +439,58 @@ def test_a_draft_carries_its_body(project, capsys):
     text = (current().root / capsys.readouterr().out.strip()).read_text()
     assert "# ADR-002: Drafted\n\n## Context\n\nDrawn on the canvas.\n" in text
     assert "influenced_by:\n- ADR-001\n" in text
+
+
+# ── --help (#328) ─────────────────────────────────────────────────────────
+
+
+def _files(root: Path) -> set[Path]:
+    return {p for p in root.rglob("*") if p.is_file()}
+
+
+def test_help_lists_the_kinds_and_writes_nothing(project, capsys):
+    """`run` takes a scheme's declared fields as flags, which used to
+    swallow `--help` and refuse it as a field named 'help'. Help is the one
+    place a reader can learn the kinds — they come from luria.yaml, and are
+    the lowercased prefix, which the first docs draft got wrong four times."""
+    before = _files(project)
+    new_mod.run(help=True)
+    said = capsys.readouterr().out
+    for kind in new_mod.kinds():
+        assert kind in said
+    assert "--title" in said and "--draft" in said
+    assert "(the default)" in said
+    assert _files(project) == before
+
+
+def test_help_for_one_kind_names_its_own_flags(project, capsys):
+    """A scheme accepts the universal flags and its declared fields; a
+    fragment takes only a body. Help says which, per kind."""
+    path = project / "luria.yaml"
+    path.write_text(merged(path.read_text(), {"schemes": {"ADR": {
+        "references": {"source": {"scheme": "ADR", "required": False}}}}}))
+    current.cache_clear()
+    new_mod.run("adr", help=True)
+    adr = capsys.readouterr().out
+    assert "--source" in adr and "--summary" in adr
+    new_mod.run("changelog", help=True)
+    fragment = capsys.readouterr().out
+    assert "--body" in fragment and "--summary" not in fragment
+
+
+def test_dash_h_is_help_too(project, capsys):
+    new_mod.run(h=True)
+    assert "luria new" in capsys.readouterr().out
+
+
+def test_help_through_the_real_cli(project):
+    """Fire is what turned `--help` into a field; hold the whole path."""
+    import os
+    import subprocess
+    import sys
+    out = subprocess.run([sys.executable, "-m", "luria.cli", "new", "--help"],
+                         cwd=project, capture_output=True, text=True,
+                         env={**os.environ, "LURIA_ROOT": str(project)})
+    assert out.returncode == 0, out.stderr
+    assert "no such field" not in out.stdout + out.stderr
+    assert "adr" in out.stdout

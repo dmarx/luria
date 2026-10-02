@@ -372,6 +372,56 @@ def new_entry(kind: str | None, fields: dict[str, str],
 
 UNIVERSAL = ("title", "status", "summary", "tags", "influenced_by", "body")
 
+# What each non-scheme kind reads from its flags, as `new_entry` uses them:
+# a journal entry takes a title and prose, a fragment only prose, a
+# migration spec only a title. `--name` names the file of the two that are
+# named rather than numbered or stamped.
+KIND_FIELDS = {"journal": ("title", "body"), "fragment": ("body", "name"),
+               "migration": ("title", "name")}
+
+
+def accepted_flags(what: str, target) -> tuple[str, ...]:
+    """The flags one kind takes, in the order help lists them. A scheme's
+    are the universal six plus its declared fields, once each — a scheme
+    declaring `status` and `tags` does not take them twice."""
+    if what == "scheme":
+        return tuple(dict.fromkeys((*UNIVERSAL, *declared_fields(target))))
+    return KIND_FIELDS[what]
+
+
+def help_text(kind: str | None = None) -> str:
+    """`luria new --help`: the kinds this record scaffolds and each one's
+    flags, read from luria.yaml like the dispatch (ADR-036) — the one place
+    a reader learns that a kind is the lowercased prefix (#328). With a
+    kind, that kind alone."""
+    from .migrate import MIGRATIONS_DIR
+    available = kinds()
+    default = default_kind()
+    if kind is not None and kind.lower() not in available:
+        raise SystemExit(
+            f"luria new: unknown kind {kind!r} — this project scaffolds: "
+            + ", ".join(sorted(available)))
+    names = [kind.lower()] if kind else sorted(available)
+    cfg = current()
+    rows = []
+    for name in names:
+        what, target = available[name]
+        where = {"scheme": lambda t: f"a scheme, filed in {cfg.rel(t.dir)}/",
+                 "fragment": lambda t: f"a fragment directory, {t}/",
+                 "journal": lambda t: f"a journal, filed in {cfg.rel(t.dir)}/",
+                 "migration": lambda t: f"a migration spec, {MIGRATIONS_DIR}/",
+                 }[what](target)
+        note = " (the default)" if name == default else ""
+        flags = " ".join(f"--{f}" for f in accepted_flags(what, target))
+        rows.append(f"  {name:<12} {where}{note}\n  {'':<12} {flags}")
+    lead = (run.__doc__ or "").strip().split("\n\n")[0]
+    return ("usage: luria new [KIND] [--FIELD VALUE ...]\n"
+            "       luria new [KIND] --draft FILE\n\n"
+            f"{' '.join(lead.split())}\n\n"
+            "Kinds this record scaffolds (from luria.yaml), and the flags "
+            "each takes:\n" + "\n".join(rows) + "\n\n"
+            "--draft FILE files what a tool wrote instead of taking flags.\n")
+
 # `influenced_by:` is standard frontmatter for every scheme — the index and
 # the typed-edge module read it as a list of codes (ADR-012) — but it is not
 # a contract field, so the contract cannot say its shape. Named here so the
@@ -467,7 +517,15 @@ def run(kind: str = None, title: str = None, status: str = None,
     `--draft FILE` files what a tool wrote instead: one draft object, or a
     `luria-drafts` document holding several, each with the fields above and
     the kind its `scheme` names (#301). Same validation, one path printed
-    per draft."""
+    per draft.
+
+    `--help` (or `-h`) lists the kinds and each kind's flags; with a KIND,
+    that kind's alone."""
+    # The declared-field catch-all would otherwise take `--help` as a field
+    # named 'help' and refuse it (#328).
+    if declared.pop("help", False) or declared.pop("h", False):
+        print(help_text(kind), end="")
+        return
     if draft is not None:
         if any(v for v in (title, status, summary, tags, influenced_by, name)) or declared:
             sys.exit("luria new: --draft takes its fields from the file; "
@@ -486,7 +544,8 @@ def run(kind: str = None, title: str = None, status: str = None,
             else ()
         unknown = [f for f in declared if f not in accepted]
         if unknown:
-            known = ", ".join(f"--{f}" for f in (*UNIVERSAL, *accepted))
+            known = ", ".join(f"--{f}" for f in
+                              dict.fromkeys((*UNIVERSAL, *accepted)))
             sys.exit(f"luria new {resolved or ''}: no such field "
                      f"{', '.join(repr(u) for u in unknown)} "
                      f"(this kind accepts: {known})")
