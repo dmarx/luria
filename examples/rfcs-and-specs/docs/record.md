@@ -46,6 +46,8 @@ Dated observations. An entry is true about the day it was written and is never r
 |---|---|---|---|---|
 | `devlog` | `record/devlog.d/` `yyyy/mm/dd/hhmmss.md` | `docs/devlog/` | month | Development log |
 
+*Luria's shipped default: `luria.yaml` declares no `journals:`. Declaring the family replaces this; an empty `journals: {}` says there are none.*
+
 ## Fragment directories
 
 One file per contribution, assembled into a single document and then consumed. The point is the absence of a shared file to conflict on: every contributor writes a new path.
@@ -53,6 +55,8 @@ One file per contribution, assembled into a single document and then consumed. T
 | directory | assembled into | style |
 |---|---|---|
 | `record/changelog.d/` | `CHANGELOG.md` | append |
+
+*Luria's shipped default: `luria.yaml` declares no `fragments:`. Declaring the family replaces this; an empty `fragments: {}` says there are none.*
 
 ## Other projects this record cites
 

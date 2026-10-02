@@ -64,6 +64,8 @@ One file per contribution, assembled into a single document and then consumed. T
 |---|---|---|
 | `record/changelog.d/` | `CHANGELOG.md` | append |
 
+*Luria's shipped default: `luria.yaml` declares no `fragments:`. Declaring the family replaces this; an empty `fragments: {}` says there are none.*
+
 ## Other projects this record cites
 
 A prefixed code reaches into another project's record, so a citation says whose decision it is at the point of use rather than leaving the reader to guess.

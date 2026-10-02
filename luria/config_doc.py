@@ -124,6 +124,12 @@ also what makes omission meaningful inside a declared family — an `output`
 you leave out is genuinely unset, because there is no default entry left for
 it to inherit from.
 
+An undeclared family still applies, so the record says where it came from:
+`docs/record.md` marks a shipped-default schemes, journals or fragments table
+as one, and an empty table (`fragments: {{}}`) is how to say there are none.
+`luria collect` deletes what it reads, so it consumes only a fragment
+directory `luria.yaml` declares (#136).
+
 | table | what it configures | families |
 |---|---|---|
 | `luria` | issue links, staleness horizon, nested records | — |

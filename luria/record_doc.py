@@ -94,6 +94,18 @@ def _table(header: list[str], rows: list[list[str]]) -> str:
     return "\n".join(out) + "\n"
 
 
+def _inherited(cfg, family: str, body: str) -> str:
+    """`body`, with a note when the family is the shipped default rather
+    than something `luria.yaml` says (ADR-047, #136). The page promises it is
+    generated from the config, so an entry the config never wrote has to say
+    where it came from — and how to say "none" instead (ADR-tmpky7q2)."""
+    if family not in cfg.inherited or not body.strip():
+        return body
+    return (body + f"\n*Luria's shipped default: `luria.yaml` declares no "
+            f"`{family}:`. Declaring the family replaces this; an empty "
+            f"`{family}: {{}}` says there are none.*\n")
+
+
 def schemes_section(cfg) -> str:
     """One row per referable document family — the thing a code names."""
     rows = []
@@ -104,8 +116,9 @@ def schemes_section(cfg) -> str:
             view = f"{_rel(cfg, s.index_path)} + tag pages"
         rows.append([f"`{prefix}-001`", _rel(cfg, s.dir, dir=True), view,
                      f"`{s.active}`"])
-    return _table(["a code looks like", "filed in", "rendered to",
-                   "in force when status is"], rows)
+    return _inherited(cfg, "schemes", _table(
+        ["a code looks like", "filed in", "rendered to",
+         "in force when status is"], rows))
 
 
 def families_section(cfg) -> str:
@@ -153,8 +166,9 @@ def journals_section(cfg) -> str:
              f"{_rel(cfg, j.dir, dir=True)} `yyyy/mm/dd/hhmmss.md`",
              _rel(cfg, j.output, dir=True), j.granularity, j.title]
             for j in cfg.journals.values()]
-    return _table(["journal", "entries filed at", "books rendered to",
-                   "one book per", "titled"], rows)
+    return _inherited(cfg, "journals", _table(
+        ["journal", "entries filed at", "books rendered to",
+         "one book per", "titled"], rows))
 
 
 def fragments_section(cfg) -> str:
@@ -163,7 +177,8 @@ def fragments_section(cfg) -> str:
     and a journal permanent."""
     rows = [[_rel(cfg, cfg.root / d, dir=True), _rel(cfg, cfg.root / f.target),
              f.style] for d, f in cfg.fragments.items()]
-    return _table(["directory", "assembled into", "style"], rows)
+    return _inherited(cfg, "fragments", _table(
+        ["directory", "assembled into", "style"], rows))
 
 
 def remotes_section(cfg) -> str:
