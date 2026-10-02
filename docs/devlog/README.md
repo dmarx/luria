@@ -6,14 +6,15 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 
 ## Currently — [October 2026](2026-10.md)
 
+- [1 Oct 18:30 — A vocabulary is a scheme in shorthand](2026-10.md#a-vocabulary-is-a-scheme-in-shorthand)
 - [1 Oct 02:00 — Reference-entry detection, fired on the anthology](2026-10.md#reference-entry-detection-fired-on-the-anthology)
 
 ## All books
 
-129 entries across 3 books, newest first.
+130 entries across 3 books, newest first.
 
 | Book | Entries | First | Last |
 |---|--:|---|---|
-| [2026-10](2026-10.md) | 1 | 2026-10-01 | 2026-10-01 |
+| [2026-10](2026-10.md) | 2 | 2026-10-01 | 2026-10-01 |
 | [2026-09](2026-09.md) | 82 | 2026-09-03 | 2026-09-30 |
 | [2026-08](2026-08.md) | 46 | 2026-08-03 | 2026-08-28 |

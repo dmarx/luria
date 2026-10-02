@@ -11,7 +11,7 @@ to say more than that:
 
 Each of these means the field is typed as the wrong kind of thing. The
 repair is to promote the vocabulary to a scheme: one document per value, and
-every field that drew from it becomes a reference ([ADR-tmppzon2](../../record/decisions.d/ADR-tmppzon2.md)). The
+every field that drew from it becomes a reference ([ADR-124](../../record/decisions.d/ADR-124.md)). The
 reasoning is in [Vocabularies](../concepts/vocabularies.md#when-a-vocabulary-is-not-enough).
 
 The examples below start from this record:

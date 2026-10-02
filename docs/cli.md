@@ -586,7 +586,7 @@ scaffolds one). Three operations:
   alias such as `AREA-runtime`), every field that drew from it becomes a
   grouped reference, and the documents' values become those aliases.
   What a reference cannot carry is refused rather than dropped
-  ([how to](how-to/promote-vocabulary.md), [ADR-tmppzon2](../record/decisions.d/ADR-tmppzon2.md)).
+  ([how to](how-to/promote-vocabulary.md), [ADR-124](../record/decisions.d/ADR-124.md)).
 
 `rename_scheme` and `move_doc` take `strategy: supersede` to copy instead of move,
 leaving a tombstone (`status: Superseded`, `superseded_by: …`) at the

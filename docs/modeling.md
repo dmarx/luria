@@ -132,7 +132,7 @@ Asking for a richer vocabulary at that point is asking the shorthand to
 become the long form badly. Promote it instead: a `promote_vocabulary`
 migration files one document per value and turns every field that drew from
 the vocabulary into a reference, keeping the per-value pages as per-term
-pages ([how to](how-to/promote-vocabulary.md), [ADR-tmppzon2](../record/decisions.d/ADR-tmppzon2.md)).
+pages ([how to](how-to/promote-vocabulary.md), [ADR-124](../record/decisions.d/ADR-124.md)).
 
 ## Statuses in two schemes
 

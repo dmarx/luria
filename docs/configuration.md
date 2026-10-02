@@ -301,6 +301,7 @@ because the explanation is prose only a person can write (#333, ADR-123).
 | `blurb` | `str` | *unset* |
 | `required_when` | `RequiredWhen \| None` | *unset* |
 | `explain` | `str` | *unset* |
+| `group` | `bool` | `False` |
 
 ## Tag groups — `schemes.X.fields.<field>.groups.<name>`
 
