@@ -136,6 +136,17 @@ def collect_dir(name: str, fragment) -> int:
     paths = fragment_paths(cfg.root / name)
     if not paths:
         return 0
+    if "fragments" in cfg.inherited:
+        # Collecting deletes what it reads, so it needs a declaration, not a
+        # default: a `record/changelog.d` that exists for some other reason
+        # is not a request to consume it (#136). The default still applies
+        # everywhere else (ADR-047); only the destructive step asks
+        # (ADR-tmpky7q2).
+        raise SystemExit(
+            f"luria collect: {name}/ is Luria's shipped default, not a "
+            f"fragment directory luria.yaml declares, and collecting deletes "
+            f"the {len(paths)} file(s) in it — to collect it, declare it:\n"
+            f"  fragments:\n    {name}: {fragment.target}")
     view = cfg.root / fragment.target
     if not view.exists():
         # Refused, not created: where the entries go is a choice about the

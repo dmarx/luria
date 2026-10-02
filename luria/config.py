@@ -2177,6 +2177,11 @@ class Config:
     # awkwardness — a distinction the layout had stopped expressing.
     include_records: tuple[str, ...] = ()
     site: Site = None  # type: ignore[assignment]
+    # The families this record left to the shipped default (ADR-047): named
+    # in `FAMILIES`, absent from `luria.yaml`. They still apply; this is what
+    # lets a view say so rather than present them as written, and what keeps
+    # `luria collect` from consuming a directory nobody declared (#136).
+    inherited: frozenset[str] = frozenset()
     _raw: dict = dcfield(default_factory=dict, repr=False)
 
     def nested_records(self) -> list[Path]:
@@ -2408,6 +2413,7 @@ def load(root: Path | None = None, text: str | None = None,
     be), so the parser is reachable without a write."""
     root = root or find_root()
     raw = DEFAULTS
+    parsed: dict = {}
     config_file = root / CONFIG_NAME
     if text is None and config_file.exists():
         text = config_file.read_text(encoding="utf-8")
@@ -2435,6 +2441,7 @@ def load(root: Path | None = None, text: str | None = None,
         design_principles=root / paths["design_principles"],
         reports=root / paths["reports"],
         fragments={k: _fragment(v) for k, v in raw["fragments"].items()},
+        inherited=frozenset(f for f in FAMILIES if f not in parsed),
         code_globs=tuple(raw["code"]["globs"]),
         historical=frozenset(root / p for p in raw["code"]["historical"]),
         schemes=(schemes := _schemes(raw["schemes"], root, scaffolding,

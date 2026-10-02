@@ -456,6 +456,12 @@ adds a dated heading; the default appends), and delete the fragments.
 `--commit` stages and commits the result with `[skip ci]` — the shape a
 scheduled CI job wants.
 
+Only a directory `luria.yaml` declares is collected. With no `fragments:`
+block the record still has the shipped default, `record/changelog.d` →
+`CHANGELOG.md` ([ADR-047](../record/decisions.d/ADR-047.md)), but collecting deletes what it reads, so `collect`
+refuses to consume it until it is declared and names the lines to add. An
+empty directory is quiet either way.
+
 ## luria concretize
 
 ```
