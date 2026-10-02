@@ -264,8 +264,23 @@ def test_the_builtin_successor_is_a_relation_like_any_other(
     root = project(tmp_path, monkeypatch)
     note(root, 2)
     a = note(root, 1, "Replaced. <!-- ref::superseded_by: LIT-2 -->")
+    a.write_text(a.read_text().replace("status: Active",
+                                       "status: Superseded", 1))
     annotations.complete(fix=True)
     assert meta(a)["superseded_by"] == ["LIT-002"]
+
+
+def test_a_successor_is_not_written_onto_a_document_in_force(
+        tmp_path, monkeypatch):
+    """The fixer refuses a write that would leave the document in breach,
+    and a document in force naming its replacement is one (#191)."""
+    root = project(tmp_path, monkeypatch)
+    note(root, 2)
+    a = note(root, 1, "Replaced. <!-- ref::superseded_by: LIT-2 -->")
+    survey = annotations.complete(fix=True)
+    assert "superseded_by" not in meta(a)
+    assert any("forbids it while `status` is `Active`" in b
+               for b in survey.bad), survey.bad
 
 
 def test_a_scalar_already_holding_another_code_is_not_overwritten(

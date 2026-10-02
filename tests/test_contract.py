@@ -586,6 +586,13 @@ def test_a_scheme_code_is_still_read_without_any_remote(tmp_path, monkeypatch):
     assert contract.reference_code("not a code") is None
 
 
+def _retire(path: Path) -> None:
+    """A document naming a successor is one that was replaced: in force, it
+    would be in breach of the built-in rule (ADR-tmpt3gtr)."""
+    path.write_text(path.read_text().replace("status: Active",
+                                             "status: Superseded", 1))
+
+
 def test_superseded_by_may_name_remote_documents(tmp_path, monkeypatch):
     """The docstring always said "or a remote code"; the reader truncated it
     before the check could see it, so a paper superseded by a paper failed
@@ -593,6 +600,7 @@ def test_superseded_by_may_name_remote_documents(tmp_path, monkeypatch):
     root = project(tmp_path, monkeypatch, REMOTES)
     doc(root, "record/literature.d/LIT-001.md", code="LIT-001", tags=["record"],
         extra="superseded_by:\n- ARXIV-2110.08058\n- DOI:10.1145/3600006.3613165")
+    _retire(root / "record/literature.d/LIT-001.md")
     errors: list[str] = []
     lint.check_contracts(errors)
     assert not [e for e in errors if "superseded_by" in e], errors
@@ -602,6 +610,7 @@ def test_an_undeclared_prefix_in_superseded_by_is_still_a_finding(tmp_path, monk
     root = project(tmp_path, monkeypatch, REMOTES)
     doc(root, "record/literature.d/LIT-001.md", code="LIT-001", tags=["record"],
         extra="superseded_by: FAKE-2110.08058")
+    _retire(root / "record/literature.d/LIT-001.md")
     errors: list[str] = []
     lint.check_contracts(errors)
     assert any("superseded_by" in e and "names no scheme or remote" in e for e in errors), errors

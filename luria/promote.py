@@ -56,8 +56,8 @@ from .config import current, reset
 # What a vocabulary field may say that a reference can say too. `closed` is
 # dropped on purpose: a reference is closed by construction, which is the
 # promotion's point.
-CARRIED = {"vocabulary", "many", "required", "required_when", "label",
-           "blurb", "closed"}
+CARRIED = {"vocabulary", "many", "required", "required_when",
+           "forbidden_when", "label", "blurb", "closed"}
 
 
 @dataclass(frozen=True)
@@ -253,7 +253,7 @@ def _config_edit(p: Promotion) -> None:
         old = spec["fields"][field]
         ref = {"scheme": p.prefix, "many": bool(old.get("many", False)),
                "required": bool(old.get("required", False)), "group": True}
-        for key in ("required_when", "label", "blurb"):
+        for key in ("required_when", "forbidden_when", "label", "blurb"):
             if key in old:
                 ref[key] = old[key]
         del spec["fields"][field]

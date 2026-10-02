@@ -1,0 +1,155 @@
+---
+status: 'Active'
+title: 'A field can be forbidden while another field says one of these things'
+version: 1
+tags:
+- record
+- mechanism
+date: '2026-10-02'
+issue: '#191'
+summary: >-
+  `forbidden_when` is the mirror of `required_when`: the same condition (one
+  field, a set of literal values), the opposite sense. A document carrying
+  the field while the condition holds is a violation. The built-in successor
+  field gets a default: `superseded_by` is forbidden while `status` is the
+  scheme's `active` word, so an in-force document that names its replacement
+  fails the lint in every record without any config. `excluded_by` stays: it
+  constrains which values of one field combine, not whether a field may be
+  present. Rejected: a predicate language, an `allowed_when` whitelist,
+  folding `excluded_by` into the condition, and reporting rather than
+  failing.
+influenced_by:
+- ADR-071
+- ADR-085
+- ADR-054
+- ADR-098
+---
+
+# ADR-tmpt3gtr: A field can be forbidden while another field says one of these things
+
+## Context
+
+This document lints clean:
+
+```yaml
+status: Active
+superseded_by:
+- ADR-002
+```
+
+It claims to be in force and to have been replaced. The record can demand a
+field in a state (`required_when`, [#170](https://github.com/dmarx/luria/issues/170)): `superseded_by` is required while
+`status` is `Superseded` ([ADR-071](ADR-071.md)), and since [ADR-085](ADR-085.md) that rule is a built-in
+declaration the scheme can replace. Nothing can say the converse, that a
+field is nonsense in a state. [#191](https://github.com/dmarx/luria/issues/191) verified the gap; it still held on `main`
+a month later, after [ADR-098](ADR-098.md) moved value groups onto any field and [#141](https://github.com/dmarx/luria/issues/141)
+compiled every obligation into one contract.
+
+What could have expressed it, and why each falls short:
+
+- `groups` with `excluded_by` ([ADR-054](ADR-054.md), [ADR-098](ADR-098.md)) compares values *within* one
+  field. `status` and `superseded_by` are two fields.
+- `field_groups` with `at-most-one` counts which fields are present; `status`
+  always is.
+- A derived field is a `str.format` template with no conditionals.
+
+The design question [#191](https://github.com/dmarx/luria/issues/191) raised first: `required_when` and `excluded_by`
+are adjacent ideas in two spellings, and a third key risks the
+grammar-per-table cost [ADR-063](ADR-063.md) and [ADR-076](ADR-076.md) name. One mechanism or several?
+
+## Decision
+
+**`forbidden_when` takes the condition `required_when` takes, with the
+opposite sense.**
+
+```yaml
+schemes:
+  ADR:
+    references:
+      superseded_by:
+        scheme: ADR
+        many: true
+        required: false
+        required_when: {status: [Superseded]}
+        forbidden_when: {status: [Active, Proposed]}
+```
+
+- One condition type, read and validated by one function, in every table a
+  field is declared in (`references`, `fields` with or without a
+  vocabulary). The field it names and the values it lists are checked at load
+  against what the scheme can say, exactly as for `required_when`: a
+  misspelled field or value is a config error, not a rule that never fires.
+- The condition is read through the contract's effective value: a status
+  carrying a note is that status, and a vocabulary field with a `default`
+  that a document omits reads as the default.
+- A document that carries the field (any non-empty value) while the
+  condition holds is a **violation**, and the finding names the value that
+  turned the rule on and the key that declared it. Every instance is wrong
+  on its own, which is what separates a rule from a smell ([#188](https://github.com/dmarx/luria/issues/188)).
+- Declarations that contradict themselves are refused at load: `required:
+  true` with `forbidden_when` (always demanded and sometimes forbidden),
+  `required_when` and `forbidden_when` on the same field and overlapping
+  values (demanded and forbidden at once), and `forbidden_when` on a field
+  with a `default` (a default is never absent, so the rule would fire on
+  documents that never wrote the field).
+
+**The built-in successor field forbids itself while the document is in
+force.** `contract.built_in` already gives every scheme `superseded_by`,
+required while `status` is the scheme's `retires_on` word. It now also
+carries `forbidden_when: {status: [<active>]}`, using the scheme's own
+`active` word, so [#191](https://github.com/dmarx/luria/issues/191)'s case fails in every record with no config. Only
+the in-force word: whether a `Proposed`, `Deferred` or `Rejected` document
+may name a successor is a record's own call, and a record that wants more
+declares the field in its `references` table, which replaces the built-in
+outright ([ADR-085](ADR-085.md)).
+
+**`excluded_by` stays as it is.** A group constrains which *values* of one
+field may be combined; a condition constrains whether a *field* may be
+present, given another field's value. Restated as a condition, "`sound`
+excludes the failure modes" would be a field forbidden by its own value,
+which says nothing about which values were meant. The two keys now divide
+cleanly: `*_when` is presence against another field, `groups` is
+combination within a field. [ADR-098](ADR-098.md) is what made this division visible,
+because both now attach to a field.
+
+## Alternatives considered
+
+- **A predicate language** (`and`, `or`, `not`, comparisons). It would
+  cover the temporal half and every combination. But the value of the
+  existing condition is that a reader sees the rule in the line, and a
+  config that can state arbitrary predicates is one nobody reads at a
+  glance. Two conditions on one field are still out of reach. That is the
+  same limit `required_when` has, and no case has needed it.
+- **`allowed_when`, a whitelist** (`superseded_by` allowed only while
+  `Superseded`). Tighter for the motivating case, but it makes a record
+  enumerate every legal state, so a new status word silently becomes a
+  state in which the field is forbidden. A forbid list fails the other way:
+  a new word is unconstrained until someone says otherwise, which is the
+  default everywhere else in the contract.
+- **Folding `excluded_by` into the condition.** The consolidation [#191](https://github.com/dmarx/luria/issues/191) asked
+  about. Rejected above: it is a different unit (values within a field, not
+  presence of a field), and restating it would need a condition over list
+  membership on the field being constrained.
+- **A report instead of a violation.** Reports are for findings that need
+  judgement and carry an acknowledgement directive. There is nothing to
+  acknowledge here: an `Active` document with a successor is wrong every
+  time.
+- **No built-in, `forbidden_when` only.** Every record would have to
+  declare the rule to get the check the issue was filed for, and the shipped
+  `ADR` scheme declares no references.
+- **Status quo.** The contradiction stays writable, and readers of the
+  index and the typed edges see a document both in force and replaced.
+
+## Consequences
+
+- An existing record holding an in-force document that names a successor
+  fails `luria lint` after upgrading. The finding says which field to drop
+  or which status to change. Fixing it takes a judgement (was the document
+  replaced or not?), so there is no `--fix`.
+- The record page (`docs/record.md`) states the built-in rule alongside the
+  standard fields, as it already does for the requirement.
+- `promote_vocabulary` carries `forbidden_when` from a vocabulary field to
+  the reference that replaces it, as it carries `required_when`.
+- The temporal half of [#191](https://github.com/dmarx/luria/issues/191)'s state-machine idea, which transitions between
+  values are legal, is still out of scope. It needs history, which a
+  condition over one revision cannot see.

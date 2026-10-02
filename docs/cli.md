@@ -333,10 +333,11 @@ The contract, in two halves.
 - a scheme document without frontmatter, `status:`, `title:`, or `tags:`;
   a status outside the vocabulary (`Active`, `Proposed`, `Deferred`,
   `Superseded`, `Rejected`; a note still riding in `status:` rather
-  than in `status_note:`; `Superseded` with no `superseded_by:`) or
-  undeclared in the scheme's vocabulary; a missing field the scheme
-  `requires`, or one its `required_when` demands at the status the
-  document is at; a `title:` disagreeing with the body heading
+  than in `status_note:`; `Superseded` with no `superseded_by:`, or
+  `Active` with one) or undeclared in the scheme's vocabulary; a missing
+  field the scheme `requires`, or one its `required_when` demands at the
+  status the document is at; a field written where its `forbidden_when`
+  forbids it; a `title:` disagreeing with the body heading
 - a constraint the scheme declares, broken: tag-group rules
   (`exactly-one`, `at-most-one`, `excluded_by`), a field group's
   `at-least-one`, a value outside a closed vocabulary, a reference field

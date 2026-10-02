@@ -68,6 +68,9 @@ class Field:
     # `required` stays the unconditional flag; this is the other way a field
     # can be demanded, and the two are exclusive by construction in config.
     required_when: object | None = None
+    # When the field may not be written at all — the same condition, the
+    # opposite sense (ADR-tmpt3gtr, #191).
+    forbidden_when: object | None = None
     # The vocabulary's own prose, printed after a closed-set violation
     # (ADR-108, #273). Carried on the field because that is what a check has in hand;
     # declared on the vocabulary, because that is what it is about.
@@ -127,6 +130,14 @@ class Contract:
         if when is None:
             return False
         return any(str(v) in when.values for v in self.reading(when.on, meta))
+
+    def forbids(self, field: Field, meta: dict) -> bool:
+        """Whether this document may not carry the field — read through the
+        same effective values `demands` reads, so a status carrying a note is
+        still that status (ADR-tmpt3gtr)."""
+        when = field.forbidden_when
+        return when is not None and any(
+            str(v) in when.values for v in self.reading(when.on, meta))
 
     def reading(self, name: str, meta: dict) -> list:
         """What a field is read as on one document — the same resolution the
@@ -191,9 +202,16 @@ def built_in(scheme) -> tuple[Field, ...]:
     `active` set that precedent long ago: which word means *in force* was
     always the project's to choose. What generic code needs is the role, not
     the word."""
+    # A document in force names no successor: it cannot be in force and
+    # replaced at once (#191). Only the `active` word — whether a proposal or
+    # a rejection may name one is the record's call (ADR-tmpt3gtr).
+    forbid = (RequiredWhen("status", (scheme.active,))
+              if scheme.active and scheme.active != scheme.retires_on
+              else None)
     return (Field(scheme.successor, required=False, reference=ANY_SCHEME,
                   many=True, builtin=True,
                   required_when=RequiredWhen("status", (scheme.retires_on,)),
+                  forbidden_when=forbid,
                   because=(f"built in: `{scheme.successor}` (ADR-071)",)),)
 
 
@@ -219,7 +237,8 @@ def for_scheme(scheme) -> Contract:
             ref.field,
             required=ref.required or (prior is not None and prior.required),
             reference=ref.scheme, many=ref.many,
-            required_when=ref.required_when, blurb=ref.blurb,
+            required_when=ref.required_when,
+            forbidden_when=ref.forbidden_when, blurb=ref.blurb,
             because=because)
     from .vocabularies import declared
     for vocab in scheme.vocabularies:
@@ -233,7 +252,8 @@ def for_scheme(scheme) -> Contract:
             required=vocab.required or (prior is not None and prior.required),
             many=vocab.many, vocabulary=vocab.name, closed=vocab.closed,
             values=tuple(declared(vocab.values_by_name)), default=vocab.default,
-            required_when=vocab.required_when, alert=vocab.alert,
+            required_when=vocab.required_when,
+            forbidden_when=vocab.forbidden_when, alert=vocab.alert,
             blurb=vocab.blurb, because=because)
     for plain in scheme.plain_fields:
         prior = fields.get(plain.field)
@@ -245,7 +265,8 @@ def for_scheme(scheme) -> Contract:
             required=plain.required or (prior is not None and prior.required),
             many=plain.many or (prior is not None and prior.many),
             reference=prior.reference if prior is not None else None,
-            required_when=plain.required_when, blurb=plain.blurb,
+            required_when=plain.required_when,
+            forbidden_when=plain.forbidden_when, blurb=plain.blurb,
             because=because)
     for field in built_in(scheme):
         fields.setdefault(field.name, field)
@@ -298,6 +319,30 @@ def _condition(field: Field, meta: dict | None) -> str:
     if meta and (held := meta.get(when.on)) is not None:
         return f", because `{when.on}: {held}`"
     return f", when `{when.on}` is {', '.join(when.values)}"
+
+
+def forbidden(contract: Contract, field: Field, meta: dict) -> str:
+    """Why a field may not be here, in the document's own words — the value
+    that turned the rule on — plus the key that said so."""
+    when = field.forbidden_when
+    # What the rule read, not the raw line: a default fills an absent field.
+    shown = ", ".join(str(v) for v in contract.reading(when.on, meta))
+    # The built-in's provenance names the decision behind its requirement;
+    # this half of it has its own (ADR-tmpt3gtr).
+    cite = (f"(built in: `{field.name}` forbidden in force (ADR-tmpt3gtr))"
+            if field.builtin else _cite(field.because))
+    return (f"the {contract.scheme} scheme forbids it while `{when.on}` is "
+            f"{', '.join(f'`{v}`' for v in when.values)}, and this document "
+            f"says `{when.on}: {shown}` {cite}")
+
+
+def _forbids(field: Field) -> str:
+    """The `describe` clause for a forbidden field, or ""."""
+    when = field.forbidden_when
+    if when is None:
+        return ""
+    return (f"; forbidden when `{when.on}` is "
+            + ", ".join(f"`{v}`" for v in when.values))
 
 
 def explain(contract: Contract, field: Field, meta: dict | None = None) -> str:
@@ -365,6 +410,7 @@ def describe(contract: Contract) -> list[str]:
             what += ("one or more of " if field.many else "one of ") + members
             if field.default:
                 what += "; absent means " + ", ".join(f"`{d}`" for d in field.default)
+            what += _forbids(field)
             say(f"`{field.name}` — {what} {_cite(field.because)}", field.blurb)
             continue
         what = ("required" if field.required else
@@ -376,6 +422,7 @@ def describe(contract: Contract) -> list[str]:
                      else f", a `{field.reference}` code")
             if not field.required:
                 what += " when present"
+        what += _forbids(field)
         say(f"`{field.name}` — {what} {_cite(field.because)}", field.blurb)
     for group in contract.field_groups:
         members = ", ".join(f"`{f}`" for f in group.fields)
@@ -538,6 +585,12 @@ def violations(contract: Contract, rel: str, meta: dict,
     meta = derive.applied(meta, contract.derived, resolve)
     for field in contract.fields:
         raw = meta.get(field.name)
+        # Present where it is forbidden is the whole finding: the field's
+        # shape is beside the point when it should not be there at all.
+        if raw not in (None, "", []) and contract.forbids(field, meta):
+            out.append(f"{rel}: `{field.name}:` is written, but "
+                       f"{forbidden(contract, field, meta)}")
+            continue
         if field.vocabulary is not None:
             out.extend(_vocabulary_violations(contract, field, rel, raw, meta))
             continue

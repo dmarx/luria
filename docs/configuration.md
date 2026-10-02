@@ -175,6 +175,7 @@ would say nothing.
 | `closed` | `bool` | `True` |
 | `alert` | `str` | *unset* |
 | `required_when` | `RequiredWhen \| None` | *unset* |
+| `forbidden_when` | `RequiredWhen \| None` | *unset* |
 
 ## Plain fields — `schemes.X.fields.<field>`
 
@@ -190,13 +191,14 @@ it adds is when the requirement applies.
 | `required` | `bool` | `False` |
 | `many` | `bool` | `False` |
 | `required_when` | `RequiredWhen \| None` | *unset* |
+| `forbidden_when` | `RequiredWhen \| None` | *unset* |
 | `unique` | `bool` | `False` |
 | `label` | `str` | *unset* |
 | `blurb` | `str` | *unset* |
 
-## Conditional requirement — `…fields.<field>.required_when`
+## Conditions — `…fields.<field>.required_when` and `forbidden_when`
 
-A field demanded only while another field says one of a set of values — the shape a question that is only open while a document is unsettled actually has.
+A field demanded only while another field says one of a set of values — the shape a question that is only open while a document is unsettled actually has. `forbidden_when` takes the same table in the opposite sense: the field may not be written while the condition holds, as `superseded_by` may not on a document still in force.
 
 A field demanded only while another field says one of these things:
 
@@ -217,6 +219,11 @@ practice at a provisional status should say what would settle it, and one
 already in force has nothing to be waiting for. Demanding the field of
 everything makes most documents carry a key with nothing to put in it,
 and demanding it of nothing is what a project has today (#170).
+
+The same condition is what `forbidden_when` takes, in the opposite sense:
+a field that may not be written while the condition holds — `superseded_by`
+on a document still in force (ADR-tmpt3gtr, #191). One condition type
+for both keys, so there is one grammar to read and one to validate.
 
 One field against a set of literal values, and no more than that. Not
 negation, not conjunction, not an expression: a config that can state
@@ -300,6 +307,7 @@ because the explanation is prose only a person can write (#333, ADR-123).
 | `label` | `str` | *unset* |
 | `blurb` | `str` | *unset* |
 | `required_when` | `RequiredWhen \| None` | *unset* |
+| `forbidden_when` | `RequiredWhen \| None` | *unset* |
 | `explain` | `str` | *unset* |
 | `group` | `bool` | `False` |
 

@@ -320,3 +320,19 @@ def test_a_value_that_would_read_as_a_number_is_refused(
     config.reset()
     with pytest.raises(SystemExit, match="reads as a code"):
         migrate.run("0001")
+
+
+def test_a_forbidden_when_rides_the_promotion(tmp_path, monkeypatch):
+    """A reference takes the condition a vocabulary field did, in both
+    senses (ADR-tmpt3gtr), so promotion carries it like `required_when`."""
+    root = project(tmp_path, monkeypatch)
+    cfg = root / "luria.yaml"
+    cfg.write_text(cfg.read_text().replace(
+        "        vocabulary: area\n        many: true\n",
+        "        vocabulary: area\n        many: true\n"
+        "        forbidden_when: {status: [Superseded]}\n"))
+    config.reset()
+    migrate.run("0001")
+    raw = yaml.safe_load(cfg.read_text())
+    assert raw["schemes"]["RFC"]["references"]["area"]["forbidden_when"] == {
+        "status": ["Superseded"]}
