@@ -741,6 +741,13 @@ def spent_upgrades() -> list[str]:
     anything. One user's record saying it is not proof every record has,
     which is why the row says "once every record has" rather than "now"."""
     from . import upgrade
+    # Only the record that ships the upgrade can act on this: the remedy is
+    # deleting it from luria. Every other record — one born on the current
+    # format above all — was told it no longer needed an upgrade it never
+    # needed, a finding its owner could do nothing about (#331).
+    if not Path(upgrade.__file__).resolve().is_relative_to(
+            current().root.resolve()):
+        return []
     out = []
     for name, entry in upgrade.SUNSET.items():
         writes, lines, _ = upgrade._plan(current().root)

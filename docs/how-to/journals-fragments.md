@@ -49,12 +49,17 @@ The default `style` appends each fragment in order; `changelog` inserts each col
 
 Contributors write independent fragment files instead of editing the shared target. `luria new changelog` writes one (named for its filing moment) from the directory's `_template.md`; edit it, and commit it with the change it describes.
 
-`luria collect` assembles them into the target and deletes the fragments it collected. It inserts at a marker, so the target has to exist and carry one — `luria init` creates neither. Create it once, with the marker where collected entries belong:
+`luria collect` assembles them into the target and deletes the fragments it collected. It inserts at a marker, so the target has to exist and carry one. `luria init` writes the target, marker included, for every fragment directory the config declares when it runs:
+
+```console
+$ luria collect
+Collected 1 fragment(s) from record/changelog.d into CHANGELOG.md.
+```
+
+A directory declared after `init` ran has no target yet, and `luria collect` says so rather than guessing at one. Run `luria init` again (it writes only what is missing), or create the file yourself with the marker where collected entries belong:
 
 ```console
 $ printf '# Changelog\n\n<!-- luria-insert-here -->\n' > CHANGELOG.md
-$ luria collect
-Collected 1 fragment(s) from record/changelog.d into CHANGELOG.md.
 ```
 
 Collection is deliberately not per-merge. A bot commit on every merge races in-flight rebases: a branch rebased onto the pre-collection main conflicts in exactly the file fragments exist to keep conflict-free. So it runs on a cadence or on demand — the scaffolded `docs.yml` runs `luria collect --commit` weekly and from a manual dispatch ([ADR-002](../../record/decisions.d/ADR-002.md)). One writer for the shared artifact is [DP-2](../../record/principles.d/DP-002.md)'s rule.

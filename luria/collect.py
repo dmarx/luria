@@ -137,9 +137,23 @@ def collect_dir(name: str, fragment) -> int:
     if not paths:
         return 0
     view = cfg.root / fragment.target
-    view.write_text(collect(view.read_text(encoding="utf-8"), [p.read_text(encoding="utf-8") for p in paths],
+    if not view.exists():
+        # Refused, not created: where the entries go is a choice about the
+        # file — its heading, what sits above the marker — and `luria init`
+        # is what makes it. A traceback here was the first thing a fresh
+        # record met (#331).
+        raise SystemExit(
+            f"luria collect: {fragment.target} does not exist, so {name}/ "
+            f"has nowhere to collect into — `luria init` writes it, or "
+            f"create it with a {MARKER} line where entries belong")
+    try:
+        assembled = collect(view.read_text(encoding="utf-8"),
+                            [p.read_text(encoding="utf-8") for p in paths],
                             style=fragment.style,
-                            date=dt.date.today().isoformat()), encoding="utf-8")
+                            date=dt.date.today().isoformat())
+    except ValueError as why:
+        raise SystemExit(f"luria collect: {fragment.target}: {why}") from None
+    view.write_text(assembled, encoding="utf-8")
     for p in paths:
         p.unlink()
     print(f"Collected {len(paths)} fragment(s) from {name} "

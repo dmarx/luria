@@ -112,7 +112,7 @@ $ luria index
 $ luria lint
 ```
 
-Run `luria index` first: the scaffolded `docs/README.md` links views that only it writes. A `CLAUDE.md:4: docs/design-principles.md resolves to nothing` advisory is expected: the scaffolded `CLAUDE.md` points at a principles page this config does not generate, so edit that line. It does not fail the lint.
+Run `luria index` first: the scaffolded `docs/README.md` links views that only it writes.
 
 For a corpus too large to edit by hand, write a script and commit it ([Importing an existing corpus](../importing.md)). Three traps from that page are worth knowing before you start:
 
