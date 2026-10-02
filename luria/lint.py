@@ -444,6 +444,8 @@ def check_journals(errors: list[str]) -> None:
             if path.name == "_template.md":
                 continue
             rel = cfg.rel(path)
+            text = path.read_text(encoding="utf-8")
+            frontmatter_shape.check(errors, rel, text)
             meta, _ = builder.read_document(path)
             created = journal.parse_created(meta.get("created"))
             if created is None:
