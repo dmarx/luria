@@ -6,6 +6,7 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 
 ## Currently — [October 2026](2026-10.md)
 
+- [2 Oct 15:26 — Duplicate keys: ask the parser](2026-10.md#duplicate-keys-ask-the-parser)
 - [2 Oct 12:48 — A catch-all keyword swallows --help](2026-10.md#a-catch-all-keyword-swallows---help)
 - [2 Oct 05:52 — A fresh record should have nothing to say](2026-10.md#a-fresh-record-should-have-nothing-to-say)
 - [1 Oct 18:30 — A vocabulary is a scheme in shorthand](2026-10.md#a-vocabulary-is-a-scheme-in-shorthand)
@@ -13,10 +14,10 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 
 ## All books
 
-132 entries across 3 books, newest first.
+133 entries across 3 books, newest first.
 
 | Book | Entries | First | Last |
 |---|--:|---|---|
-| [2026-10](2026-10.md) | 4 | 2026-10-01 | 2026-10-02 |
+| [2026-10](2026-10.md) | 5 | 2026-10-01 | 2026-10-02 |
 | [2026-09](2026-09.md) | 82 | 2026-09-03 | 2026-09-30 |
 | [2026-08](2026-08.md) | 46 | 2026-08-03 | 2026-08-28 |
