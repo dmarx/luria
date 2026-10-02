@@ -81,6 +81,7 @@ $ luria init
 ```text
 .github/workflows/docs.yml     CI: repair, index and lint
 .github/workflows/pages.yml    CI: publish the site
+CHANGELOG.md                   where `luria collect` assembles changelog fragments
 CLAUDE.md                      a short map for coding agents
 docs/README.md                 the docs index
 record/
@@ -99,7 +100,7 @@ $ luria index
 $ luria lint
 ```
 
-A fresh scaffold passes (exit status 0). Two advisories are expected and do not fail the lint: `CLAUDE.md:4: docs/design-principles.md resolves to nothing` (the scaffolded `CLAUDE.md` points at a principles page this config never generates — edit that line to suit your project), and a note that two one-shot `luria upgrade` commands have nothing to do here.
+A fresh scaffold lints with no findings: `luria: docs lint clean`. The scaffolded `CLAUDE.md` and `docs/README.md` are planned from your config, so they link only pages this record generates.
 
 If you later add another family or scheme, update `luria.yaml` and run `luria init` again rather than inventing a parallel layout manually.
 

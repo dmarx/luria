@@ -479,6 +479,37 @@ def _views(cfg: Config) -> str:
     return "\n".join(lines)
 
 
+PRINCIPLES_LEAD = "**Before anything else, read"
+
+
+def _claude_md(cfg: Config, into: Path) -> str:
+    """The agent map, planned from the config like the docs index.
+
+    Its first paragraph sends the reader to the design principles, which is
+    right when the record renders them and a link to nothing when it does
+    not — a custom record with no principles scheme started with a broken
+    link and a lint warning about it (#331). So the paragraph goes where the
+    principles page actually renders, or is left out."""
+    text = _read("CLAUDE.md")
+    renders = any(s.render == "document" and s.output == cfg.design_principles
+                  for s in cfg.schemes.values())
+    if renders:
+        return text.replace("(docs/design-principles.md)",
+                            f"({os.path.relpath(cfg.design_principles, into)})")
+    blocks = text.split("\n\n")
+    return "\n\n".join(b for b in blocks if not b.startswith(PRINCIPLES_LEAD))
+
+
+def _fragment_target(name: str, fragment) -> str:
+    """A fragment directory's target, empty but for its heading and the
+    marker `luria collect` inserts at."""
+    from .collect import MARKER
+    title = Path(fragment.target).stem.replace("_", " ").replace("-", " ")
+    return (f"# {title.title()}\n\n"
+            f"Assembled from `{name}/` fragments by `luria collect` — "
+            f"never hand-edited.\n\n{MARKER}\n")
+
+
 def plan(into: Path, config_arg: str | None = None,
          issue_url: str = "", schemes: str = "",
          journals: str = "") -> list[tuple[Path, str]]:
@@ -499,7 +530,12 @@ def plan(into: Path, config_arg: str | None = None,
         files[into / name / "_template.md"] = _read("record/changelog.d/_template.md")
     files[cfg.docs / "README.md"] = _read("docs/README.md").replace(
         "{views}", _views(cfg))
-    files[into / "CLAUDE.md"] = _read("CLAUDE.md")
+    files[into / "CLAUDE.md"] = _claude_md(cfg, into)
+    # The file each fragment directory collects into, with the marker the
+    # collector inserts at. Without it the first `luria collect` on a fresh
+    # record crashed on the directory this same scaffold had created (#331).
+    for name, fragment in cfg.fragments.items():
+        files[into / fragment.target] = _fragment_target(name, fragment)
     for wf in sorted((TEMPLATE / ".github").rglob("*")):
         if wf.is_file():
             files[into / wf.relative_to(TEMPLATE)] = wf.read_text(encoding="utf-8")

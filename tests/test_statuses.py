@@ -795,16 +795,21 @@ def test_the_upgrade_does_not_load_the_config_it_repairs(tmp_path, monkeypatch):
 
 
 def test_a_spent_upgrade_says_it_can_be_deleted(tmp_path, monkeypatch):
-    """The marker. An upgrade that has nothing left to do anywhere is dead
-    code that still has to be read and tested, so the lint raises the
-    question rather than waiting for someone to remember it — the posture
-    `stale-directives` already takes."""
+    """The marker. An upgrade that has nothing left to do is dead code that
+    still has to be read and tested, so the lint raises the question rather
+    than waiting for someone to remember it — the posture `stale-directives`
+    already takes.
+
+    Raised in luria's own record, which is the only one that can act on it:
+    the remedy is deleting the upgrade. A record that ran the upgrade is not
+    told — it cannot delete luria's code (#331)."""
     from luria import upgrade
+    rows = lint.spent_upgrades()
+    assert any("statuses" in r and "remove it at" in r for r in rows), rows
     _project(tmp_path, monkeypatch)
     upgrade.run("statuses", root=str(tmp_path))
     config.reset()
-    rows = lint.spent_upgrades()
-    assert any("statuses" in r and "remove it at" in r for r in rows), rows
+    assert lint.spent_upgrades() == []
 
 
 def test_a_scheme_level_statuses_key_says_where_the_vocabulary_goes(

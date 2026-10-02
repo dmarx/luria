@@ -32,8 +32,12 @@ luria init [INTO] [--issue-url URL] [--schemes S] [--journals J]
 ```
 
 Scaffolds the default record — templates, stubs, tag vocabulary, principle
-seeds, a docs index, a `CLAUDE.md`, and CI workflows — into `INTO`
-(default: the project root, found via `luria.yaml`, then `.git`).
+seeds, a docs index, a `CLAUDE.md`, each fragment directory's target file
+(`CHANGELOG.md`, with the marker `luria collect` inserts at), and CI
+workflows — into `INTO` (default: the project root, found via `luria.yaml`,
+then `.git`). The docs index and `CLAUDE.md` are planned from the config:
+`CLAUDE.md` sends a reader to the design principles only where a scheme
+renders them. A fresh record, after `luria index`, lints with no findings.
 
 - Existing files are **always skipped**, never overwritten; each is
   reported. Re-running on a grown project is safe.
@@ -662,9 +666,11 @@ that is not the working directory, for upgrading a record from outside it.
 **Every command here is temporary by construction.** An upgrade exists to
 move records that predate a change onto it; once they have moved it is dead
 code that still has to be read, tested and explained. Each one carries the
-condition for its own deletion, and `luria lint` reports an upgrade this
-record no longer needs as `spent-upgrades` — so the question of removing it
-comes up on its own rather than waiting to be remembered. Nothing here goes
+condition for its own deletion, and `luria lint` reports an upgrade
+luria's own record no longer needs as `spent-upgrades` — so the question of
+removing it comes up on its own rather than waiting to be remembered. Only
+the record that ships the upgrade code is told: deleting it is the remedy,
+and no other record can take it. Nothing here goes
 through the config loader: the config an upgrade repairs is the config the
 new version refuses to load, so a command that needed it would be unrunnable
 in exactly the situation it exists for.
