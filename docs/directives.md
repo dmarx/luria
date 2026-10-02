@@ -124,6 +124,7 @@ outlive what they excuse.
 | `url-ok:` | a remote code linked to a hand-written URL instead of the constructed one (`hand-written-urls`) | the code(s) |
 | `target-ok:` | a relative link target that resolves to nothing from where the prose renders (`broken-targets`) | the exact target |
 | `source-ok:` | an identifier whose upstream title is not the one recorded (`source-mismatch`) — a preferred nickname, a trimmed subtitle, a title that changed between versions | the identifier(s) |
+| `summary-ok:` | an amended document whose `summary:` is unchanged from the committed revision (`unrevisited-summaries`) — a recap that still holds after the amendment | the version it answers, `vN` |
 | `broad-ok:` | a term flagged by `narrow-titles`, used in a legitimately broad sense | the term(s) |
 | `ref::<field>:` | not an acknowledgement — a *statement*: this document stands in the relation `<field>` (a reference field its scheme holds) to the code(s). Pushed up into frontmatter by `luria link --fix`; its `— reason`, or a citation in its scope, explains a relation declared `explain:` (at `stated` strength, a citation needs one). `[[<field>::CODE]]` is shorthand for a citation plus this directive ([how-to](how-to/relations.md#7-state-the-relation-where-you-explain-it)) | the code(s) |
 | `unlinted-file:` | opts the entire file out of reference checking — the blunt tool for fixture-heavy or vendored pages. File-scoped by design; counted in the report rather than hidden | — |
