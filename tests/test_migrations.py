@@ -425,7 +425,27 @@ def test_new_migration_scaffolds_a_numbered_spec(tmp_path, monkeypatch):
     from luria import new
     path = new.new_entry("migration", {"title": "A second move"}, None)
     assert path.name == "0002-a-second-move.yaml"
-    assert 'title = "A second move"' in path.read_text()
+    # The spec is read with `yaml.safe_load`, so the scaffold must be YAML —
+    # it was still TOML after ADR-098, and read as one opaque string.
+    import yaml
+    assert yaml.safe_load(path.read_text())["title"] == "A second move"
+
+
+def test_the_scaffolds_examples_are_valid_operations(tmp_path, monkeypatch):
+    """Uncommenting an example is how a spec gets written, so each one has to
+    parse into an operation the planner knows."""
+    _premigration_project(tmp_path, monkeypatch)
+    import yaml
+    from luria import new
+    text = new.new_entry("migration", {"title": "Examples"}, None).read_text()
+    body = "\n".join(line[2:] if line.startswith("# ") and
+                     not line.startswith("# A ") else line
+                     for line in text.splitlines()
+                     if line.startswith("# - ") or line.startswith("#   ")
+                     or line.startswith("# operations"))
+    ops = yaml.safe_load(body)["operations"]
+    assert {o["op"] for o in ops} == {"rename_scheme", "move_doc",
+                                      "promote_vocabulary"}
 
 
 def test_the_sweep_honors_unlinted_file(tmp_path, monkeypatch, capsys):

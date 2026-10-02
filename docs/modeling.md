@@ -117,6 +117,23 @@ schemes:
     - source
 ```
 
+## When is a vocabulary a scheme?
+
+The same question one level down. A vocabulary is a shorthand for a tiny
+scheme — values with a label and a blurb — and it is the right size for most
+fields. The rule:
+
+> **If a value needs to say more than its name, its label and its blurb, it
+> is an entry, and the vocabulary is a scheme.**
+
+A value that needs a parent (the values form a hierarchy), a status (it can
+be retired and replaced), relations or a history has outgrown the shorthand.
+Asking for a richer vocabulary at that point is asking the shorthand to
+become the long form badly. Promote it instead: a `promote_vocabulary`
+migration files one document per value and turns every field that drew from
+the vocabulary into a reference, keeping the per-value pages as per-term
+pages ([how to](how-to/promote-vocabulary.md), [ADR-tmppzon2](../record/decisions.d/ADR-tmppzon2.md)).
+
 ## Statuses in two schemes
 
 The status words are a vocabulary declared in `luria.yaml`, not fixed by
@@ -268,13 +285,14 @@ journals:
 None of these needed a plugin, and none of them is a special case in the code.
 A family is a table; the entries are yours to name.
 
-## Four smells
+## Five smells
 
-Four smells, each with a reading:
+Five smells, each with a reading:
 
 - **Every entry has the same status.** The field is decoration. Either narrow
-  the vocabulary in `statuses.yaml` to the one word you mean, or work out what
-  distinction you were trying to draw. `inert-status` reports this.
+  the status vocabulary the scheme names (`fields.status.vocabulary`) to the
+  one word you mean, or work out what distinction you were trying to draw.
+  `inert-status` reports this.
 - **You keep wanting a second status field.** That is the two-schemes signal,
   arriving as a schema request.
 - **Nothing ever cites these entries.** They may be a journal rather than a
@@ -282,6 +300,8 @@ Four smells, each with a reading:
   name.
 - **A tag is on 80% of entries.** It is not a browsing axis, it is the name of
   the scheme.
+- **You want a vocabulary value to have a parent, a status, or a relation.**
+  The vocabulary is a scheme in shorthand; promote it.
 
 And the general one, which applies to the machinery as much as the content: a
 guard that keeps catching you is a bug report about the workflow. One catch is

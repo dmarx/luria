@@ -572,7 +572,8 @@ luria migrate SPEC [--dry-run] [--commit]
 ```
 
 Executes a migration spec from `record/migrations.d/` (`SPEC` can be a
-path, a filename, or a unique prefix like `0001`). Two operations:
+path, a filename, or a unique prefix like `0001`; `luria new migration`
+scaffolds one). Three operations:
 
 - `rename_scheme` — rename a prefix wholesale: files move (`git mv`),
   every reference and anchor in the repository is swept to the new
@@ -580,8 +581,14 @@ path, a filename, or a unique prefix like `0001`). Two operations:
   `formerly:` with its old code.
 - `move_doc` — move one document into another scheme, where it gets a
   temporary code for the next concretize.
+- `promote_vocabulary` — turn a vocabulary into a scheme: one document per
+  value (its old spelling kept as `slug:`, from which the scheme derives an
+  alias such as `AREA-runtime`), every field that drew from it becomes a
+  grouped reference, and the documents' values become those aliases.
+  What a reference cannot carry is refused rather than dropped
+  ([how to](how-to/promote-vocabulary.md), [ADR-tmppzon2](../record/decisions.d/ADR-tmppzon2.md)).
 
-Either operation takes `strategy = "supersede"` to copy instead of move,
+`rename_scheme` and `move_doc` take `strategy: supersede` to copy instead of move,
 leaving a tombstone (`status: Superseded`, `superseded_by: …`) at the
 old code. `--dry-run`
 prints the full plan. `--commit` commits the sweep and appends the commit

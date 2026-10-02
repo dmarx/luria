@@ -78,6 +78,9 @@ Accomplish a concrete task.
 - [Reference remote knowledge](how-to/remotes.md)
 - [Publish and export a record](how-to/publishing.md)
 - [Run Luria in CI](how-to/ci.md)
+- [Promote a vocabulary to a scheme](how-to/promote-vocabulary.md) — when a
+  value needs a parent, a status or relations, it is an entry; promote the
+  vocabulary and keep its views.
 
 ## Reference
 

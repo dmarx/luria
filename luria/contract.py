@@ -412,6 +412,13 @@ def reference_code(value: str) -> str | None:
     prose resolved. Any truthy value was never the contract; a remote code
     always was (`_any_scheme_violations`)."""
     text = value.strip()
+    # A scheme's derived alias names its document as surely as the code does
+    # (#219): `area: AREA-runtime` is the readable spelling of `AREA-001`,
+    # and a reference field is where a readable spelling reads best.
+    if any(s.alias for s in current().schemes.values()):
+        from .aliases import derived_code
+        if (code := derived_code(text)) is not None:
+            return code
     from . import remotes
     if current().remotes:
         refs = remotes.references(text)
@@ -427,6 +434,18 @@ def resolvable(prefix: str) -> set[str]:
     scheme = current().schemes[prefix]
     return ({scheme.code(n) for n in scheme.documents()}
             | {f"{prefix}-{tail}" for tail in scheme.temp_documents()})
+
+
+def codes_of(field: Field, raw) -> list[str]:
+    """The codes a reference field holds, each resolved: a derived alias to
+    the code it names, anything else as written. Every walk over a relation
+    reads through this, so a document citing `AREA-runtime` and one citing
+    `AREA-001` are joined to the same node."""
+    out = []
+    for value in values_of(field, raw) or []:
+        text = str(value).strip()
+        out.append(reference_code(text) or text)
+    return out
 
 
 def values_of(field: Field, raw) -> list | None:

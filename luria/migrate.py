@@ -10,22 +10,22 @@ losing the record's memory. The spec is a YAML file in `record/migrations.d/`
 (`luria new migration` scaffolds one) — the executable plan and the audit
 trail in one artifact:
 
-    title = "Design principles become guiding principles"
-    issue = "#29"
-
-    [[operations]]
-    op = "rename_scheme"
-    from = "OLD"
-    to = "NEW"
-    output = "docs/guiding-principles.md"   # optional: the view moves too
-    remotes = ["LU"]                        # remotes that mirror THIS project
-    configs = ["template/luria.yaml"]       # extra config files to edit
-
-    [[operations]]
-    op = "move_doc"
-    doc = "OLD-4"
-    to = "NRM"                              # auto-numbered in the target
-    # strategy = "supersede"                # copy + tombstone instead of move
+    title: "Design principles become guiding principles"
+    issue: "#29"
+    operations:
+    - op: rename_scheme
+      from: OLD
+      to: NEW
+      output: docs/guiding-principles.md    # optional: the view moves too
+      remotes: [LU]                         # remotes that mirror THIS project
+      configs: [template/luria.yaml]        # extra config files to edit
+    - op: move_doc
+      doc: OLD-4
+      to: NRM                               # auto-numbered in the target
+      # strategy: supersede                 # copy + tombstone instead of move
+    - op: promote_vocabulary                # see `promote.py`
+      vocabulary: area
+      to: AREA
 
 What an operation does, in ADR-040's terms:
 
@@ -171,6 +171,11 @@ class Plan:
     # filename an index-rendered one did (`DP-017.md`), so a citation is found
     # by where it POINTS rather than by how it is labelled.
     old_addresses: dict[str, str] = field(default_factory=dict)
+    # Vocabularies promoted to schemes (`promote.Promotion`). Not code
+    # renames: a value's spelling was never a code, so nothing is swept for
+    # it — the promotion rewrites the config, files the documents and swaps
+    # the one frontmatter field itself.
+    promotions: list = field(default_factory=list)
 
 
 def _spec_path(ref: str) -> Path:
@@ -307,9 +312,13 @@ def build_plan(spec: dict, title: str) -> Plan:
             _plan_rename(plan, op)
         elif kind == "move_doc":
             _plan_move(plan, op)
+        elif kind == "promote_vocabulary":
+            from . import promote
+            plan.promotions.append(promote.plan(op))
         else:
             raise SystemExit(f"luria migrate: unknown op {kind!r} "
-                             "(know: rename_scheme, move_doc)")
+                             "(know: rename_scheme, move_doc, "
+                             "promote_vocabulary)")
     return plan
 
 
@@ -666,6 +675,12 @@ def apply(plan: Plan) -> tuple[int, int]:
             linked, n = doc_refs.linkify(text, path, adrs, anchors)
             if n:
                 path.write_text(linked, encoding="utf-8")
+    if plan.promotions:
+        from . import promote
+        for promotion in plan.promotions:
+            n = promote.apply(promotion)
+            files += n
+            swept += n
     return files, swept
 
 
@@ -694,6 +709,10 @@ def describe(plan: Plan) -> list[str]:
         new_header = ".".join((*path, new_key))
         lines.append(f"  {current().rel(config_file)}: {old_header} -> "
                      f"{new_header}")
+    if plan.promotions:
+        from . import promote
+        for promotion in plan.promotions:
+            lines += promote.describe(promotion)
     return lines
 
 
@@ -715,7 +734,10 @@ def run(spec: str, dry_run: bool = False, commit: bool = False) -> None:
 
     if dry_run:
         would = 0
-        for path in _tracked_files():
+        # Only a code rename sweeps text; a promotion edits its own files.
+        swept_paths = (_tracked_files() if plan.mapping or plan.composed
+                       or plan.path_pairs else [])
+        for path in swept_paths:
             try:
                 _, count = sweep_text(path.read_text(encoding="utf-8"), plan,
                                       source=path)
@@ -729,6 +751,10 @@ def run(spec: str, dry_run: bool = False, commit: bool = False) -> None:
     files, swept = apply(plan)
     print(f"migrated: {len(plan.moves)} move(s), {len(plan.copies)} "
           f"cop(y/ies), {swept} rewrite(s) in {files} file(s)")
+    for promotion in plan.promotions:
+        print(f"promoted: vocabulary {promotion.vocabulary} -> scheme "
+              f"{promotion.prefix}, {len(promotion.values)} document(s) "
+              f"filed, {len(promotion.fields)} field(s) now reference it")
 
     if commit:
         _git(["add", "-A"])
