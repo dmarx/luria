@@ -354,7 +354,7 @@ class RequiredWhen:
 
     The same condition is what `forbidden_when` takes, in the opposite sense:
     a field that may not be written while the condition holds — `superseded_by`
-    on a document still in force (ADR-tmpt3gtr, #191). One condition type
+    on a document still in force (ADR-125, #191). One condition type
     for both keys, so there is one grammar to read and one to validate.
 
     One field against a set of literal values, and no more than that. Not
@@ -381,7 +381,7 @@ class PlainField:
     required: bool = False
     many: bool = False
     required_when: RequiredWhen | None = None
-    # When the field may not be written at all (ADR-tmpt3gtr, #191).
+    # When the field may not be written at all (ADR-125, #191).
     forbidden_when: RequiredWhen | None = None
     # No two documents in the scheme hold one value here (ADR-111, #165).
     # A type like the others: `many` says the field holds a list, `unique`
@@ -505,7 +505,7 @@ class Reference:
     # When the requirement applies, if not always (see `RequiredWhen`).
     required_when: RequiredWhen | None = None
     # When the field may not be written at all — the same condition, the
-    # opposite sense (ADR-tmpt3gtr, #191).
+    # opposite sense (ADR-125, #191).
     forbidden_when: RequiredWhen | None = None
     # How strongly the body must account for each code the field holds
     # (#333). Two strengths, because they ask for different things:
@@ -606,7 +606,7 @@ class Vocabulary:
     alert: str = ""
     # When the requirement applies, if not always (see `RequiredWhen`).
     required_when: RequiredWhen | None = None
-    # When the field may not be written at all (ADR-tmpt3gtr, #191).
+    # When the field may not be written at all (ADR-125, #191).
     forbidden_when: RequiredWhen | None = None
 
 
@@ -1745,7 +1745,7 @@ def _required_when(where: str, spec: dict, required: bool) -> RequiredWhen | Non
 def _forbidden_when(where: str, spec: dict, required: bool,
                     required_when: RequiredWhen | None,
                     default=None) -> RequiredWhen | None:
-    """The mirror of `_required_when` (ADR-tmpt3gtr, #191), refusing the
+    """The mirror of `_required_when` (ADR-125, #191), refusing the
     declarations that contradict themselves: a field always required and
     sometimes forbidden, one both required and forbidden on the same value,
     and one with a `default` — never absent, so the rule would fire on

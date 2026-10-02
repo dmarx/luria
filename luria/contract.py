@@ -69,7 +69,7 @@ class Field:
     # can be demanded, and the two are exclusive by construction in config.
     required_when: object | None = None
     # When the field may not be written at all — the same condition, the
-    # opposite sense (ADR-tmpt3gtr, #191).
+    # opposite sense (ADR-125, #191).
     forbidden_when: object | None = None
     # The vocabulary's own prose, printed after a closed-set violation
     # (ADR-108, #273). Carried on the field because that is what a check has in hand;
@@ -134,7 +134,7 @@ class Contract:
     def forbids(self, field: Field, meta: dict) -> bool:
         """Whether this document may not carry the field — read through the
         same effective values `demands` reads, so a status carrying a note is
-        still that status (ADR-tmpt3gtr)."""
+        still that status (ADR-125)."""
         when = field.forbidden_when
         return when is not None and any(
             str(v) in when.values for v in self.reading(when.on, meta))
@@ -204,7 +204,7 @@ def built_in(scheme) -> tuple[Field, ...]:
     the word."""
     # A document in force names no successor: it cannot be in force and
     # replaced at once (#191). Only the `active` word — whether a proposal or
-    # a rejection may name one is the record's call (ADR-tmpt3gtr).
+    # a rejection may name one is the record's call (ADR-125).
     forbid = (RequiredWhen("status", (scheme.active,))
               if scheme.active and scheme.active != scheme.retires_on
               else None)
@@ -328,8 +328,8 @@ def forbidden(contract: Contract, field: Field, meta: dict) -> str:
     # What the rule read, not the raw line: a default fills an absent field.
     shown = ", ".join(str(v) for v in contract.reading(when.on, meta))
     # The built-in's provenance names the decision behind its requirement;
-    # this half of it has its own (ADR-tmpt3gtr).
-    cite = (f"(built in: `{field.name}` forbidden in force (ADR-tmpt3gtr))"
+    # this half of it has its own (ADR-125).
+    cite = (f"(built in: `{field.name}` forbidden in force (ADR-125))"
             if field.builtin else _cite(field.because))
     return (f"the {contract.scheme} scheme forbids it while `{when.on}` is "
             f"{', '.join(f'`{v}`' for v in when.values)}, and this document "

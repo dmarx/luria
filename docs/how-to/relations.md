@@ -88,7 +88,7 @@ Every scheme already has a successor relation: its `successor` field defaults
 to `superseded_by`. An entry carrying the scheme's `retires_on` status
 (default `Superseded`) must fill it ([ADR-071](../../record/decisions.d/ADR-071.md)), and an entry carrying its
 `active` status may not, because it cannot be in force and replaced at once
-([ADR-tmpt3gtr](../../record/decisions.d/ADR-tmpt3gtr.md)). Do **not** redeclare `superseded_by` merely to make those
+([ADR-125](../../record/decisions.d/ADR-125.md)). Do **not** redeclare `superseded_by` merely to make those
 rules conditional.
 
 For your own field or relation, `required_when` expresses the same general

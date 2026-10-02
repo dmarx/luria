@@ -588,7 +588,7 @@ def test_a_scheme_code_is_still_read_without_any_remote(tmp_path, monkeypatch):
 
 def _retire(path: Path) -> None:
     """A document naming a successor is one that was replaced: in force, it
-    would be in breach of the built-in rule (ADR-tmpt3gtr)."""
+    would be in breach of the built-in rule (ADR-125)."""
     path.write_text(path.read_text().replace("status: Active",
                                              "status: Superseded", 1))
 

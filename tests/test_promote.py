@@ -324,7 +324,7 @@ def test_a_value_that_would_read_as_a_number_is_refused(
 
 def test_a_forbidden_when_rides_the_promotion(tmp_path, monkeypatch):
     """A reference takes the condition a vocabulary field did, in both
-    senses (ADR-tmpt3gtr), so promotion carries it like `required_when`."""
+    senses (ADR-125), so promotion carries it like `required_when`."""
     root = project(tmp_path, monkeypatch)
     cfg = root / "luria.yaml"
     cfg.write_text(cfg.read_text().replace(

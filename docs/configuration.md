@@ -222,7 +222,7 @@ and demanding it of nothing is what a project has today (#170).
 
 The same condition is what `forbidden_when` takes, in the opposite sense:
 a field that may not be written while the condition holds — `superseded_by`
-on a document still in force (ADR-tmpt3gtr, #191). One condition type
+on a document still in force (ADR-125, #191). One condition type
 for both keys, so there is one grammar to read and one to validate.
 
 One field against a set of literal values, and no more than that. Not

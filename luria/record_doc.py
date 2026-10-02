@@ -277,7 +277,7 @@ SECTIONS = (
      "`superseded_by:` when `status` is `Superseded` — and a document in "
      "force names none: the field is forbidden while `status` is `Active`. "
      "Both follow the scheme's own words where it renames them (ADR-071, "
-     "ADR-tmpt3gtr). `status` itself is listed below rather "
+     "ADR-125). `status` itself is listed below rather "
      "than assumed: the words are the scheme's own, declared like any "
      "other controlled vocabulary. Beyond those, what each scheme's "
      "entries must carry — compiled from `luria.yaml` into the contract "

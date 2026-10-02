@@ -1,6 +1,6 @@
 ### Added
 
-- `forbidden_when` on a field, the mirror of `required_when`. It takes the same one-field condition, and a document carrying the field while the condition holds is a violation. Contradictory declarations are refused at load: always required, a value in both lists, or a field with a `default` ([#191](https://github.com/dmarx/luria/issues/191), [ADR-tmpt3gtr](record/decisions.d/ADR-tmpt3gtr.md)).
+- `forbidden_when` on a field, the mirror of `required_when`. It takes the same one-field condition, and a document carrying the field while the condition holds is a violation. Contradictory declarations are refused at load: always required, a value in both lists, or a field with a `default` ([#191](https://github.com/dmarx/luria/issues/191), [ADR-125](record/decisions.d/ADR-125.md)).
 
 ### Changed
 
