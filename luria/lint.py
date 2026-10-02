@@ -62,7 +62,7 @@ from . import adr_index as builder
 from . import (adr_pending, annotations, badges, chains, ci, contract,
                directives, doc_refs, frontmatter_shape, invariants, journal,
                referents, link_targets, narrow_titles, pins, ref_status, remotes,
-               relations, sources, statuses, templates)
+               relations, revisits, sources, statuses, templates)
 from . import aliases as aliases_mod
 from . import anchors as anchors_mod
 from . import config as config_mod
@@ -676,7 +676,7 @@ FAILABLE = ("retired-citations", "unresolved-codes", "foreign-temp-codes",
             "unresolved-citations",
             "hand-written-urls",
             "broken-targets", "remote-drift", "inert-status",
-            "source-mismatch", "source-unchecked",
+            "source-mismatch", "source-unchecked", "unrevisited-summaries",
             "legacy-spellings", "narrow-titles", "stale-directives",
             "template-drift", "broken-chains",
             "one-sided-relations", "unbound-relations", "unbound-lines",
@@ -881,6 +881,16 @@ def status_sections() -> list[tuple[str, str, list[str]]]:
             "one recorded (`source-ok:` acknowledges a deliberate one, "
             "`luria remotes --resolve` refreshes what upstream serves)", wrong))
 
+    # A version bump that left the index's line as it was (#326). Read
+    # against HEAD, so it speaks while the amendment is still uncommitted.
+    unrevisited, stale_summaries = revisits.unrevisited_summaries()
+    if unrevisited:
+        sections.append((
+            "unrevisited-summaries",
+            f"{len(unrevisited)} amended document(s) kept their `summary:` "
+            "word for word (`summary-ok: vN` acknowledges a summary that "
+            "still holds)", unrevisited))
+
     # Not the same finding, and the difference is the whole point: this one
     # says nobody has ever asked. Under `network = "require"` it is a failure,
     # so a green CI run means the citations were verified rather than merely
@@ -1024,7 +1034,8 @@ def status_sections() -> list[tuple[str, str, list[str]]]:
 
     # A directive that silently does nothing is worse than no directive.
     stale = ref_status.stale_annotations(result, docs) + stale_urls \
-        + stale_targets + stale_sources + pins.flag_problems()
+        + stale_targets + stale_sources + stale_summaries \
+        + pins.flag_problems()
     for path in doc_refs.doc_files():
         stale += doc_refs.directive_problems(path, path.read_text(encoding="utf-8"))
     if stale:

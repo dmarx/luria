@@ -369,7 +369,8 @@ add the narrative and say how many sites are already acknowledged:
 `retired-citations` · `unresolved-codes` · `foreign-temp-codes` ·
 `unresolved-citations` ·
 `hand-written-urls` · `broken-targets` · `remote-drift` ·
-`source-mismatch` · `source-unchecked` · `inert-status` ·
+`source-mismatch` · `source-unchecked` · `unrevisited-summaries` ·
+`inert-status` ·
 `legacy-spellings` · `narrow-titles` · `stale-directives` ·
 `template-drift` · `broken-chains` · `one-sided-relations` ·
 `unbound-relations` · `unbound-lines` ·

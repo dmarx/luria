@@ -6,6 +6,7 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 
 ## Currently — [October 2026](2026-10.md)
 
+- [2 Oct 20:07 — Unrevisited summaries: a check that only speaks before the commit](2026-10.md#unrevisited-summaries-a-check-that-only-speaks-before-the-commit)
 - [2 Oct 19:38 — Title comparison folds spelling, not meaning](2026-10.md#title-comparison-folds-spelling-not-meaning)
 - [2 Oct 16:25 — Forbidding a field: the mirror of required_when](2026-10.md#forbidding-a-field-the-mirror-of-required_when)
 - [2 Oct 15:26 — Duplicate keys: ask the parser](2026-10.md#duplicate-keys-ask-the-parser)
@@ -16,10 +17,10 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 
 ## All books
 
-135 entries across 3 books, newest first.
+136 entries across 3 books, newest first.
 
 | Book | Entries | First | Last |
 |---|--:|---|---|
-| [2026-10](2026-10.md) | 7 | 2026-10-01 | 2026-10-02 |
+| [2026-10](2026-10.md) | 8 | 2026-10-01 | 2026-10-02 |
 | [2026-09](2026-09.md) | 82 | 2026-09-03 | 2026-09-30 |
 | [2026-08](2026-08.md) | 46 | 2026-08-03 | 2026-08-28 |
