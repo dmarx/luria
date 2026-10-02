@@ -516,6 +516,12 @@ deliberate one, which the legitimate cases need — a nickname the project
 prefers (`AdamW: Decoupled Weight Decay Regularization`), a subtitle
 trimmed, a v1 title that changed between versions.
 
+Spelling is not a disagreement. The comparison ignores case, punctuation
+and word breaks, and folds the ways one title gets typed: TeX math and
+control words (`$O(n^2)$`, `$\mu$P`), accents written as TeX or Unicode
+(`Schr\"odinger`, `Schrödinger`), superscripts (`n²`) and Greek letters
+(`µ`, `\mu`). None of these needs a `source-ok:`.
+
 The lockfile is a cache with an endorsement in it, not the boundary of what
 may be known, and `lint.network` says how far the lint may go:
 
