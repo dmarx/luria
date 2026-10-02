@@ -85,9 +85,11 @@ A half-declared pair — a converse that is not a declared field of the target s
 ## 4. Use conditional requirements for state-dependent fields
 
 Every scheme already has a successor relation: its `successor` field defaults
-to `superseded_by`, and an entry carrying the scheme's `retires_on` status
-(default `Superseded`) must fill it ([ADR-071](../../record/decisions.d/ADR-071.md)). Do **not** redeclare
-`superseded_by` merely to make that rule conditional.
+to `superseded_by`. An entry carrying the scheme's `retires_on` status
+(default `Superseded`) must fill it ([ADR-071](../../record/decisions.d/ADR-071.md)), and an entry carrying its
+`active` status may not, because it cannot be in force and replaced at once
+([ADR-tmpt3gtr](../../record/decisions.d/ADR-tmpt3gtr.md)). Do **not** redeclare `superseded_by` merely to make those
+rules conditional.
 
 For your own field or relation, `required_when` expresses the same general
 shape. For example, a proposed or deferred recommendation can be required to
@@ -104,6 +106,19 @@ fields:
 
 The field is required only in the named states: an entry at `status: Proposed`
 with no `promote_when:` fails the lint, and an `Active` one does not.
+
+`forbidden_when` takes the same table in the opposite sense: the field may
+not be written in the named states. Adding
+
+```yaml
+    forbidden_when:
+      status:
+        - Active
+```
+
+makes an `Active` entry that still carries `promote_when:` a violation, since
+nothing remains to settle. A value can be in one of the two lists, not both,
+and a field with a `default` cannot be forbidden.
 
 ## 5. Add an invariant when the edge implies shared structure
 

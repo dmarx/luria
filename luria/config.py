@@ -352,6 +352,11 @@ class RequiredWhen:
     everything makes most documents carry a key with nothing to put in it,
     and demanding it of nothing is what a project has today (#170).
 
+    The same condition is what `forbidden_when` takes, in the opposite sense:
+    a field that may not be written while the condition holds — `superseded_by`
+    on a document still in force (ADR-tmpt3gtr, #191). One condition type
+    for both keys, so there is one grammar to read and one to validate.
+
     One field against a set of literal values, and no more than that. Not
     negation, not conjunction, not an expression: a config that can state
     arbitrary predicates is a config nobody reads at a glance, and the whole
@@ -376,6 +381,8 @@ class PlainField:
     required: bool = False
     many: bool = False
     required_when: RequiredWhen | None = None
+    # When the field may not be written at all (ADR-tmpt3gtr, #191).
+    forbidden_when: RequiredWhen | None = None
     # No two documents in the scheme hold one value here (ADR-111, #165).
     # A type like the others: `many` says the field holds a list, `unique`
     # says its values are identifiers rather than descriptions. Opt-in for
@@ -497,6 +504,9 @@ class Reference:
     blurb: str = ""
     # When the requirement applies, if not always (see `RequiredWhen`).
     required_when: RequiredWhen | None = None
+    # When the field may not be written at all — the same condition, the
+    # opposite sense (ADR-tmpt3gtr, #191).
+    forbidden_when: RequiredWhen | None = None
     # How strongly the body must account for each code the field holds
     # (#333). Two strengths, because they ask for different things:
     #
@@ -596,6 +606,8 @@ class Vocabulary:
     alert: str = ""
     # When the requirement applies, if not always (see `RequiredWhen`).
     required_when: RequiredWhen | None = None
+    # When the field may not be written at all (ADR-tmpt3gtr, #191).
+    forbidden_when: RequiredWhen | None = None
 
 
 # Path → ((mtime_ns, size), number). Keyed on the stat rather than reset
@@ -1666,8 +1678,10 @@ def _references(prefix: str, raw: dict) -> tuple[Reference, ...]:
                                label=str(spec.get("label", "")),
                                blurb=str(spec.get("blurb", "")),
                                invariant=str(spec.get("invariant", "")).strip(),
-                               required_when=_required_when(where, spec,
-                                                            required),
+                               required_when=(when := _required_when(
+                                   where, spec, required)),
+                               forbidden_when=_forbidden_when(
+                                   where, spec, required, when),
                                explain=_explain(where, spec),
                                group=bool(spec.get("group", False))))
     return tuple(found)
@@ -1693,34 +1707,69 @@ def _explain(where: str, spec: dict) -> str:
         f"relation); `true` means `cited`")
 
 
-def _required_when(where: str, spec: dict, required: bool) -> RequiredWhen | None:
-    """`required_when = { status = ["Proposed"] }` — one field, one set of
-    values. Validated eagerly, for the reason every other declaration is: a
-    condition that can never hold, or one whose meaning the reader has to
-    guess, surfaces as "no violations"."""
-    raw = spec.get("required_when")
+def _when(where: str, spec: dict, key: str) -> RequiredWhen | None:
+    """`{ status = ["Proposed"] }` under `required_when` or `forbidden_when` —
+    one field, one set of values. Validated eagerly, for the reason every
+    other declaration is: a condition that can never hold, or one whose
+    meaning the reader has to guess, surfaces as "no violations"."""
+    raw = spec.get(key)
     if raw is None:
         return None
     if not isinstance(raw, dict) or not raw:
-        raise ValueError(f"{where}: `required_when` is a table naming one "
-                         f"field and the values that make this one required "
-                         f"— `{{ status = [\"Proposed\"] }}`")
+        raise ValueError(f"{where}: `{key}` is a table naming one field and "
+                         f"the values that turn the rule on — "
+                         f"`{{ status = [\"Proposed\"] }}`")
     if len(raw) > 1:
         raise ValueError(
-            f"{where}: `required_when` names one field, not "
+            f"{where}: `{key}` names one field, not "
             f"{', '.join(sorted(raw))} — two conditions would need an `and` "
             f"or an `or` this config does not have")
-    if required:
-        raise ValueError(f"{where}: the field is already always required, so "
-                         f"`required_when` says nothing — drop one of them")
     on, values = next(iter(raw.items()))
     values = tuple(str(v) for v in
-                   (values if isinstance(values, list) else [values]))
+                   (values if isinstance(values, list) else [values] if values
+                    is not None else []))
     if not values:
-        raise ValueError(f"{where}: `required_when.{on}` lists no values, so "
-                         f"the condition can never hold and the field is "
-                         f"never required")
+        raise ValueError(f"{where}: `{key}.{on}` lists no values, so the "
+                         f"condition can never hold")
     return RequiredWhen(on=str(on), values=values)
+
+
+def _required_when(where: str, spec: dict, required: bool) -> RequiredWhen | None:
+    when = _when(where, spec, "required_when")
+    if when is not None and required:
+        raise ValueError(f"{where}: the field is already always required, so "
+                         f"`required_when` says nothing — drop one of them")
+    return when
+
+
+def _forbidden_when(where: str, spec: dict, required: bool,
+                    required_when: RequiredWhen | None,
+                    default=None) -> RequiredWhen | None:
+    """The mirror of `_required_when` (ADR-tmpt3gtr, #191), refusing the
+    declarations that contradict themselves: a field always required and
+    sometimes forbidden, one both required and forbidden on the same value,
+    and one with a `default` — never absent, so the rule would fire on
+    documents that never wrote the field."""
+    when = _when(where, spec, "forbidden_when")
+    if when is None:
+        return None
+    if required:
+        raise ValueError(f"{where}: the field is always required, so "
+                         f"`forbidden_when` would demand and forbid it at "
+                         f"once — drop one of them")
+    if (required_when is not None and required_when.on == when.on
+            and (both := [v for v in when.values
+                          if v in required_when.values])):
+        raise ValueError(
+            f"{where}: `{when.on}: {', '.join(both)}` makes the field both "
+            f"required and forbidden — a value belongs in one of "
+            f"`required_when` and `forbidden_when`, not both")
+    if default is not None:
+        raise ValueError(f"{where}: `forbidden_when` on a field with a "
+                         f"`default` — the default is never absent, so every "
+                         f"document in that state would be in breach "
+                         f"without having written the field")
+    return when
 
 
 def _fields(prefix: str, raw: dict, scheme_dir: Path, root: Path,
@@ -1805,23 +1854,26 @@ def _fields(prefix: str, raw: dict, scheme_dir: Path, root: Path,
             required = bool(spec.get("required", False))
             many = bool(spec.get("many", False))
             when = _required_when(where, spec, required)
+            forbid = _forbidden_when(where, spec, required, when)
             # `many` types a field too: it says the field holds a list, which
             # is what makes it nameable in a derivation or a chain and gives
             # the record page something to print. That is exactly what being
             # built in used to say about `tags` (ADR-098).
-            if (when is None and not required and rule is None
+            if (when is None and forbid is None and not required
+                    and rule is None
                     and not declares_groups and not many and not unique):
                 raise ValueError(f"{where}: declares no type — `vocabulary = "
                                  f"\"NAME\"` types the field, `derive` says "
                                  f"where its value comes from, `many` says it "
                                  f"holds a list, `unique` says no two "
                                  f"documents share a value, `required_when` "
-                                 f"says when it applies, `groups` says which "
+                                 f"says when it applies, `forbidden_when` "
+                                 f"when it may not be written, `groups` says which "
                                  f"of its values combine, and a table with "
                                  f"none of them constrains nothing")
             plain.append(PlainField(field=str(field), required=required,
                                     many=many, required_when=when,
-                                    unique=unique,
+                                    forbidden_when=forbid, unique=unique,
                                     label=str(spec.get("label", "")).strip(),
                                     blurb=str(spec.get("blurb", "")).strip()))
             # No vocabulary to derive membership from, so every group here
@@ -1886,8 +1938,11 @@ def _fields(prefix: str, raw: dict, scheme_dir: Path, root: Path,
                                 # (#279).
                                 label=meta.get("label", ""),
                                 blurb=meta.get("blurb", ""),
-                                required_when=_required_when(where, spec,
-                                                             required)))
+                                required_when=(when := _required_when(
+                                    where, spec, required)),
+                                forbidden_when=_forbidden_when(
+                                    where, spec, required, when,
+                                    defaults)))
         # A group constrains a subset of THIS field's values, so it is read
         # here with the field rather than from a scheme-level table that
         # could only ever have meant `tags` (ADR-098).
@@ -2562,13 +2617,13 @@ def _check_conditions(prefix: str, scheme) -> None:
     known = nameable(scheme)
     vocab_of = {v.field: v for v in scheme.vocabularies}
 
-    for field, when in _conditions(scheme):
-        where = f"luria.yaml: schemes.{prefix}.fields.{field}.required_when"
+    for field, key, when in _conditions(scheme):
+        where = f"luria.yaml: schemes.{prefix}.fields.{field}.{key}"
         if when.on not in known:
             raise ValueError(
                 f"{where}: `{when.on}` is not a field {prefix} declares, so "
                 f"the condition can never hold and `{field}` is never "
-                f"required (nameable: {', '.join(sorted(known))})")
+                f"{key.split('_')[0]} (nameable: {', '.join(sorted(known))})")
         allowed: tuple[str, ...] | None = None
         if when.on == "status":
             allowed = status_words(scheme)
@@ -2580,7 +2635,7 @@ def _check_conditions(prefix: str, scheme) -> None:
             raise ValueError(
                 f"{where}: {', '.join(repr(v) for v in bad)} is not a value "
                 f"`{when.on}` takes, so the condition can never hold and "
-                f"`{field}` is never required "
+                f"`{field}` is never {key.split('_')[0]} "
                 f"(values: {', '.join(allowed)})")
 
 
@@ -2802,8 +2857,9 @@ def _conditions(scheme):
     a condition can be written in."""
     for group in (scheme.references, scheme.vocabularies, scheme.plain_fields):
         for entry in group:
-            if entry.required_when is not None:
-                yield entry.field, entry.required_when
+            for key in ("required_when", "forbidden_when"):
+                if (when := getattr(entry, key)) is not None:
+                    yield entry.field, key, when
 
 
 def _schemes(raw: dict, root: Path, scaffolding: bool = False,

@@ -208,10 +208,12 @@ PROSE: dict[type, tuple[str, str]] = {
      "The same table, for a field that carries no vocabulary: its type is "
      "\"any truthy value\" and what it adds over a `requires` entry is when "
      "the requirement applies."),
-    RequiredWhen: ("Conditional requirement — `…fields.<field>.required_when`",
+    RequiredWhen: ("Conditions — `…fields.<field>.required_when` and `forbidden_when`",
      "A field demanded only while another field says one of a set of "
      "values — the shape a question that is only open while a document is "
-     "unsettled actually has."),
+     "unsettled actually has. `forbidden_when` takes the same table in the "
+     "opposite sense: the field may not be written while the condition "
+     "holds, as `superseded_by` may not on a document still in force."),
     Reference: ("Reference fields — `schemes.X.references.<field>`",
      "A frontmatter field that holds a code from a named scheme. Declaring "
      "the relationship rather than merely requiring the field is what turns "
