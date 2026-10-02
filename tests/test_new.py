@@ -494,3 +494,32 @@ def test_help_through_the_real_cli(project):
     assert out.returncode == 0, out.stderr
     assert "no such field" not in out.stdout + out.stderr
     assert "adr" in out.stdout
+
+
+# ── flags a kind would ignore are refused (#330) ──────────────────────────
+
+
+@pytest.mark.parametrize("kind, flags, named", [
+    ("changelog", {"title": "x"}, "title"),       # a fragment has no title
+    ("devlog", {"status": "Active"}, "status"),   # a journal has no status
+    ("adr", {"name": "foo"}, "name"),             # a scheme is numbered
+    ("migration", {"tags": "a"}, "tags"),
+])
+def test_a_flag_the_kind_would_ignore_is_refused(project, kind, flags, named):
+    """Accepted and dropped was the old behaviour: `luria new changelog
+    --title "…"` filed a fragment and threw the title away, with nothing
+    saying so. Refused by name instead, listing what the kind does take —
+    the same list `--help` prints."""
+    before = _files(project)
+    with pytest.raises(SystemExit) as stop:
+        new_mod.run(kind, **flags)
+    said = str(stop.value)
+    assert f"--{named}" in said and kind in said
+    assert _files(project) == before
+
+
+def test_the_flags_a_kind_takes_still_work(project, capsys):
+    new_mod.run("changelog", body="- An entry.", name="mine")
+    assert "mine" in capsys.readouterr().out
+    new_mod.run(title="A devlog entry", body="Prose.")
+    assert "devlog" in capsys.readouterr().out

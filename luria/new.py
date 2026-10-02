@@ -536,20 +536,23 @@ def run(kind: str = None, title: str = None, status: str = None,
               [("title", title), ("status", status),
                ("summary", summary), ("tags", tags),
                ("influenced_by", influenced_by), ("body", body)] if v}
-    if declared:
-        kinds_ = kinds()
-        resolved = (kind or default_kind() or "").lower()
-        entry = kinds_.get(resolved)
-        accepted = declared_fields(entry[1]) if entry and entry[0] == "scheme" \
-            else ()
-        unknown = [f for f in declared if f not in accepted]
+    # Every flag is checked against what the kind takes — the list `--help`
+    # prints. A scheme's declared fields were always refused when unknown;
+    # a flag the kind would simply ignore (`luria new changelog --title`)
+    # was accepted and dropped, with nothing saying so (#330).
+    resolved = (kind or default_kind() or "").lower()
+    entry = kinds().get(resolved)
+    if entry is not None:
+        accepted = accepted_flags(*entry)
+        given = [*fields, *(["name"] if name else []),
+                 *(k for k, v in declared.items() if v)]
+        unknown = [f for f in given if f not in accepted]
         if unknown:
-            known = ", ".join(f"--{f}" for f in
-                              dict.fromkeys((*UNIVERSAL, *accepted)))
-            sys.exit(f"luria new {resolved or ''}: no such field "
-                     f"{', '.join(repr(u) for u in unknown)} "
+            known = ", ".join(f"--{f}" for f in accepted)
+            sys.exit(f"luria new {resolved}: no such flag "
+                     f"{', '.join(f'--{u}' for u in unknown)} "
                      f"(this kind accepts: {known})")
-        fields.update({k: v for k, v in declared.items() if v})
+    fields.update({k: v for k, v in declared.items() if v})
     print(current().rel(new_entry(kind, fields, name)))
 
 
