@@ -111,8 +111,10 @@ luria new [KIND] [--title T] [--status S] [--summary S] [--tags a,b]
 luria new [KIND] --draft FILE
 ```
 
-Files one new entry and prints its path. `KIND` is any name the project's
-`luria.yaml` gives the machinery, lower-cased:
+Files one new entry and prints its path. `luria new --help` lists the
+kinds this record scaffolds and the flags each one takes, read from
+`luria.yaml`; `luria new KIND --help` shows one. `KIND` is any name the
+project's `luria.yaml` gives the machinery, lower-cased:
 
 - a **scheme** prefix (`adr`, `rfc`, …) — scaffolds the next document from
   the scheme's `_template.md`, with the number allocated (or a temporary
