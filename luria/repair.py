@@ -64,6 +64,14 @@ def apply() -> list[Path]:
         for p in populate_numbers(s):
             print(f"populated `number:` from the path in {cfg.rel(p)}")
             changed.append(p)
+    # The converse, on a branch: a temporary document has no number until
+    # concretize assigns one (ADR-049), so a typed `number:` is always wrong
+    # and always removable (#355).
+    for s in cfg.schemes.values():
+        for p in clear_temp_numbers(s):
+            print(f"removed `number:` from temporary document {cfg.rel(p)} — "
+                  "concretize assigns it at merge")
+            changed.append(p)
     # A note still riding in `status:` moves to `status_note:`, and an
     # old-form `by CODE` note becomes `superseded_by:` — the same repair: the
     # file states the facts, and now says so in the fields that carry them
@@ -104,6 +112,28 @@ def populate_numbers(scheme) -> list[Path]:
         if written != text:
             path.write_text(written, encoding="utf-8")
             done.append(path)
+    return done
+
+
+def clear_temp_numbers(scheme) -> list[Path]:
+    """Remove a `number:` line from every temporary document of `scheme`.
+
+    `luria new` leaves the field out of a merge-allocated document and
+    `luria concretize` writes it when it assigns the number (ADR-049), so a
+    `number:` on a temporary document was typed by hand and states an
+    identity the document does not have yet. Left in place it reached a
+    trunk once as a second `number:` key beside the one concretize wrote
+    (#355). Idempotent: a second run finds no line to remove."""
+    from .new import declares_number, drop_number
+    done: list[Path] = []
+    for path in sorted(scheme.dir.glob("*.md")):
+        if scheme.temp_of(path) is None:
+            continue
+        text = path.read_text(encoding="utf-8")
+        if not declares_number(text):
+            continue
+        path.write_text(drop_number(text), encoding="utf-8")
+        done.append(path)
     return done
 
 

@@ -276,9 +276,18 @@ def check_numbers(errors: list[str]) -> None:
     renaming on a guess would move a document's identity. An *absent* `number:`
     is the repairable case, and `luria repair` handles it from the path."""
     cfg = current()
+    from .new import declares_number
     for scheme in cfg.schemes.values():
         for path in sorted(scheme.dir.glob("*.md")):
             if scheme.temp_of(path) is not None:
+                # No number exists until concretize assigns one (ADR-049);
+                # a typed one became a duplicate key on the trunk (#355).
+                if declares_number(path.read_text(encoding="utf-8")):
+                    errors.append(
+                        f"{cfg.rel(path)}: a temporary document declares "
+                        "`number:` — concretize assigns the number at merge "
+                        "and writes the field then; `luria repair` removes "
+                        "this line")
                 continue
             declared = config_mod._declared_number(path)
             named = scheme.number_in_name(path)

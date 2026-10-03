@@ -34,8 +34,11 @@ from .config import current
 
 TEMPLATE_NAME = "_template.md"
 
-# `number:` as `luria new` and `luria repair` both write it.
-_NUMBER_LINE = re.compile(r"^number:[ \t]*\d*[ \t]*$\n", re.M)
+# Any `number:` line, whatever its value. Matching only the numeric shape the
+# writers produce let a hand-written `number: tmpabcde` survive, so the writer
+# put a second key above it — a duplicate the lint rejects, written by
+# concretize on the trunk where nobody reviews (#355).
+_NUMBER_LINE = re.compile(r"^number:[^\n]*\n", re.M)
 
 # The shape written when a scheme has no _template.md of its own — enough to
 # pass the lint (status, title, tag, date, agreeing heading) and nothing else.
@@ -269,6 +272,27 @@ def write_number(text: str, number: int) -> str:
     if _NUMBER_LINE.search(head):
         return _NUMBER_LINE.sub(line, text, count=1)
     return text[:4] + line + text[4:]
+
+
+def _frontmatter_head(text: str) -> str:
+    """The frontmatter block's lines, or "" when there is none: a `number:` in
+    the body is prose about identity, not a claim to one."""
+    if not text.startswith("---\n"):
+        return ""
+    end = text.find("\n---\n", 3)
+    return text[4:end + 1] if end != -1 else ""
+
+
+def declares_number(text: str) -> bool:
+    """Whether the frontmatter carries a `number:` line of any value."""
+    return bool(_NUMBER_LINE.search(_frontmatter_head(text)))
+
+
+def drop_number(text: str) -> str:
+    """The document without its frontmatter `number:` line, if it has one."""
+    if not declares_number(text):
+        return text
+    return _NUMBER_LINE.sub("", text, count=1)
 
 
 def new_fragment(dir_name: str, name: str | None,

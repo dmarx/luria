@@ -225,3 +225,80 @@ def test_an_indented_number_is_inside_another_field(tmp_path, monkeypatch):
                  "  number: 42\ndate: '2026-01-01'\n---\n\n# FXL-007\n")
     assert config._declared_number(path) is None
     assert scheme().number_of(path) == 7
+
+
+# --- a hand-written `number:` on a temporary document (#355) ----------------
+
+def temp_doc_with_number(root: Path, tail: str = "tmpabcde") -> Path:
+    """The specimen that reached a trunk: a temporary document whose author
+    typed `number:` with the temporary tail as its value."""
+    return write(root, f"record/fixtures.d/FXL-{tail}.md",
+                 f"---\nnumber: {tail}\nstatus: Active\n"
+                 "title: 'Landed from a branch'\ndate: '2026-01-01'\n---\n\n"
+                 f"# FXL-{tail}: Landed from a branch\n\nBody.\n")
+
+
+def test_write_number_replaces_a_non_numeric_number(tmp_path):
+    """The pattern was narrower than the docstring: it matched only an empty
+    or numeric value, so `number: tmpabcde` survived and a second key was
+    written above it."""
+    text = "---\nnumber: tmpabcde\nstatus: Active\n---\n\n# FXL-tmpabcde\n"
+    out = new.write_number(text, 9)
+    assert out.count("number:") == 1
+    assert out.startswith("---\nnumber: 9\nstatus: Active\n")
+
+
+def test_concretize_leaves_one_number_key(tmp_path, monkeypatch):
+    from luria import concretize
+    root = project(tmp_path, monkeypatch, allocate="merge")
+    doc(root, "FXL-001", number=1)
+    temp_doc_with_number(root)
+    concretize.run()
+    text = (root / "record/fixtures.d/FXL-002.md").read_text()
+    head = text.split("\n---\n", 1)[0]
+    assert head.count("number:") == 1
+    assert "number: 2\n" in text
+
+
+def test_lint_flags_a_number_on_a_temporary_document(tmp_path, monkeypatch):
+    """Caught on the branch, where its author has the context, rather than on
+    the trunk after concretize — which nobody reviews."""
+    root = project(tmp_path, monkeypatch, allocate="merge")
+    temp_doc_with_number(root)
+    errors: list[str] = []
+    lint.check_numbers(errors)
+    assert len(errors) == 1
+    assert "FXL-tmpabcde.md" in errors[0]
+    assert "luria repair" in errors[0]
+
+
+def test_lint_is_silent_on_a_temporary_document_without_one(
+        tmp_path, monkeypatch):
+    root = project(tmp_path, monkeypatch, allocate="merge")
+    doc(root, "FXL-tmpabcde")
+    errors: list[str] = []
+    lint.check_numbers(errors)
+    assert errors == []
+
+
+def test_repair_removes_a_number_from_a_temporary_document(
+        tmp_path, monkeypatch):
+    root = project(tmp_path, monkeypatch, allocate="merge")
+    path = temp_doc_with_number(root)
+    assert repair.clear_temp_numbers(scheme()) == [path]
+    text = path.read_text()
+    assert "number:" not in text
+    assert text.startswith("---\nstatus: Active\n")
+    assert repair.clear_temp_numbers(scheme()) == []
+
+
+def test_repair_leaves_a_number_in_a_temporary_body_alone(
+        tmp_path, monkeypatch):
+    """Only the frontmatter states identity; prose about it is not a claim."""
+    root = project(tmp_path, monkeypatch, allocate="merge")
+    path = write(root, "record/fixtures.d/FXL-tmpabcde.md",
+                 "---\nstatus: Active\ntitle: 'T'\n---\n\n# FXL-tmpabcde: T\n\n"
+                 "number: 3\n")
+    before = path.read_text()
+    assert repair.clear_temp_numbers(scheme()) == []
+    assert path.read_text() == before
