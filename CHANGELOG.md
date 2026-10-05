@@ -5,6 +5,180 @@ Assembled from `changelog.d/` fragments on a cadence — never hand-edited
 
 <!-- luria-insert-here -->
 
+## 2026-10-05
+
+### Fixed
+
+- `luria concretize` no longer writes a second `number:` key when a temporary document already carries a hand-written one such as `number: tmpabcde`. The writer replaced only an empty or numeric value, so it inserted `number: N` above the stale line, and the duplicate key then failed the lint on the trunk. `luria repair` populating a numbered document had the same gap ([#355](https://github.com/dmarx/luria/issues/355)).
+
+### Added
+
+- The lint now reports a `number:` on a temporary document as a violation. The number is assigned at merge ([ADR-049](record/decisions.d/ADR-049.md)), so the field is always wrong there, and the lint catches it on the branch instead of on the trunk after concretize. `luria repair` removes the line ([#355](https://github.com/dmarx/luria/issues/355)).
+
+### Fixed
+
+- `source-mismatch` no longer fires when the recorded and upstream titles differ only in spelling: TeX math and symbol commands (`$O(n^2)$`, `$\mu$P`), TeX or Unicode accents, Unicode superscripts, or Greek letters against their names. A nickname or a trimmed subtitle is still a mismatch ([#340](https://github.com/dmarx/luria/issues/340)).
+- A `source-ok:` that only excused such a spelling difference is now reported as excusing nothing, and can be removed ([#340](https://github.com/dmarx/luria/issues/340)).
+
+### Fixed
+
+- `luria new` refuses a flag the kind would ignore (`luria new changelog --title`, `luria new adr --name`) and names the flags it does take, instead of dropping it silently ([#330](https://github.com/dmarx/luria/issues/330)).
+
+### Fixed
+
+- The duplicate-frontmatter-key check now asks the YAML parser instead of scanning lines. It reports a key repeated in another spelling (`"title":` after `title:`) or inside a nested mapping, and names the line ([#240](https://github.com/dmarx/luria/issues/240)).
+- Journal entries (devlog, changelog) get the frontmatter shape check scheme documents already had: HTML comments and duplicate keys ([#240](https://github.com/dmarx/luria/issues/240)).
+
+### Added
+
+- `forbidden_when` on a field, the mirror of `required_when`. It takes the same one-field condition, and a document carrying the field while the condition holds is a violation. Contradictory declarations are refused at load: always required, a value in both lists, or a field with a `default` ([#191](https://github.com/dmarx/luria/issues/191), [ADR-125](record/decisions.d/ADR-125.md)).
+
+### Changed
+
+- The built-in `superseded_by` is now forbidden while `status` is the scheme's `active` word. An in-force document that names its replacement fails `luria lint` in every record, with no config ([#191](https://github.com/dmarx/luria/issues/191)).
+
+### Fixed
+
+- **`luria new --help` shows help** ([#328](https://github.com/dmarx/luria/issues/328)). It lists the kinds this record
+  scaffolds — read from `luria.yaml`, lower-cased (`luria new rfc`) — and
+  the flags each one takes; `luria new KIND --help` shows one. The
+  declared-field catch-all had been taking `--help` as a field named
+  `help` and refusing it. The refusal for an unknown flag no longer lists
+  a scheme's declared `status` or `tags` twice.
+
+### Fixed
+
+- **A fresh record lints with no findings** ([#331](https://github.com/dmarx/luria/issues/331)). `luria init` plans
+  `CLAUDE.md` from the config, so a record with no principles scheme is no
+  longer sent to a `docs/design-principles.md` it will never generate; it
+  writes each fragment directory's target (`CHANGELOG.md`) with its insert
+  marker, so the first `luria collect` works; and `spent-upgrades` is
+  reported only in the record that ships the upgrade code, the one place
+  its remedy can be taken.
+- `luria collect` names a missing target and what writes it, and a target
+  with no insert marker, instead of raising `FileNotFoundError` or a bare
+  `ValueError`.
+
+### Added
+
+- **Promote a vocabulary to a scheme** ([ADR-124](record/decisions.d/ADR-124.md)). A new
+  `promote_vocabulary` migration operation files one document per value
+  (its old spelling kept as a unique `slug:`), turns every field that drew
+  from the vocabulary into a reference, and rewrites the documents' values
+  to codes. What a reference cannot carry (`default`, `groups`, a
+  derivation, an `alert`) is refused rather than dropped, as is a status
+  vocabulary.
+- **A reference field accepts a derived alias** ([ADR-088](record/decisions.d/ADR-088.md)). `area:
+  AREA-runtime` is the same reference as `area: AREA-001` for the lint, the
+  views, chains, invariants and `luria relate`; `luria link --fix` leaves it
+  as written and writes a missing converse in that spelling. A promoted
+  scheme derives its alias from each value's old spelling, so documents keep
+  reading `AREA-runtime` instead of an opaque number.
+- **References can be grouped like vocabulary fields.** `group: true` on a
+  reference, or naming it as a scheme's `axis`, gives each target document
+  a page listing the documents that cite it, titled and described by the
+  target. Promotion keeps the field grouped, so its views survive.
+
+### Fixed
+
+- `luria new migration` scaffolds a YAML spec. It still wrote TOML after the
+  config moved to YAML, which `luria migrate` read as a single string.
+
+### Documentation
+
+- A how-to for promotion; `concepts/vocabularies.md` and `modeling.md`
+  explain when a vocabulary is really a scheme. `modeling.md` no longer
+  points at a `statuses.yaml`.
+
+### Documentation
+
+- **Relations stated in prose, and relations that must be explained, are
+  documented where a reader looks for them.** The concepts page on
+  relations gains a section on holding a relation twice, as frontmatter
+  and as prose, and on why an unexplained relation is a question about the
+  relation as well as the prose. The relations how-to says what to write
+  when explaining a relation, and what to do when reading turns up nothing
+  to write. `luria link` in the CLI reference describes its third job,
+  pushing a `ref::` statement up into frontmatter. The lint's warning list
+  no longer says the sites are only in the reports, since [#335](https://github.com/dmarx/luria/issues/335) prints them.
+  `explain:` gets prose in the configuration reference, and `cited` is now
+  the spelling the docs lead with.
+
+### Changed
+
+- **`explain:` no longer counts a reference entry as an explanation.** A
+  citation inside a bibliography line (`Kingma et al. (2014), LIT-001 —
+  ARXIV-1412.6980.`) names a work and says nothing about it. At either
+  strength, a code cited only there is now `unexplained-relations`, and the
+  row gives the entry's line. Under `stated`, the fixer no longer writes a
+  statement after one. An entry followed by a sentence about the work still
+  counts. Records that open each document with a reference line will see new
+  findings: on the anthology, 590 of 1427 explained relations
+  ([ADR-123](record/decisions.d/ADR-123.md)).
+
+### Added
+
+- **`luria/bibliography.py`, a standalone reference-entry detector.** It
+  judges each paragraph or list item by shape, never by heading: an
+  author/year lead or a classic author list, identifiers, title and venue,
+  and how much lower-case prose is left over. `regions(body)` returns the
+  spans of the entries.
+
+### Changed
+
+- `explain:` on a reference field takes a strength. `explain: true` (or `cited`) now asks only that the body cite each code the field holds, and takes the citation as serving the relation, so the only finding is `unexplained-relations` for a code the prose never mentions. `explain: stated` is the stricter form that shipped as `explain: true`: each citation also needs a `ref::` statement (`unannotated-relations`, which the fixer writes). Any other value is refused at config load.
+
+### Fixed
+
+- **`luria lint` no longer crashes on a DOI cited by its code.** 0.33.0's
+  relation survey split a `-` tail off every code before it asked whether
+  the code was local, and a DOI composes with `:`
+  (`[DOI:10.1109/72.238311](https://doi.org/...)`), so any record citing
+  one that way died with an `IndexError`, with nothing opted in. The
+  anthology is such a record. A remote code is now read as it is.
+
+### Documentation
+
+- `concepts.md` shows status meanings declared as a vocabulary in
+  `luria.yaml`, not in a `statuses.yaml`, and scopes "answered where it is
+  raised" to warnings that have an acknowledgement directive.
+- `how-to/relations.md` no longer redeclares the built-in `superseded_by`;
+  `required_when` is shown on a field of your own.
+- `concepts/record-model.md` is folded into `concepts.md` and
+  `concepts/governance.md`.
+- `contributing/documentation.md` states the citation rule in its general
+  form: make mutable premises explicit dependencies.
+- Proposed design principle: *Make mutable premises explicit dependencies*.
+
+### Changed
+
+- **`luria lint` names where a status finding is, not only how many.** The
+  `retired-citations`, `unresolved-codes` and `foreign-temp-codes` rows used
+  to give a per-code count and point at `luria reports` for the sites. That
+  meant a second command, and a generated file to read, before anything
+  could be fixed. Each row now lists every unacknowledged citing site as
+  `path:line` beneath it. The sites are continuation lines of their row, so
+  `baseline` and `fail_on`, which count rows, count exactly what they did
+  before. `luria reports` is unchanged.
+
+### Added
+
+- Relations stated in prose ([#333](https://github.com/dmarx/luria/issues/333)). A comment directive in the `ref::` namespace, named by a reference field, `<!-- ref::extends: LIT-007 -->`, states that this document holds that relation. A misspelt field is reported. It uses the same grammar as every acknowledgement, so line, `-block` and `-file` scope, `— reason` and `until <date>` all apply. Any reference works, declared or built in. `[[extends::LIT-7]]` is shorthand that `luria link --fix` expands into the link plus the statement. A stated relation missing from frontmatter is the new `unrecorded-relations` warning, and the fixer writes it.
+- `explain: true` on a reference field asks for each code the field holds to be explained in the body, either by a citation within a statement's scope or by the statement's `— reason`. `unannotated-relations` (the fixer writes the statement after an existing citation) and `unexplained-relations` (a report) cover the two ways that can fail.
+- `bad-annotations` reports a statement the record cannot hold: a field the document does not hold, an argument that is not a code, a code naming no local document, a code in the wrong scheme, or a contradiction of a single-valued field.
+
+### Changed
+
+- Directive names may open with a `namespace::` and contain `_`, so a statement can be named `ref::extended_by`. A reference field whose name ends in `-block` or `-file` is now refused at config load, since it would read as a scope suffix.
+
+### Fixed
+
+- A markdown link with a title (`[X](path "title")`) was invisible to the link-target check, the remote hand-link check, view-citation retargeting and the site's frontmatter link rewriting. All four now read it.
+
+### Documentation
+
+- The relations how-to gains a section on stating a relation where you explain it, and the directive vocabulary lists relation statements.
+
 ## 2026-09-28
 
 ### Documentation
