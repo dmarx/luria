@@ -244,9 +244,9 @@ def check_contracts(errors: list[str]) -> None:
         if not c.fields and not c.groups:
             continue
         for field in c.fields:
-            if (field.reference and field.reference != contract.ANY_SCHEME
-                    and field.reference not in known):
-                known[field.reference] = contract.resolvable(field.reference)
+            for target in contract.targets(field):
+                if target not in known:
+                    known[target] = contract.resolvable(target)
         for path in [*scheme.documents().values(),
                      *scheme.temp_documents().values()]:
             meta, _ = builder.read_document(path)

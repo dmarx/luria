@@ -195,8 +195,9 @@ def relation_edges(prefix: str, ref: Reference) -> list[Unbound]:
     not the relation's to make. It is the chain's, and a chain is where it
     stays (#272)."""
     docs = _documents(prefix)
-    if ref.scheme != prefix:
-        docs = {**docs, **_documents(ref.scheme)}
+    for far in ref.scheme:
+        if far != prefix:
+            docs = {**docs, **_documents(far)}
     out, seen = [], set()
     for code, targets in sorted(relations.edges(prefix, ref.field).items()):
         for other in sorted(targets):

@@ -43,7 +43,7 @@ from pathlib import Path
 
 from .adr_index import Adr, load_scheme, parse_frontmatter, read_document
 from .config import current
-from .contract import (ANY_SCHEME, codes_of, for_scheme, resolvable,
+from .contract import (codes_of, for_scheme, resolvable, targets,
                        violations)
 from .aliases import readable
 from .field_edit import add_to_field, drop_from_field
@@ -75,7 +75,11 @@ def pairs() -> list[tuple[str, str, str, str]]:
     for prefix, scheme in current().schemes.items():
         for ref in scheme.references:
             if ref.converse:
-                out.append((prefix, ref.field, ref.converse, ref.scheme))
+                # One pair per scheme the field may name (#160): each target
+                # holds its own half, and completing one says nothing about
+                # the others.
+                out.extend((prefix, ref.field, ref.converse, far)
+                           for far in ref.scheme)
     return sorted(set(out))
 
 
@@ -129,30 +133,28 @@ def edges(prefix: str, field: str) -> dict[str, set[str]]:
     is simply itself."""
     spec = next((r for r in current().schemes[prefix].references
                  if r.field == field), None)
-    far = spec.scheme if spec else prefix
+    fars = spec.scheme if spec else (prefix,)
     docs = _documents(prefix)
-    far_docs = docs if far == prefix else _documents(far)
+    far_docs: dict[str, Adr] = {}
+    for far in fars:
+        far_docs.update(docs if far == prefix else _documents(far))
 
     out = _reads(prefix, field, far_docs)
     back = converse_of(prefix, field)
     if back:
         # The far side names this one, so its reading inverts into this
-        # scheme's code space whether or not the relation crosses.
-        for code, others in _reads(far, back, docs).items():
-            for other in others:
-                out.setdefault(other, set()).add(code)
+        # scheme's code space whether or not the relation crosses — from
+        # every scheme the field may name.
+        for far in fars:
+            for code, others in _reads(far, back, docs).items():
+                for other in others:
+                    out.setdefault(other, set()).add(code)
     return out
 
 
 def converse_of(prefix: str, field: str) -> str:
     """The field holding `field` read backwards, or "" if none is declared."""
     return next((c for p, f, c, _ in pairs() if p == prefix and f == field), "")
-
-
-def converse_scheme_of(prefix: str, field: str) -> str:
-    """Which scheme that converse field lives on — `prefix` itself unless the
-    relation crosses."""
-    return next((s for p, f, _, s in pairs() if p == prefix and f == field), "")
 
 
 def _contradictions(field: str, back: str, held: dict) -> set[tuple[str, str]]:
@@ -369,8 +371,8 @@ def _blocked(prefix: str, docs: dict, repairs: list[Repair]
             continue
         # `superseded_by` names any scheme, which has no one set of codes to
         # resolve against — the same exemption the lint makes.
-        known = {f.reference: resolvable(f.reference) for f in contract.fields
-                 if f.reference and f.reference != ANY_SCHEME}
+        known = {t: resolvable(t) for f in contract.fields
+                 for t in targets(f)}
         rel = current().rel(path)
         meta = read_document(path)[0]
         was = set(violations(contract, rel, meta, known))

@@ -214,7 +214,7 @@ def test_a_practice_names_the_paper_behind_it(example):
     arXiv is a paper all the same."""
     root = example("knowledge-base")
     ref, = config.current().schemes["SOTA"].references
-    assert (ref.field, ref.scheme, ref.required) == ("source", "LIT", True)
+    assert (ref.field, ref.scheme, ref.required) == ("source", ("LIT",), True)
     group, = config.current().schemes["LIT"].field_groups
     assert (group.name, group.fields) == ("source", ("arxiv", "doi", "url"))
 
@@ -480,7 +480,7 @@ def test_a_required_reference_makes_an_ungrounded_rule_a_finding(example):
     cfg = config.current()
     for scheme in ("PRACTICE", "BOUNDARY"):
         grounds, = [r for r in cfg.schemes[scheme].references if r.field == "grounds"]
-        assert grounds.scheme == "VALUE", scheme
+        assert grounds.scheme == ("VALUE",), scheme
         assert grounds.required, scheme
 
     rogue = root / "record" / "practices.d" / "PRACTICE-009.md"

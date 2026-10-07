@@ -88,7 +88,7 @@ def test_a_reference_compiles_to_a_typed_field(tmp_path, monkeypatch):
             """)
     field, = declared(sota())
     assert field.name == "source"
-    assert field.required and field.reference == "LIT"
+    assert field.required and field.reference == ("LIT",)
 
 
 def test_an_optional_reference_is_typed_but_not_required(tmp_path, monkeypatch):
@@ -102,7 +102,7 @@ def test_an_optional_reference_is_typed_but_not_required(tmp_path, monkeypatch):
                     required: false
             """)
     field, = declared(sota())
-    assert not field.required and field.reference == "LIT"
+    assert not field.required and field.reference == ("LIT",)
 
 
 def test_a_field_in_both_tables_is_one_obligation(tmp_path, monkeypatch):
@@ -121,7 +121,7 @@ def test_a_field_in_both_tables_is_one_obligation(tmp_path, monkeypatch):
                     scheme: LIT
             """)
     field, = declared(sota())
-    assert field.required and field.reference == "LIT"
+    assert field.required and field.reference == ("LIT",)
     assert len(field.because) == 2
 
 
@@ -400,7 +400,7 @@ def test_a_reference_declares_whether_it_holds_one_code_or_many(tmp_path, monkey
     ref, = config.current().schemes["SCENE"].references
     assert ref.many
     field, = declared(contract.for_scheme(config.current().schemes["SCENE"]))
-    assert field.many and field.reference == "SCENE"
+    assert field.many and field.reference == ("SCENE",)
 
 
 def test_the_default_is_one(tmp_path, monkeypatch):

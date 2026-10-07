@@ -32,19 +32,21 @@ from dataclasses import dataclass
 from . import derive
 from .config import (TEMP_TAIL, FieldGroup, RequiredWhen, TagGroup,
                      current)
+from .config import spelled as _spelled
 
 
 @dataclass(frozen=True)
 class Field:
     """One frontmatter field an entry must (or may) carry, and what it holds.
 
-    `reference` is a scheme prefix when the field names a document, `None`
-    when any truthy value satisfies it — the gap between the two is the one
-    ADR-060 measured. `because` is every declaration that contributed, so a
-    finding can say why rather than only what."""
+    `reference` is the scheme prefixes a code may belong to when the field
+    names a document — one, or several for a relation spanning families
+    (#160) — and `None` when any truthy value satisfies it; the gap between
+    the two is the one ADR-060 measured. `because` is every declaration that
+    contributed, so a finding can say why rather than only what."""
     name: str
     required: bool = True
-    reference: str | None = None
+    reference: tuple[str, ...] | None = None
     # A list of values rather than one. A reference or a vocabulary can say
     # so; a plain `requires` field is satisfied by any truthy value,
     # whatever shape it has.
@@ -177,7 +179,27 @@ class Contract:
 # A reference into any local scheme: the successor a superseded document
 # names may live in another scheme, and a remote code passes as a citation
 # the remote machinery verifies.
-ANY_SCHEME = "*"
+ANY_SCHEME = ("*",)
+
+
+def targets(field: Field) -> tuple[str, ...]:
+    """The local schemes a reference field's codes may belong to — empty for
+    a field that names no document, or names a document in any scheme."""
+    if field.reference is None or field.reference == ANY_SCHEME:
+        return ()
+    return field.reference
+
+
+def target_of(field: Field, code: str) -> str | None:
+    """Which of the field's declared schemes `code` belongs to, or None. Read
+    off the code's own prefix, so `LIT-001` is never mistaken for a code of
+    a scheme whose prefix merely starts the same way."""
+    return next((t for t in targets(field) if code.startswith(f"{t}-")), None)
+
+
+def spelled(field: Field) -> str:
+    """What a field may hold, as a finding says it: `LIT`, `LIT or CASE`."""
+    return _spelled(targets(field))
 
 # The fields every scheme has. `superseded_by` holds one code or a list —
 # the successor is structure, written and checked as a reference, and the
@@ -236,7 +258,7 @@ def for_scheme(scheme) -> Contract:
         fields[ref.field] = Field(
             ref.field,
             required=ref.required or (prior is not None and prior.required),
-            reference=ref.scheme, many=ref.many,
+            reference=tuple(ref.scheme), many=ref.many,
             required_when=ref.required_when,
             forbidden_when=ref.forbidden_when, blurb=ref.blurb,
             because=because)
@@ -360,7 +382,7 @@ def explain(contract: Contract, field: Field, meta: dict | None = None) -> str:
         return (f"the {contract.scheme} scheme requires it{why} "
                 f"{_cite(field.because)}")
     what = ("names a document in any scheme" if field.reference == ANY_SCHEME
-            else f"declares it a {field.reference} reference")
+            else f"declares it a {spelled(field)} reference")
     lead = ("" if field.reference == ANY_SCHEME
             else f"the {contract.scheme} scheme ")
     if field.reference == ANY_SCHEME:
@@ -418,8 +440,9 @@ def describe(contract: Contract) -> list[str]:
                  + ", ".join(f"`{v}`" for v in field.required_when.values))
                 if field.required_when is not None else "optional")
         if field.reference is not None:
-            what += (f", one or more `{field.reference}` codes" if field.many
-                     else f", a `{field.reference}` code")
+            shown = " or ".join(f"`{t}`" for t in targets(field)) or "`*`"
+            what += (f", one or more {shown} codes" if field.many
+                     else f", a {shown} code")
             if not field.required:
                 what += " when present"
         what += _forbids(field)
@@ -604,6 +627,7 @@ def violations(contract: Contract, rel: str, meta: dict,
             out.extend(_any_scheme_violations(contract, field, rel, raw, known,
                                               meta))
             continue
+        target = spelled(field)
         values = values_of(field, raw)
         if values is None:
             out.append(
@@ -624,14 +648,14 @@ def violations(contract: Contract, rel: str, meta: dict,
                     f"{rel}: `{field.name}: {value}` is not a code — the "
                     f"{contract.scheme} scheme declares this field a "
                     f"{target} reference {_cite(field.because)}")
-            elif not code.startswith(f"{target}-"):
+            elif (home := target_of(field, code)) is None:
                 out.append(
                     f"{rel}: `{field.name}: {code}` is not a {target} code — "
                     f"a {contract.scheme} document's `{field.name}` names a "
                     f"{target} document {_cite(field.because)}")
-            elif code not in known[target]:
+            elif code not in known.setdefault(home, resolvable(home)):
                 out.append(f"{rel}: `{field.name}: {code}` resolves to no "
-                           f"{target} document")
+                           f"{home} document")
     for group in contract.field_groups:
         present = [f for f in group.fields if meta.get(f) not in (None, "", [])]
         shown = ", ".join(f"`{f}:`" for f in group.fields)

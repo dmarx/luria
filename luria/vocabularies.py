@@ -140,10 +140,14 @@ def _targets(field) -> dict[str, object]:
     declared value nobody uses does."""
     from .adr_index import load_scheme
     from .config import current
-    target = current().schemes.get(field.reference)
-    if target is None:
-        return {}
-    return {d.code: d for d in load_scheme(target)}
+    from .contract import targets as named
+    # Each scheme the field may name, in declared order (#160): a union of
+    # families is still one axis, and every target in it gets its page.
+    out: dict[str, object] = {}
+    for prefix in named(field):
+        if (target := current().schemes.get(prefix)) is not None:
+            out.update({d.code: d for d in load_scheme(target)})
+    return out
 
 
 def _canon(code: str) -> str:

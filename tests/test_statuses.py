@@ -680,7 +680,7 @@ def test_declaring_the_field_yourself_replaces_the_default(tmp_path, monkeypatch
               if f.name == "superseded_by"]
     assert len(fields) == 1, fields
     assert not fields[0].builtin
-    assert fields[0].reference == "VP"
+    assert fields[0].reference == ("VP",)
 
 
 # --- `status:` is an ordinary controlled vocabulary (#181) -------------------
