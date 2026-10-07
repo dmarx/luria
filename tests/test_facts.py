@@ -183,3 +183,18 @@ def test_a_value_is_held_as_a_set_member(tmp_path, monkeypatch):
     doc(root, "LIT-001", "area: ' runtime '\n")
     assert ("LIT-001", "area", "runtime") in by(facts(), "holds")
     assert ("LIT-001", "tags", "record") in by(facts(), "holds")
+
+
+def test_what_head_said_is_a_fact(tmp_path, monkeypatch):
+    """The converse fixer's baseline: what each paired field said at HEAD,
+    read again once HEAD moves even though no document changed."""
+    root = project(tmp_path, monkeypatch)
+    doc(root, "LIT-001", "supports:\n- CLAIM-001\n")
+    doc(root, "CLAIM-001")
+    assert by(facts(), "head_value") == set()           # no repository yet
+    git = ["git", "-c", "user.name=t", "-c", "user.email=t@t"]
+    subprocess.run([*git, "init", "-q"], cwd=root, check=True)
+    subprocess.run([*git, "add", "."], cwd=root, check=True)
+    subprocess.run([*git, "commit", "-qm", "x"], cwd=root, check=True)
+    assert ("LIT", "supports", "LIT-001", "CLAIM-001") in by(facts(),
+                                                             "head_value")
