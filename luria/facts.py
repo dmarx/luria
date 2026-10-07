@@ -40,6 +40,12 @@ position, an integer), so a code like `LIT-001` needs no mangling:
                                   asserts they share a value (`members`)
     edge(C, R, T).                the typed graph `luria/edges.py` derives
 
+    head_value(S, F, C, X).       what document C of scheme S declared in a
+                                  converse-paired field F at HEAD, as the
+                                  text said it — the baseline the converse
+                                  fixer reads change against. Absent with no
+                                  repository or no commit.
+
 Every fact comes through the record's own readers — `load_scheme`, the
 compiled contract, `edges.graph` — never a second parse, for the reason
 `luria export` gives (DP-4).
@@ -50,7 +56,11 @@ import json
 from collections.abc import Iterable, Iterator
 from dataclasses import dataclass
 
-from .adr_index import load_scheme
+import re
+import subprocess
+from pathlib import Path
+
+from .adr_index import load_scheme, parse_frontmatter
 from .config import current
 from .contract import codes_of, for_scheme
 
@@ -166,12 +176,76 @@ def document_facts(cfg=None) -> Iterator[Fact]:
         yield Fact("edge", (edge.source, edge.relation, edge.target))
 
 
-def fingerprint(cfg=None) -> tuple:
-    """What the facts depend on, cheaply: every document's path, mtime and
-    size. Listing the scheme directories is a few hundred `stat`s; reading
-    the documents is what costs, and this is what says whether to."""
+def listed(value) -> list[str]:
+    """Codes from a raw frontmatter value, list or scalar. Deliberately not
+    contract-resolved: HEAD's config is not necessarily this one's, and all
+    that is wanted from the baseline is what the text said."""
+    if value is None:
+        return []
+    if isinstance(value, list):
+        return [str(v).strip() for v in value]
+    return [str(value).strip()]
+
+
+def _paired_fields(cfg) -> dict[str, set[str]]:
+    """Per scheme, the fields a declared converse pair reads on that side:
+    the field on its own scheme, the converse on each scheme it names."""
+    out: dict[str, set[str]] = {}
+    for prefix, scheme in cfg.schemes.items():
+        for ref in scheme.references:
+            if not ref.converse:
+                continue
+            out.setdefault(prefix, set()).add(ref.field)
+            for far in ref.scheme:
+                if far in cfg.schemes:
+                    out.setdefault(far, set()).add(ref.converse)
+    return out
+
+
+def head_facts(cfg=None) -> list[Fact]:
+    """What each document declared at HEAD in the fields a converse pair
+    reads. Narrowed with `git grep`, because the answer only depends on
+    documents that declared such a field, which is a handful of a corpus.
+
+    No baseline at all — no repository, or no commit yet — is no facts, not
+    a partial set: the fixer reads that as "nothing changed"."""
     cfg = cfg or current()
-    out = []
+    out: list[Fact] = []
+    for prefix, fields in sorted(_paired_fields(cfg).items()):
+        args = ["git", "grep", "-l", "-E",
+                f"^({'|'.join(sorted(re.escape(f) for f in fields))}):",
+                "HEAD", "--", str(cfg.schemes[prefix].dir)]
+        found = subprocess.run(args, cwd=cfg.root, capture_output=True,
+                               text=True)
+        if found.returncode > 1:      # 1 is "no matches", which is an answer
+            return []
+        for line in found.stdout.splitlines():
+            _, _, rel = line.partition(":")
+            blob = subprocess.run(["git", "show", f"HEAD:{rel}"],
+                                  cwd=cfg.root, capture_output=True, text=True)
+            if blob.returncode != 0:
+                continue
+            meta = parse_frontmatter(blob.stdout)[0]
+            for field in fields:
+                for code in listed(meta.get(field)):
+                    out.append(Fact("head_value",
+                                    (prefix, field, Path(rel).stem, code)))
+    return out
+
+
+def _head(cfg) -> str:
+    done = subprocess.run(["git", "rev-parse", "-q", "--verify", "HEAD"],
+                          cwd=cfg.root, capture_output=True, text=True)
+    return done.stdout.strip()
+
+
+def fingerprint(cfg=None) -> tuple:
+    """What the facts depend on, cheaply: the commit HEAD names, and every
+    document's path, mtime and size. Listing the scheme directories is a few
+    hundred `stat`s; reading the documents is what costs, and this is what
+    says whether to."""
+    cfg = cfg or current()
+    out = [("HEAD", _head(cfg), 0)]
     for scheme in cfg.schemes.values():
         for path in [*scheme.documents().values(),
                      *scheme.temp_documents().values()]:
@@ -194,7 +268,8 @@ def facts(cfg=None) -> list[Fact]:
     stamp = fingerprint(cfg)
     if _memo["cfg"] is cfg and _memo["print"] == stamp:
         return _memo["facts"]
-    found = sorted(set(schema_facts(cfg)) | set(document_facts(cfg)))
+    found = sorted(set(schema_facts(cfg)) | set(document_facts(cfg))
+                   | set(head_facts(cfg)))
     _memo.update(cfg=cfg, print=stamp, facts=found)
     return found
 
