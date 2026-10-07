@@ -19,6 +19,8 @@
     luria remotes       other projects' records cited from this one
     luria site          stage the record as a Quartz vault, ready to build
     luria export        write the record as a SQLite database, for querying
+    luria facts         print the record as clingo facts, for the logic core
+                        or for rules of your own
     luria init          scaffold the record into a project that has none
     luria config        write a starting luria.yaml and stop, for editing
                         before anything is scaffolded
@@ -46,9 +48,9 @@ import sys
 
 import fire
 
-from . import (ack, adr_index, collect, concretize, export, init, link_refs,
-               lint, migrate, new, relate, remotes, repair, reports, site,
-               upgrade)
+from . import (ack, adr_index, collect, concretize, export, facts, init,
+               link_refs, lint, migrate, new, relate, remotes,
+               repair, reports, site, upgrade)
 
 COMMANDS = {
     "lint": lint.run,
@@ -63,6 +65,7 @@ COMMANDS = {
     "remotes": remotes.run,
     "site": site.run,
     "export": export.run,
+    "facts": facts.run,
     "init": init.run,
     "config": init.config_run,
     "reports": reports.run,
