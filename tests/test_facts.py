@@ -178,11 +178,19 @@ def test_a_relation_is_held_from_either_side(tmp_path, monkeypatch):
 
 
 def test_a_value_is_held_as_a_set_member(tmp_path, monkeypatch):
-    """`holds/3` is `members`: a scalar is a set of one, stripped."""
+    """`holds/3` is `members`, for the fields an invariant names and no
+    others: a scalar is a set of one, stripped."""
     root = project(tmp_path, monkeypatch)
+    (root / "luria.yaml").write_text(merged(
+        CONFIG, {"chains": {"argument": {"invariant": "status"}}}))
+    config.reset()
     doc(root, "LIT-001", "area: ' runtime '\n")
-    assert ("LIT-001", "area", "runtime") in by(facts(), "holds")
-    assert ("LIT-001", "tags", "record") in by(facts(), "holds")
+    (root / "record/claims.d/CLAIM-001.md").write_text(
+        "---\nstatus: ' Active '\ntitle: x\ndate: '2026-01-01'\n---\n\n"
+        "# CLAIM-001: x\n")
+    held = by(facts(), "holds")
+    assert ("CLAIM-001", "status", "Active") in held
+    assert not any(f == "area" for _, f, _ in held)
 
 
 def test_what_head_said_is_a_fact(tmp_path, monkeypatch):
@@ -198,3 +206,37 @@ def test_what_head_said_is_a_fact(tmp_path, monkeypatch):
     subprocess.run([*git, "commit", "-qm", "x"], cwd=root, check=True)
     assert ("LIT", "supports", "LIT-001", "CLAIM-001") in by(facts(),
                                                              "head_value")
+
+
+def test_threads_asking_at_once_build_the_facts_once(tmp_path, monkeypatch):
+    """The render pool asks from several threads at once; without the lock
+    each built its own copy, slower for contending with the others."""
+    import threading
+    from luria import facts as facts_module
+    root = project(tmp_path, monkeypatch)
+    doc(root, "LIT-001")
+    builds = []
+    real = facts_module.document_facts
+
+    def counted(*args, **kwargs):
+        builds.append(1)
+        yield from real(*args, **kwargs)
+
+    monkeypatch.setattr(facts_module, "document_facts", counted)
+    cfg = config.current()
+    threads = [threading.Thread(target=facts, args=(cfg,)) for _ in range(8)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+    assert len(builds) == 1
+
+
+def test_a_program_reads_only_the_families_it_names(tmp_path, monkeypatch):
+    root = project(tmp_path, monkeypatch)
+    doc(root, "LIT-001")
+    assert logic.needs("relations") == {"schema", "documents"}
+    assert "head" in logic.needs("converse")
+    assert not by(facts(families={"schema", "documents"}), "value")
+    with pytest.raises(ValueError, match="no fact family"):
+        facts(families={"nope"})

@@ -1,4 +1,5 @@
 % luria/logic/converse.lp
+% facts: schema documents head
 % A relation and its converse: what `luria link --fix` writes or removes to
 % make the two sides of a declared pair agree, and what it refuses to touch.
 % See luria/relations.py for the reasoning; this program decides it.
