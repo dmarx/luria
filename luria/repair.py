@@ -26,6 +26,7 @@ from pathlib import Path
 
 from . import adr_index, config_doc, doc_refs, journal, link_refs, statuses
 from .config import current
+from . import writes
 
 
 def apply() -> list[Path]:
@@ -110,7 +111,7 @@ def populate_numbers(scheme) -> list[Path]:
         text = path.read_text(encoding="utf-8")
         written = write_number(text, number)
         if written != text:
-            path.write_text(written, encoding="utf-8")
+            writes.write_text(path, written)
             done.append(path)
     return done
 
@@ -132,7 +133,7 @@ def clear_temp_numbers(scheme) -> list[Path]:
         text = path.read_text(encoding="utf-8")
         if not declares_number(text):
             continue
-        path.write_text(drop_number(text), encoding="utf-8")
+        writes.write_text(path, drop_number(text))
         done.append(path)
     return done
 
@@ -162,7 +163,7 @@ def retire_aliases(scheme) -> list[Path]:
             continue
         if any(str(a).strip() == was for a in (meta.get("formerly") or [])):
             continue
-        path.write_text(add_to_field(text, "formerly", was), encoding="utf-8")
+        writes.write_text(path, add_to_field(text, "formerly", was))
         done.append(path)
     if done:
         aliases_mod.reset()

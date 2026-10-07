@@ -31,6 +31,7 @@ from pathlib import Path
 
 from . import journal as journal_mod
 from .config import current
+from . import writes
 
 TEMPLATE_NAME = "_template.md"
 
@@ -228,7 +229,7 @@ def new_scheme_doc(scheme, fields: dict[str, str]) -> Path:
 
     path = scheme.dir / f"{stem}.md"
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(text, encoding="utf-8")
+    writes.write_text(path, text)
     return path
 
 
@@ -326,7 +327,7 @@ def new_fragment(dir_name: str, name: str | None,
         text = template.read_text(encoding="utf-8")
     else:
         text = "### Changed\n\n- \n"
-    path.write_text(text, encoding="utf-8")
+    writes.write_text(path, text)
     return path
 
 
@@ -370,7 +371,7 @@ def new_migration(fields: dict[str, str], name: str | None) -> Path:
     slug = name or re.sub(r"[^a-z0-9]+", "-", title.lower()).strip("-")
     path = mig_dir / f"{number}-{slug}.yaml"
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(MIGRATION_TEMPLATE.format(number=number, title=title), encoding="utf-8")
+    writes.write_text(path, MIGRATION_TEMPLATE.format(number=number, title=title))
     return path
 
 

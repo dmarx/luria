@@ -55,6 +55,7 @@ from . import doc_refs
 from . import new as new_mod
 from .collect import _added_at
 from .config import current
+from . import writes
 
 
 def pending() -> list[tuple[object, str, Path]]:
@@ -108,7 +109,7 @@ def _rewrite_files(renames: list[tuple[str, str]]) -> int:
             if (low := old.lower()) != old:
                 new = new.replace(low, target.lower())
         if new != text:
-            path.write_text(new, encoding="utf-8")
+            writes.write_text(path, new)
             touched += 1
     return touched
 
@@ -154,8 +155,8 @@ def run(check: bool = False) -> None:
         # (ADR-049), which is exactly why `luria new` leaves `number:` out and
         # this command puts it in.
         text = _record_alias(src.read_text(encoding="utf-8"), old)
-        dest.write_text(new_mod.write_number(text, number), encoding="utf-8")
-        src.unlink()
+        writes.write_text(dest, new_mod.write_number(text, number))
+        writes.unlink(src)
         print(f"{old} → {new}")
 
     # The views re-derive from the renamed sources, so the index, tag pages

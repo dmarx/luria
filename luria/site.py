@@ -64,6 +64,7 @@ import yaml
 from . import adr_index, doc_refs, edges, site_page
 from .adr_index import parse_frontmatter
 from .config import Site, current
+from . import writes
 
 # Skipped wherever they turn up: a scaffold seed whose references are
 # illustrative, and directories no record keeps prose in.
@@ -769,8 +770,8 @@ def brand(out: Path, cfg, report: Report) -> str:
     if dark_source is None:
         dark_svg = _reinked(dark_svg, palette["dark"]["dark"])
 
-    (static / "logo-light.svg").write_text(light_svg, encoding="utf-8")
-    (static / "logo-dark.svg").write_text(dark_svg, encoding="utf-8")
+    writes.write_text(static / "logo-light.svg", light_svg)
+    writes.write_text(static / "logo-dark.svg", dark_svg)
     report.assets += 2
 
     w, h = _svg_size(light_svg)
@@ -827,7 +828,7 @@ def stage(out: Path, cfg=None, nested: bool = True,
         text = _retarget(text, path, cfg, published, assets, report)
         dest = content / dest_rel
         dest.parent.mkdir(parents=True, exist_ok=True)
-        dest.write_text(text, encoding="utf-8")
+        writes.write_text(dest, text)
         report.pages += 1
 
     for absolute, rel in assets.items():
@@ -842,14 +843,12 @@ def stage(out: Path, cfg=None, nested: bool = True,
     # One file, where Quartz 4 needed two: v5 takes its layout from each
     # plugin's own `layout:` key, so the generated `quartz.layout.ts` — and
     # the TSX luria had to write to move one component — is gone (ADR-101).
-    (out / "quartz.config.yaml").write_text(
-        QUARTZ_CONFIG.format(title=cfg.site.title,
+    writes.write_text(out / "quartz.config.yaml", QUARTZ_CONFIG.format(title=cfg.site.title,
                              base_url=cfg.site.base_url,
                              repo_url=repo_url or cfg.site.source_url,
                              colors=colors(cfg.site),
-                             hidden=", ".join(site_page.HIDDEN_PROPERTIES)),
-        encoding="utf-8")
-    (out / "custom.scss").write_text(brand(out, cfg, report), encoding="utf-8")
+                             hidden=", ".join(site_page.HIDDEN_PROPERTIES)))
+    writes.write_text(out / "custom.scss", brand(out, cfg, report))
 
     if nested:
         stage_nested(content, cfg, report)

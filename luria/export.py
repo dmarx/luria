@@ -54,6 +54,7 @@ from . import __version__, edges, journal, ref_status
 from .facts import field_rows
 from .adr_index import load_scheme, read_document
 from .config import current
+from . import writes
 
 SQLITE_MAGIC = b"SQLite format 3\x00"
 
@@ -167,7 +168,7 @@ def _clear(out: Path) -> None:
     if head != SQLITE_MAGIC:
         raise SystemExit(f"luria export: {out} exists and is not a SQLite "
                          "database — choose another --out, or move it aside")
-    out.unlink()
+    writes.unlink(out)
 
 
 def write(out: Path, cfg=None) -> Path:

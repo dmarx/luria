@@ -71,6 +71,7 @@ from pathlib import Path
 from .adr_index import load_scheme, parse_frontmatter
 from .config import current
 from .contract import codes_of, for_scheme
+from . import writes
 
 
 FAMILIES = ("schema", "documents", "values", "graph", "head")
@@ -230,15 +231,27 @@ def _paired_fields(cfg) -> dict[str, set[str]]:
     return out
 
 
+def _git(args: list[str], root: Path, **kwargs) -> subprocess.CompletedProcess | None:
+    """Run git, or None when there is no git to run. A machine without git
+    has no repository as far as luria can tell, and the record reads exactly
+    as it does outside one: no baseline, nothing committed to compare."""
+    try:
+        return subprocess.run(["git", *args], cwd=root, capture_output=True,
+                              **kwargs)
+    except OSError:
+        return None
+
+
 def _blobs(root: Path, revs: list[str]) -> dict[str, str]:
     """The text of each `HEAD:path`, through one `git cat-file --batch`
     rather than a process per file — on a corpus of a few thousand
     documents, the difference between two seconds and a tenth of one."""
     if not revs:
         return {}
-    done = subprocess.run(["git", "cat-file", "--batch"], cwd=root,
-                          input="".join(r + "\n" for r in revs).encode(),
-                          capture_output=True)
+    done = _git(["cat-file", "--batch"], root,
+                input="".join(r + "\n" for r in revs).encode())
+    if done is None:
+        return {}
     out, data, at = {}, done.stdout, 0
     for rev in revs:
         end = data.index(b"\n", at)
@@ -262,12 +275,12 @@ def head_facts(cfg=None) -> list[Fact]:
     cfg = cfg or current()
     found: list[tuple[str, set[str], str]] = []
     for prefix, fields in sorted(_paired_fields(cfg).items()):
-        args = ["git", "grep", "-l", "-E",
-                f"^({'|'.join(sorted(re.escape(f) for f in fields))}):",
-                "HEAD", "--", str(cfg.schemes[prefix].dir)]
-        listed_at = subprocess.run(args, cwd=cfg.root, capture_output=True,
-                                   text=True)
-        if listed_at.returncode > 1:  # 1 is "no matches", which is an answer
+        listed_at = _git(["grep", "-l", "-E",
+                          f"^({'|'.join(sorted(re.escape(f) for f in fields))}):",
+                          "HEAD", "--", str(cfg.schemes[prefix].dir)],
+                         cfg.root, text=True)
+        # 1 is "no matches", which is an answer; no git at all is none.
+        if listed_at is None or listed_at.returncode > 1:
             return []
         found += [(prefix, fields, line.partition(":")[2])
                   for line in listed_at.stdout.splitlines()]
@@ -295,9 +308,11 @@ def _git_dir(root: Path) -> tuple[Path, Path] | None:
     record can be put under git while one process is reading it."""
     if root not in _git_dirs or (_git_dirs[root] is None
                                  and (root / ".git").exists()):
-        done = subprocess.run(
-            ["git", "rev-parse", "--absolute-git-dir", "--git-common-dir"],
-            cwd=root, capture_output=True, text=True)
+        done = _git(["rev-parse", "--absolute-git-dir", "--git-common-dir"],
+                    root, text=True)
+        if done is None:
+            _git_dirs[root] = None
+            return None
         lines = done.stdout.split()
         _git_dirs[root] = None if done.returncode or len(lines) != 2 else (
             Path(lines[0]), (root / lines[1]).resolve()
@@ -352,8 +367,9 @@ def fingerprint(cfg=None) -> tuple:
 # One run asks for the facts many times — every relation a chain or a check
 # reads — and a fixer may write documents between asks. So the facts are
 # kept against the config they were read under (held, so its identity cannot
-# be reused) and the fingerprint of the documents; either changing reads
-# them again. Kept per set of families, and built under a lock: the render
+# be reused), the fingerprint of the documents, and `writes.generation()` —
+# bumped by every write this process makes to a document, so a rewrite that
+# keeps size and mtime is still seen; any of them changing reads them again. Kept per set of families, and built under a lock: the render
 # pool asks from several threads at once, and without it each built its own
 # copy, every one slower for contending with the rest.
 _memo: dict = {"cfg": None, "print": None, "facts": {}}
@@ -369,7 +385,10 @@ def facts(cfg=None, families: Iterable[str] = FAMILIES) -> list[Fact]:
         raise ValueError(f"no fact family {', '.join(sorted(unknown))} "
                          f"(have: {', '.join(FAMILIES)})")
     with _lock:
-        stamp = fingerprint(cfg)
+        # The fingerprint catches an edit made by anything outside this
+        # process; the write generation catches one made inside it, which a
+        # clock too coarse to move the mtime would otherwise hide.
+        stamp = (writes.generation(), fingerprint(cfg))
         if _memo["cfg"] is not cfg or _memo["print"] != stamp:
             _memo.update(cfg=cfg, print=stamp, facts={})
         if wanted not in _memo["facts"]:

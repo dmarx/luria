@@ -44,6 +44,7 @@ from pathlib import Path
 
 from . import adr_pending, ci, readme as readme_mod, ref_status
 from .config import current
+from . import writes
 
 # The region's own machinery lives in `readme.py`, shared with every other
 # marked region; these names stay because callers and tests address them here.
@@ -135,7 +136,7 @@ def run(write: bool = False, check: bool = False) -> None:
             raise SystemExit(1)
         print("luria badges: current")
         return
-    path.write_text(fresh, encoding="utf-8")
+    writes.write_text(path, fresh)
     undecided, retired = counts()
     print(f"badges: needs decision {undecided}, cited not in force {retired}")
 

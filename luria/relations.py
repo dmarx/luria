@@ -45,6 +45,7 @@ from .contract import for_scheme, resolvable, targets, violations
 from .facts import listed
 from .aliases import readable
 from .field_edit import add_to_field, drop_from_field
+from . import writes
 
 
 @dataclass(frozen=True)
@@ -314,7 +315,7 @@ def complete(fix: bool = False) -> list[Repair]:
                 else:
                     for spelling in {entry.code, readable(entry.code)}:
                         text = drop_from_field(text, entry.field, spelling)
-            path.write_text(text, encoding="utf-8")
+            writes.write_text(path, text)
     return todo
 
 

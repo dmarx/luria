@@ -53,6 +53,7 @@ import yaml  # noqa: F401  (re-exported for callers that parse frontmatter)
 from . import aliases, directives, remotes
 from .adr_index import parse_frontmatter
 from .config import Config, current
+from . import writes
 
 
 # ── Reference patterns ───────────────────────────────────────────────────
@@ -890,7 +891,7 @@ def upgrade_legacy_spellings() -> list[Path]:
             continue
         for start, end, replacement in sorted(edits, reverse=True):
             text = text[:start] + replacement + text[end:]
-        path.write_text(text, encoding="utf-8")
+        writes.write_text(path, text)
         changed.append(path)
     return changed
 

@@ -30,6 +30,7 @@ import yaml
 
 from . import readme as readme_mod
 from .config import current
+from . import writes
 
 # Shared region machinery (`readme.py`); these names stay for the callers.
 OPEN, CLOSE = readme_mod.markers("citation")
@@ -147,7 +148,7 @@ def run(write: bool = False, check: bool = False) -> None:
             raise SystemExit(1)
         return
     if write:
-        target.write_text(fresh, encoding="utf-8")
+        writes.write_text(target, fresh)
         return
     print(region())
 
