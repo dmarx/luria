@@ -106,6 +106,26 @@ jobs:
       - run: pip install -e ".[dev]"
       - run: python -m pytest tests -q
 
+  # The tests run from an editable install, which reads `luria/logic/*.lp`
+  # out of the checkout; this proves the wheel carries them. Built, installed
+  # into a clean environment, and run from outside the checkout, with git
+  # and without (tools/wheel_smoke.py).
+  wheel:
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0      # the version is read from git tags
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install build
+      - run: python -m build --wheel --outdir dist
+      - run: python -m venv /tmp/wheel-env
+      - run: /tmp/wheel-env/bin/pip install dist/*.whl
+      - run: python tools/wheel_smoke.py --python /tmp/wheel-env/bin/python
+
   collect:
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest

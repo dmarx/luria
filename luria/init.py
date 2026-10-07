@@ -43,6 +43,7 @@ from pathlib import Path
 
 from . import yaml_edit
 from .config import CONFIG_NAME, Config, Scheme, find_root, load
+from . import writes
 
 
 def _template_dir() -> Path:
@@ -558,7 +559,7 @@ def write(into: Path, issue_url: str = "", dry_run: bool = False,
         if dry_run:
             continue
         dest.parent.mkdir(parents=True, exist_ok=True)
-        dest.write_text(content, encoding="utf-8")
+        writes.write_text(dest, content)
     return written, skipped, kept
 
 
@@ -591,7 +592,7 @@ def config_run(into: str = None, issue_url: str = "", schemes: str = "",
             f"luria config: {dest} already exists — this writes a starting "
             f"config, and yours has already started. Add the tables by hand, "
             f"or pass --stdout to see what this would have written.")
-    dest.write_text(text, encoding="utf-8")
+    writes.write_text(dest, text)
     print(dest)
     print("\nEdit it, then `luria init` to scaffold the shape it declares.")
 

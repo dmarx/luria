@@ -42,6 +42,7 @@ from . import config as config_mod
 from . import contract as contract_mod
 from .adr_index import escape_cell
 from .config import current
+from . import writes
 
 SCHEMA_URL = ("https://github.com/dmarx/luria/blob/main/docs/"
               "configuration.md")
@@ -331,7 +332,7 @@ def write(out_dir: Path | None = None) -> list[Path]:
     rendered = outputs(out_dir)
     for path, text in rendered.items():
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(text, encoding="utf-8")
+        writes.write_text(path, text)
     return sorted(rendered)
 
 

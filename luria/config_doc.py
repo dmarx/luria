@@ -72,6 +72,7 @@ from .config import (FAMILIES, Chain, FieldGroup, Fragment, Journal,
                      PlainField, Reference, Remote, RemoteScheme, RequiredWhen,
                      Scheme, Site, TagGroup, Vocabulary, VocabularyTable,
                      current)
+from . import writes
 
 #: Imported, not re-spelled: `FAMILIES` is the list `config.load` replaces
 #: whole, and the shape table in `HEADER` says the same thing in words. The
@@ -571,7 +572,7 @@ def retire() -> list[Path]:
         return []
     if MARKER not in path.read_text(encoding="utf-8"):
         return []
-    path.unlink()
+    writes.unlink(path)
     return [path]
 
 
@@ -579,7 +580,7 @@ def write(out_dir: Path | None = None) -> list[Path]:
     rendered = outputs(out_dir)
     for path, text in rendered.items():
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(text, encoding="utf-8")
+        writes.write_text(path, text)
     return sorted(rendered)
 
 

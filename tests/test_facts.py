@@ -257,3 +257,18 @@ def test_a_commit_alone_moves_the_head_stamp(tmp_path, monkeypatch):
     subprocess.run([*git, "commit", "-q", "--allow-empty", "-m", "two"],
                    cwd=root, check=True)
     assert facts_module._head(cfg) != before
+
+
+def test_a_machine_without_git_reads_as_no_repository(tmp_path, monkeypatch):
+    """0.36.0 ran where git is not installed; the facts must too, with no
+    baseline rather than a crash."""
+    root = project(tmp_path, monkeypatch)
+    doc(root, "LIT-001", "supports:\n- CLAIM-001\n")
+    doc(root, "CLAIM-001")
+    (root / ".git").mkdir()      # a repository git cannot be asked about
+    monkeypatch.setenv("PATH", str(tmp_path / "no-bin"))
+    from luria import facts as facts_module
+    facts_module._git_dirs.clear()
+    assert by(facts(), "head_value") == set()
+    assert ("CLAIM", "rests_on", "CLAIM-001", "LIT-001") in \
+        logic.derive("relations")["held"]

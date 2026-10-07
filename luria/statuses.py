@@ -43,6 +43,7 @@ from collections import Counter
 from dataclasses import dataclass
 
 import yaml
+from . import writes
 
 # ADR-003's five, kept as the DEFAULT rather than the law (ADR-085).
 # A project whose decisions are `Accepted` and `Withdrawn` says so in its own
@@ -255,7 +256,7 @@ def populate(scheme) -> list:
     for path in [*scheme.documents().values(), *scheme.temp_documents().values()]:
         text = path.read_text(encoding="utf-8")
         if (fresh := repair(text)) is not None:
-            path.write_text(fresh, encoding="utf-8")
+            writes.write_text(path, fresh)
             moved.append(path)
     return moved
 

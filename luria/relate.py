@@ -37,6 +37,7 @@ from .contract import (ANY_SCHEME, Field, for_scheme, is_remote, local_scheme,
                        spelled, target_of)
 from .field_edit import add_to_field
 from .referents import path_of
+from . import writes
 
 # Standard frontmatter every scheme reads as a relation without declaring
 # it (edges.py): a list of the documents this one follows from.
@@ -144,7 +145,7 @@ def relate(source: str, field: str, target: str) -> Related:
     else:
         from .new import _sub_line
         text = _sub_line(text, field, target)
-    path.write_text(text, encoding="utf-8")
+    writes.write_text(path, text)
     return Related(path, field, target, "added", tuple(notes))
 
 

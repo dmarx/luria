@@ -37,6 +37,7 @@ from pathlib import Path
 
 from . import directives, ref_status
 from .config import current
+from . import writes
 
 # `<!--` for prose, `#` for everything else. Crude and deliberate: a directive
 # has to OPEN its comment, so the only question is which marker opens one here,
@@ -137,7 +138,7 @@ def write(code: str, reason: str, scope: str = "line",
                       if scope == "line" and line <= len(rows) else "")
             rows.insert(line - 1, indent + _comment(path, body) + "\n")
             written.append(f"{cfg.rel(path)}:{line}")
-        path.write_text("".join(rows), encoding="utf-8")
+        writes.write_text(path, "".join(rows))
     return written
 
 

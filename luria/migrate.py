@@ -68,6 +68,7 @@ from . import aliases as aliases_mod
 from . import doc_refs, new as new_mod, remotes
 from . import yaml_edit
 from .config import current, is_temp_tail
+from . import writes
 
 MIGRATIONS_DIR = "record/migrations.d"
 BLAME_IGNORE = ".git-blame-ignore-revs"
@@ -552,10 +553,10 @@ def _stamp_formerly(path: Path, old_code: str) -> None:
         raise SystemExit(f"luria migrate: {path} has no frontmatter to stamp")
     m = re.search(r"^formerly:\n((?:- .*\n)*)", text, flags=re.MULTILINE)
     if m:
-        path.write_text(text[:m.end()] + f"- {old_code}\n" + text[m.end():], encoding="utf-8")
+        writes.write_text(path, text[:m.end()] + f"- {old_code}\n" + text[m.end():])
     else:
         head, rest = text.split("\n", 1)
-        path.write_text(f"{head}\nformerly:\n- {old_code}\n{rest}", encoding="utf-8")
+        writes.write_text(path, f"{head}\nformerly:\n- {old_code}\n{rest}")
 
 
 def _git(args: list[str]) -> str:
@@ -582,21 +583,18 @@ def apply(plan: Plan) -> tuple[int, int]:
         # old one — it is the tombstone, and its body is history.
         text = source.read_text(encoding="utf-8").replace(old_code, new_code)
         new_path.parent.mkdir(parents=True, exist_ok=True)
-        new_path.write_text(text, encoding="utf-8")
+        writes.write_text(new_path, text)
     from . import statuses
     for source, new_code in plan.tombstones:
         text = source.read_text(encoding="utf-8")
-        source.write_text(
-            statuses.set_status(text, "Superseded", superseded_by=[new_code]),
-            encoding="utf-8")
+        writes.write_text(source, statuses.set_status(text, "Superseded", superseded_by=[new_code]))
     for config_file, path, old_key, new_key in plan.section_renames:
         text = config_file.read_text(encoding="utf-8")
         renamed = rename_key_at(text, path, old_key, new_key)
         if renamed != text:
-            config_file.write_text(renamed, encoding="utf-8")
+            writes.write_text(config_file, renamed)
     for config_file in plan.config_files:
-        config_file.write_text(
-            config_paths_pass(config_file.read_text(encoding="utf-8"), plan), encoding="utf-8")
+        writes.write_text(config_file, config_paths_pass(config_file.read_text(encoding="utf-8"), plan))
     for stale_view in plan.removals:
         if stale_view.exists():
             _git(["rm", "-q", str(stale_view)])
@@ -638,7 +636,7 @@ def apply(plan: Plan) -> tuple[int, int]:
                                     paths=live not in plan.config_files,
                                     source=live)
             if count:
-                live.write_text(new, encoding="utf-8")
+                writes.write_text(live, new)
                 files += 1
                 swept += count
     aliases_mod.reset()
@@ -674,7 +672,7 @@ def apply(plan: Plan) -> tuple[int, int]:
                 continue
             linked, n = doc_refs.linkify(text, path, adrs, anchors)
             if n:
-                path.write_text(linked, encoding="utf-8")
+                writes.write_text(path, linked)
     if plan.promotions:
         from . import promote
         for promotion in plan.promotions:
@@ -719,8 +717,8 @@ def describe(plan: Plan) -> list[str]:
 def _blame_ignore(sha: str, title: str) -> None:
     path = current().root / BLAME_IGNORE
     stamp = f"# luria migrate: {title}\n{sha}\n"
-    path.write_text((path.read_text(encoding="utf-8") if path.exists() else
-                     "# Commits git blame should read through.\n") + stamp, encoding="utf-8")
+    writes.write_text(path, (path.read_text(encoding="utf-8") if path.exists() else
+                     "# Commits git blame should read through.\n") + stamp)
 
 
 def run(spec: str, dry_run: bool = False, commit: bool = False) -> None:

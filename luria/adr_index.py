@@ -52,6 +52,7 @@ import yaml
 
 from . import derive, referents, vocabularies
 from .config import current
+from . import writes
 
 # unresolved-ok: ADR-tmp47fje — ADR-049's example of the shape, not a document
 # The tail accepts a temporary code (`ADR-tmp47fje`, ADR-049) as well as a
@@ -640,10 +641,10 @@ def run(check: bool = False) -> None:
     rendered = outputs()
     cfg = current()
     for stale_file in orphans(rendered):
-        stale_file.unlink()
+        writes.unlink(stale_file)
     for p, text in rendered.items():
         p.parent.mkdir(parents=True, exist_ok=True)
-        p.write_text(text, encoding="utf-8")
+        writes.write_text(p, text)
     # Name every scheme, not just the decisions: a project that adds one wants
     # to see it counted, and a scheme silently rendering nothing is the failure
     # this line exists to make visible (DP-1).
@@ -679,7 +680,7 @@ def run(check: bool = False) -> None:
         if readme_mod.has(text, "site"):
             text = readme_mod.rewrite(text, "site", site.readme_region())
         if text != before:
-            path.write_text(text, encoding="utf-8")
+            writes.write_text(path, text)
 
 
 if __name__ == "__main__":
