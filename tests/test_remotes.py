@@ -388,7 +388,7 @@ def test_url_ok_retires_when_the_construction_catches_up(project):
 
 
 ARXIV = (
-    """
+    r"""
 remotes:
   ARXIV:
     uid: (\d{4})[.:](\d{4,5})
@@ -420,7 +420,7 @@ def test_uid_is_exact_never_normalised(project):
 
 def test_the_delimiter_is_configurable(project):
     with_remote(project,
-        """
+        r"""
         remotes:
           JIRA:
             delim: ':'
@@ -443,7 +443,7 @@ def test_unconfigured_prefixes_do_not_match(project):
 def test_uid_remote_without_a_template_constructs_nothing(project):
     """One rung only — with no template there is nothing to guess with, and
     "" is what makes ref-status report the citation as dangling (DP-1)."""
-    with_remote(project, """
+    with_remote(project, r"""
                          remotes:
                            ARXIV:
                              uid: \d{4}[.]\d{4,5}
@@ -636,7 +636,7 @@ def test_a_remote_with_no_repo_has_no_tracker(project):
     """`ARXIV-#5` names nothing. A remote reached by a `url` template has no
     issues, and guessing one would be the same silent wrongness in a new
     place — so it resolves to nothing and the caller reports it."""
-    with_remote(project, """
+    with_remote(project, r"""
                          remotes:
                            ARXIV:
                              uid: (\d{4})\.(\d{4,5})

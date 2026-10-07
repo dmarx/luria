@@ -334,7 +334,7 @@ def test_fixer_links_a_uid_remote_reference(tmp_path, monkeypatch):
     from luria import config
     (tmp_path / "docs").mkdir(parents=True)
     (tmp_path / "luria.yaml").write_text(
-        """
+        r"""
         issue_url: ''
         remotes:
           ARXIV:

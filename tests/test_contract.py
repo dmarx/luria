@@ -556,7 +556,7 @@ def test_describe_lists_the_group_with_its_provenance(tmp_path, monkeypatch):
 
 # --- remote codes in reference fields --------------------------------------
 
-REMOTES = """
+REMOTES = r"""
 remotes:
   ARXIV:
     uid: (\d{4})[.:](\d{4,5})
