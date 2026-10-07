@@ -17,6 +17,7 @@ from __future__ import annotations
 from collections.abc import Iterable
 from importlib import resources
 
+import functools
 import threading
 
 import clingo
@@ -32,8 +33,9 @@ class LogicError(RuntimeError):
 Derived = dict[str, set[tuple]]
 
 
+@functools.cache
 def rules(name: str) -> str:
-    """The text of `luria/logic/<name>.lp`."""
+    """The text of `luria/logic/<name>.lp`, read once per process."""
     return resources.files(__package__).joinpath(f"{name}.lp").read_text(
         encoding="utf-8")
 
