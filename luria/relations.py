@@ -130,25 +130,17 @@ def edges(prefix: str, field: str) -> dict[str, set[str]]:
     The union is why a one-sided declaration still reads correctly before
     anyone runs the fixer. Completion makes the two agree on disk; this makes
     them agree in every reading meanwhile. A field with no declared converse
-    is simply itself."""
-    spec = next((r for r in current().schemes[prefix].references
-                 if r.field == field), None)
-    fars = spec.scheme if spec else (prefix,)
-    docs = _documents(prefix)
-    far_docs: dict[str, Adr] = {}
-    for far in fars:
-        far_docs.update(docs if far == prefix else _documents(far))
+    is simply itself.
 
-    out = _reads(prefix, field, far_docs)
-    back = converse_of(prefix, field)
-    if back:
-        # The far side names this one, so its reading inverts into this
-        # scheme's code space whether or not the relation crosses — from
-        # every scheme the field may name.
-        for far in fars:
-            for code, others in _reads(far, back, docs).items():
-                for other in others:
-                    out.setdefault(other, set()).add(code)
+    Decided by `luria/logic/relations.lp` (`held/4`), over every relation at
+    once; this keys the answer the way callers read it — every document of
+    the scheme, related to nothing or to something."""
+    from . import logic
+    out: dict[str, set[str]] = {d.code: set()
+                                for d in _documents(prefix).values()}
+    for s, f, code, other in logic.derive("relations").get("held", ()):
+        if s == prefix and f == field:
+            out.setdefault(code, set()).add(other)
     return out
 
 
