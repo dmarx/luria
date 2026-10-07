@@ -36,6 +36,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 from pathlib import Path
 
 from ruamel.yaml import YAML
@@ -106,12 +107,16 @@ def _perturb(root: Path, seed: int) -> int:
     return len(committed) + len(pending)
 
 
-def _run(luria: str, root: Path, *args: str) -> tuple[int, str]:
+def _run(luria: str, root: Path, *args: str) -> tuple[int, str, float]:
+    """Exit code, output with the root masked, and wall-clock seconds."""
     env = {**os.environ, "LURIA_ROOT": str(root), "PYTHONWARNINGS": "ignore"}
+    env.pop("LURIA_TIMINGS", None)    # its lines would differ by design
+    start = time.perf_counter()
     done = subprocess.run([luria, *args], cwd=root, env=env,
                           capture_output=True, text=True)
+    took = time.perf_counter() - start
     text = (done.stdout + done.stderr).replace(str(root), "<root>")
-    return done.returncode, text
+    return done.returncode, text, took
 
 
 def _tree(root: Path) -> dict[str, str]:
@@ -150,15 +155,22 @@ def _diff(a: str, b: str, label: str, limit: int = 40) -> str:
 
 
 def compare(baseline: str, candidate: str, record: Path,
-            seed: int | None = None) -> tuple[list[str], int]:
-    """Every way the candidate's output differs from the baseline's, and
-    how many documents were perturbed first."""
+            seed: int | None = None
+            ) -> tuple[list[str], int, dict[str, tuple[float, float]]]:
+    """Every way the candidate's output differs from the baseline's, how
+    many documents were perturbed first, and each step's wall-clock seconds
+    as (baseline, candidate).
+
+    The two builds run one after the other on the same machine, so the
+    timings compare like with like; across machines, or a busy one, only
+    the ratio means much."""
     with tempfile.TemporaryDirectory() as tmp:
         old = _side(baseline, record, Path(tmp) / "baseline", seed)
         new = _side(candidate, record, Path(tmp) / "candidate", seed)
         problems = []
+        times = {step: (old[step][2], new[step][2]) for step in STEPS}
         for step in STEPS:
-            if old[step] != new[step]:
+            if old[step][:2] != new[step][:2]:
                 problems.append(
                     f"`luria {step}` differs (exit {old[step][0]} → "
                     f"{new[step][0]}):\n" + _diff(old[step][1], new[step][1], step))
@@ -174,7 +186,21 @@ def compare(baseline: str, candidate: str, record: Path,
             problems.append(f"{rel} differs:\n" + _diff(
                 a.read_text(encoding="utf-8", errors="replace"),
                 b.read_text(encoding="utf-8", errors="replace"), rel))
-        return problems, old.get("perturbed", 0)
+        return problems, old.get("perturbed", 0), times
+
+
+def _timings(times: dict[str, tuple[float, float]]) -> str:
+    """Each step's seconds, baseline then candidate, and their ratio."""
+    rows = [f"{'step':<12} {'baseline':>9} {'candidate':>10} {'ratio':>6}"]
+    total = [0.0, 0.0]
+    for step, (old, new) in times.items():
+        total[0] += old
+        total[1] += new
+        rows.append(f"{step:<12} {old:>8.1f}s {new:>9.1f}s "
+                    f"{new / old if old else 0:>6.2f}")
+    rows.append(f"{'total':<12} {total[0]:>8.1f}s {total[1]:>9.1f}s "
+                f"{total[1] / total[0] if total[0] else 0:>6.2f}")
+    return "\n".join(rows)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -186,11 +212,12 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     failed = 0
     for record in args.records:
-        problems, perturbed = compare(args.baseline, args.candidate,
-                                      record.resolve(), args.perturb)
+        problems, perturbed, times = compare(args.baseline, args.candidate,
+                                             record.resolve(), args.perturb)
         verdict = "identical" if not problems else f"{len(problems)} difference(s)"
         extra = f" ({perturbed} perturbed)" if args.perturb is not None else ""
         print(f"{record}{extra}: {verdict}")
+        print("  " + _timings(times).replace("\n", "\n  "))
         for problem in problems:
             print("  " + problem.replace("\n", "\n  "))
         failed += bool(problems)
