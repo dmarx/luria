@@ -1,4 +1,5 @@
 % luria/logic/invariants.lp
+% facts: schema documents
 % What a relation asserts, checked against what the fields say (#214).
 % Needs relations.lp for held/4. See luria/invariants.py for the findings'
 % meaning; this program decides which pairs and lines they are.

@@ -34,10 +34,11 @@ position, an integer), so a code like `LIT-001` needs no mangling:
                                   through aliases; whether it lands on a
                                   document is the rules' business, not this
                                   module's
-    holds(C, F, V).               each value as a set member: stripped, and a
-                                  derived alias read as the code it names —
-                                  what two documents compare when a relation
-                                  asserts they share a value (`members`)
+    holds(C, F, V).               each value of a field some invariant names,
+                                  as a set member: stripped, and a derived
+                                  alias read as the code it names — what two
+                                  documents compare when a relation asserts
+                                  they share a value (`members`)
     edge(C, R, T).                the typed graph `luria/edges.py` derives
 
     head_value(S, F, C, X).       what document C of scheme S declared in a
@@ -46,6 +47,12 @@ position, an integer), so a code like `LIT-001` needs no mangling:
                                   fixer reads change against. Absent with no
                                   repository or no commit.
 
+The facts come in families, and a logic program names the ones it reads in
+a `% facts:` line at its head, so a run builds only those: `schema` (what
+`luria.yaml` declares), `documents` (`doc`, `status`, `ref_value`,
+`holds`), `values` (`value`), `graph` (`edge`) and `head` (`head_value`,
+which costs a read of HEAD). `luria facts` prints all of them.
+
 Every fact comes through the record's own readers — `load_scheme`, the
 compiled contract, `edges.graph` — never a second parse, for the reason
 `luria export` gives (DP-4).
@@ -53,6 +60,7 @@ compiled contract, `edges.graph` — never a second parse, for the reason
 from __future__ import annotations
 
 import json
+import threading
 from collections.abc import Iterable, Iterator
 from dataclasses import dataclass
 
@@ -63,6 +71,9 @@ from pathlib import Path
 from .adr_index import load_scheme, parse_frontmatter
 from .config import current
 from .contract import codes_of, for_scheme
+
+
+FAMILIES = ("schema", "documents", "values", "graph", "head")
 
 
 @dataclass(frozen=True, order=True)
@@ -154,26 +165,43 @@ def schema_facts(cfg=None) -> Iterator[Fact]:
             yield Fact("chain_invariant", (name, chain.invariant))
 
 
-def document_facts(cfg=None) -> Iterator[Fact]:
-    """What every document says, as facts."""
+def _invariant_fields(cfg) -> set[str]:
+    """Every field some relation or chain asserts its documents share."""
+    return ({ref.invariant for scheme in cfg.schemes.values()
+             for ref in scheme.references if ref.invariant}
+            | {c.invariant for c in cfg.chains.values() if c.invariant})
+
+
+def document_facts(cfg=None, families: Iterable[str] = FAMILIES
+                   ) -> Iterator[Fact]:
+    """What every document says, as facts — the families asked for."""
     cfg = cfg or current()
-    for prefix, scheme in cfg.schemes.items():
-        contract = for_scheme(scheme)
-        references = [f for f in contract.fields if f.reference is not None]
-        for adr in load_scheme(scheme):
-            yield Fact("doc", (adr.code, prefix))
-            yield Fact("status", (adr.code, adr.status_value))
-            for code, field, i, value in field_rows(adr.code, adr.meta):
-                yield Fact("value", (code, field, i, value))
-            for field, raw in adr.meta.items():
-                for member in members(raw):
-                    yield Fact("holds", (adr.code, field, member))
-            for field in references:
-                for target in codes_of(field, adr.meta.get(field.name)):
-                    yield Fact("ref_value", (adr.code, field.name, target))
-    from . import edges
-    for edge in edges.graph().edges:
-        yield Fact("edge", (edge.source, edge.relation, edge.target))
+    families = set(families)
+    shared = _invariant_fields(cfg)
+    if families & {"documents", "values"}:
+        for prefix, scheme in cfg.schemes.items():
+            contract = for_scheme(scheme)
+            references = [f for f in contract.fields
+                          if f.reference is not None]
+            for adr in load_scheme(scheme):
+                if "values" in families:
+                    for code, field, i, value in field_rows(adr.code,
+                                                            adr.meta):
+                        yield Fact("value", (code, field, i, value))
+                if "documents" not in families:
+                    continue
+                yield Fact("doc", (adr.code, prefix))
+                yield Fact("status", (adr.code, adr.status_value))
+                for field in shared:
+                    for member in members(adr.meta.get(field)):
+                        yield Fact("holds", (adr.code, field, member))
+                for field in references:
+                    for target in codes_of(field, adr.meta.get(field.name)):
+                        yield Fact("ref_value", (adr.code, field.name, target))
+    if "graph" in families:
+        from . import edges
+        for edge in edges.graph().edges:
+            yield Fact("edge", (edge.source, edge.relation, edge.target))
 
 
 def listed(value) -> list[str]:
@@ -202,6 +230,28 @@ def _paired_fields(cfg) -> dict[str, set[str]]:
     return out
 
 
+def _blobs(root: Path, revs: list[str]) -> dict[str, str]:
+    """The text of each `HEAD:path`, through one `git cat-file --batch`
+    rather than a process per file — on a corpus of a few thousand
+    documents, the difference between two seconds and a tenth of one."""
+    if not revs:
+        return {}
+    done = subprocess.run(["git", "cat-file", "--batch"], cwd=root,
+                          input="".join(r + "\n" for r in revs).encode(),
+                          capture_output=True)
+    out, data, at = {}, done.stdout, 0
+    for rev in revs:
+        end = data.index(b"\n", at)
+        header = data[at:end].split()
+        at = end + 1
+        if len(header) != 3:          # "<rev> missing", or worse
+            continue
+        size = int(header[2])
+        out[rev] = data[at:at + size].decode("utf-8", errors="replace")
+        at += size + 1
+    return out
+
+
 def head_facts(cfg=None) -> list[Fact]:
     """What each document declared at HEAD in the fields a converse pair
     reads. Narrowed with `git grep`, because the answer only depends on
@@ -210,26 +260,28 @@ def head_facts(cfg=None) -> list[Fact]:
     No baseline at all — no repository, or no commit yet — is no facts, not
     a partial set: the fixer reads that as "nothing changed"."""
     cfg = cfg or current()
-    out: list[Fact] = []
+    found: list[tuple[str, set[str], str]] = []
     for prefix, fields in sorted(_paired_fields(cfg).items()):
         args = ["git", "grep", "-l", "-E",
                 f"^({'|'.join(sorted(re.escape(f) for f in fields))}):",
                 "HEAD", "--", str(cfg.schemes[prefix].dir)]
-        found = subprocess.run(args, cwd=cfg.root, capture_output=True,
-                               text=True)
-        if found.returncode > 1:      # 1 is "no matches", which is an answer
+        listed_at = subprocess.run(args, cwd=cfg.root, capture_output=True,
+                                   text=True)
+        if listed_at.returncode > 1:  # 1 is "no matches", which is an answer
             return []
-        for line in found.stdout.splitlines():
-            _, _, rel = line.partition(":")
-            blob = subprocess.run(["git", "show", f"HEAD:{rel}"],
-                                  cwd=cfg.root, capture_output=True, text=True)
-            if blob.returncode != 0:
-                continue
-            meta = parse_frontmatter(blob.stdout)[0]
-            for field in fields:
-                for code in listed(meta.get(field)):
-                    out.append(Fact("head_value",
-                                    (prefix, field, Path(rel).stem, code)))
+        found += [(prefix, fields, line.partition(":")[2])
+                  for line in listed_at.stdout.splitlines()]
+    texts = _blobs(cfg.root, [f"HEAD:{rel}" for _, _, rel in found])
+    out: list[Fact] = []
+    for prefix, fields, rel in found:
+        text = texts.get(f"HEAD:{rel}")
+        if text is None:
+            continue
+        meta = parse_frontmatter(text)[0]
+        for field in fields:
+            for code in listed(meta.get(field)):
+                out.append(Fact("head_value",
+                                (prefix, field, Path(rel).stem, code)))
     return out
 
 
@@ -258,23 +310,37 @@ def fingerprint(cfg=None) -> tuple:
 # reads — and a fixer may write documents between asks. So the facts are
 # kept against the config they were read under (held, so its identity cannot
 # be reused) and the fingerprint of the documents; either changing reads
-# them again.
-_memo: dict = {"cfg": None, "print": None, "facts": None}
+# them again. Kept per set of families, and built under a lock: the render
+# pool asks from several threads at once, and without it each built its own
+# copy, every one slower for contending with the rest.
+_memo: dict = {"cfg": None, "print": None, "facts": {}}
+_lock = threading.Lock()
 
 
-def facts(cfg=None) -> list[Fact]:
-    """Every fact about the record, sorted, without repeats."""
+def facts(cfg=None, families: Iterable[str] = FAMILIES) -> list[Fact]:
+    """The record's facts in the families asked for (all, by default),
+    sorted, without repeats."""
     cfg = cfg or current()
-    stamp = fingerprint(cfg)
-    if _memo["cfg"] is cfg and _memo["print"] == stamp:
-        return _memo["facts"]
-    from .timing import timed
-    with timed("facts") as t:
-        found = sorted(set(schema_facts(cfg)) | set(document_facts(cfg))
-                       | set(head_facts(cfg)))
-        t["note"] = f"{len(found)} facts"
-    _memo.update(cfg=cfg, print=stamp, facts=found)
-    return found
+    wanted = frozenset(families)
+    if unknown := wanted - set(FAMILIES):
+        raise ValueError(f"no fact family {', '.join(sorted(unknown))} "
+                         f"(have: {', '.join(FAMILIES)})")
+    with _lock:
+        stamp = fingerprint(cfg)
+        if _memo["cfg"] is not cfg or _memo["print"] != stamp:
+            _memo.update(cfg=cfg, print=stamp, facts={})
+        if wanted not in _memo["facts"]:
+            from .timing import timed
+            with timed("facts " + "+".join(f for f in FAMILIES
+                                           if f in wanted)) as t:
+                found = set(document_facts(cfg, wanted))
+                if "schema" in wanted:
+                    found |= set(schema_facts(cfg))
+                if "head" in wanted:
+                    found |= set(head_facts(cfg))
+                _memo["facts"][wanted] = sorted(found)
+                t["note"] = f"{len(found)} facts"
+        return _memo["facts"][wanted]
 
 
 def program(found: Iterable[Fact]) -> str:
