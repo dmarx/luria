@@ -72,10 +72,22 @@ def _chain_facts(chains: dict[str, dict]) -> list[Fact]:
     return out
 
 
+# The scheme checks run in two passes of one load (`config._schemes` raises
+# an undeclared target between other per-scheme checks, the rest after), and
+# both read one answer. Kept against the schemes dict it was derived from,
+# held so its identity cannot be reused.
+_last: dict = {"schemes": None, "derived": None}
+
+
 def _derived(schemes: dict, chains: dict[str, dict]) -> dict[str, set[tuple]]:
     from . import logic
-    return logic.derive("consistency",
-                        found=_scheme_facts(schemes) + _chain_facts(chains))
+    if chains:
+        return logic.derive("consistency",
+                            found=_scheme_facts(schemes) + _chain_facts(chains))
+    if _last["schemes"] is not schemes:
+        _last.update(schemes=schemes, derived=logic.derive(
+            "consistency", found=_scheme_facts(schemes)))
+    return _last["derived"]
 
 
 def _at(seq, item) -> int:
