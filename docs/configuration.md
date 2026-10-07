@@ -296,10 +296,19 @@ each citation carry a `ref::` statement of the relation. A code the body
 never explains is `unexplained-relations`, a report and not a fix,
 because the explanation is prose only a person can write (#333, ADR-123).
 
+`scheme` names one scheme or a list of them: a relation whose legitimate
+targets span several families — a claim resting on a paper or a case, a
+boundary overriding a practice or another boundary — is one relation, and
+a field per target family would put the type system's job in the field
+name (#160). A code passes if it belongs to any scheme named. A converse
+is then a field of the same name on every one of them, each naming this
+scheme back, and a chain still refuses the relation unless its only
+target is the chain's own scheme.
+
 | key | type | default |
 |---|---|---|
 | `field` | `str` | *required* |
-| `scheme` | `str` | *required* |
+| `scheme` | `tuple[str, ...]` | *required* |
 | `required` | `bool` | `True` |
 | `many` | `bool` | `False` |
 | `converse` | `str` | *unset* |

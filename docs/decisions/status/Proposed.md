@@ -4,8 +4,8 @@
 
 **Proposed** — not in force yet — an open question, so citing it as settled is what the reference report catches.
 
-0 of 125 decisions. Back to the [full index](../README.md).
+1 of 126 decisions. Back to the [full index](../README.md).
 
 | # | Title | Summary | Status |
 |---|---|---|---|
-
+| [ADR-126](../../../record/decisions.d/ADR-126.md) | A reference may name several schemes | `scheme:` on a reference takes a list as well as a string, and a code passes if it belongs to any scheme listed. A string is a list of one, so no config changes meaning. A converse is a field of the same name on every scheme listed, each naming the declaring scheme back; a chain walks the relation only when its own scheme is the sole target. Rejected: a field per target family, a loose `requires` field, a refinement predicate language, and letting a chain walk a union that includes its scheme. | Proposed |
