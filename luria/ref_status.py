@@ -263,6 +263,15 @@ class Scan:
     # suppression a report can't converge past, so it has to stay visible.
     unlinted: list[Path] = field(default_factory=list)
 
+    # Decided by `luria/logic/acknowledgements.lp`, keyed by each
+    # annotation's position in `annotations`: whether it answers for any
+    # site, and what a malformed one left unanswered (code → sites).
+    unused: frozenset[int] = frozenset()
+    lost: dict[int, dict[str, int]] = field(default_factory=dict)
+
+    def _index(self, ann: Annotation) -> int:
+        return next(i for i, a in enumerate(self.annotations) if a is ann)
+
     def used(self, ann: Annotation) -> bool:
         """Whether this annotation is still doing its job.
 
@@ -272,14 +281,7 @@ class Scan:
         code it names is cited in its scope at all, in either pool, whatever
         the document's state: its claim is about the text, and rotting it on a
         status change is the failure it exists to prevent (ADR-105)."""
-        if ann.kind == MENTION_DIRECTIVE:
-            pools = (self.cited, self.dangling)
-        elif ann.kind == DANGLING_DIRECTIVE:
-            pools = (self.dangling,)
-        else:
-            pools = (self.cited,)
-        return any(c.excused_by is ann
-                   for pool in pools for sites in pool.values() for c in sites)
+        return not ann.problem and self._index(ann) not in self.unused
 
 
 def scanned_files() -> list[Path]:
@@ -362,6 +364,7 @@ def _scan(files: list[Path] | None = None, docs: dict[str, Doc] | None = None) -
     known = set(docs)
     own = {doc.path: doc.code for doc in docs.values()}
     result = Scan()
+    sites: list[tuple[Path, int, str]] = []
     for path in files if files is not None else scanned_files():
         try:
             text = path.read_text(encoding="utf-8")
@@ -374,16 +377,6 @@ def _scan(files: list[Path] | None = None, docs: dict[str, Doc] | None = None) -
         dangling_anns = annotations(path, text, known, DANGLING_DIRECTIVE)
         mention_anns = annotations(path, text, known, MENTION_DIRECTIVE)
         result.annotations += anns + dangling_anns + mention_anns
-        usable = [a for a in anns if not a.problem]
-        usable_dangling = [a for a in dangling_anns if not a.problem]
-        usable_mentions = [a for a in mention_anns if not a.problem]
-
-        def mention_for(code: str, where: int):
-            """The `mention-ok` covering this site, if any. Tried wherever a
-            finding could arise, because a mention claims nothing and so
-            answers both questions at once (ADR-105)."""
-            return next((a for a in usable_mentions
-                         if code in a.codes and a.covers(where)), None)
         # Naming a code in a directive is not citing it — true of a live
         # annotation and of an example of one alike, which is why this matches
         # the *shape* rather than the parsed directives. Without it an
@@ -421,13 +414,8 @@ def _scan(files: list[Path] | None = None, docs: dict[str, Doc] | None = None) -
             for ref in remotes.references(text):
                 spans.append((ref.start, ref.end))
                 if not remotes.link(ref.remote, ref.tail):
-                    code = ref.composed
-                    where = text.count("\n", 0, ref.start) + 1
-                    excuse = next((a for a in usable_dangling
-                                   if code in a.codes and a.covers(where)),
-                                  None) or mention_for(code, where)
-                    result.dangling.setdefault(code, []).append(
-                        Citation(path, where, code, excuse))
+                    sites.append((path, text.count("\n", 0, ref.start) + 1,
+                                  ref.composed))
             text = _blank(text, spans)
         for line_no, line in enumerate(text.splitlines(), 1):
             bare = line
@@ -439,35 +427,57 @@ def _scan(files: list[Path] | None = None, docs: dict[str, Doc] | None = None) -
                           for m in scheme.pattern.finditer(bare)}
                 codes |= {f"{scheme.prefix}-{m.group('tail')}"
                           for m in scheme.temp_pattern.finditer(bare)}
-            for code in codes:
-                if own.get(path) == code:
-                    continue
-                if code not in docs:
-                    excuse = next((a for a in usable_dangling
-                                   if code in a.codes and a.covers(line_no)),
-                                  None) or mention_for(code, line_no)
-                    result.dangling.setdefault(code, []).append(
-                        Citation(path, line_no, code, excuse))
-                    continue
-                # An annotation excuses a *retired* reference. Excusing an
-                # in-force one means nothing, and counting it as "used" would
-                # keep the annotation alive after its document went Active —
-                # which is precisely when it should be reported as stale.
-                # A mention is recorded against an in-force document too. There
-                # is no finding to suppress there — `flagged` skips active
-                # documents and `acknowledged_count` does not count them — but
-                # it is what keeps the annotation `used` when the document it
-                # names goes Active, which is the moment it exists to survive.
-                excuse = mention_for(code, line_no) if docs[code].active else (
-                    next((a for a in usable
-                          if code in a.codes and a.covers(line_no)), None)
-                    or mention_for(code, line_no))
-                result.cited.setdefault(code, []).append(
-                    Citation(path, line_no, code, excuse))
+            sites += [(path, line_no, code) for code in sorted(codes)
+                      if own.get(path) != code]
+    _acknowledge(result, sites, docs)
     for pool in (result.cited, result.dangling):
         for sites in pool.values():
             sites.sort(key=lambda c: (str(c.path), c.line))
     return result
+
+
+def _acknowledge(result: Scan, sites: list[tuple[Path, int, str]],
+                 docs: dict[str, Doc]) -> None:
+    """File every site under `cited` or `dangling`, with the annotation that
+    answers for it, and record which annotations answer for nothing.
+
+    Who answers is decided by `luria/logic/acknowledgements.lp`: the first
+    well-formed annotation in the file that names the code, governs the
+    line and claims the site's state — `unresolved-ok` for a code naming
+    nothing here, `inactive-ok` for a retired document — and failing one,
+    the first `mention-ok`, which claims nothing and so answers either. A
+    document in force is no finding, so only a mention is recorded against
+    it, which is what keeps that mention alive when its document goes
+    Active (ADR-105)."""
+    from . import logic
+    from .facts import Fact
+    found: list[Fact] = []
+    for i, (path, line, code) in enumerate(sites):
+        found.append(Fact("site", (i, str(path), line, code)))
+    for code in {c for _, _, c in sites} & set(docs):
+        found.append(Fact("resolves", (code,)))
+        if docs[code].active:
+            found.append(Fact("active", (code,)))
+    for a, ann in enumerate(result.annotations):
+        d = ann.directive
+        found.append(Fact("ann", (a, str(d.path), ann.kind)))
+        found += [Fact("ann_code", (a, c)) for c in ann.codes]
+        if d.scope == directives.FILE:
+            found.append(Fact("ann_file", (a,)))
+        else:
+            found += [Fact("ann_line", (a, n)) for n in d.lines]
+        if ann.problem:
+            found.append(Fact("ann_problem", (a,)))
+    derived = logic.derive("acknowledgements", found=found)
+    excused = dict(derived.get("excused", ()))
+    for i, (path, line, code) in enumerate(sites):
+        ann = result.annotations[excused[i]] if i in excused else None
+        pool = result.cited if code in docs else result.dangling
+        pool.setdefault(code, []).append(Citation(path, line, code, ann))
+    result.unused = frozenset(a for (a,) in derived.get("unused", ()))
+    for a, code, _ in derived.get("lost", ()):
+        lost = result.lost.setdefault(a, {})
+        lost[code] = lost.get(code, 0) + 1
 
 
 # ── Reporting ────────────────────────────────────────────────────────────
@@ -609,43 +619,6 @@ def dangling_acknowledged_count(result: Scan | None = None,
                for c in sites if c.excused_by is not None)
 
 
-def _unexcused_under(result: "Scan", ann: Annotation,
-                     docs: dict[str, Doc]) -> dict[str, int]:
-    """Code → how many citations this annotation covers but could not excuse.
-
-    `scan` drops an annotation with a `problem` whole — `usable = [a for a in
-    anns if not a.problem]` — so every citation it names and covers is left
-    unacknowledged, including the ones whose codes are still perfectly good.
-    One stale code in a multi-code acknowledgement therefore un-acknowledges
-    the others, which is the part the finding could not say: the citations
-    surface as unaccounted for in a different section, with nothing tying them
-    to the annotation that stopped covering them.
-
-    Scoped by path and by the directive's own reach, because an annotation is
-    only ever responsible for what it actually covered."""
-    loose = ann.kind in (DANGLING_DIRECTIVE, MENTION_DIRECTIVE)
-    pools = ((result.cited, result.dangling)
-             if ann.kind == MENTION_DIRECTIVE else
-             (result.dangling,) if loose else (result.cited,))
-    out: dict[str, int] = {}
-    for code, sites in [kv for pool in pools for kv in pool.items()]:
-        if code not in ann.codes:
-            continue
-        if not loose:
-            doc = docs.get(code)
-            # Citing a document that is in force was never a finding, so
-            # losing an excuse for it costs nothing.
-            if doc is None or doc.active:
-                continue
-        n = sum(1 for c in sites
-                if c.excused_by is None
-                and c.path == ann.directive.path
-                and ann.covers(c.line))
-        if n:
-            out[code] = n
-    return out
-
-
 def stale_annotations(result: Scan | None = None,
                       docs: dict[str, Doc] | None = None) -> list[str]:
     """Annotations that no longer excuse anything — the document went Active,
@@ -661,7 +634,7 @@ def stale_annotations(result: Scan | None = None,
             # all, so the codes beside the bad one lose their acknowledgement
             # with it — say so here rather than leaving it to be found by
             # diffing two reports.
-            lost = _unexcused_under(result, ann, docs)
+            lost = result.lost.get(result._index(ann), {})
             if lost:
                 named = ", ".join(
                     f"{code} ({n} site{'' if n == 1 else 's'})"

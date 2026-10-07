@@ -8,8 +8,8 @@ tags:
 date: '2026-10-07'
 summary: >-
   The parts of luria that decide things about the record's graph —
-  converse pairs, invariants, chain edges, contract checks on references,
-  config consistency, retired citations — move from hand-written Python
+  converse pairs, invariants, chain edges, config consistency, and which
+  acknowledgement answers for a citation — move from hand-written Python
   walks to Answer Set Programming rules evaluated by clingo, over facts the
   Python extracts. Python keeps parsing, rendering, editing, git and the
   network, and turns derived facts into findings, edits and pages. The move
@@ -96,8 +96,18 @@ Order, smallest and purest first:
 2. converse-pair decisions in `relations` ([#358](https://github.com/dmarx/luria/issues/358)'s class);
 3. config consistency (converses, invariants, chain scope, declared
    schemes);
-4. reference checks in `contract`;
-5. retired-citation status in `ref_status`.
+4. which acknowledgement answers for which citation in `ref_status`.
+
+**`contract` stays in Python.** It was fifth in the first version of this
+list and was dropped on inspection. Its reference checks decide, for each
+value, whether the code's prefix is one the field names and whether the
+code is in that scheme's set of documents: two lookups, interleaved with
+parsing the value. And `relations` asks the same checker about frontmatter
+that exists only in memory, a document as it would read after the fixer's
+edits, which record facts cannot describe without a solve per file. Rules
+there would read worse than the Python and run slower, which are two of the
+kill criteria below. What `ref_status` decides is a join instead: sites,
+annotations and document states, matched by file, code, line and kind.
 
 User-facing queries (a `queries:` table, and chains over a derived relation
 rather than a field) follow once the engine is in place. They are outside
