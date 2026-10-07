@@ -240,3 +240,20 @@ def test_a_program_reads_only_the_families_it_names(tmp_path, monkeypatch):
     assert not by(facts(families={"schema", "documents"}), "value")
     with pytest.raises(ValueError, match="no fact family"):
         facts(families={"nope"})
+
+
+def test_a_commit_alone_moves_the_head_stamp(tmp_path, monkeypatch):
+    """The facts are re-read when HEAD moves even if no document did, and
+    finding that out costs `stat`s, not a `git rev-parse` per read."""
+    from luria import facts as facts_module
+    root = project(tmp_path, monkeypatch)
+    doc(root, "LIT-001")
+    git = ["git", "-c", "user.name=t", "-c", "user.email=t@t"]
+    subprocess.run([*git, "init", "-q"], cwd=root, check=True)
+    subprocess.run([*git, "add", "."], cwd=root, check=True)
+    subprocess.run([*git, "commit", "-qm", "one"], cwd=root, check=True)
+    cfg = config.current()
+    before = facts_module._head(cfg)
+    subprocess.run([*git, "commit", "-q", "--allow-empty", "-m", "two"],
+                   cwd=root, check=True)
+    assert facts_module._head(cfg) != before

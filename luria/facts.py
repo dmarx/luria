@@ -285,10 +285,53 @@ def head_facts(cfg=None) -> list[Fact]:
     return out
 
 
-def _head(cfg) -> str:
-    done = subprocess.run(["git", "rev-parse", "-q", "--verify", "HEAD"],
-                          cwd=cfg.root, capture_output=True, text=True)
-    return done.stdout.strip()
+_git_dirs: dict[Path, tuple[Path, Path] | None] = {}
+
+
+def _git_dir(root: Path) -> tuple[Path, Path] | None:
+    """The repository's git directory and its common directory (they differ
+    in a linked worktree), asked of git once per root; None outside a
+    repository — asked again once a `.git` appears at the root, since a
+    record can be put under git while one process is reading it."""
+    if root not in _git_dirs or (_git_dirs[root] is None
+                                 and (root / ".git").exists()):
+        done = subprocess.run(
+            ["git", "rev-parse", "--absolute-git-dir", "--git-common-dir"],
+            cwd=root, capture_output=True, text=True)
+        lines = done.stdout.split()
+        _git_dirs[root] = None if done.returncode or len(lines) != 2 else (
+            Path(lines[0]), (root / lines[1]).resolve()
+            if not Path(lines[1]).is_absolute() else Path(lines[1]))
+    return _git_dirs[root]
+
+
+def _read(path: Path) -> str:
+    try:
+        return path.read_text(encoding="utf-8").strip()
+    except OSError:
+        return ""
+
+
+def _head(cfg) -> tuple:
+    """What says HEAD has moved, without a process per ask: the `HEAD` file
+    itself (a checkout rewrites it), the commit its ref names when the ref
+    is loose (a commit rewrites that), and `packed-refs`, where a packed ref
+    lives. Contents rather than mtimes, so two commits inside one tick of a
+    coarse clock still read as two. Asked on every read of the facts, so it
+    has to cost a few small reads, not a `git rev-parse` each time."""
+    dirs = _git_dir(cfg.root)
+    if dirs is None:
+        return ()
+    git_dir, common = dirs
+    head = _read(git_dir / "HEAD")
+    ref = head.removeprefix("ref: ") if head.startswith("ref: ") else ""
+    packed = common / "packed-refs"
+    try:
+        st = packed.stat()
+        packed_stamp = (st.st_mtime_ns, st.st_size)
+    except OSError:
+        packed_stamp = ()
+    return (head, _read(common / ref) if ref else "", packed_stamp)
 
 
 def fingerprint(cfg=None) -> tuple:
@@ -297,7 +340,7 @@ def fingerprint(cfg=None) -> tuple:
     hundred `stat`s; reading the documents is what costs, and this is what
     says whether to."""
     cfg = cfg or current()
-    out = [("HEAD", _head(cfg), 0)]
+    out = [("HEAD", repr(_head(cfg)), 0)]
     for scheme in cfg.schemes.values():
         for path in [*scheme.documents().values(),
                      *scheme.temp_documents().values()]:
