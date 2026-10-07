@@ -75,7 +75,21 @@ def solve(sources: Iterable[str], found: Iterable[Fact]) -> Derived:
     return models[0]
 
 
+_memo: dict = {"facts": None, "results": {}}
+
+
 def derive(*names: str, found: Iterable[Fact] | None = None) -> Derived:
-    """Run the named programs over the record's facts (or the facts given)."""
-    return solve([rules(n) for n in names],
-                 record_facts() if found is None else found)
+    """Run the named programs over the record's facts (or the facts given).
+
+    Over the record's own facts the result is kept until the facts change:
+    `facts()` returns the same list object while the documents are
+    unchanged, so that identity is the key."""
+    if found is not None:
+        return solve([rules(n) for n in names], found)
+    current_facts = record_facts()
+    if _memo["facts"] is not current_facts:
+        _memo.update(facts=current_facts, results={})
+    if names not in _memo["results"]:
+        _memo["results"][names] = solve([rules(n) for n in names],
+                                        current_facts)
+    return _memo["results"][names]

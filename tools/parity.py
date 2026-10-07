@@ -4,8 +4,8 @@
 The logic-core migration (ADR on a logic core in clingo) moves luria's graph
 decisions from Python walks to rules, one subsystem at a time. A step is
 admissible only if it changes nothing a user sees, or changes exactly the
-defect it says it fixes. This is the check: run `luria lint` and
-`luria index` with a baseline build and a candidate build, each on its own
+defect it says it fixes. This is the check: run `luria lint`,
+`luria index` and `luria reports` with a baseline build and a candidate build, each on its own
 copy of each record, and compare.
 
     python tools/parity.py --baseline OLD/bin/luria --candidate NEW/bin/luria \\
@@ -66,8 +66,10 @@ def _side(luria: str, record: Path, into: Path) -> dict:
     _hermetic(root)
     lint_code, lint_out = _run(luria, root, "lint")
     index_code, index_out = _run(luria, root, "index")
+    reports_code, reports_out = _run(luria, root, "reports")
     return {"root": root, "lint": (lint_code, lint_out),
-            "index": (index_code, index_out), "tree": _tree(root)}
+            "index": (index_code, index_out),
+            "reports": (reports_code, reports_out), "tree": _tree(root)}
 
 
 def _diff(a: str, b: str, label: str, limit: int = 40) -> str:
@@ -84,7 +86,7 @@ def compare(baseline: str, candidate: str, record: Path) -> list[str]:
         old = _side(baseline, record, Path(tmp) / "baseline")
         new = _side(candidate, record, Path(tmp) / "candidate")
         problems = []
-        for step in ("lint", "index"):
+        for step in ("lint", "index", "reports"):
             if old[step] != new[step]:
                 problems.append(
                     f"`luria {step}` differs (exit {old[step][0]} → "

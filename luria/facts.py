@@ -34,6 +34,10 @@ position, an integer), so a code like `LIT-001` needs no mangling:
                                   through aliases; whether it lands on a
                                   document is the rules' business, not this
                                   module's
+    holds(C, F, V).               each value as a set member: stripped, and a
+                                  derived alias read as the code it names —
+                                  what two documents compare when a relation
+                                  asserts they share a value (`members`)
     edge(C, R, T).                the typed graph `luria/edges.py` derives
 
 Every fact comes through the record's own readers — `load_scheme`, the
@@ -94,6 +98,22 @@ def field_rows(code: str, meta: dict) -> list[tuple[str, str, int, str]]:
     return rows
 
 
+def members(raw) -> set[str]:
+    """A frontmatter value as a set of members: a scalar is a set of one, so
+    equality and intersection are the same test, and a derived alias and the
+    code it names are one value (#219) — or two documents in one area would
+    share nothing when one wrote `AREA-runtime` and the other `AREA-001`.
+
+    The one definition: the invariant check compares these, and so do the
+    rules, through `holds/3`."""
+    if raw in (None, ""):
+        return set()
+    values = raw if isinstance(raw, list) else [raw]
+    from .aliases import derived_code
+    return {derived_code(str(v)) or str(v).strip()
+            for v in values if v not in (None, "")}
+
+
 def schema_facts(cfg=None) -> Iterator[Fact]:
     """What `luria.yaml` declares, as facts."""
     cfg = cfg or current()
@@ -135,6 +155,9 @@ def document_facts(cfg=None) -> Iterator[Fact]:
             yield Fact("status", (adr.code, adr.status_value))
             for code, field, i, value in field_rows(adr.code, adr.meta):
                 yield Fact("value", (code, field, i, value))
+            for field, raw in adr.meta.items():
+                for member in members(raw):
+                    yield Fact("holds", (adr.code, field, member))
             for field in references:
                 for target in codes_of(field, adr.meta.get(field.name)):
                     yield Fact("ref_value", (adr.code, field.name, target))
@@ -143,10 +166,37 @@ def document_facts(cfg=None) -> Iterator[Fact]:
         yield Fact("edge", (edge.source, edge.relation, edge.target))
 
 
+def fingerprint(cfg=None) -> tuple:
+    """What the facts depend on, cheaply: every document's path, mtime and
+    size. Listing the scheme directories is a few hundred `stat`s; reading
+    the documents is what costs, and this is what says whether to."""
+    cfg = cfg or current()
+    out = []
+    for scheme in cfg.schemes.values():
+        for path in [*scheme.documents().values(),
+                     *scheme.temp_documents().values()]:
+            st = path.stat()
+            out.append((str(path), st.st_mtime_ns, st.st_size))
+    return tuple(sorted(out))
+
+
+# One run asks for the facts many times — every relation a chain or a check
+# reads — and a fixer may write documents between asks. So the facts are
+# kept against the config they were read under (held, so its identity cannot
+# be reused) and the fingerprint of the documents; either changing reads
+# them again.
+_memo: dict = {"cfg": None, "print": None, "facts": None}
+
+
 def facts(cfg=None) -> list[Fact]:
     """Every fact about the record, sorted, without repeats."""
     cfg = cfg or current()
-    return sorted(set(schema_facts(cfg)) | set(document_facts(cfg)))
+    stamp = fingerprint(cfg)
+    if _memo["cfg"] is cfg and _memo["print"] == stamp:
+        return _memo["facts"]
+    found = sorted(set(schema_facts(cfg)) | set(document_facts(cfg)))
+    _memo.update(cfg=cfg, print=stamp, facts=found)
+    return found
 
 
 def program(found: Iterable[Fact]) -> str:

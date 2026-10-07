@@ -162,3 +162,24 @@ def test_a_program_with_several_answers_is_refused():
 def test_a_program_with_no_answer_is_refused():
     with pytest.raises(logic.LogicError, match="has none"):
         logic.solve([":- not a. #show a/0."], [])
+
+
+# ── the ported programs ───────────────────────────────────────────────────
+
+def test_a_relation_is_held_from_either_side(tmp_path, monkeypatch):
+    """`relations.lp` unions a field with its converse, so a one-sided
+    declaration reads the same as a completed one."""
+    root = project(tmp_path, monkeypatch)
+    doc(root, "LIT-001", "supports:\n- CLAIM-001\n")
+    doc(root, "CLAIM-001")
+    held = logic.derive("relations")["held"]
+    assert ("LIT", "supports", "LIT-001", "CLAIM-001") in held
+    assert ("CLAIM", "rests_on", "CLAIM-001", "LIT-001") in held
+
+
+def test_a_value_is_held_as_a_set_member(tmp_path, monkeypatch):
+    """`holds/3` is `members`: a scalar is a set of one, stripped."""
+    root = project(tmp_path, monkeypatch)
+    doc(root, "LIT-001", "area: ' runtime '\n")
+    assert ("LIT-001", "area", "runtime") in by(facts(), "holds")
+    assert ("LIT-001", "tags", "record") in by(facts(), "holds")
