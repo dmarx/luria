@@ -19,6 +19,7 @@ from importlib import resources
 
 import clingo
 
+from ..timing import timed
 from ..facts import Fact, facts as record_facts, program as facts_program
 
 
@@ -84,12 +85,15 @@ def derive(*names: str, found: Iterable[Fact] | None = None) -> Derived:
     Over the record's own facts the result is kept until the facts change:
     `facts()` returns the same list object while the documents are
     unchanged, so that identity is the key."""
+    label = "solve " + "+".join(names)
     if found is not None:
-        return solve([rules(n) for n in names], found)
+        with timed(label):
+            return solve([rules(n) for n in names], found)
     current_facts = record_facts()
     if _memo["facts"] is not current_facts:
         _memo.update(facts=current_facts, results={})
     if names not in _memo["results"]:
-        _memo["results"][names] = solve([rules(n) for n in names],
-                                        current_facts)
+        with timed(label):
+            _memo["results"][names] = solve([rules(n) for n in names],
+                                            current_facts)
     return _memo["results"][names]

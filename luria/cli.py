@@ -104,7 +104,9 @@ def _survivable_console() -> None:
 
 def main() -> int:
     _survivable_console()
-    fire.Fire(COMMANDS, name="luria")
+    from .timing import timed
+    with timed("command " + " ".join(sys.argv[1:2] or ["(none)"])):
+        fire.Fire(COMMANDS, name="luria")
     return 0
 
 
