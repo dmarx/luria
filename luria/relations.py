@@ -115,12 +115,21 @@ def _held(prefix: str, field: str, back: str, far: str
           ) -> tuple[dict[str, Adr], dict[str, Adr], dict[str, dict[str, set[str]]]]:
     """Both sides of one pair: the near documents, the far documents, and
     what each side declares. For a relation that does not cross, the two
-    document sets are the same object and this is the old behaviour."""
+    document sets are the same object and this is the old behaviour.
+
+    The two readings are keyed by side, NEAR and FAR, not by field name. A
+    symmetric relation names one field on both sides, and keyed by name the
+    far reading overwrote the near one: harmless within one scheme, where the
+    two readings are the same, and wrong across two, where a pair held on
+    both sides read as held on neither."""
     near_docs = _documents(prefix)
     far_docs = near_docs if far == prefix else _documents(far)
-    held = {field: _reads(prefix, field, far_docs),
-            back: _reads(far, back, near_docs)}
+    held = {NEAR: _reads(prefix, field, far_docs),
+            FAR: _reads(far, back, near_docs)}
     return near_docs, far_docs, held
+
+
+NEAR, FAR = "near", "far"
 
 
 def edges(prefix: str, field: str) -> dict[str, set[str]]:
@@ -169,7 +178,7 @@ def _contradictions(field: str, back: str, held: dict) -> set[tuple[str, str]]:
     if back == field:
         return set()
     clash: set[tuple[str, str]] = set()
-    forward, backward = held[field], held[back]
+    forward, backward = held[NEAR], held[FAR]
     for code, others in forward.items():
         for other in others:
             if other in backward.get(code, ()) or code in forward.get(other, ()):
@@ -241,8 +250,8 @@ def _listed(value) -> list[str]:
 
 def _now(field: str, back: str, held: dict) -> tuple[set, set]:
     """The same two edge sets as the working tree holds them."""
-    forward = {(a, b) for a, others in held[field].items() for b in others}
-    reverse = {(a, b) for b, others in held[back].items() for a in others}
+    forward = {(a, b) for a, others in held[NEAR].items() for b in others}
+    reverse = {(a, b) for b, others in held[FAR].items() for a in others}
     return forward, reverse
 
 
