@@ -73,6 +73,10 @@ class Line:
     # parents renders under one of them and names the rest.
     under: dict[str, str] = field(default_factory=dict)
     also: dict[str, list[str]] = field(default_factory=dict)
+    # Which of the chain's relations holds each edge, as (step, parent) to
+    # field names, so a parent named in `also` is named by its relation and
+    # not by a word the chain may not walk.
+    via: dict[tuple[str, str], list[str]] = field(default_factory=dict)
 
     @property
     def members(self) -> list[Adr]:
@@ -107,14 +111,17 @@ def _load(chain) -> tuple[dict[str, Adr], dict[str, list[str]],
     # many fields filled it — which is what keeps ordering, depth and cycle
     # reporting identical whether a record signs its succession or not.
     held: dict[str, set[str]] = {}
+    via: dict[tuple[str, str], list[str]] = {}
     for field in chain.relation:
         for code, targets in relations.edges(chain.scheme, field).items():
             held.setdefault(code, set()).update(targets)
+            for target in targets:
+                via.setdefault((code, target), []).append(field)
     apart = (relations.edges(chain.scheme, chain.sibling)
              if chain.sibling else {})
     spine = {code: sorted(held.get(code, ())) for code in docs}
     cross = {code: sorted(apart.get(code, ())) for code in docs}
-    return docs, spine, cross
+    return docs, spine, cross, via
 
 
 def _components(codes: list[str], neighbours: dict[str, set[str]]
@@ -212,7 +219,7 @@ def lines_of(chain) -> list[Line]:
     extends it; one attached only by a cross-link renders alongside. Both
     the page and `walk()` come through here, so the view and the query
     cannot disagree about what a line contains."""
-    docs, spine, cross = _load(chain)
+    docs, spine, cross, via = _load(chain)
     neighbours: dict[str, set[str]] = {c: set() for c in docs}
     for code in docs:
         for other in spine[code] + cross[code]:
@@ -222,7 +229,9 @@ def lines_of(chain) -> list[Line]:
     for group in _components(sorted(docs), neighbours):
         depth = _depths(group, spine)
         order, under, also = _order(group, spine, depth)
-        line = Line(depth=depth, under=under, also=also)
+        line = Line(depth=depth, under=under, also=also,
+                    via={edge: fields for edge, fields in via.items()
+                         if edge[0] in group})
         for code in order:
             on_spine = bool(spine[code]) or any(code in spine[o] for o in group)
             (line.spine if on_spine else line.alongside).append(docs[code])
@@ -247,7 +256,7 @@ def rows() -> list[str]:
     cfg = current()
     found: list[str] = []
     for chain in cfg.chains.values():
-        docs, spine, _ = _load(chain)
+        docs, spine, _, _ = _load(chain)
         for code in sorted(docs):
             for reached in sorted(_reaches(code, spine)):
                 if code in spine[reached] and code < reached:
@@ -378,13 +387,40 @@ def _line_block(chain, line: Line, heading: str) -> list[str]:
         # are named here so the page holds every declared edge, not the
         # subset a tree layout can draw.
         extra = line.also.get(doc.code, [])
-        tail = (f" — also extends {', '.join(extra)}" if extra else "")
+        tail = _also(chain, line, doc.code, extra)
         out.append("  " * line.depth[doc.code] + "- "
                    + _step(doc, chain) + tail)
     for doc in line.alongside:
         out.append(_step(doc, chain, lead="- alongside: "))
     out.append("")
     return out
+
+
+def _also(chain, line: Line, code: str, extra: list[str]) -> str:
+    """The parents a step does not render under, each named by the relation
+    that holds it: `— also corrects LIT-009`, or one clause per relation when
+    several hold them. The word is the relation's declared `label`, which is
+    what a view calls it (#254), else its field name."""
+    if not extra:
+        return ""
+    by: dict[str, list[str]] = {}
+    for parent in extra:
+        for name in line.via.get((code, parent), []) or [chain.relation[0]]:
+            by.setdefault(name, []).append(parent)
+    clauses = [f"also {_relation_word(chain, name)} {', '.join(parents)}"
+               for name, parents in sorted(
+                   by.items(), key=lambda kv: chain.relation.index(kv[0])
+                   if kv[0] in chain.relation else len(chain.relation))]
+    return " — " + "; ".join(clauses)
+
+
+def _relation_word(chain, name: str) -> str:
+    ref = next((r for r in current().schemes[chain.scheme].references
+                if r.field == name), None)
+    label = ref.label.strip() if ref is not None else ""
+    if label:
+        return label[0].lower() + label[1:]
+    return name.replace("_", " ")
 
 
 def _render(chain, lines: list[Line]) -> str:
