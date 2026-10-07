@@ -43,7 +43,7 @@ Every entry carries `title`, `tags` and `date`, and one standard field is condit
 
 **`BOUNDARY`**
 
-- `overrides` — optional, one or more `PRACTICE` codes when present (luria.yaml: schemes.BOUNDARY.references.overrides)
+- `overrides` — optional, one or more `PRACTICE` or `BOUNDARY` codes when present (luria.yaml: schemes.BOUNDARY.references.overrides)
 - `grounds` — required, one or more `VALUE` codes (luria.yaml: schemes.BOUNDARY.references.grounds)
 - `status` — optional, one of `Active`, `Proposed`, `Deferred`, `Superseded`, `Rejected` (luria.yaml: schemes.BOUNDARY.fields.status; vocabulary 'value-statuses': values)
 - `tags` — required, one or more of `refusal`, `attribution`, `identity` (luria.yaml: schemes.BOUNDARY.fields.tags; vocabulary 'boundary-tags': values)
