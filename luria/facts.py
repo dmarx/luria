@@ -268,8 +268,11 @@ def facts(cfg=None) -> list[Fact]:
     stamp = fingerprint(cfg)
     if _memo["cfg"] is cfg and _memo["print"] == stamp:
         return _memo["facts"]
-    found = sorted(set(schema_facts(cfg)) | set(document_facts(cfg))
-                   | set(head_facts(cfg)))
+    from .timing import timed
+    with timed("facts") as t:
+        found = sorted(set(schema_facts(cfg)) | set(document_facts(cfg))
+                       | set(head_facts(cfg)))
+        t["note"] = f"{len(found)} facts"
     _memo.update(cfg=cfg, print=stamp, facts=found)
     return found
 
