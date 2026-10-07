@@ -1,4 +1,5 @@
 % luria/logic/relations.lp
+% facts: schema documents
 % A declared relation, read from either side.
 %
 % `held(S, F, C, X)`: document C of scheme S stands in relation F to X —
