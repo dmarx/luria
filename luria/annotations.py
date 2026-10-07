@@ -64,7 +64,8 @@ from pathlib import Path
 from . import bibliography, directives, doc_refs, relations
 from .adr_index import Adr, load_scheme
 from .config import EXPLAIN_CITED, TEMP_TAIL, current
-from .contract import ANY_SCHEME, for_scheme, local_scheme, reference_code
+from .contract import (ANY_SCHEME, for_scheme, local_scheme, reference_code,
+                       spelled, target_of)
 from .field_edit import add_to_field
 
 # The namespace a relation statement's name lives in: `<!-- ref::F: X -->`.
@@ -251,9 +252,9 @@ def _push_up(doc: Adr, code: str, st: Statement, spec,
     if st.code == code:
         s.bad.append(f"{where}: {said} relates {code} to itself")
         return
-    if spec.reference != ANY_SCHEME and local_scheme(st.code) != spec.reference:
+    if spec.reference != ANY_SCHEME and target_of(spec, st.code) is None:
         s.bad.append(f"{where}: {said} — `{st.relation}` holds "
-                     f"{spec.reference} codes, and {st.code} is not one")
+                     f"{spelled(spec)} codes, and {st.code} is not one")
         return
     back = relations.converse_of(doc.prefix, st.relation)
     if st.code in _values(doc, st.relation) or (

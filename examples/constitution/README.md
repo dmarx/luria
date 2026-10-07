@@ -14,15 +14,18 @@ as prose signals precedence by escalation — *IMPORTANT*, *ALWAYS*, *you MUST* 
 which is unfalsifiable: nothing verifies that the emphatic rule wins, and
 nothing notices when the rule it was meant to beat is deleted. Declaring
 `overrides` as a typed reference makes it an edge the lint resolves and the
-site draws. `grounds` does the same job downward, so no rule stands on its own
-authority: a practice with no value behind it is a habit.
+site draws. It names a practice or another boundary — a carve-out that beats a
+prohibition is one relation whichever kind of rule it beats, so the field lists
+both schemes rather than splitting into two. `grounds` does the same job
+downward, so no rule stands on its own authority: a practice with no value
+behind it is a habit.
 
 **The source is here too**, and the record is checked against it. A test
 asserts that every document in force accounts for some part of it — the schema
 checks `PRACTICE → VALUE`, but nothing else would check `document → the text it
 was drawn from`, which is the direction a record like this drifts in.
 
-The configuration is `luria.toml`, commented throughout; the documents are
+The configuration is `luria.yaml`; the documents are
 under `record/`. Start with [the source
 constitution](docs/constitution.md), annotated section by section with what
 accounts for it, then [the values](docs/values.md),

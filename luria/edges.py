@@ -33,7 +33,7 @@ from pathlib import Path
 from .adr_index import Adr, load_scheme
 from .config import current
 from .contract import (ANY_SCHEME, for_scheme, is_remote, local_scheme,
-                       reference_code, values_of)
+                       reference_code, target_of, values_of)
 
 SUPERSEDED_BY = "superseded_by"
 INFLUENCED_BY = "influenced_by"
@@ -54,7 +54,7 @@ def _lands(field, code: str) -> bool:
     code is a citation the remote machinery verifies, never an edge."""
     if field.reference == ANY_SCHEME:
         return not is_remote(code) and local_scheme(code) is not None
-    return code.startswith(f"{field.reference}-")
+    return target_of(field, code) is not None
 
 
 def outbound(doc: Adr) -> list[Edge]:

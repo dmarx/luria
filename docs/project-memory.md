@@ -303,6 +303,26 @@ must agree on: a scene that extends a scene in another world is a mistake
 the codes alone cannot show. A relation with no declared converse is left
 alone entirely, because its reverse edge would be a guess.
 
+A relation whose legitimate targets span several families names them all:
+
+```yaml
+schemes:
+  CLAIM:
+    references:
+      rests_on:
+        scheme: [LIT, CASE]
+        many: true
+        converse: supports
+```
+
+A code passes if it belongs to any scheme listed, and a finding names the
+whole union — "not a LIT or CASE code". It stays one relation rather than a
+field per target, so nothing reading the graph has to know to union two
+edges. Its converse is a field of the same name on every scheme listed, each
+naming the declaring scheme back. A chain walks a relation only when the
+chain's own scheme is its sole target; a union can leave the scheme, and a
+chain is a sequence within one.
+
 A relation can also be *walked*, which is what a chain is:
 
 ```yaml

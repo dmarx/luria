@@ -95,7 +95,7 @@ schemes:
     render: index
     references:
       overrides:
-        scheme: PRACTICE
+        scheme: [PRACTICE, BOUNDARY]
         many: true
         required: false
       grounds:

@@ -486,9 +486,20 @@ class Reference:
     and takes the citation as serving the relation. `stated` also asks that
     each citation carry a `ref::` statement of the relation. A code the body
     never explains is `unexplained-relations`, a report and not a fix,
-    because the explanation is prose only a person can write (#333, ADR-123)."""
+    because the explanation is prose only a person can write (#333, ADR-123).
+
+    `scheme` names one scheme or a list of them: a relation whose legitimate
+    targets span several families — a claim resting on a paper or a case, a
+    boundary overriding a practice or another boundary — is one relation, and
+    a field per target family would put the type system's job in the field
+    name (#160). A code passes if it belongs to any scheme named. A converse
+    is then a field of the same name on every one of them, each naming this
+    scheme back, and a chain still refuses the relation unless its only
+    target is the chain's own scheme."""
     field: str
-    scheme: str
+    # Every scheme whose codes the field may hold, in declared order; a
+    # single string in `luria.yaml` is a tuple of one.
+    scheme: tuple[str, ...]
     required: bool = True
     many: bool = False
     converse: str = ""
@@ -1591,34 +1602,53 @@ def _checked_converses(prefix: str, refs: tuple, schemes: dict) -> tuple:
         if not ref.converse:
             continue
         where = f"luria.yaml: schemes.{prefix}.references.{ref.field}.converse"
-        far = schemes.get(ref.scheme)
-        by_name = {r.field: r for r in far.references} if far else {}
-        other = by_name.get(ref.converse)
-        if other is None:
-            raise ValueError(
-                f"{where}: {ref.converse!r} is not a reference {ref.scheme} "
-                f"declares — {ref.field!r} holds {ref.scheme} codes, so the "
-                f"same relation read backwards is a field on {ref.scheme}, "
-                f"and it has to exist to be written into "
-                f"(declared: {', '.join(sorted(by_name)) or 'none'})")
-        if other.scheme != prefix:
-            raise ValueError(
-                f"{where}: {ref.field!r} is on {prefix} and "
-                f"{ref.scheme}.{ref.converse!r} holds {other.scheme} codes — "
-                f"the same relation read backwards points back at {prefix}")
-        if other.converse != ref.field:
-            raise ValueError(
-                f"{where}: {ref.converse!r} does not name {ref.field!r} back "
-                f"— a converse is mutual, and half a pair completes in one "
-                f"direction only "
-                f"(saw: {ref.converse}.converse = {other.converse or 'unset'!r})")
-        for side in (ref, other):
-            if not side.many:
-                raise ValueError(
-                    f"{where}: {side.field!r} needs `many = true` — either "
-                    f"side of a pair is written into, and several documents "
-                    f"can stand in one relation to the same one")
+        # A field naming several schemes has its converse on each of them, by
+        # the same name: one relation, read backwards from wherever its far
+        # end lands (#160).
+        for target in ref.scheme:
+            _checked_converse(where, prefix, ref, target, schemes)
     return refs
+
+
+def _checked_converse(where: str, prefix: str, ref, target: str,
+                      schemes: dict) -> None:
+    """One target scheme's half of `_checked_converses`."""
+    far = schemes.get(target)
+    by_name = {r.field: r for r in far.references} if far else {}
+    other = by_name.get(ref.converse)
+    if other is None:
+        raise ValueError(
+            f"{where}: {ref.converse!r} is not a reference {target} "
+            f"declares — {ref.field!r} holds {target} codes, so the "
+            f"same relation read backwards is a field on {target}, "
+            f"and it has to exist to be written into "
+            f"(declared: {', '.join(sorted(by_name)) or 'none'})")
+    if prefix not in other.scheme:
+        raise ValueError(
+            f"{where}: {ref.field!r} is on {prefix} and "
+            f"{target}.{ref.converse!r} holds {spelled(other.scheme)} codes "
+            f"— the same relation read backwards points back at {prefix}")
+    if other.converse != ref.field:
+        raise ValueError(
+            f"{where}: {ref.converse!r} does not name {ref.field!r} back "
+            f"— a converse is mutual, and half a pair completes in one "
+            f"direction only "
+            f"(saw: {ref.converse}.converse = {other.converse or 'unset'!r})")
+    for side in (ref, other):
+        if not side.many:
+            raise ValueError(
+                f"{where}: {side.field!r} needs `many = true` — either "
+                f"side of a pair is written into, and several documents "
+                f"can stand in one relation to the same one")
+
+
+def spelled(prefixes) -> str:
+    """Schemes as a sentence names them: `LIT`, `LIT or CASE`, `LIT, CASE or
+    NOTE` — the words a finding uses for what a reference may hold."""
+    names = list(prefixes)
+    if len(names) <= 1:
+        return "".join(names)
+    return f"{', '.join(names[:-1])} or {names[-1]}"
 
 
 CITE_TARGETS = ("page", "view")
@@ -1659,8 +1689,10 @@ def _references(prefix: str, raw: dict) -> tuple[Reference, ...]:
         if not isinstance(spec, dict) or not spec.get("scheme"):
             raise ValueError(
                 f"luria.yaml: schemes.{prefix}.references.{field} needs a "
-                f"`scheme` — it names which scheme's codes the field holds")
+                f"`scheme` — it names which scheme's codes the field holds, "
+                f"or a list of the schemes it may draw from")
         where = f"luria.yaml: schemes.{prefix}.references.{field}"
+        targets = _targets(where, spec["scheme"])
         # A relation is stated in prose as `<!-- ref::<field>: X -->` (#333),
         # and a directive's scope is a suffix on its name: a field ending in
         # one would read as a narrower statement of a different field.
@@ -1671,7 +1703,7 @@ def _references(prefix: str, raw: dict) -> tuple[Reference, ...]:
                 f"of a different field")
         required = bool(spec.get("required", True))
         found.append(Reference(field=str(field),
-                               scheme=str(spec["scheme"]).upper(),
+                               scheme=targets,
                                required=required,
                                many=bool(spec.get("many", False)),
                                converse=str(spec.get("converse", "")),
@@ -1685,6 +1717,18 @@ def _references(prefix: str, raw: dict) -> tuple[Reference, ...]:
                                explain=_explain(where, spec),
                                group=bool(spec.get("group", False))))
     return tuple(found)
+
+
+def _targets(where: str, raw) -> tuple[str, ...]:
+    """`scheme:` as the tuple of prefixes a reference may name (#160). A
+    string is one; a list is several, each named once — a repeat would read
+    as though order or weight meant something, and neither does."""
+    names = [str(s).upper() for s in (raw if isinstance(raw, list) else [raw])]
+    for name in names:
+        if names.count(name) > 1:
+            raise ValueError(f"{where}.scheme names {name} twice — a code "
+                             f"belongs to a scheme or it does not")
+    return tuple(names)
 
 
 EXPLAIN_CITED, EXPLAIN_STATED = "cited", "stated"
@@ -2558,10 +2602,12 @@ def _chains(raw: dict, schemes: dict, root: Path) -> dict[str, Chain]:
                 # says which key is wrong, and where the assertion belongs.
                 far = next(r.scheme for r in schemes[prefix].references
                            if r.field == field)
-                if far != prefix:
+                if far != (prefix,):
+                    alone = " alone" if prefix in far else ""
                     raise ValueError(
                         f"{where}: `{key}` names {field!r}, which points at "
-                        f"{far} rather than {prefix} — a chain is a sequence "
+                        f"{spelled(far)} rather than {prefix}{alone} — a "
+                        f"chain is a sequence "
                         f"within one scheme, so there is no line to walk "
                         f"across the boundary. To assert a shared field over "
                         f"this relation, declare `invariant` on "
@@ -2653,7 +2699,9 @@ def _check_invariants(prefix: str, scheme, schemes: dict) -> None:
             continue
         where = (f"luria.yaml: schemes.{prefix}.references.{ref.field}"
                  f".invariant")
-        for end, target in ((prefix, scheme), (ref.scheme, schemes[ref.scheme])):
+        ends = [(prefix, scheme)] + [(t, schemes[t]) for t in ref.scheme
+                                     if t != prefix]
+        for end, target in ends:
             known = nameable(target)
             if ref.invariant not in known:
                 raise ValueError(
@@ -2784,28 +2832,35 @@ def _check_target_fields(where: str, rule, ref, schemes, many: bool = False) -> 
     *during* load, and asking the loader for the config it is still assembling
     recurses until the stack ends.
 
+    A field naming several schemes (#160) follows into whichever one the code
+    names, so the template is checked against each: a source only some of
+    them can hold resolves to nothing on every document that lands in the
+    others, which reads exactly like a record with nothing to derive.
+
     Skipped when the target is a scheme this project does not declare — a
     remote, or a prefix configured elsewhere — because there is nothing local
     to check the names against and refusing would forbid a legitimate shape."""
-    target = (schemes or {}).get(ref.scheme)
-    if target is None:
-        return
-    nameable = {*BUILT_IN_CONDITION_FIELDS, "number", *target.requires,
-                *(r.field for r in target.references),
-                *(v.field for v in target.vocabularies),
-                *(f.field for f in target.plain_fields),
-                *(d.field for d in target.derived)}
-    for name in rule.sources:
-        if name not in nameable:
-            raise ValueError(
-                f"{where}: `{name}` is not a field {ref.scheme} declares, and "
-                f"`from = \"{rule.follow}\"` reads a {ref.scheme} document — "
-                f"so `{rule.field}` resolves to nothing on every document "
-                f"(nameable: {', '.join(sorted(nameable))})")
-    # Against the TARGET's cardinality, which is the whole reason this is a
-    # declaration rather than an inference: the scheme holding the source is
-    # not this one, and is not necessarily assembled yet when it is compiled.
-    _check_cardinality(where, rule, plural_fields(target), many, ref.scheme)
+    for prefix in ref.scheme:
+        target = (schemes or {}).get(prefix)
+        if target is None:
+            continue
+        nameable = {*BUILT_IN_CONDITION_FIELDS, "number", *target.requires,
+                    *(r.field for r in target.references),
+                    *(v.field for v in target.vocabularies),
+                    *(f.field for f in target.plain_fields),
+                    *(d.field for d in target.derived)}
+        for name in rule.sources:
+            if name not in nameable:
+                raise ValueError(
+                    f"{where}: `{name}` is not a field {prefix} declares, and "
+                    f"`from = \"{rule.follow}\"` reads a {prefix} document — "
+                    f"so `{rule.field}` resolves to nothing on every document "
+                    f"(nameable: {', '.join(sorted(nameable))})")
+        # Against the TARGET's cardinality, which is the whole reason this is
+        # a declaration rather than an inference: the scheme holding the
+        # source is not this one, and is not necessarily assembled yet when
+        # it is compiled.
+        _check_cardinality(where, rule, plural_fields(target), many, prefix)
 
 
 def _alias_template(prefix: str, raw) -> str:
@@ -2946,11 +3001,12 @@ def _schemes(raw: dict, root: Path, scaffolding: bool = False,
         _check_conditions(prefix, scheme)
         _check_derivations(prefix, scheme, schemes)
         for ref in scheme.references:
-            if ref.scheme not in schemes:
-                raise ValueError(
-                    f"luria.yaml: schemes.{prefix}.references.{ref.field} "
-                    f"names scheme {ref.scheme!r}, which is not declared "
-                    f"(have: {', '.join(sorted(schemes))})")
+            for target in ref.scheme:
+                if target not in schemes:
+                    raise ValueError(
+                        f"luria.yaml: schemes.{prefix}.references.{ref.field} "
+                        f"names scheme {target!r}, which is not declared "
+                        f"(have: {', '.join(sorted(schemes))})")
     # After the loop above, so that a converse naming an undeclared scheme is
     # reported as the missing scheme rather than as a missing field on it.
     for prefix, scheme in schemes.items():
