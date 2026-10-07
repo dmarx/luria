@@ -18,8 +18,8 @@ def test_a_timed_block_reports_when_asked(monkeypatch, capsys):
     with timed("facts") as t:
         t["note"] = "3 facts"
     err = capsys.readouterr().err
-    assert err.startswith("luria: timing: facts ") and err.endswith(
-        "s (3 facts)\n")
+    assert err.startswith("luria: timing: facts ") and ", cpu " in err
+    assert err.endswith("s (3 facts)\n")
 
 
 def test_zero_means_off(monkeypatch, capsys):
