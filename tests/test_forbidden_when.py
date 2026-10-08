@@ -208,12 +208,14 @@ def test_other_states_may_name_a_successor(tmp_path, monkeypatch):
                      {"SOTA": {"SOTA-002"}}) == [], status
 
 
-def test_the_record_page_states_the_built_in_rule(tmp_path, monkeypatch):
+def test_the_record_page_states_a_declared_successor_rule(tmp_path, monkeypatch):
+    """Under the scheme that declares it, like any other obligation — there
+    is no built-in rule to state once for everyone any more."""
     from luria import record_doc
-    project(tmp_path, monkeypatch, "")
+    project(tmp_path, monkeypatch, {"schemes": {"SOTA": successor("SOTA")}})
     section = record_doc.render().split("## What an entry must carry")[1]
     section = section.split("\n## ")[0]
-    assert "forbidden" in section and "Active" in section, section
+    assert "forbidden when `status` is `Active`" in section, section
 
 
 def test_a_defaulted_condition_field_is_named_by_its_default(

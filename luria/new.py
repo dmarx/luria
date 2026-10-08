@@ -43,19 +43,35 @@ TEMPLATE_NAME = "_template.md"
 _NUMBER_LINE = re.compile(r"^number:[^\n]*\n", re.M)
 
 # The shape written when a scheme has no _template.md of its own — enough to
-# pass the lint (status, title, tag, date, agreeing heading) and nothing else.
-FALLBACK = """---
-status: Proposed
+# pass the lint (status, title, date, agreeing heading, and a value on the
+# scheme's axis if it has one) and nothing else. Read off the scheme rather
+# than assumed: the status word is one its vocabulary holds, and the axis is
+# whichever field the scheme names, or none (the ADR on explicit relations).
+FALLBACK_HEAD = """---
+status: {status}
 title: '{title}'
-tags:
-- record
-date: '{date}'
+{axis}date: '{date}'
 ---
 
 # {code}: {title}
+"""
 
+FALLBACK_BODY = """
 Why this needed deciding, what was decided, and what was rejected.
 """
+
+
+def fallback(scheme, code: str, date: str, title: str) -> str:
+    """The fallback document for `scheme`: a starting status that is not in
+    force — `Proposed` where the vocabulary has it, else the first word
+    that is not the `active` one — and one placeholder value on the axis."""
+    from .statuses import vocabulary
+    words = vocabulary(scheme)
+    status = ("Proposed" if "Proposed" in words else
+              next((w for w in words if w != scheme.active), scheme.active))
+    axis = f"{scheme.axis}:\n- record\n" if scheme.axis else ""
+    return (FALLBACK_HEAD.format(status=status, title=title, axis=axis,
+                                 date=date, code=code) + FALLBACK_BODY)
 
 
 def kinds() -> dict[str, tuple[str, object]]:
@@ -189,8 +205,7 @@ def new_scheme_doc(scheme, fields: dict[str, str]) -> Path:
         text = re.sub(r"^date: .*$", f"date: '{today}'", text,
                       count=1, flags=re.MULTILINE)
     else:
-        text = FALLBACK.format(code=code, date=today,
-                               title="Stated as the thing you did")
+        text = fallback(scheme, code, today, "Stated as the thing you did")
 
     plural = plural_fields(scheme)
     title = fields.pop("title", None)

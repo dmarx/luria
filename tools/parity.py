@@ -10,7 +10,7 @@ baseline build and a candidate build, each on its own copy of each record,
 and compare what they print and every file they leave.
 
     python tools/parity.py --baseline OLD/bin/luria --candidate NEW/bin/luria \\
-        [--perturb SEED] RECORD [RECORD ...]
+        [--perturb SEED] [--upgrade NAME] RECORD [RECORD ...]
 
 A record whose relations already agree gives the converse fixer nothing to
 do, so `--perturb` gives it work first, the same on both sides: from a
@@ -18,6 +18,12 @@ seeded sample of the documents that declare a converse-paired field, one
 code is dropped and committed (a one-sided edge nobody touched, which the
 fixer completes), and from another sample one is dropped and left
 uncommitted (a withdrawal, which the fixer propagates).
+
+A release that changes the config's shape ships a `luria upgrade` for it.
+`--upgrade NAME` runs the candidate's `luria upgrade NAME` on the
+candidate's copy first, committed, so the comparison is the old release on
+the old record against the new release on the migrated one. `luria.yaml`
+then differs by design: its diff is printed for reading, not counted.
 
 Each record is copied with its `.git`, because the converse fixer reads HEAD
 as its baseline. The copy's `luria.yaml` is set to `lint.network: never`, so
@@ -133,11 +139,36 @@ STEPS = {"lint": ("lint",), "index": ("index",), "reports": ("reports",),
          "link": ("link",), "link --fix": ("link", "--fix")}
 
 
-def _side(luria: str, record: Path, into: Path, seed: int | None) -> dict:
+def _upgrade(luria: str, root: Path, name: str) -> str:
+    """Run `luria upgrade NAME` on the copy — on every record in it, nested
+    ones included, since a record renders the records it includes — and
+    commit what it wrote, so the converse fixer's HEAD baseline is the
+    migrated record too."""
+    said = []
+    for config in sorted(root.rglob("luria.yaml")):
+        if ".git" in config.relative_to(root).parts:
+            continue
+        where = config.parent
+        code, text, _ = _run(luria, where, "upgrade", name, "--root", str(where))
+        if code:
+            raise SystemExit(f"luria upgrade {name} failed on "
+                             f"{where.relative_to(root.parent)}:\n{text}")
+        said.append(f"[{where.relative_to(root.parent)}]\n{text.strip()}")
+    text = "\n".join(said)
+    git = ["git", "-c", "user.name=parity", "-c", "user.email=parity@luria"]
+    subprocess.run([*git, "commit", "-qam", f"upgrade {name}", "--no-verify"],
+                   cwd=root, capture_output=True)
+    return text
+
+
+def _side(luria: str, record: Path, into: Path, seed: int | None,
+          upgrade: str | None = None) -> dict:
     root = into / record.name
     shutil.copytree(record, root, symlinks=True)
     _hermetic(root)
     out: dict = {"root": root}
+    if upgrade:
+        out["upgraded"] = _upgrade(luria, root, upgrade)
     if seed is not None:
         out["perturbed"] = _perturb(root, seed)
     for step, args in STEPS.items():
@@ -155,7 +186,7 @@ def _diff(a: str, b: str, label: str, limit: int = 40) -> str:
 
 
 def compare(baseline: str, candidate: str, record: Path,
-            seed: int | None = None
+            seed: int | None = None, upgrade: str | None = None
             ) -> tuple[list[str], int, dict[str, tuple[float, float]]]:
     """Every way the candidate's output differs from the baseline's, how
     many documents were perturbed first, and each step's wall-clock seconds
@@ -166,7 +197,14 @@ def compare(baseline: str, candidate: str, record: Path,
     the ratio means much."""
     with tempfile.TemporaryDirectory() as tmp:
         old = _side(baseline, record, Path(tmp) / "baseline", seed)
-        new = _side(candidate, record, Path(tmp) / "candidate", seed)
+        new = _side(candidate, record, Path(tmp) / "candidate", seed, upgrade)
+        if upgrade:
+            print(f"  {record.name}: luria upgrade {upgrade}\n    "
+                  + new["upgraded"].strip().replace("\n", "\n    "))
+            print("    " + _diff(
+                (old["root"] / "luria.yaml").read_text(encoding="utf-8"),
+                (new["root"] / "luria.yaml").read_text(encoding="utf-8"),
+                "luria.yaml", limit=200).replace("\n", "\n    "))
         problems = []
         times = {step: (old[step][2], new[step][2]) for step in STEPS}
         for step in STEPS:
@@ -177,6 +215,8 @@ def compare(baseline: str, candidate: str, record: Path,
         for rel in sorted(set(old["tree"]) | set(new["tree"])):
             if old["tree"].get(rel) == new["tree"].get(rel):
                 continue
+            if upgrade and rel == "luria.yaml":
+                continue        # changed by design, and shown above
             a = old["root"] / rel
             b = new["root"] / rel
             if not a.exists() or not b.exists():
@@ -208,12 +248,14 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--baseline", required=True)
     parser.add_argument("--candidate", required=True)
     parser.add_argument("--perturb", type=int, default=None, metavar="SEED")
+    parser.add_argument("--upgrade", default=None, metavar="NAME")
     parser.add_argument("records", nargs="+", type=Path)
     args = parser.parse_args(argv)
     failed = 0
     for record in args.records:
         problems, perturbed, times = compare(args.baseline, args.candidate,
-                                             record.resolve(), args.perturb)
+                                             record.resolve(), args.perturb,
+                                             args.upgrade)
         verdict = "identical" if not problems else f"{len(problems)} difference(s)"
         extra = f" ({perturbed} perturbed)" if args.perturb is not None else ""
         print(f"{record}{extra}: {verdict}")
