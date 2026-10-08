@@ -38,6 +38,7 @@ the old shape.
 from __future__ import annotations
 
 import copy
+import json
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -144,7 +145,14 @@ def plan(root: Path) -> Plan:
     if out.refusals or not out.changed:
         out.text = text
         return out
-    out.text = yaml_edit.dump(data)
+    out.text = _inserted(text, data)
+    if _plain(yaml_edit.load(out.text)) != _plain(data):
+        out.refusals.append(
+            "the additions could not be placed in the file's own text "
+            "without changing something else — nothing written; declare "
+            "them by hand from `--dry-run`'s notes")
+        out.text = text
+        return out
     try:
         with config_mod.rooted(root, text=out.text):
             pass
@@ -213,6 +221,60 @@ def _scheme(cfg, scheme, spec, docs, words: tuple[str, ...], out: Plan) -> None:
         if not spec.get("influence"):
             spec["influence"] = INFLUENCED_BY
             out.changed = True
+
+
+def _plain(data):
+    """A loaded document as plain dicts and lists, for comparing meaning."""
+    return json.loads(json.dumps(data, default=str))
+
+
+def _inserted(text: str, data) -> str:
+    """`text` with every key the upgrade added to `data` written in at the end
+    of its parent's block, and nothing else touched.
+
+    Re-emitting the whole document would rewrap long strings and requote
+    values the person wrote (`yaml_edit` emits one shape, and a record need
+    not be written in it), so a migration that only adds keys adds lines.
+    Two levels receive additions: a scheme (its roles, or a `references:`
+    table it lacked) and an existing `references:` table (a new entry)."""
+    original = yaml_edit.load(text)
+    lines = text.splitlines(keepends=True)
+    if lines and not lines[-1].endswith("\n"):
+        lines[-1] += "\n"
+    placed = []                               # (line, depth, rendered text)
+    old_schemes = original.get("schemes") or {}
+    for prefix, spec in (data.get("schemes") or {}).items():
+        before = old_schemes.get(prefix) or {}
+        parents = [(("schemes", str(prefix)),
+                    {k: v for k, v in spec.items() if k not in before})]
+        if "references" in before:
+            old_refs = before.get("references") or {}
+            parents.append(((("schemes", str(prefix), "references")),
+                            {k: v for k, v in (spec.get("references") or {}).items()
+                             if k not in old_refs}))
+        for path, added in parents:
+            if not added:
+                continue
+            start, end = yaml_edit.span(original, path)
+            end = len(lines) if end is None else end
+            # Comments and blank lines just above the next entry are that
+            # entry's, so the block ends before them.
+            while end - 1 > start and (not lines[end - 1].strip() or
+                                       lines[end - 1].lstrip().startswith("#")):
+                end -= 1
+            column = min(col for here, _, col in yaml_edit.keys(original)
+                         if here[:-1] == path)
+            block = yaml_edit.dump(_plain(added))
+            indent = " " * column
+            rendered = "".join(indent + line if line.strip() else line
+                               for line in block.splitlines(keepends=True))
+            placed.append((end, len(path), rendered))
+    # Bottom-up, so earlier line numbers stay true; at one line, the
+    # shallower block first, so a deeper one lands above it — inside the
+    # table it belongs to.
+    for end, _, rendered in sorted(placed, key=lambda p: (-p[0], p[1])):
+        lines.insert(end, rendered)
+    return "".join(lines)
 
 
 def pending(root: Path) -> bool:
