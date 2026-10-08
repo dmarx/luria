@@ -77,7 +77,7 @@ def test_remote_code_expands_to_a_url(project):
 
 def test_uid_remote_expands_through_its_template(project):
     project_with(project,
-        """
+        r"""
         remotes:
           ARXIV:
             uid: \d{4}[.]\d{4,5}

@@ -18,7 +18,7 @@ from luria import config, lint, sources
 import urllib.error
 
 SOURCE_BASE = (
-    """
+    r"""
 issue_url: https://example.test/issues/{n}
 lint:
   network: never
@@ -286,7 +286,7 @@ def test_the_title_url_indexes_the_uid_capture_groups(project):
 def test_a_remote_with_no_title_uri_is_skipped(project):
     """Most remotes are records, not metadata APIs. Declaring nothing means
     the check has no opinion, rather than an opinion it cannot support."""
-    _project(project, extra="""
+    _project(project, extra=r"""
                             remotes:
                               TICKET:
                                 uid: '[A-Z]+-\d+'
