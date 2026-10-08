@@ -32,12 +32,8 @@ from pathlib import Path
 
 from .adr_index import Adr, load_scheme
 from .config import current
-from .contract import (ANY_SCHEME, for_scheme, is_remote, local_scheme,
+from .contract import (for_scheme, is_remote, local_scheme,
                        reference_code, target_of, values_of)
-
-SUPERSEDED_BY = "superseded_by"
-INFLUENCED_BY = "influenced_by"
-
 
 @dataclass(frozen=True)
 class Edge:
@@ -49,20 +45,15 @@ class Edge:
 
 
 def _lands(field, code: str) -> bool:
-    """Whether a code is a node this graph has: a local document of the
-    declared scheme, or of any scheme for a built-in reference. A remote
-    code is a citation the remote machinery verifies, never an edge."""
-    if field.reference == ANY_SCHEME:
-        return not is_remote(code) and local_scheme(code) is not None
-    return target_of(field, code) is not None
+    """Whether a code is a node this graph has: a local document of a
+    scheme the field declares. A remote code is a citation the remote
+    machinery verifies, never an edge."""
+    return not is_remote(code) and target_of(field, code) is not None
 
 
 def outbound(doc: Adr) -> list[Edge]:
     """Every typed edge this document is the source of."""
     out: list[Edge] = []
-    for code in doc.influenced_by:
-        out.append(Edge(doc.code, INFLUENCED_BY, code,
-                        "frontmatter `influenced_by:`"))
     for field in for_scheme(doc.scheme).fields:
         if field.reference is None:
             continue

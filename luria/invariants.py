@@ -68,9 +68,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from . import chains, relations
+from . import logic
 from .adr_index import Adr, load_scheme
 from .config import Chain, Reference, current
+from .facts import members
 
 
 @dataclass(frozen=True)
@@ -88,8 +89,9 @@ class Unbound:
         return tuple(d.code for d in self.members)
 
 
-def _documents(prefix: str) -> dict[str, Adr]:
-    return {d.code: d for d in load_scheme(current().schemes[prefix])}
+def _documents(*prefixes: str) -> dict[str, Adr]:
+    return {d.code: d for p in prefixes if p in current().schemes
+            for d in load_scheme(current().schemes[p])}
 
 
 def held(doc: Adr, field: str) -> set[str]:
@@ -97,17 +99,9 @@ def held(doc: Adr, field: str) -> set[str]:
 
     A scalar is a set of one, which is what lets equality and intersection be
     the same test — `status: Active` on both sides intersects to `{"Active"}`
-    exactly when the two are equal."""
-    raw = doc.meta.get(field)
-    if raw in (None, ""):
-        return set()
-    values = raw if isinstance(raw, list) else [raw]
-    # A derived alias and the code it names are one value (#219), or two
-    # documents in the same area would share nothing when one wrote
-    # `AREA-runtime` and the other `AREA-001`.
-    from .aliases import derived_code
-    return {derived_code(str(v)) or str(v).strip()
-            for v in values if v not in (None, "")}
+    exactly when the two are equal. `facts.members` is the one definition;
+    the rules compare the same sets through `holds/3`."""
+    return members(doc.meta.get(field))
 
 
 def shared(docs, field: str) -> set[str]:
@@ -125,59 +119,49 @@ def shared(docs, field: str) -> set[str]:
     return set.intersection(*(held(d, field) for d in docs))
 
 
-def _neighbours(chain: Chain) -> dict[str, set[str]]:
-    """Every undirected edge the chain walks — spine and cross-link alike.
+# Which pairs and lines are unbound is decided by `luria/logic/invariants.lp`
+# over `relations.lp`'s reading of each relation from both sides — so a
+# one-sided declaration is checked before `luria link --fix` has written the
+# other half. A finding that waited for the fixer would be a finding about
+# tidiness rather than about the record. What follows only puts the derived
+# atoms in the order the report has always printed them.
 
-    Read through `relations.edges`, which unions a relation with its declared
-    converse, so a one-sided declaration is walked before the fixer has
-    written the other half. A finding that waited for `luria link --fix` would
-    be a finding about tidiness rather than about the record."""
-    out: dict[str, set[str]] = {}
-    fields = list(chain.relation) + ([chain.sibling] if chain.sibling else [])
-    for field in fields:
-        for code, targets in relations.edges(chain.scheme, field).items():
-            for other in targets:
-                out.setdefault(code, set()).add(other)
-                out.setdefault(other, set()).add(code)
-    return out
-
-
-def _walk(chain: Chain) -> tuple[dict[str, Adr], dict[str, set[str]]]:
-    docs = {d.code: d for d in load_scheme(current().schemes[chain.scheme])}
-    near = {c: {o for o in v if o in docs}
-            for c, v in _neighbours(chain).items() if c in docs}
-    return docs, {c: near.get(c, set()) for c in docs}
+def _derived() -> logic.Derived:
+    return logic.derive("relations", "invariants")
 
 
 def edges(chain: Chain) -> list[Unbound]:
-    """Pairs in a declared relation that share no value in the field."""
-    docs, near = _walk(chain)
-    seen, out = set(), []
-    for code in sorted(near):
-        for other in sorted(near[code]):
-            pair = tuple(sorted((code, other)))
-            if pair in seen:
-                continue
-            seen.add(pair)
-            a, b = docs[pair[0]], docs[pair[1]]
-            if not (held(a, chain.invariant) & held(b, chain.invariant)):
-                out.append(Unbound(chain.name, chain.invariant, (a, b)))
-    return out
+    """Pairs in a declared relation that share no value in the field — every
+    edge the chain walks, spine and cross-link alike, as sorted pairs."""
+    if not chain.invariant:
+        return []
+    docs = _documents(chain.scheme)
+    pairs = sorted((a, b) for n, a, b in _derived().get("unbound_edge", ())
+                   if n == chain.name)
+    return [Unbound(chain.name, chain.invariant, (docs[a], docs[b]))
+            for a, b in pairs]
 
 
 def paths(chain: Chain) -> list[Unbound]:
-    """Components whose members hold no value in common.
+    """Components whose members hold no value in common, ordered by their
+    earliest member, each member list sorted.
 
     A one-member component is not a finding: a document alone in the graph
     asserts nothing about anything, so there is no invariance to express."""
-    docs, near = _walk(chain)
+    if not chain.invariant:
+        return []
+    derived = _derived()
+    groups: dict[str, list[str]] = {}
+    for n, root, code in derived.get("member", ()):
+        if n == chain.name:
+            groups.setdefault(root, []).append(code)
+    docs = _documents(chain.scheme)
     out = []
-    for group in chains._components(sorted(docs), near):
-        if len(group) < 2:
-            continue
-        members = tuple(docs[c] for c in group)
-        if not shared(members, chain.invariant):
-            out.append(Unbound(chain.name, chain.invariant, members))
+    for n, root in sorted(derived.get("unbound_line", ())):
+        group = sorted(groups.get(root, ())) if n == chain.name else []
+        if len(group) >= 2:
+            out.append(Unbound(chain.name, chain.invariant,
+                               tuple(docs[c] for c in group)))
     return out
 
 
@@ -185,31 +169,28 @@ def relation_edges(prefix: str, ref: Reference) -> list[Unbound]:
     """Pairs joined by one declared relation that share no value in its
     invariant field.
 
-    The far scheme's documents are loaded beside the near one's, which is the
-    whole difference from the chain walk: a relation names the scheme it
-    points at, so both ends are known without a sequence to walk them along.
+    A relation names the scheme it points at, so both ends are known without
+    a sequence to walk them along; that is the whole difference from the
+    chain check.
 
     Edges only. A relation asserts something about the pair it joins and
     nothing about what else either end is joined to, so the transitive
     reading — every member of a component holding one value in common — is
     not the relation's to make. It is the chain's, and a chain is where it
     stays (#272)."""
-    docs = _documents(prefix)
-    for far in ref.scheme:
-        if far != prefix:
-            docs = {**docs, **_documents(far)}
-    out, seen = [], set()
-    for code, targets in sorted(relations.edges(prefix, ref.field).items()):
-        for other in sorted(targets):
-            pair = tuple(sorted((code, other)))
-            if pair in seen or not all(c in docs for c in pair):
-                continue
-            seen.add(pair)
-            a, b = docs[pair[0]], docs[pair[1]]
-            if not (held(a, ref.invariant) & held(b, ref.invariant)):
-                out.append(Unbound(f"{prefix}.{ref.field}", ref.invariant,
-                                   (a, b)))
-    return out
+    if not ref.invariant:
+        return []
+    derived = _derived()
+    joined = {(c, x) for s, f, c, x in derived.get("held", ())
+              if s == prefix and f == ref.field}
+    pairs = [(a, b) for s, f, a, b in derived.get("unbound_relation", ())
+             if s == prefix and f == ref.field]
+    # Each pair where a reading from the near side meets it first: by the
+    # near document, then the far one.
+    pairs.sort(key=lambda p: min(t for t in (p, p[::-1]) if t in joined))
+    docs = _documents(prefix, *ref.scheme)
+    return [Unbound(f"{prefix}.{ref.field}", ref.invariant, (docs[a], docs[b]))
+            for a, b in pairs]
 
 
 def declared() -> list[tuple[str, str]]:

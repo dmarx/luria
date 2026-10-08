@@ -61,6 +61,7 @@ from pathlib import Path
 
 from .config import Remote, current
 from .fetch import request
+from . import writes
 
 # `LU-ADR-013`: a remote prefix, a delimiter, then a tail in that remote's own
 # namespace. Built from config, because an unconfigured prefix must NOT match —
@@ -188,7 +189,7 @@ def write_lock(found: dict[str, dict[str, str]] | None = None,
         payload["titles"] = {key: dict(sorted(entry.items()))
                              for key, entry in sorted(titles.items())}
     path = current().remotes_lock
-    path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+    writes.write_text(path, json.dumps(payload, indent=2) + "\n")
     return path
 
 

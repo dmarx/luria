@@ -43,6 +43,7 @@ from pathlib import Path
 
 from . import yaml_edit
 from .config import CONFIG_NAME, Config, Scheme, find_root, load
+from . import writes
 
 
 def _template_dir() -> Path:
@@ -246,6 +247,8 @@ def _spec(item: str, kinds: tuple, default: str, what: str) -> tuple:
 
 def _scheme_entry(prefix: str, render: str) -> tuple[dict, str]:
     """One scheme's table and the comment that introduces it."""
+    from .explicit_relations import successor_reference
+    from .statuses import DEFAULT_STATUSES
     slug = _slug(prefix)
     output = "docs/%s.md" % slug if render == "document" else "docs/%s" % slug
     reading = ("read as a whole, so its entries concatenate into one page"
@@ -269,6 +272,14 @@ def _scheme_entry(prefix: str, render: str) -> tuple[dict, str]:
         # WHICH field heads this scheme's index. Named rather than assumed —
         # a world-bible's axis is `worlds` (ADR-098).
         "axis": "tags",
+        # Retirement is a relation like any other, so it is declared like
+        # one: the roles point at a status word and a reference, and the
+        # reference is written out (the ADR on explicit relations).
+        "active": "Active",
+        "retires_on": "Superseded",
+        "successor": "superseded_by",
+        "references": {"superseded_by": successor_reference(
+            [prefix], "Active", "Superseded", DEFAULT_STATUSES)},
     }, ("\n%s — %s.\n"
         "The paths follow the prefix; rename them if this family is better\n"
         "called something other than what its codes spell." % (prefix, reading))
@@ -396,6 +407,12 @@ def _scheme_files(scheme: Scheme) -> dict[Path, str]:
     template = GENERIC_TEMPLATE
     for key, value in subs.items():
         template = template.replace(key, value)
+    # The placeholder value goes on the scheme's own axis, or nowhere: a
+    # scheme naming none (a promoted vocabulary) gets no `tags:` it never
+    # declared (the ADR on explicit relations).
+    template = template.replace(
+        "tags:\n- record\n\n",
+        f"{scheme.axis}:\n- record\n\n" if scheme.axis else "")
     return {scheme.dir / "_template.md": template,
             scheme.stub: stub.replace("{PREFIX}", scheme.prefix)}
 
@@ -558,7 +575,7 @@ def write(into: Path, issue_url: str = "", dry_run: bool = False,
         if dry_run:
             continue
         dest.parent.mkdir(parents=True, exist_ok=True)
-        dest.write_text(content, encoding="utf-8")
+        writes.write_text(dest, content)
     return written, skipped, kept
 
 
@@ -591,7 +608,7 @@ def config_run(into: str = None, issue_url: str = "", schemes: str = "",
             f"luria config: {dest} already exists — this writes a starting "
             f"config, and yours has already started. Add the tables by hand, "
             f"or pass --stdout to see what this would have written.")
-    dest.write_text(text, encoding="utf-8")
+    writes.write_text(dest, text)
     print(dest)
     print("\nEdit it, then `luria init` to scaffold the shape it declares.")
 

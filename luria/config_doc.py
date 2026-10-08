@@ -72,6 +72,7 @@ from .config import (FAMILIES, Chain, FieldGroup, Fragment, Journal,
                      PlainField, Reference, Remote, RemoteScheme, RequiredWhen,
                      Scheme, Site, TagGroup, Vocabulary, VocabularyTable,
                      current)
+from . import writes
 
 #: Imported, not re-spelled: `FAMILIES` is the list `config.load` replaces
 #: whole, and the shape table in `HEADER` says the same thing in words. The
@@ -142,13 +143,14 @@ it to inherit from.
 FOOTER = """
 ## Environment variables
 
-Two, both escape hatches rather than configuration — they change how a run
+Three, all escape hatches rather than configuration — they change how a run
 behaves, never what the record *is*, which is why they are not in the file.
 
 | variable | effect |
 |---|---|
 | `LURIA_ROOT` | the project root, overriding the search for `luria.yaml` / `.git`. What lets the test suite run against fixture trees, and what a CI job uses when it checks out a project somewhere other than the working directory. |
 | `LURIA_JOBS` | caps the thread pool that renders views, scans files and probes remote URLs. `LURIA_JOBS=1` is the serial escape hatch — the one to reach for when a failure needs a deterministic ordering to reproduce. |
+| `LURIA_TIMINGS` | set to `1`, prints how long each phase of a run took to stderr — the facts read, each logic program solved, and the command as a whole — as wall-clock time and the CPU time of the thread that ran it. A wide gap between the two is waiting, not work. What to reach for before saying a command is slow, or that a change made it slower. |
 
 ## Running one module without the package
 
@@ -169,9 +171,12 @@ everything is one:
   warning classes to failures with `lint.fail_on`, and acknowledge
   individual findings with the comment directives. A check earns its place by
   being always wrong and mechanically fixable; anything else is a report.
-- **The frontmatter vocabulary.** `status:`, `title:`, `tags:`, `date:`,
+- **The frontmatter vocabulary.** `status:`, `title:`, `date:`,
   `version:`, `history:` are fixed field names. Which *statuses* count as in
-  force is per-scheme (`active`), but the field they live in is not.
+  force is per-scheme (`active`), but the field they live in is not. No
+  relation is fixed: the successor and `influenced_by` are references a
+  scheme declares like any other, which its `successor` and `influence`
+  roles name.
 - **The record's shape, from the command line.** Adding `schemes.RFC` costs
   one table, and that table is the only way to add it: there is no
   `luria add-scheme`. Changing a shape that already has documents under it is
@@ -570,7 +575,7 @@ def retire() -> list[Path]:
         return []
     if MARKER not in path.read_text(encoding="utf-8"):
         return []
-    path.unlink()
+    writes.unlink(path)
     return [path]
 
 
@@ -578,7 +583,7 @@ def write(out_dir: Path | None = None) -> list[Path]:
     rendered = outputs(out_dir)
     for path, text in rendered.items():
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(text, encoding="utf-8")
+        writes.write_text(path, text)
     return sorted(rendered)
 
 

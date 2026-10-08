@@ -43,6 +43,7 @@ from collections import Counter
 from dataclasses import dataclass
 
 import yaml
+from . import writes
 
 # ADR-003's five, kept as the DEFAULT rather than the law (ADR-085).
 # A project whose decisions are `Accepted` and `Withdrawn` says so in its own
@@ -110,10 +111,11 @@ def parse(raw) -> Status:
 
 
 def successor_field(scheme=None) -> str:
-    """The field a retiring document names its replacement in. The scheme's
-    where one is given, the default otherwise — this module is called from
-    places that have no scheme in hand, and defaulting is the whole point."""
-    return getattr(scheme, "successor", None) or "superseded_by"
+    """The field a retiring document names its replacement in: the scheme's
+    `successor` role, which names a reference `luria.yaml` declares. "" when
+    there is no scheme in hand or the scheme declares no successor — a name
+    this module assumed would be a relation nobody declared."""
+    return getattr(scheme, "successor", "") or ""
 
 
 def of(meta: dict, scheme=None) -> Status:
@@ -122,12 +124,12 @@ def of(meta: dict, scheme=None) -> Status:
     `status_note:` wins when present; a note still riding in `status:` is
     read too, so nothing breaks between the field arriving and the file
     being moved. `scheme` says what the successor field is called; without
-    one the default name is read, which is what every project not renaming
-    it uses."""
+    one, or with no successor role declared, no successor is read."""
     meta = meta or {}
     parsed = parse(meta.get("status"))
     note = str(meta.get("status_note") or "").strip()
-    raw = meta.get(successor_field(scheme))
+    field = successor_field(scheme)
+    raw = meta.get(field) if field else None
     codes = raw if isinstance(raw, list) else ([raw] if raw not in (None, "") else [])
     return Status(parsed.value, note or parsed.note,
                   tuple(str(c).strip() for c in codes if str(c).strip()))
@@ -165,7 +167,11 @@ def combined(meta: dict) -> bool:
 # continuation lines.
 _STATUS_BLOCK_RE = re.compile(r"^status:.*(?:\n[ \t]+.*)*", re.MULTILINE)
 _NOTE_BLOCK_RE = re.compile(r"^status_note:.*(?:\n[ \t]+.*)*\n?", re.MULTILINE)
-_BY_BLOCK_RE = re.compile(r"^superseded_by:.*(?:\n(?:[ \t]+|- ).*)*\n?", re.MULTILINE)
+def _block_re(field: str) -> re.Pattern:
+    """A top-level `field:` block — scalar or list, with any indented or
+    `- ` continuation lines."""
+    return re.compile(rf"^{re.escape(field)}:.*(?:\n(?:[ \t]+|- ).*)*\n?",
+                      re.MULTILINE)
 # The old canonical note, `by CODE …`: the shape `luria migrate` used to
 # write, read once more so the repair can turn it into the field.
 _BY_RE = re.compile(r"^by\s+")
@@ -181,8 +187,14 @@ def set_status(text: str, value: str, note: str = "",
     duplicated."""
     lines = f"status: {value}"
     fields = {}
+    field = successor_field(scheme)
     if superseded_by:
-        fields[successor_field(scheme)] = [str(c) for c in superseded_by]
+        if not field:
+            raise ValueError(
+                f"{getattr(scheme, 'prefix', 'this scheme')} declares no "
+                f"`successor` role, so there is no field to name a "
+                f"replacement in")
+        fields[field] = [str(c) for c in superseded_by]
     if note:
         fields["status_note"] = note
     if fields:
@@ -190,7 +202,8 @@ def set_status(text: str, value: str, note: str = "",
                                 default_flow_style=False, sort_keys=False)
         lines += "\n" + dumped.rstrip("\n")
     text = _NOTE_BLOCK_RE.sub("", text, count=1)
-    text = _BY_BLOCK_RE.sub("", text, count=1)
+    if field:
+        text = _block_re(field).sub("", text, count=1)
     return _STATUS_BLOCK_RE.sub(lambda _: lines, text, count=1)
 
 
@@ -212,7 +225,7 @@ def successor_in(note: str) -> str | None:
     return refs[0].describe()
 
 
-def repair(text: str) -> str | None:
+def repair(text: str, scheme=None) -> str | None:
     """A document's text brought to the three-field form, or None when it
     is there already: a note riding in `status:` moves to `status_note:`,
     and a Superseded document whose old-form note opens with `by CODE` gets
@@ -223,11 +236,13 @@ def repair(text: str) -> str | None:
     meta, _ = parse_frontmatter(text)
     if not meta:
         return None
-    status = of(meta)
+    status = of(meta, scheme)
     changed = combined(meta)
     successors = status.superseded_by
     note = status.note
-    if status.value == "Superseded" and not successors:
+    retires_on = getattr(scheme, "retires_on", "")
+    if (retires_on and successor_field(scheme)
+            and status.value == retires_on and not successors):
         if code := successor_in(note):
             successors = (code,)
             changed = True
@@ -237,13 +252,13 @@ def repair(text: str) -> str | None:
                 note = ""
     if not changed:
         return None
-    return set_status(text, status.value, note, successors)
+    return set_status(text, status.value, note, successors, scheme)
 
 
-def split(text: str) -> str | None:
+def split(text: str, scheme=None) -> str | None:
     """Kept as the name the split was introduced under; `repair` is the
     whole operation."""
-    return repair(text)
+    return repair(text, scheme)
 
 
 def populate(scheme) -> list:
@@ -254,8 +269,8 @@ def populate(scheme) -> list:
     moved = []
     for path in [*scheme.documents().values(), *scheme.temp_documents().values()]:
         text = path.read_text(encoding="utf-8")
-        if (fresh := repair(text)) is not None:
-            path.write_text(fresh, encoding="utf-8")
+        if (fresh := repair(text, scheme)) is not None:
+            writes.write_text(path, fresh)
             moved.append(path)
     return moved
 

@@ -61,6 +61,22 @@ def project(tmp_path, monkeypatch):
               # (ADR-098).
               tags:
                 many: true
+            # Retirement and influence are relations like any other, so a
+            # complete record declares them (the ADR on explicit relations).
+            retires_on: Superseded
+            successor: superseded_by
+            influence: influenced_by
+            references:
+              superseded_by:
+                scheme: ADR
+                many: true
+                required: false
+                required_when: {status: [Superseded]}
+                forbidden_when: {status: [Active]}
+              influenced_by:
+                scheme: ADR
+                many: true
+                required: false
         """
     )
     (tmp_path / "docs" / "design-principles.md").write_text(

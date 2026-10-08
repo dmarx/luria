@@ -42,6 +42,7 @@ from . import config as config_mod
 from . import contract as contract_mod
 from .adr_index import escape_cell
 from .config import current
+from . import writes
 
 SCHEMA_URL = ("https://github.com/dmarx/luria/blob/main/docs/"
               "configuration.md")
@@ -272,17 +273,14 @@ SECTIONS = (
      "not previously state (#279).",
      families_section),
     ("What an entry must carry",
-     "Every entry carries `title`, `tags` and `date`, and one standard "
-     "field is conditional: a retiring document names its successor — "
-     "`superseded_by:` when `status` is `Superseded` — and a document in "
-     "force names none: the field is forbidden while `status` is `Active`. "
-     "Both follow the scheme's own words where it renames them (ADR-071, "
-     "ADR-125). `status` itself is listed below rather "
-     "than assumed: the words are the scheme's own, declared like any "
-     "other controlled vocabulary. Beyond those, what each scheme's "
-     "entries must carry — compiled from `luria.yaml` into the contract "
-     "`luria lint` checks, with where each obligation was declared. A "
-     "finding cites the same line.",
+     "Every entry carries `title` and `date`. Everything else is listed "
+     "below rather than assumed: `status` and the axis are controlled "
+     "fields the scheme declares, and every relation — the successor a "
+     "retiring document names included — is a reference the scheme "
+     "declares, with the conditions it states (ADR-071, ADR-125). What "
+     "each scheme's entries must carry, compiled from `luria.yaml` into "
+     "the contract `luria lint` checks, with where each obligation was "
+     "declared. A finding cites the same line.",
      contracts_section),
     ("Journals",
      "Dated observations. An entry is true about the day it was written and "
@@ -331,7 +329,7 @@ def write(out_dir: Path | None = None) -> list[Path]:
     rendered = outputs(out_dir)
     for path, text in rendered.items():
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(text, encoding="utf-8")
+        writes.write_text(path, text)
     return sorted(rendered)
 
 

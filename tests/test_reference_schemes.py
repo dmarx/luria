@@ -331,3 +331,52 @@ def test_a_grouped_reference_has_a_page_per_target_in_every_scheme(
     pages = {p.relative_to(root).as_posix() for p in builder.outputs()}
     assert "docs/claims/rests_on/LIT-001.md" in pages, sorted(pages)
     assert "docs/claims/rests_on/CASE-001.md" in pages, sorted(pages)
+
+
+# ── a symmetric relation that crosses schemes ─────────────────────────────
+
+PEERS = {"schemes": {
+    "CLAIM": {"references": {"peers": {
+        "scheme": ["CLAIM", "LIT"], "required": False, "many": True,
+        "converse": "peers"}}},
+    "LIT": {"references": {"peers": {
+        "scheme": "CLAIM", "required": False, "many": True,
+        "converse": "peers"}}}}}
+
+
+def test_a_symmetric_pair_held_on_both_sides_is_not_reported(
+        tmp_path, monkeypatch):
+    """A relation that is its own converse and crosses schemes names one
+    field on each side. Reading both sides into one map keyed by field name
+    let the far side's reading overwrite the near side's, so a pair held on
+    both sides was reported as held on neither."""
+    root = project(tmp_path, monkeypatch, PEERS)
+    doc(root, "LIT", 1, "peers:\n- CLAIM-001\n")
+    doc(root, "CLAIM", 1, "peers:\n- LIT-001\n")
+    assert relations.rows() == []
+    assert relations.completions() == []
+
+
+def test_a_symmetric_pair_is_completed_across_schemes(tmp_path, monkeypatch):
+    root = project(tmp_path, monkeypatch, PEERS)
+    lit = doc(root, "LIT", 1)
+    doc(root, "CLAIM", 1, "peers:\n- LIT-001\n")
+    relations.complete(fix=True)
+    assert "peers:\n- CLAIM-001" in lit.read_text()
+    assert relations.rows() == []
+
+
+def test_a_single_target_symmetric_crossing_pair_reads_both_sides(
+        tmp_path, monkeypatch):
+    """The same collision without a list: `compared_against` naming itself
+    across two schemes, which was declarable before #160."""
+    root = project(tmp_path, monkeypatch, {"schemes": {
+        "CASE": {"references": {"compared_against": {
+            "scheme": "NOTE", "required": False, "many": True,
+            "converse": "compared_against"}}},
+        "NOTE": {"references": {"compared_against": {
+            "scheme": "CASE", "required": False, "many": True,
+            "converse": "compared_against"}}}}})
+    doc(root, "NOTE", 1, "compared_against:\n- CASE-001\n")
+    doc(root, "CASE", 1, "compared_against:\n- NOTE-001\n")
+    assert relations.rows() == []

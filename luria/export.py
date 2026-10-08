@@ -51,8 +51,10 @@ from contextlib import closing
 from pathlib import Path
 
 from . import __version__, edges, journal, ref_status
+from .facts import field_rows
 from .adr_index import load_scheme, read_document
 from .config import current
+from . import writes
 
 SQLITE_MAGIC = b"SQLite format 3\x00"
 
@@ -113,28 +115,6 @@ TABLES = ("documents", "fields", "edges", "citations", "journal_entries",
           "journal_tags")
 
 
-def _text(value) -> str:
-    """One cell's worth of a frontmatter value. Scalars as they print; a
-    mapping or a nested list as JSON, so nothing is dropped and nothing is
-    guessed at."""
-    if isinstance(value, (dict, list, tuple)):
-        return json.dumps(value, default=str, ensure_ascii=False)
-    return str(value)
-
-
-def _field_rows(code: str, meta: dict) -> list[tuple]:
-    rows: list[tuple] = []
-    for name, value in meta.items():
-        if value is None:
-            continue
-        if isinstance(value, (list, tuple)):
-            rows += [(code, name, i, _text(v)) for i, v in enumerate(value)
-                     if v is not None]
-        else:
-            rows.append((code, name, 0, _text(value)))
-    return rows
-
-
 def _document_rows(cfg) -> tuple[list[tuple], list[tuple]]:
     docs: list[tuple] = []
     fields: list[tuple] = []
@@ -148,7 +128,7 @@ def _document_rows(cfg) -> tuple[list[tuple], list[tuple]]:
                          cfg.rel(adr.path),
                          json.dumps(adr.meta, default=str, ensure_ascii=False),
                          body))
-            fields += _field_rows(adr.code, adr.meta)
+            fields += field_rows(adr.code, adr.meta)
     return docs, fields
 
 
@@ -188,7 +168,7 @@ def _clear(out: Path) -> None:
     if head != SQLITE_MAGIC:
         raise SystemExit(f"luria export: {out} exists and is not a SQLite "
                          "database — choose another --out, or move it aside")
-    out.unlink()
+    writes.unlink(out)
 
 
 def write(out: Path, cfg=None) -> Path:

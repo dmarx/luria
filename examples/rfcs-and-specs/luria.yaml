@@ -24,6 +24,20 @@ schemes:
         required: true
         closed: false
     axis: tags
+    active: Active
+    retires_on: Superseded
+    successor: superseded_by
+    references:
+      superseded_by:
+        scheme: RFC
+        many: true
+        required: false
+        required_when:
+          status:
+          - Superseded
+        forbidden_when:
+          status:
+          - Active
   SPEC:
     dir: record/specs.d
     output: docs/interfaces.md
@@ -36,5 +50,19 @@ schemes:
         required: true
         closed: false
     axis: tags
+    active: Active
+    retires_on: Superseded
+    successor: superseded_by
+    references:
+      superseded_by:
+        scheme: SPEC
+        many: true
+        required: false
+        required_when:
+          status:
+          - Superseded
+        forbidden_when:
+          status:
+          - Active
 site:
   title: RFCs and specs

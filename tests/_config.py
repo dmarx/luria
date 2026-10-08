@@ -13,6 +13,8 @@ text arrived.
 """
 from __future__ import annotations
 
+import copy
+
 import yaml
 
 
@@ -31,7 +33,10 @@ def merged(*parts: str | dict) -> str:
     for part in parts:
         if not part:
             continue
-        loaded = yaml.safe_load(part) if isinstance(part, str) else part
+        # A dict fragment is copied: merging it by reference let one test's
+        # extra keys leak into a module-level fragment the next test reused.
+        loaded = (yaml.safe_load(part) if isinstance(part, str)
+                  else copy.deepcopy(part))
         if loaded is None:
             continue
         if not isinstance(loaded, dict):
@@ -40,3 +45,17 @@ def merged(*parts: str | dict) -> str:
                 f"{type(loaded).__name__}: {part!r}")
         _deep(out, loaded)
     return yaml.dump(out, sort_keys=False, allow_unicode=True, width=200)
+
+
+def successor(prefix: str, field: str = "superseded_by",
+              retires_on: str = "Superseded", active: str = "Active",
+              targets: list[str] | None = None) -> dict:
+    """The scheme fragment that declares retirement: the roles, and the
+    reference they point at — the shape `luria upgrade explicit-relations`
+    writes, and what older versions supplied without a word in the config.
+    Merge it under `schemes.<PREFIX>`."""
+    from luria.explicit_relations import successor_reference
+    words = (active, retires_on)
+    return {"active": active, "retires_on": retires_on, "successor": field,
+            "references": {field: successor_reference(
+                targets or [prefix], active, retires_on, words)}}

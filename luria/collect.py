@@ -48,6 +48,7 @@ import sys
 from pathlib import Path
 
 from .config import current
+from . import writes
 
 TEMPLATE_NAME = "_template.md"
 # Collected entries are inserted immediately BEFORE this marker, so the marker
@@ -153,9 +154,9 @@ def collect_dir(name: str, fragment) -> int:
                             date=dt.date.today().isoformat())
     except ValueError as why:
         raise SystemExit(f"luria collect: {fragment.target}: {why}") from None
-    view.write_text(assembled, encoding="utf-8")
+    writes.write_text(view, assembled)
     for p in paths:
-        p.unlink()
+        writes.unlink(p)
     print(f"Collected {len(paths)} fragment(s) from {name} "
           f"into {fragment.target}.")
     return len(paths)

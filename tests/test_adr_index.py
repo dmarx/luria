@@ -117,14 +117,14 @@ def value(root: Path, number: int, title: str, body: str = "Body.",
 VP_SCHEME_ARGS = dict(active="Active", render="document")
 
 
-def vp_scheme(root: Path) -> Scheme:
+def vp_scheme(root: Path, **roles) -> Scheme:
     return Scheme("VP", root / "docs" / "values",
                   output=root / "docs" / "values.md",
-                  **VP_SCHEME_ARGS)
+                  **VP_SCHEME_ARGS, **roles)
 
 
-def render(root: Path) -> str:
-    scheme = vp_scheme(root)
+def render(root: Path, **roles) -> str:
+    scheme = vp_scheme(root, **roles)
     return builder.render_document(scheme, builder.load_scheme(scheme))
 
 
@@ -175,14 +175,22 @@ def test_influenced_by_renders_as_a_followable_backlink(project):
     value(project, 1, "A value", influenced_by="[ADR-004]")
     target = os.path.relpath(current().schemes["ADR"].dir / "ADR-004.md",
                              vp_scheme(project).output.parent)
-    assert f"[ADR-004]({target})" in render(project)
+    # "Shaped by" renders the reference the scheme's `influence` role names.
+    assert f"[ADR-004]({target})" in render(project, influence="influenced_by")
 
 
 def test_an_unresolvable_backlink_stays_a_bare_code(project):
     """DP-1: say what can be said, rather than linking to nothing."""
     value(project, 1, "A value", influenced_by="[ADR-404]")
-    out = render(project)
+    out = render(project, influence="influenced_by")
     assert "shaped by ADR-404" in out and "](" not in out.split("shaped by")[1]
+
+
+def test_without_an_influence_role_nothing_is_shaped_by(project):
+    """The field name alone means nothing (the ADR on explicit relations):
+    with no `influence` role, an `influenced_by:` list is just frontmatter."""
+    value(project, 1, "A value", influenced_by="[ADR-404]")
+    assert "shaped by" not in render(project)
 
 
 def test_outputs_covers_every_scheme(project, monkeypatch):

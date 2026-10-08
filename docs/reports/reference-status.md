@@ -9,7 +9,7 @@ Every reference in the record is a claim — "this is why things are the way the
 
 Only an `Active` document is in force. `Proposed` and `Deferred` mean *not in force yet* — an open question, being cited as if it were settled — while `Superseded` and `Rejected` mean *no longer in force*, which is often a perfectly good thing to cite: history, or a rejection worth pointing at. Either way the citation should be deliberate, and this section lists the ones nobody has vouched for yet.
 
-**0 documents cited without acknowledgement.** Not listed: 62 citations someone has already vouched for with an `inactive-ok:` comment at the citing site.
+**2 documents cited without acknowledgement.** Not listed: 62 citations someone has already vouched for with an `inactive-ok:` comment at the citing site.
 
 To vouch for one, put the reason where the citation is — `inactive-ok:` covers its own line and the line below it, `inactive-ok-block:` its paragraph, `inactive-ok-file:` the whole page:
 
@@ -17,30 +17,51 @@ To vouch for one, put the reason where the citation is — `inactive-ok:` covers
 <!-- inactive-ok: ADR-012 — why this citation is right -->
 ```
 
-Nothing unacknowledged. ✅
+### [ADR-126](../../record/decisions.d/ADR-126.md) — Proposed
+
+A reference may name several schemes
+
+2 citations in 1 file await a look.
+
+- [`record/decisions.d/ADR-127.md:28`](../../record/decisions.d/ADR-127.md)
+- [`record/decisions.d/ADR-127.md:35`](../../record/decisions.d/ADR-127.md)
+
+### [ADR-127](../../record/decisions.d/ADR-127.md) — Proposed
+
+A logic core in clingo, behind a procedural shell
+
+2 citations in 1 file await a look.
+
+- [`record/decisions.d/ADR-128.md:70`](../../record/decisions.d/ADR-128.md)
+- [`record/decisions.d/ADR-128.md:77`](../../record/decisions.d/ADR-128.md)
+
 ## Codes that resolve to no document
 
 A reference the reader cannot follow: the code names no document in this record. A typo, a number carried in from another project, and an illustrative code in an example all look identical from here — telling them apart takes a human, so this is a report, not an error.
 
-**5 codes unaccounted for.** Not listed: 74 mentions marked deliberate with an `unresolved-ok:` comment (same syntax and scopes as `inactive-ok:` above).
+**6 codes unaccounted for.** Not listed: 76 mentions marked deliberate with an `unresolved-ok:` comment (same syntax and scopes as `inactive-ok:` above).
 
+
+### ADR-404 — resolves to nothing (3 unmarked sites · 14 other mentions marked deliberate)
+
+- [`tests/test_acknowledgements_logic.py:37`](../../tests/test_acknowledgements_logic.py)
+- [`tests/test_acknowledgements_logic.py:38`](../../tests/test_acknowledgements_logic.py)
+- [`tests/test_acknowledgements_logic.py:40`](../../tests/test_acknowledgements_logic.py)
 
 ### ADR-000 — resolves to nothing (2 unmarked sites · 4 other mentions marked deliberate)
 
 - [`tests/test_lint.py:491`](../../tests/test_lint.py)
 - [`tests/test_relate.py:155`](../../tests/test_relate.py)
 
-### ADR-231 — resolves to nothing (2 unmarked sites)
+### ADR-231 — resolves to nothing (1 unmarked site)
 
-- [`luria/new.py:454`](../../luria/new.py)
 - [`luria/relate.py:5`](../../luria/relate.py)
 
-### ADR-245 — resolves to nothing (2 unmarked sites)
+### ADR-245 — resolves to nothing (1 unmarked site)
 
-- [`luria/new.py:454`](../../luria/new.py)
 - [`luria/relate.py:5`](../../luria/relate.py)
 
-### ADR-919 — resolves to nothing (1 unmarked site · 14 other mentions marked deliberate)
+### ADR-919 — resolves to nothing (1 unmarked site · 15 other mentions marked deliberate)
 
 - [`tests/test_documents_cache.py:125`](../../tests/test_documents_cache.py)
 

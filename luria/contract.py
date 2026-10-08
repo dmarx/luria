@@ -62,10 +62,6 @@ class Field:
     # needed: the declaration supplies order, label and blurb, and using a
     # new value stays an edit to a document (ADR-098).
     closed: bool = True
-    # Standard for every scheme rather than declared by one — `superseded_by`
-    # (ADR-071). Checked like any other; not a declaration, so it stays
-    # out of `Contract.empty`.
-    builtin: bool = False
     # When the requirement applies, if not always (`RequiredWhen`, #170).
     # `required` stays the unconditional flag; this is the other way a field
     # can be demanded, and the two are exclusive by construction in config.
@@ -172,22 +168,34 @@ class Contract:
     def empty(self) -> bool:
         """True for every scheme that declares nothing — which is every
         scheme that predates the three tables, and the shipped ADR scheme."""
-        return (not any(not f.builtin for f in self.fields)
-                and not self.groups and not self.field_groups)
-
-
-# A reference into any local scheme: the successor a superseded document
-# names may live in another scheme, and a remote code passes as a citation
-# the remote machinery verifies.
-ANY_SCHEME = ("*",)
+        return not self.fields and not self.groups and not self.field_groups
 
 
 def targets(field: Field) -> tuple[str, ...]:
     """The local schemes a reference field's codes may belong to — empty for
-    a field that names no document, or names a document in any scheme."""
-    if field.reference is None or field.reference == ANY_SCHEME:
+    a field that names no document. A field may also name remotes
+    (`scheme: [LIT, ARXIV]`); those are `remotes_of`, never resolved here."""
+    if field.reference is None:
         return ()
-    return field.reference
+    remotes = current().remotes
+    return tuple(t for t in field.reference if t not in remotes)
+
+
+def remotes_of(field: Field) -> tuple[str, ...]:
+    """The remotes a reference field's codes may belong to: a citation the
+    remote machinery verifies (ADR-016), declared as a target like a scheme
+    so a successor that is a published paper is said, not assumed."""
+    if field.reference is None:
+        return ()
+    remotes = current().remotes
+    return tuple(t for t in field.reference if t in remotes)
+
+
+def names_remote(field: Field, code: str) -> bool:
+    """Whether `code` is a remote code of a remote this field names."""
+    from . import remotes
+    parsed = remotes.parse_code(code)
+    return parsed is not None and parsed[0].prefix in remotes_of(field)
 
 
 def target_of(field: Field, code: str) -> str | None:
@@ -198,44 +206,8 @@ def target_of(field: Field, code: str) -> str | None:
 
 
 def spelled(field: Field) -> str:
-    """What a field may hold, as a finding says it: `LIT`, `LIT or CASE`."""
-    return _spelled(targets(field))
-
-# The fields every scheme has. `superseded_by` holds one code or a list —
-# the successor is structure, written and checked as a reference, and the
-# typed edge the index and the site render (ADR-071).
-#
-# ADR-071's other half — a Superseded document *names* its successor — was a
-# hand-written branch in `lint.check_frontmatter` for as long as there was no
-# way to declare it. `required_when` is that way (#170), so the rule is stated
-# here instead of implemented twice: one implementation (DP-4), and the
-# built-in gets this module's finding wording, `because:` provenance and
-# record-page line for nothing.
-def built_in(scheme) -> tuple[Field, ...]:
-    """The fields a scheme gets without asking — today, the one naming what
-    replaced a retired document.
-
-    A **default**, not a law (ADR-085). The field's name and the status
-    that demands it come from the scheme (`successor` and `retires_on`,
-    themselves defaulting to `superseded_by` and `Superseded`), and a scheme
-    declaring the field in its own `references` table replaces this outright
-    — `for_scheme` merges these last, with `setdefault`.
-
-    `active` set that precedent long ago: which word means *in force* was
-    always the project's to choose. What generic code needs is the role, not
-    the word."""
-    # A document in force names no successor: it cannot be in force and
-    # replaced at once (#191). Only the `active` word — whether a proposal or
-    # a rejection may name one is the record's call (ADR-125).
-    forbid = (RequiredWhen("status", (scheme.active,))
-              if scheme.active and scheme.active != scheme.retires_on
-              else None)
-    return (Field(scheme.successor, required=False, reference=ANY_SCHEME,
-                  many=True, builtin=True,
-                  required_when=RequiredWhen("status", (scheme.retires_on,)),
-                  forbidden_when=forbid,
-                  because=(f"built in: `{scheme.successor}` (ADR-071)",)),)
-
+    """What a field may hold, as a finding says it: `LIT`, `LIT or ARXIV`."""
+    return _spelled(field.reference or ())
 
 def for_scheme(scheme) -> Contract:
     """Everything `luria.yaml` declares this scheme demands of an entry.
@@ -290,8 +262,6 @@ def for_scheme(scheme) -> Contract:
             required_when=plain.required_when,
             forbidden_when=plain.forbidden_when, blurb=plain.blurb,
             because=because)
-    for field in built_in(scheme):
-        fields.setdefault(field.name, field)
     return Contract(scheme.prefix, tuple(fields.values()), scheme.tag_groups,
                     field_groups=scheme.field_groups,
                     where="luria.yaml", vocabulary=vocabulary,
@@ -349,10 +319,7 @@ def forbidden(contract: Contract, field: Field, meta: dict) -> str:
     when = field.forbidden_when
     # What the rule read, not the raw line: a default fills an absent field.
     shown = ", ".join(str(v) for v in contract.reading(when.on, meta))
-    # The built-in's provenance names the decision behind its requirement;
-    # this half of it has its own (ADR-125).
-    cite = (f"(built in: `{field.name}` forbidden in force (ADR-125))"
-            if field.builtin else _cite(field.because))
+    cite = _cite(field.because)
     return (f"the {contract.scheme} scheme forbids it while `{when.on}` is "
             f"{', '.join(f'`{v}`' for v in when.values)}, and this document "
             f"says `{when.on}: {shown}` {cite}")
@@ -381,13 +348,8 @@ def explain(contract: Contract, field: Field, meta: dict | None = None) -> str:
     if field.reference is None:
         return (f"the {contract.scheme} scheme requires it{why} "
                 f"{_cite(field.because)}")
-    what = ("names a document in any scheme" if field.reference == ANY_SCHEME
-            else f"declares it a {spelled(field)} reference")
-    lead = ("" if field.reference == ANY_SCHEME
-            else f"the {contract.scheme} scheme ")
-    if field.reference == ANY_SCHEME:
-        return f"`{field.name}` {what}{why} {_cite(field.because)}"
-    return f"{lead}{what}{why} {_cite(field.because)}"
+    return (f"the {contract.scheme} scheme declares it a {spelled(field)} "
+            f"reference{why} {_cite(field.because)}")
 
 
 def describe(contract: Contract) -> list[str]:
@@ -404,14 +366,6 @@ def describe(contract: Contract) -> list[str]:
     def say(line: str, blurb: str) -> None:
         lines.append(f"{line} — *{blurb}*" if blurb else line)
     for field in contract.fields:
-        # Built-ins stay out: this describes what a scheme declares *beyond*
-        # the standard fields, and the page says so in as many words. The
-        # built-in conditional is real and worth a reader's attention, so
-        # `record_doc` states it once alongside the standard fields rather
-        # than repeating it under every scheme as though it were declared
-        # there (review of #172).
-        if field.builtin:
-            continue
         if (rule := contract.derivation(field.name)) is not None:
             # `spec` rather than `template`: a followed derivation reads
             # another document, and a record page saying only `{published}`
@@ -440,7 +394,10 @@ def describe(contract: Contract) -> list[str]:
                  + ", ".join(f"`{v}`" for v in field.required_when.values))
                 if field.required_when is not None else "optional")
         if field.reference is not None:
-            shown = " or ".join(f"`{t}`" for t in targets(field)) or "`*`"
+            # Every target the declaration names, remotes included: a
+            # record page hiding that a successor may be a paper would
+            # describe a narrower field than the one checked.
+            shown = " or ".join(f"`{t}`" for t in field.reference or ())
             what += (f", one or more {shown} codes" if field.many
                      else f", a {shown} code")
             if not field.required:
@@ -557,33 +514,6 @@ def is_remote(code: str) -> bool:
     return remotes.parse_code(code) is not None
 
 
-def _any_scheme_violations(contract: Contract, field: Field, rel: str, raw,
-                           known: dict[str, set[str]],
-                           meta: dict | None = None) -> list[str]:
-    """A built-in reference into any scheme: one code or a list, each a
-    code that resolves in the scheme it names, or a remote code — and
-    present at all when the contract demands it."""
-    out = []
-    values = values_of(field, raw) or []
-    if not values and contract.demands(field, meta or {}):
-        return [f"{rel}: no `{field.name}:` in frontmatter — "
-                f"{explain(contract, field, meta)}"]
-    for value in values:
-        code = reference_code(str(value))
-        if code is None:
-            out.append(f"{rel}: `{field.name}: {value}` is not a code — "
-                       f"`{field.name}` names a document {_cite(field.because)}")
-        elif is_remote(code):
-            continue
-        elif (home := local_scheme(code)) is None:
-            out.append(f"{rel}: `{field.name}: {code}` names no scheme or "
-                       f"remote this record declares")
-        elif code not in known.setdefault(home, resolvable(home)):
-            out.append(f"{rel}: `{field.name}: {code}` resolves to no "
-                       f"{home} document")
-    return out
-
-
 def violations(contract: Contract, rel: str, meta: dict,
                known: dict[str, set[str]], resolve=None) -> list[str]:
     """One document against its scheme's contract, one line per breach.
@@ -623,10 +553,6 @@ def violations(contract: Contract, rel: str, meta: dict,
                 out.append(f"{rel}: no `{field.name}:` in frontmatter — "
                            f"{explain(contract, field, meta)}")
             continue
-        if target == ANY_SCHEME:
-            out.extend(_any_scheme_violations(contract, field, rel, raw, known,
-                                              meta))
-            continue
         target = spelled(field)
         values = values_of(field, raw)
         if values is None:
@@ -648,6 +574,8 @@ def violations(contract: Contract, rel: str, meta: dict,
                     f"{rel}: `{field.name}: {value}` is not a code — the "
                     f"{contract.scheme} scheme declares this field a "
                     f"{target} reference {_cite(field.because)}")
+            elif names_remote(field, code):
+                continue        # a citation the remote machinery verifies
             elif (home := target_of(field, code)) is None:
                 out.append(
                     f"{rel}: `{field.name}: {code}` is not a {target} code — "

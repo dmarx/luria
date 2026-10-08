@@ -52,6 +52,7 @@ import yaml
 
 from . import derive, referents, vocabularies
 from .config import current
+from . import writes
 
 # unresolved-ok: ADR-tmp47fje — ADR-049's example of the shape, not a document
 # The tail accepts a temporary code (`ADR-tmp47fje`, ADR-049) as well as a
@@ -308,9 +309,15 @@ class Adr:
         return int(self.meta.get("version", 1) or 1)
 
     @property
-    def influenced_by(self) -> list[str]:
-        raw = self.meta.get("influenced_by") or []
-        return [str(x).strip() for x in raw]
+    def influences(self) -> list[str]:
+        """The codes in the reference the scheme's `influence` role names —
+        what shaped this document — or none when the scheme declares no
+        such role. The field is an ordinary declared reference; this only
+        reads it."""
+        field = self.scheme.influence
+        raw = self.meta.get(field) if field else None
+        values = raw if isinstance(raw, list) else ([] if raw in (None, "") else [raw])
+        return [str(x).strip() for x in values]
 
     def row(self, prefix: str = "") -> str:
         # unresolved-ok-block: ADR-919 — a stand-in number in the example below
@@ -404,10 +411,10 @@ def render_document(scheme, docs: list[Adr]) -> str:
         slot = doc.number if doc.number is not None else doc.tail
         body = f'<a id="{doc.prefix.lower()}-{slot}"></a>\n\n{body}'
         meta = [f"*v{doc.version}"]
-        if doc.influenced_by:
+        if doc.influences:
             meta.append("shaped by " + ", ".join(
                 f"[{code}]({target})" if (target := _link(code, base)) else code
-                for code in doc.influenced_by))
+                for code in doc.influences))
         if doc.status != scheme.active:
             meta.append(f"**{doc.status}**")
         if origin := str(doc.meta.get("origin", "")).strip():
@@ -640,10 +647,10 @@ def run(check: bool = False) -> None:
     rendered = outputs()
     cfg = current()
     for stale_file in orphans(rendered):
-        stale_file.unlink()
+        writes.unlink(stale_file)
     for p, text in rendered.items():
         p.parent.mkdir(parents=True, exist_ok=True)
-        p.write_text(text, encoding="utf-8")
+        writes.write_text(p, text)
     # Name every scheme, not just the decisions: a project that adds one wants
     # to see it counted, and a scheme silently rendering nothing is the failure
     # this line exists to make visible (DP-1).
@@ -679,7 +686,7 @@ def run(check: bool = False) -> None:
         if readme_mod.has(text, "site"):
             text = readme_mod.rewrite(text, "site", site.readme_region())
         if text != before:
-            path.write_text(text, encoding="utf-8")
+            writes.write_text(path, text)
 
 
 if __name__ == "__main__":
