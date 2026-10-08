@@ -223,3 +223,28 @@ def test_a_scheme_that_never_retires_gets_no_successor(tmp_path, monkeypatch):
     doc(root, "LIT-001")
     lit = upgraded(root)["LIT"]
     assert "successor" not in lit and "references" not in lit
+
+
+def test_the_upgrade_only_adds_lines(tmp_path, monkeypatch):
+    """A migration that only adds keys adds lines: a long string the person
+    wrapped stays wrapped, a quote stays a quote, a comment stays put —
+    re-emitting the document would have rewritten all three."""
+    root = old_record(tmp_path, monkeypatch, {"schemes": {"SOTA": {
+        "references": {"source": {"scheme": "LIT", "many": True,
+                                  "required": False}}}}})
+    text = (root / "luria.yaml").read_text()
+    text = text.replace(
+        "issue_url:",
+        "# The record's own words, wrapped by hand.\n"
+        "blurb: 'A long description that somebody wrapped by hand, across\n"
+        "  two lines, which an emitter would unwrap'\n"
+        "issue_url:", 1)
+    (root / "luria.yaml").write_text(text)
+    config.reset()
+    explicit_relations.run(root, dry_run=False)
+    after = (root / "luria.yaml").read_text().splitlines()
+    before = text.splitlines()
+    # Every original line is still there, in order.
+    it = iter(after)
+    assert all(line in it for line in before)
+    assert len(after) > len(before)
