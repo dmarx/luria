@@ -171,9 +171,12 @@ everything is one:
   warning classes to failures with `lint.fail_on`, and acknowledge
   individual findings with the comment directives. A check earns its place by
   being always wrong and mechanically fixable; anything else is a report.
-- **The frontmatter vocabulary.** `status:`, `title:`, `tags:`, `date:`,
+- **The frontmatter vocabulary.** `status:`, `title:`, `date:`,
   `version:`, `history:` are fixed field names. Which *statuses* count as in
-  force is per-scheme (`active`), but the field they live in is not.
+  force is per-scheme (`active`), but the field they live in is not. No
+  relation is fixed: the successor and `influenced_by` are references a
+  scheme declares like any other, which its `successor` and `influence`
+  roles name.
 - **The record's shape, from the command line.** Adding `schemes.RFC` costs
   one table, and that table is the only way to add it: there is no
   `luria add-scheme`. Changing a shape that already has documents under it is

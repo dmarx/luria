@@ -13,6 +13,8 @@ text arrived.
 """
 from __future__ import annotations
 
+import copy
+
 import yaml
 
 
@@ -31,7 +33,10 @@ def merged(*parts: str | dict) -> str:
     for part in parts:
         if not part:
             continue
-        loaded = yaml.safe_load(part) if isinstance(part, str) else part
+        # A dict fragment is copied: merging it by reference let one test's
+        # extra keys leak into a module-level fragment the next test reused.
+        loaded = (yaml.safe_load(part) if isinstance(part, str)
+                  else copy.deepcopy(part))
         if loaded is None:
             continue
         if not isinstance(loaded, dict):

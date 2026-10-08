@@ -1,0 +1,119 @@
+---
+# Don't copy this file by hand — run `luria new adr`, which assigns the
+# identity and fills in the fields a machine can compute. WHICH identity
+# depends on the scheme's `allocate` mode: `filing` (the default) takes the
+# next free number on the spot, `merge` mints a temporary code that
+# `luria concretize` numbers where merges serialize (ADR-049). The kinds are the
+# config: every scheme, fragment directory and journal in luria.toml is one, so
+# `luria new <kind>` works for a scheme the moment it is declared.
+#
+# Numbering is sequential and carries information (it's the order decisions were
+# made). The filename is the code and nothing else; the title goes in `title:`
+# below, where correcting it costs an edit rather than a rename plus every link
+# (ADR-013).
+#
+# This frontmatter is the ONLY place these facts live. The index and the per-tag
+# pages are generated from it (ADR-004) — never edit them by hand; run
+# `luria index`.
+
+# Active | Proposed | Deferred | Superseded | Rejected. Supersede when the
+# CHOICE changes: set the old one to `status: Superseded`, name the successor
+# in `superseded_by: ADR-tmpt8ikc` (a reference field: checked, resolved, an edge
+# the index and the site render), and leave its body intact. A qualifying
+# note for anything the field cannot say goes in `status_note:` — prose,
+# like `summary:`, so a code in it is a citation. When the
+# choice stands and only a REASON was wrong, correct this body in place and
+# bump `version:` below — the rule objects to silent revision, not to editing.
+status: 'Proposed'
+
+# What the index shows in place of the code. Repeat it as the body's `# ADR-tmpt8ikc:`
+# heading — someone reading the file alone needs one — and `luria lint` checks
+# that the two agree, because two copies of a string is a projection that drifts.
+title: 'Configuration is the only source of relation semantics'
+
+# Which revision of this decision's claim you are reading. Standard frontmatter
+# for every scheme, and it moves rarely here: a decision that CHANGES is
+# superseded by a new one, not edited. Bump it when the same choice is restated
+# more broadly — scope widened, wording generalized — and say what changed in a
+# `history:` entry. Shown in the index only when it is not 1.
+version: 1
+
+# Browsing categories, pushed down onto the decision itself. One is normal; more
+# than one is fine. A tag not listed in tags.yaml still works.
+tags:
+- architecture
+- config
+- contract
+
+date: '2026-10-08'
+
+# Optional. The issue(s) this decision came from: '#123'.
+issue: '#000'
+
+# Optional but wanted: the one-blob description the index table shows. Without
+# it the table falls back to the title, which is usually too terse to browse by.
+# Say what was decided AND what was rejected — the index is read far more often
+# than the decision, and "why not the obvious thing" is what people come for.
+# This field is prose, so it carries links like any other prose; the rest of the
+# frontmatter is data and stays plain. (`origin:` on a principle is
+# prose for the same reason — the generator renders it.)
+summary: >-
+  No relation is supplied by the code: the successor and influenced_by become ordinary declared references, roles point at declarations instead of creating them, references may target declared remotes, the facts give every reference value a declared type, and relations.lp no longer infers a type from an absence. luria upgrade explicit-relations writes down what older versions supplied. Rejected: emitting the built-ins as facts, an explicit any-scheme target, and undeclared roles with the old defaults.
+influenced_by:
+- ADR-012
+- ADR-071
+- ADR-085
+- ADR-125
+- ADR-tmp8z08x
+---
+
+# ADR-tmpt8ikc: Configuration is the only source of relation semantics
+
+## Context
+
+The logic-core migration ([ADR-tmp8z08x](ADR-tmp8z08x.md)) put a fact interface between the Python that reads the record and the rules that reason over it. That boundary exposed relations whose meaning came from code rather than configuration:
+
+- `contract.built_in()` synthesized a reference named by `successor` (default `superseded_by`) into every scheme, into any scheme or remote, required while `retires_on` (default `Superseded`) and forbidden while `active` ([ADR-071](ADR-071.md), [ADR-125](ADR-125.md)).
+- `influenced_by` was read as a list of codes on every scheme by `edges.py`, `relate.py`, the site pages, `luria new` and the index's "shaped by" line ([ADR-012](ADR-012.md)).
+- `relations.lp` carried `far(S, F, S) :- doc(C, S), ref_value(C, F, _), not ref(S, F).` — `document_facts()` emitted reference values from the compiled contract, `schema_facts()` described only `scheme.references`, and the rule reconstructed the missing type from an absence.
+
+[ADR-085](ADR-085.md) already named the pattern: a built-in is a declaration nobody wrote. The facts boundary made it a second implementation as well.
+
+## Decision
+
+**Configuration is the only source of relation semantics.** Any frontmatter field that participates as a typed relation is declared under `schemes.<S>.references`.
+
+- **Nothing is synthesized.** `contract.built_in()`, `Field.builtin` and `ANY_SCHEME` are gone. A scheme's contract is exactly what `luria.yaml` declares.
+- **Targets are concrete.** A reference names the schemes its codes may belong to and, new here, the declared remotes (`scheme: [LIT, ARXIV]`) — so a paper superseded by a paper is said in the config. There is no "any scheme" target.
+- **Roles point; they do not declare.** `successor` names a declared reference, `retires_on` a word in the scheme's status vocabulary, and `influence` (new) the declared reference the index renders as "shaped by". All three are unset unless set, and config load refuses one naming something undeclared.
+- **The facts are a complete interface.** Every `ref_value(C, F, X)` has `ref/2` and `ref_target/3` for its field, because every reference field comes from a declaration. `relations.lp` derives targets from `ref_target/3` alone; the only `not ref(...)` left in the rules are consistency findings, where a missing declaration *is* the error.
+- **Migration, not compatibility.** `luria upgrade explicit-relations` writes down what older versions supplied: the roles, the successor reference with its old conditions where a scheme used it or its vocabulary holds the retiring word, `influenced_by` where documents use it, each with the narrowest target set its values support. It refuses a value naming no declared scheme or remote, keeps any declaration already written, and loads the result before writing it. Nothing at run time reads the old shape.
+
+`DEFAULTS` and the `luria init` scaffold declare their relations explicitly. They are conventional defaults, written in configuration where a reader of the configuration reference sees them.
+
+## Audit of hard-coded field names
+
+Every frontmatter field name generic code spells, classified:
+
+| Name | Class | Outcome |
+|---|---|---|
+| `influenced_by` | historical | Removed from `edges`, `relate`, `site_page`, `new` and the index; a declared reference, named by the `influence` role where the index should render it. |
+| `superseded_by` | role | Read through `scheme.successor` everywhere. `statuses.set_status` stripped a literal `superseded_by:` block while writing the scheme's own field — a renamed successor got a duplicate key; fixed. `migrate`'s tombstone and `statuses.repair` now use the scheme's `retires_on` and `successor`. |
+| `Superseded` (status word) | role | Read through `scheme.retires_on`; the literal in `statuses.repair` is gone. |
+| `tags` | role | `scheme.axis`. The fallback document and the generic `_template.md` write the axis field, or none; `promote`'s workaround that stripped the seeded `tags:` is gone. The configuration reference no longer lists `tags` as a fixed name. Quartz's own `tags` key in `site_page` is Quartz's, not ours. |
+| `status` | primitive | The field every document's standing lives in; its words are the scheme's vocabulary, and `active` is a role. |
+| `title`, `date`, `version`, `history`, `number`, `formerly`, `created` | primitive | Identity, ordering and history every document has by design. |
+| `summary`, `origin`, `status_note` | primitive | Prose keys: the index and site render them, which is what makes them prose ([ADR-051](ADR-051.md)). |
+
+## Alternatives considered
+
+- **Keep the built-ins, emit them as facts.** It closes the facts gap but keeps two sources of truth: a reader of `luria.yaml` would still not see the relations the record has.
+- **Keep an explicit `scheme: "*"` target.** No record needs it once remotes can be targets: every successor in nucleation, the anthology, the examples and this record names a declared scheme or remote.
+- **Default the roles to the old names and accept them undeclared.** That is the built-in again, one level up.
+
+## Consequences
+
+- A record on an older version fails to load until it runs `luria upgrade explicit-relations`, by design. nucleation and the anthology need that run; the migration was exercised on copies of both.
+- The record page states each scheme's successor obligation under the scheme that declares it, rather than once as a standard rule.
+- The site's backlink for `influenced_by` reads `Cited as “influenced by” by`, like any declared reference, instead of a hard-coded "Influenced".
+- [ADR-071](ADR-071.md)'s "standard field" clause no longer holds; its substance — succession is a typed edge read from a field — stands.

@@ -407,6 +407,12 @@ def _scheme_files(scheme: Scheme) -> dict[Path, str]:
     template = GENERIC_TEMPLATE
     for key, value in subs.items():
         template = template.replace(key, value)
+    # The placeholder value goes on the scheme's own axis, or nowhere: a
+    # scheme naming none (a promoted vocabulary) gets no `tags:` it never
+    # declared (the ADR on explicit relations).
+    template = template.replace(
+        "tags:\n- record\n\n",
+        f"{scheme.axis}:\n- record\n\n" if scheme.axis else "")
     return {scheme.dir / "_template.md": template,
             scheme.stub: stub.replace("{PREFIX}", scheme.prefix)}
 

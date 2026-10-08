@@ -284,7 +284,7 @@ def _file_documents(p: Promotion) -> None:
     the value's blurb, or a line saying where the term came from: the
     template's placeholder prose is for a person starting from nothing, and
     these documents start from something."""
-    from .new import _drop_field, new_scheme_doc
+    from .new import new_scheme_doc
     for value, slug, meta in p.values:
         reset()  # the next number is read off the directory
         blurb = str(meta.get("blurb") or "").strip()
@@ -295,11 +295,7 @@ def _file_documents(p: Promotion) -> None:
         if blurb:
             values["summary"] = blurb
         scheme = current().schemes[p.prefix]
-        path = new_scheme_doc(scheme, values)
-        # The shared template seeds `tags:`; a promoted scheme declares none.
-        if "tags" not in scheme.grouped_fields:
-            text = path.read_text(encoding="utf-8")
-            writes.write_text(path, _drop_field(text, "tags"))
+        new_scheme_doc(scheme, values)
 
 
 def _rewrite(path: Path, field: str, many: bool,

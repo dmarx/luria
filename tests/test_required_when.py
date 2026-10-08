@@ -538,15 +538,14 @@ def test_the_built_in_condition_stays_out_of_the_per_scheme_contract(
     assert contract.describe(contract.for_scheme(scheme)) == []
 
 
-def test_the_record_page_states_the_built_in_condition_once(tmp_path, monkeypatch):
-    """It is a real rule and a reader should meet it — stated with the
-    standard fields, where it belongs, rather than repeated under every
-    scheme as though each had declared it."""
+def test_the_record_page_states_a_declared_successor_condition(tmp_path, monkeypatch):
+    """Stated where it is declared, under the scheme declaring it — and only
+    there: a scheme that declares no successor has none to state."""
     from luria import record_doc
-    project(tmp_path, monkeypatch, "")
+    project(tmp_path, monkeypatch, {"schemes": {"SOTA": successor("SOTA")}})
     section = record_doc.render().split("## What an entry must carry")[1]
     section = section.split("\n## ")[0]
-    assert "superseded_by" in section and "Superseded" in section
+    assert "`superseded_by`" in section and "`Superseded`" in section, section
 
 
 def test_a_scheme_declaring_nothing_is_still_empty(tmp_path, monkeypatch):
