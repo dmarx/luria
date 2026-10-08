@@ -65,6 +65,17 @@ schemes:
         required: true
         closed: false
     axis: tags
+    references:
+      superseded_by:
+        scheme: ADR
+        many: true
+        required: false
+        required_when:
+          status:
+          - Superseded
+        forbidden_when:
+          status:
+          - Active
   DP:
     dir: record/principles.d
     active: Active
@@ -80,6 +91,17 @@ schemes:
         required: true
         closed: false
     axis: tags
+    references:
+      superseded_by:
+        scheme: DP
+        many: true
+        required: false
+        required_when:
+          status:
+          - Superseded
+        forbidden_when:
+          status:
+          - Active
 remotes:
   LU:
     name: luria

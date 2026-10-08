@@ -112,6 +112,26 @@ schemes:
         required: true
         closed: false
     axis: tags
+    retires_on: Superseded
+    successor: superseded_by
+    references:
+      superseded_by:
+        scheme: ADR
+        many: true
+        required: false
+        required_when:
+          status:
+          - Superseded
+        forbidden_when:
+          status:
+          - Active
+      influenced_by:
+        scheme:
+        - ADR
+        - DP
+        many: true
+        required: false
+    influence: influenced_by
   DP:
     cite: page
     dir: record/principles.d
@@ -127,6 +147,24 @@ schemes:
         required: true
         closed: false
     axis: tags
+    retires_on: Superseded
+    successor: superseded_by
+    references:
+      superseded_by:
+        scheme: DP
+        many: true
+        required: false
+        required_when:
+          status:
+          - Superseded
+        forbidden_when:
+          status:
+          - Active
+      influenced_by:
+        scheme: ADR
+        many: true
+        required: false
+    influence: influenced_by
 remotes:
   SG:
     name: strata-g

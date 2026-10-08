@@ -10,7 +10,7 @@ demand, and why?"
 
 from __future__ import annotations
 
-from _config import merged
+from _config import merged, successor
 
 from pathlib import Path
 
@@ -56,8 +56,9 @@ def sota() -> contract.Contract:
 
 
 def declared(c: contract.Contract) -> list:
-    """The scheme's own fields — every scheme also carries the built-ins."""
-    return [f for f in c.fields if not f.builtin]
+    """The scheme's fields — all of them declared: nothing is built in (the
+    ADR on explicit relations)."""
+    return list(c.fields)
 
 
 # --- compilation ----------------------------------------------------------
@@ -236,11 +237,12 @@ def test_the_shipped_record_is_clean_through_the_contract():
     "nothing beyond the standard fields" and neither was readable from the
     record at all."""
     for scheme in config.current().schemes.values():
-        declared = [f.name for f in contract.for_scheme(scheme).fields
-                    if not f.builtin]
-        # ADR declares its tag axis; DP renders as one document and has none.
-        assert declared in (["status"], ["status", "tags"]), \
-            (scheme.prefix, declared)
+        declared = [f.name for f in contract.for_scheme(scheme).fields]
+        # Every shipped scheme declares its successor and, where the record
+        # uses it, `influenced_by`; ADR its tag axis too.
+        assert [f for f in declared if f not in ("superseded_by", "influenced_by")] \
+            in (["status"], ["status", "tags"]), (scheme.prefix, declared)
+        assert "superseded_by" in declared, (scheme.prefix, declared)
     errors: list[str] = []
     lint.check_contracts(errors)
     assert errors == []
@@ -593,11 +595,15 @@ def _retire(path: Path) -> None:
                                              "status: Superseded", 1))
 
 
+LIT_RETIRES_INTO_PAPERS = {"schemes": {"LIT": successor(
+    "LIT", targets=["LIT", "ARXIV", "DOI"])}}
+
+
 def test_superseded_by_may_name_remote_documents(tmp_path, monkeypatch):
-    """The docstring always said "or a remote code"; the reader truncated it
-    before the check could see it, so a paper superseded by a paper failed
-    as "names no scheme or remote"."""
-    root = project(tmp_path, monkeypatch, REMOTES)
+    """A paper superseded by a paper: a remote code passes where the
+    successor reference declares that remote as a target — said in the
+    config, not assumed for every reference."""
+    root = project(tmp_path, monkeypatch, merged(REMOTES, LIT_RETIRES_INTO_PAPERS))
     doc(root, "record/literature.d/LIT-001.md", code="LIT-001", tags=["record"],
         extra="superseded_by:\n- ARXIV-2110.08058\n- DOI:10.1145/3600006.3613165")
     _retire(root / "record/literature.d/LIT-001.md")
@@ -607,10 +613,24 @@ def test_superseded_by_may_name_remote_documents(tmp_path, monkeypatch):
 
 
 def test_an_undeclared_prefix_in_superseded_by_is_still_a_finding(tmp_path, monkeypatch):
-    root = project(tmp_path, monkeypatch, REMOTES)
+    root = project(tmp_path, monkeypatch, merged(REMOTES, LIT_RETIRES_INTO_PAPERS))
     doc(root, "record/literature.d/LIT-001.md", code="LIT-001", tags=["record"],
         extra="superseded_by: FAKE-2110.08058")
     _retire(root / "record/literature.d/LIT-001.md")
     errors: list[str] = []
     lint.check_contracts(errors)
-    assert any("superseded_by" in e and "names no scheme or remote" in e for e in errors), errors
+    assert any("superseded_by" in e and "is not a LIT, ARXIV or DOI code" in e
+               for e in errors), errors
+
+
+def test_a_remote_the_reference_does_not_name_is_a_finding(tmp_path, monkeypatch):
+    """Remotes are targets like schemes: declared per reference, not
+    accepted everywhere because one reference somewhere wanted them."""
+    root = project(tmp_path, monkeypatch, merged(
+        REMOTES, {"schemes": {"LIT": successor("LIT", targets=["LIT", "ARXIV"])}}))
+    doc(root, "record/literature.d/LIT-001.md", code="LIT-001", tags=["record"],
+        extra="superseded_by: DOI:10.1145/3600006.3613165")
+    _retire(root / "record/literature.d/LIT-001.md")
+    errors: list[str] = []
+    lint.check_contracts(errors)
+    assert any("is not a LIT or ARXIV code" in e for e in errors), errors

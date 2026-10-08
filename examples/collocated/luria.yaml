@@ -24,5 +24,19 @@ schemes:
         required: true
         closed: false
     axis: tags
+    active: Active
+    retires_on: Superseded
+    successor: superseded_by
+    references:
+      superseded_by:
+        scheme: ADR
+        many: true
+        required: false
+        required_when:
+          status:
+          - Superseded
+        forbidden_when:
+          status:
+          - Active
 site:
   title: Collocated views

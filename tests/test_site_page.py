@@ -10,7 +10,7 @@ from pathlib import Path
 
 import yaml
 
-from luria import site, site_page
+from luria import edges, site, site_page
 from luria.config import current
 
 # unresolved-ok-file: ADR-919 — a fixture code, deliberately not real: the
@@ -21,10 +21,19 @@ def _adr(n: int) -> Path:
     return current().schemes["ADR"].dir / f"ADR-{n:03d}.md"
 
 
+def _influenced(code: str, *targets: str) -> list:
+    """`influenced_by` as the typed edges the page is handed: an ordinary
+    declared reference now, drawn by `edges` like any other (the ADR on
+    explicit relations) rather than read off the frontmatter here."""
+    return [edges.Edge(code, "influenced_by", t, "frontmatter `influenced_by:`")
+            for t in targets]
+
+
 def test_properties_carry_status_date_and_lineage():
     meta = {"status": "Active", "date": "2026-08-04", "issue": "#9",
             "influenced_by": ["ADR-005", "ADR-024"]}
-    props, unresolved = site_page.properties(meta, _adr(25))
+    props, unresolved = site_page.properties(
+        meta, _adr(25), outbound=_influenced("ADR-025", "ADR-005", "ADR-024"))
     assert unresolved == []
     assert props["Status"] == "Active"
     # The date is Quartz's to show, from its own key: not repeated here.
@@ -55,6 +64,7 @@ def test_version_appears_only_when_it_is_not_one():
 
 def test_a_nested_record_links_through_its_mount_point():
     props, _ = site_page.properties({"influenced_by": ["ADR-005"]}, _adr(25),
+                                    outbound=_influenced("ADR-025", "ADR-005"),
                                     prefix="examples/child")
     assert props["Influenced by"].startswith(
         "[[examples/child/record/decisions.d/ADR-005|ADR-005]]")
@@ -62,7 +72,8 @@ def test_a_nested_record_links_through_its_mount_point():
 
 def test_an_unresolvable_code_is_reported_not_linked():
     props, unresolved = site_page.properties(
-        {"influenced_by": ["ADR-919"]}, _adr(25))
+        {"influenced_by": ["ADR-919"]}, _adr(25),
+        outbound=_influenced("ADR-025", "ADR-919"))
     assert props["Influenced by"] == "[[ADR-919]]"
     assert unresolved == ["[[ADR-919]]"]
 

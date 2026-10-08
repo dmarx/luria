@@ -184,6 +184,13 @@ def test_the_written_vocabulary_is_the_one_in_force(tmp_path, monkeypatch):
     raw["vocabularies"]["statuses"] = {
         "Active": {"blurb": "in force"},
         "Withdrawn": {"blurb": "taken back"}}
+    # Dropping `Superseded` drops retirement with it: the scaffold's roles
+    # and successor reference name that word, and a declaration naming a
+    # word the vocabulary lacks is a config error, not a silent no-op.
+    for spec in raw["schemes"].values():
+        for role in ("retires_on", "successor"):
+            spec.pop(role, None)
+        spec.get("references", {}).pop("superseded_by", None)
     path.write_text(_yaml.dump(raw, sort_keys=False))
     config.reset()
     values = next(v for v in config.current().schemes["ADR"].vocabularies

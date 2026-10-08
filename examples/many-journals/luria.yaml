@@ -44,3 +44,16 @@ schemes:
         required: true
         closed: false
     axis: tags
+    retires_on: Superseded
+    successor: superseded_by
+    references:
+      superseded_by:
+        scheme: ADR
+        many: true
+        required: false
+        required_when:
+          status:
+          - Superseded
+        forbidden_when:
+          status:
+          - Active

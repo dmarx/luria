@@ -247,6 +247,8 @@ def _spec(item: str, kinds: tuple, default: str, what: str) -> tuple:
 
 def _scheme_entry(prefix: str, render: str) -> tuple[dict, str]:
     """One scheme's table and the comment that introduces it."""
+    from .explicit_relations import successor_reference
+    from .statuses import DEFAULT_STATUSES
     slug = _slug(prefix)
     output = "docs/%s.md" % slug if render == "document" else "docs/%s" % slug
     reading = ("read as a whole, so its entries concatenate into one page"
@@ -270,6 +272,14 @@ def _scheme_entry(prefix: str, render: str) -> tuple[dict, str]:
         # WHICH field heads this scheme's index. Named rather than assumed —
         # a world-bible's axis is `worlds` (ADR-098).
         "axis": "tags",
+        # Retirement is a relation like any other, so it is declared like
+        # one: the roles point at a status word and a reference, and the
+        # reference is written out (the ADR on explicit relations).
+        "active": "Active",
+        "retires_on": "Superseded",
+        "successor": "superseded_by",
+        "references": {"superseded_by": successor_reference(
+            [prefix], "Active", "Superseded", DEFAULT_STATUSES)},
     }, ("\n%s — %s.\n"
         "The paths follow the prefix; rename them if this family is better\n"
         "called something other than what its codes spell." % (prefix, reading))

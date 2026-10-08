@@ -239,9 +239,7 @@ def check_contracts(errors: list[str]) -> None:
     resolve = referents.Lookup()
     for scheme in cfg.schemes.values():
         c = contract.for_scheme(scheme)
-        # Not `c.empty`: that ignores the built-in `superseded_by` field,
-        # which is exactly the one every scheme has to have checked.
-        if not c.fields and not c.groups:
+        if c.empty:
             continue
         for field in c.fields:
             for target in contract.targets(field):
@@ -425,17 +423,20 @@ def check_unique_fields(errors: list[str]) -> None:
                 # rather than wondering why the check fired.
                 spellings = " / ".join(f"`{w}`" for w in
                                        dict.fromkeys(w for _, w in left))
+                remedy = (f"retire all but one, naming the survivor in "
+                          f"`{scheme.successor}:`" if scheme.successor else
+                          "keep one, and declare a `successor` reference if "
+                          "the others should retire into it")
                 errors.append(
                     f"luria.yaml: schemes.{scheme.prefix}.{where} declares "
                     f"`{field}` unique, and {spellings} is held by {codes} — "
                     f"one value cannot identify {len(left)} documents; "
-                    f"retire all but one, naming the survivor in "
-                    f"`{scheme.successor}:`")
+                    f"{remedy}")
 
 
 def _successors(meta: dict, scheme) -> set[str]:
     """The codes this document names as what replaced it, upper-cased."""
-    held = meta.get(scheme.successor)
+    held = meta.get(scheme.successor) if scheme.successor else None
     if held is None:
         return set()
     items = held if isinstance(held, (list, tuple)) else [held]
@@ -761,8 +762,7 @@ def spent_upgrades() -> list[str]:
         return []
     out = []
     for name, entry in upgrade.SUNSET.items():
-        writes, lines, _ = upgrade._plan(current().root)
-        if not writes and not lines:
+        if not upgrade.pending(name, current().root):
             out.append(f"`luria upgrade {name}` has nothing left to do "
                        f"here — remove it at {entry.sunset}")
     return out

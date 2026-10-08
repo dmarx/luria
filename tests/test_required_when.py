@@ -15,7 +15,7 @@ one set of literal values; deliberately not an expression language.
 
 from __future__ import annotations
 
-from _config import merged
+from _config import merged, successor
 
 from pathlib import Path
 
@@ -497,7 +497,9 @@ def _superseded(root: Path, extra: str = "") -> dict:
 
 
 def test_a_superseded_document_must_name_its_successor(tmp_path, monkeypatch):
-    project(tmp_path, monkeypatch, "")
+    """ADR-071, where the scheme declares it (the ADR on explicit
+    relations) — the condition rides on the declared successor reference."""
+    project(tmp_path, monkeypatch, {"schemes": {"SOTA": successor("SOTA")}})
     scheme = config.current().schemes["SOTA"]
     out = contract.violations(contract.for_scheme(scheme),
                               "record/practices.d/SOTA-001.md",

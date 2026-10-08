@@ -14,14 +14,18 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-from _config import merged
+from _config import merged, successor
 
 from luria import config, lint
 
 
 def project(tmp_path, monkeypatch, fields: dict | None = None,
             field_groups: dict | None = None) -> Path:
-    fxl: dict = {"dir": "record/fixtures.d", "output": "docs/fixtures"}
+    # Retiring a duplicate into its survivor is the remedy these tests
+    # exercise, so the scheme declares retirement (the ADR on explicit
+    # relations).
+    fxl: dict = {"dir": "record/fixtures.d", "output": "docs/fixtures",
+                 **successor("FXL")}
     if fields:
         fxl["fields"] = fields
     if field_groups:

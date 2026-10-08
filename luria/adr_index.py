@@ -309,9 +309,15 @@ class Adr:
         return int(self.meta.get("version", 1) or 1)
 
     @property
-    def influenced_by(self) -> list[str]:
-        raw = self.meta.get("influenced_by") or []
-        return [str(x).strip() for x in raw]
+    def influences(self) -> list[str]:
+        """The codes in the reference the scheme's `influence` role names —
+        what shaped this document — or none when the scheme declares no
+        such role. The field is an ordinary declared reference; this only
+        reads it."""
+        field = self.scheme.influence
+        raw = self.meta.get(field) if field else None
+        values = raw if isinstance(raw, list) else ([] if raw in (None, "") else [raw])
+        return [str(x).strip() for x in values]
 
     def row(self, prefix: str = "") -> str:
         # unresolved-ok-block: ADR-919 — a stand-in number in the example below
@@ -405,10 +411,10 @@ def render_document(scheme, docs: list[Adr]) -> str:
         slot = doc.number if doc.number is not None else doc.tail
         body = f'<a id="{doc.prefix.lower()}-{slot}"></a>\n\n{body}'
         meta = [f"*v{doc.version}"]
-        if doc.influenced_by:
+        if doc.influences:
             meta.append("shaped by " + ", ".join(
                 f"[{code}]({target})" if (target := _link(code, base)) else code
-                for code in doc.influenced_by))
+                for code in doc.influences))
         if doc.status != scheme.active:
             meta.append(f"**{doc.status}**")
         if origin := str(doc.meta.get("origin", "")).strip():
