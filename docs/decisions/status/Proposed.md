@@ -4,8 +4,10 @@
 
 **Proposed** — not in force yet — an open question, so citing it as settled is what the reference report catches.
 
-1 of 126 decisions. Back to the [full index](../README.md).
+3 of 128 decisions. Back to the [full index](../README.md).
 
 | # | Title | Summary | Status |
 |---|---|---|---|
 | [ADR-126](../../../record/decisions.d/ADR-126.md) | A reference may name several schemes | `scheme:` on a reference takes a list as well as a string, and a code passes if it belongs to any scheme listed. A string is a list of one, so no config changes meaning. A converse is a field of the same name on every scheme listed, each naming the declaring scheme back; a chain walks the relation only when its own scheme is the sole target. Rejected: a field per target family, a loose `requires` field, a refinement predicate language, and letting a chain walk a union that includes its scheme. | Proposed |
+| [ADR-127](../../../record/decisions.d/ADR-127.md) | A logic core in clingo, behind a procedural shell | The parts of luria that decide things about the record's graph — converse pairs, invariants, chain edges, config consistency, and which acknowledgement answers for a citation — move from hand-written Python walks to Answer Set Programming rules evaluated by clingo, over facts the Python extracts. Python keeps parsing, rendering, editing, git and the network, and turns derived facts into findings, edits and pages. The move is one subsystem at a time, each held to byte-identical `luria lint` and `luria index` output against the last release on every real record. Rejected: a full rewrite, Cypher or an embedded graph database, SQLite recursive CTEs, a hand-rolled Datalog evaluator, and staying in Python. | Proposed |
+| [ADR-128](../../../record/decisions.d/ADR-128.md) | Configuration is the only source of relation semantics | No relation is supplied by the code: the successor and influenced_by become ordinary declared references, roles point at declarations instead of creating them, references may target declared remotes, the facts give every reference value a declared type, and relations.lp no longer infers a type from an absence. luria upgrade explicit-relations writes down what older versions supplied. Rejected: emitting the built-ins as facts, an explicit any-scheme target, and undeclared roles with the old defaults. | Proposed |

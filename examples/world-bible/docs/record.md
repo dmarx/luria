@@ -25,11 +25,12 @@ A scheme's own account of itself, where it gives one — `title` and `blurb` on 
 
 ## What an entry must carry
 
-Every entry carries `title`, `tags` and `date`, and one standard field is conditional: a retiring document names its successor — `superseded_by:` when `status` is `Superseded` — and a document in force names none: the field is forbidden while `status` is `Active`. Both follow the scheme's own words where it renames them (ADR-071, ADR-125). `status` itself is listed below rather than assumed: the words are the scheme's own, declared like any other controlled vocabulary. Beyond those, what each scheme's entries must carry — compiled from `luria.yaml` into the contract `luria lint` checks, with where each obligation was declared. A finding cites the same line.
+Every entry carries `title` and `date`. Everything else is listed below rather than assumed: `status` and the axis are controlled fields the scheme declares, and every relation — the successor a retiring document names included — is a reference the scheme declares, with the conditions it states (ADR-071, ADR-125). What each scheme's entries must carry, compiled from `luria.yaml` into the contract `luria lint` checks, with where each obligation was declared. A finding cites the same line.
 
 **`SCENE`**
 
 - `follows` — optional, one or more `SCENE` codes when present (luria.yaml: schemes.SCENE.references.follows)
+- `superseded_by` — required when `status` is `Superseded`, one or more `SCENE` codes when present; forbidden when `status` is `Active` (luria.yaml: schemes.SCENE.references.superseded_by)
 - `worlds` — one or more of `A`, `B`, `C`; absent means `B` (luria.yaml: schemes.SCENE.fields.worlds; vocabulary 'worlds': values)
 - `status` — optional, one of `Active`, `Proposed`, `Deferred`, `Superseded`, `Rejected` (luria.yaml: schemes.SCENE.fields.status; vocabulary 'scene-statuses': values)
 - `tags` — required, one or more of `court`, `road` (luria.yaml: schemes.SCENE.fields.tags; vocabulary 'scene-tags': values)

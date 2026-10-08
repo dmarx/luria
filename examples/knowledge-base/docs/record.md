@@ -26,10 +26,11 @@ A scheme's own account of itself, where it gives one — `title` and `blurb` on 
 
 ## What an entry must carry
 
-Every entry carries `title`, `tags` and `date`, and one standard field is conditional: a retiring document names its successor — `superseded_by:` when `status` is `Superseded` — and a document in force names none: the field is forbidden while `status` is `Active`. Both follow the scheme's own words where it renames them (ADR-071, ADR-125). `status` itself is listed below rather than assumed: the words are the scheme's own, declared like any other controlled vocabulary. Beyond those, what each scheme's entries must carry — compiled from `luria.yaml` into the contract `luria lint` checks, with where each obligation was declared. A finding cites the same line.
+Every entry carries `title` and `date`. Everything else is listed below rather than assumed: `status` and the axis are controlled fields the scheme declares, and every relation — the successor a retiring document names included — is a reference the scheme declares, with the conditions it states (ADR-071, ADR-125). What each scheme's entries must carry, compiled from `luria.yaml` into the contract `luria lint` checks, with where each obligation was declared. A finding cites the same line.
 
 **`LIT`**
 
+- `superseded_by` — required when `status` is `Superseded`, one or more `LIT` codes when present; forbidden when `status` is `Active` (luria.yaml: schemes.LIT.references.superseded_by)
 - `status` — optional, one of `Active`, `Rejected`, `Superseded` (luria.yaml: schemes.LIT.fields.status; vocabulary 'lit-statuses': values)
 - `tags` — required, one or more of `optimization`, `stability`, `systems` (luria.yaml: schemes.LIT.fields.tags; vocabulary 'lit-tags': values)
 - `source` — at least one of `arxiv`, `doi`, `url` (luria.yaml: schemes.LIT.field_groups.source)
@@ -37,6 +38,7 @@ Every entry carries `title`, `tags` and `date`, and one standard field is condit
 **`SOTA`**
 
 - `source` — required, a `LIT` code (luria.yaml: schemes.SOTA.references.source)
+- `superseded_by` — required when `status` is `Superseded`, one or more `SOTA` codes when present; forbidden when `status` is `Active` (luria.yaml: schemes.SOTA.references.superseded_by)
 - `status` — optional, one of `Active`, `Deferred`, `Superseded` (luria.yaml: schemes.SOTA.fields.status; vocabulary 'sota-statuses': values)
 - `tags` — required, one or more of `optimization`, `stability`, `systems` (luria.yaml: schemes.SOTA.fields.tags; vocabulary 'lit-tags': values)
 - `primary_topic` — exactly one of `optimization`, `stability`, `systems` (luria.yaml: schemes.SOTA.fields.tags.groups.primary_topic)

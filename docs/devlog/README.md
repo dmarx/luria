@@ -6,6 +6,15 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 
 ## Currently — [October 2026](2026-10.md)
 
+- [8 Oct 04:48 — Explicit relations: what the migration found, and the remote target it needed](2026-10.md#explicit-relations-what-the-migration-found-and-the-remote-target-it-needed)
+- [7 Oct 18:06 — Review fixes: one door for writes, a wheel smoke test, and git as optional](2026-10.md#review-fixes-one-door-for-writes-a-wheel-smoke-test-and-git-as-optional)
+- [7 Oct 15:09 — The two timing follow-ups: a fixed cost, and wall time that was waiting](2026-10.md#the-two-timing-follow-ups-a-fixed-cost-and-wall-time-that-was-waiting)
+- [7 Oct 14:17 — Logic core step 5: acknowledgements, and why contract stays in Python](2026-10.md#logic-core-step-5-acknowledgements-and-why-contract-stays-in-python)
+- [7 Oct 07:34 — Why index and reports got slower, and the fix](2026-10.md#why-index-and-reports-got-slower-and-the-fix)
+- [7 Oct 06:24 — Logic core step 4: config consistency, and timing markers](2026-10.md#logic-core-step-4-config-consistency-and-timing-markers)
+- [7 Oct 05:44 — Logic core step 3: the converse fixer, and a harness that gives it work](2026-10.md#logic-core-step-3-the-converse-fixer-and-a-harness-that-gives-it-work)
+- [7 Oct 04:56 — Logic core step 2: invariants, and what parity had to cover](2026-10.md#logic-core-step-2-invariants-and-what-parity-had-to-cover)
+- [7 Oct 04:29 — The facts layer, and three assumptions it corrected](2026-10.md#the-facts-layer-and-three-assumptions-it-corrected)
 - [7 Oct 00:37 — Multi-scheme references: fired on the constitution example](2026-10.md#multi-scheme-references-fired-on-the-constitution-example)
 - [3 Oct 20:51 — A typed number: on a temporary document became a duplicate key on the trunk](2026-10.md#a-typed-number-on-a-temporary-document-became-a-duplicate-key-on-the-trunk)
 - [2 Oct 19:38 — Title comparison folds spelling, not meaning](2026-10.md#title-comparison-folds-spelling-not-meaning)
@@ -18,10 +27,10 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 
 ## All books
 
-137 entries across 3 books, newest first.
+146 entries across 3 books, newest first.
 
 | Book | Entries | First | Last |
 |---|--:|---|---|
-| [2026-10](2026-10.md) | 9 | 2026-10-01 | 2026-10-07 |
+| [2026-10](2026-10.md) | 18 | 2026-10-01 | 2026-10-08 |
 | [2026-09](2026-09.md) | 82 | 2026-09-03 | 2026-09-30 |
 | [2026-08](2026-08.md) | 46 | 2026-08-03 | 2026-08-28 |
