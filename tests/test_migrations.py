@@ -12,7 +12,7 @@ The fixture schemes are `FXL` and `FXM`, from the reserved fixture namespace
 (ADR-093): a migration needs two prefixes, and neither may read as a
 citation of a real document.
 """
-from _config import merged
+from _config import merged, successor
 import json
 import subprocess
 from pathlib import Path
@@ -389,7 +389,7 @@ def test_move_doc_supersede_copies_and_tombstones(tmp_path, monkeypatch):
           schemes:
             VAL:
               dir: record/values.d
-          """))
+          """, {"schemes": {"FXL": successor("FXL", targets=["FXL", "VAL"])}}))
     (root / "record" / "values.d").mkdir(parents=True)
     config.reset()
     aliases.reset()

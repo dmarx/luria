@@ -12,6 +12,7 @@ from __future__ import annotations
 import pytest
 
 from luria import config, contract
+from _config import merged, successor
 from test_required_when import project
 
 REL = "record/practices.d/SOTA-001.md"
@@ -173,16 +174,17 @@ def test_the_contract_describes_the_rule(tmp_path, monkeypatch):
 
 def test_an_active_document_naming_a_successor_is_a_violation(
         tmp_path, monkeypatch):
-    """#191's exact case, with no config at all."""
-    project(tmp_path, monkeypatch, "")
+    """#191's exact case, as the successor declaration states it — the one
+    `luria upgrade explicit-relations` writes where the code used to."""
+    project(tmp_path, monkeypatch, {"schemes": {"SOTA": successor("SOTA")}})
     out = check({"status": "Active", "superseded_by": ["SOTA-002"]},
                 {"SOTA": {"SOTA-002"}})
     assert len(out) == 1, out
     assert "superseded_by" in out[0] and "Active" in out[0]
 
 
-def test_the_built_in_uses_the_schemes_own_active_word(tmp_path, monkeypatch):
-    project(tmp_path, monkeypatch, """
+def test_the_declaration_uses_the_schemes_own_active_word(tmp_path, monkeypatch):
+    project(tmp_path, monkeypatch, merged("""
             vocabularies:
               standing:
                 Adopted: {}
@@ -190,10 +192,9 @@ def test_the_built_in_uses_the_schemes_own_active_word(tmp_path, monkeypatch):
                 Superseded: {}
             schemes:
               SOTA:
-                active: Adopted
                 fields:
                   status: {vocabulary: standing}
-            """)
+            """, {"schemes": {"SOTA": successor("SOTA", active="Adopted")}}))
     out = check({"status": "Adopted", "superseded_by": ["SOTA-002"]},
                 {"SOTA": {"SOTA-002"}})
     assert len(out) == 1 and "Adopted" in out[0], out
@@ -207,12 +208,14 @@ def test_other_states_may_name_a_successor(tmp_path, monkeypatch):
                      {"SOTA": {"SOTA-002"}}) == [], status
 
 
-def test_the_record_page_states_the_built_in_rule(tmp_path, monkeypatch):
+def test_the_record_page_states_a_declared_successor_rule(tmp_path, monkeypatch):
+    """Under the scheme that declares it, like any other obligation — there
+    is no built-in rule to state once for everyone any more."""
     from luria import record_doc
-    project(tmp_path, monkeypatch, "")
+    project(tmp_path, monkeypatch, {"schemes": {"SOTA": successor("SOTA")}})
     section = record_doc.render().split("## What an entry must carry")[1]
     section = section.split("\n## ")[0]
-    assert "forbidden" in section and "Active" in section, section
+    assert "forbidden when `status` is `Active`" in section, section
 
 
 def test_a_defaulted_condition_field_is_named_by_its_default(

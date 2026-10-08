@@ -12,7 +12,8 @@ compute — filename, number, timestamp, `date:` — are computed; every other
 field stays the template's placeholder, because a fragment is authored in a
 markdown-aware editor, not assembled on a command line (ADR-036). A tool
 driving the CLI can still set fields inline (`--title`, `--status`,
-`--summary`, `--tags`, `--influenced_by`) and hand over the prose
+`--summary`, `--tags`, or any field the scheme declares) and hand over the
+prose
 (`--body`); a human never has to.
 
 **The kinds are the config.** Every journal, scheme and fragment directory in
@@ -31,6 +32,7 @@ from pathlib import Path
 
 from . import journal as journal_mod
 from .config import current
+from . import writes
 
 TEMPLATE_NAME = "_template.md"
 
@@ -41,19 +43,35 @@ TEMPLATE_NAME = "_template.md"
 _NUMBER_LINE = re.compile(r"^number:[^\n]*\n", re.M)
 
 # The shape written when a scheme has no _template.md of its own — enough to
-# pass the lint (status, title, tag, date, agreeing heading) and nothing else.
-FALLBACK = """---
-status: Proposed
+# pass the lint (status, title, date, agreeing heading, and a value on the
+# scheme's axis if it has one) and nothing else. Read off the scheme rather
+# than assumed: the status word is one its vocabulary holds, and the axis is
+# whichever field the scheme names, or none (the ADR on explicit relations).
+FALLBACK_HEAD = """---
+status: {status}
 title: '{title}'
-tags:
-- record
-date: '{date}'
+{axis}date: '{date}'
 ---
 
 # {code}: {title}
+"""
 
+FALLBACK_BODY = """
 Why this needed deciding, what was decided, and what was rejected.
 """
+
+
+def fallback(scheme, code: str, date: str, title: str) -> str:
+    """The fallback document for `scheme`: a starting status that is not in
+    force — `Proposed` where the vocabulary has it, else the first word
+    that is not the `active` one — and one placeholder value on the axis."""
+    from .statuses import vocabulary
+    words = vocabulary(scheme)
+    status = ("Proposed" if "Proposed" in words else
+              next((w for w in words if w != scheme.active), scheme.active))
+    axis = f"{scheme.axis}:\n- record\n" if scheme.axis else ""
+    return (FALLBACK_HEAD.format(status=status, title=title, axis=axis,
+                                 date=date, code=code) + FALLBACK_BODY)
 
 
 def kinds() -> dict[str, tuple[str, object]]:
@@ -141,8 +159,7 @@ def declared_fields(scheme) -> tuple[str, ...]:
     document's first read — the scaffold offering a guaranteed violation."""
     from .contract import for_scheme
     c = for_scheme(scheme)
-    return tuple(f.name for f in c.fields
-                 if not f.builtin and c.derivation(f.name) is None)
+    return tuple(f.name for f in c.fields if c.derivation(f.name) is None)
 
 
 def _mint_tail(scheme) -> str:
@@ -188,8 +205,7 @@ def new_scheme_doc(scheme, fields: dict[str, str]) -> Path:
         text = re.sub(r"^date: .*$", f"date: '{today}'", text,
                       count=1, flags=re.MULTILINE)
     else:
-        text = FALLBACK.format(code=code, date=today,
-                               title="Stated as the thing you did")
+        text = fallback(scheme, code, today, "Stated as the thing you did")
 
     plural = plural_fields(scheme)
     title = fields.pop("title", None)
@@ -206,8 +222,7 @@ def new_scheme_doc(scheme, fields: dict[str, str]) -> Path:
     if body is not None:
         text = replace_body(text, code, body)
     for field, value in fields.items():
-        text = _sub_line(text, field, value,
-                         many=field in plural or field in STANDARD_PLURAL)
+        text = _sub_line(text, field, value, many=field in plural)
     # A prose field the caller did not fill still carries the form's own
     # words — "one-paragraph description of the decision" — which the lint
     # reports as the form's text, not the document's. Drop the value and keep
@@ -228,7 +243,7 @@ def new_scheme_doc(scheme, fields: dict[str, str]) -> Path:
 
     path = scheme.dir / f"{stem}.md"
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(text, encoding="utf-8")
+    writes.write_text(path, text)
     return path
 
 
@@ -326,7 +341,7 @@ def new_fragment(dir_name: str, name: str | None,
         text = template.read_text(encoding="utf-8")
     else:
         text = "### Changed\n\n- \n"
-    path.write_text(text, encoding="utf-8")
+    writes.write_text(path, text)
     return path
 
 
@@ -370,7 +385,7 @@ def new_migration(fields: dict[str, str], name: str | None) -> Path:
     slug = name or re.sub(r"[^a-z0-9]+", "-", title.lower()).strip("-")
     path = mig_dir / f"{number}-{slug}.yaml"
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(MIGRATION_TEMPLATE.format(number=number, title=title), encoding="utf-8")
+    writes.write_text(path, MIGRATION_TEMPLATE.format(number=number, title=title))
     return path
 
 
@@ -394,7 +409,7 @@ def new_entry(kind: str | None, fields: dict[str, str],
                            body=fields.get("body"))
 
 
-UNIVERSAL = ("title", "status", "summary", "tags", "influenced_by", "body")
+UNIVERSAL = ("title", "status", "summary", "tags", "body")
 
 # What each non-scheme kind reads from its flags, as `new_entry` uses them:
 # a journal entry takes a title and prose, a fragment only prose, a
@@ -406,7 +421,7 @@ KIND_FIELDS = {"journal": ("title", "body"), "fragment": ("body", "name"),
 
 def accepted_flags(what: str, target) -> tuple[str, ...]:
     """The flags one kind takes, in the order help lists them. A scheme's
-    are the universal six plus its declared fields, once each — a scheme
+    are the universal five plus its declared fields, once each — a scheme
     declaring `status` and `tags` does not take them twice."""
     if what == "scheme":
         return tuple(dict.fromkeys((*UNIVERSAL, *declared_fields(target))))
@@ -445,15 +460,6 @@ def help_text(kind: str | None = None) -> str:
             "Kinds this record scaffolds (from luria.yaml), and the flags "
             "each takes:\n" + "\n".join(rows) + "\n\n"
             "--draft FILE files what a tool wrote instead of taking flags.\n")
-
-# `influenced_by:` is standard frontmatter for every scheme — the index and
-# the typed-edge module read it as a list of codes (ADR-012) — but it is not
-# a contract field, so the contract cannot say its shape. Named here so the
-# scaffold writes it as the list the readers expect (#301): a tool handing
-# over a draft drawn on a canvas names the documents it was drawn from, and
-# `--influenced_by ADR-231,ADR-245` is that hand-over.
-STANDARD_PLURAL = frozenset({"influenced_by"})
-
 
 # What a drafts file carries that is not a field of the document: the
 # canvas's own bookkeeping (strata-g's exporter writes these beside the
@@ -516,7 +522,7 @@ def _file_drafts(kind: str | None, drafts: list[dict], where: str) -> None:
 
 
 def run(kind: str = None, title: str = None, status: str = None,
-        summary: str = None, tags: str = None, influenced_by: str = None,
+        summary: str = None, tags: str = None,
         body: str = None, name: str = None, draft: str = None,
         **declared) -> None:
     """Scaffold an entry and print its path. KIND defaults to the journal;
@@ -531,7 +537,7 @@ def run(kind: str = None, title: str = None, status: str = None,
     a tool that authored the prose elsewhere hands it over in a draft's
     `body` key instead.
 
-    Beyond the six universal flags, a scheme's own declared fields are
+    Beyond the five universal flags, a scheme's own declared fields are
     accepted by name — `--source LIT-134,LIT-140` where the SOTA scheme
     declares `source` — and written in the shape the contract declares
     (#169). An undeclared flag is refused rather than written, because a key
@@ -551,15 +557,14 @@ def run(kind: str = None, title: str = None, status: str = None,
         print(help_text(kind), end="")
         return
     if draft is not None:
-        if any(v for v in (title, status, summary, tags, influenced_by, name)) or declared:
+        if any(v for v in (title, status, summary, tags, name)) or declared:
             sys.exit("luria new: --draft takes its fields from the file; "
                      "no other field flag applies")
         _file_drafts(kind, _read_drafts(draft), draft)
         return
     fields = {k: v for k, v in
               [("title", title), ("status", status),
-               ("summary", summary), ("tags", tags),
-               ("influenced_by", influenced_by), ("body", body)] if v}
+               ("summary", summary), ("tags", tags), ("body", body)] if v}
     # Every flag is checked against what the kind takes — the list `--help`
     # prints. A scheme's declared fields were always refused when unknown;
     # a flag the kind would simply ignore (`luria new changelog --title`)

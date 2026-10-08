@@ -32,6 +32,10 @@ def bare_io_calls(path: Path) -> list[str]:
         fn = node.func
         if not isinstance(fn, ast.Attribute) or fn.attr not in IO_METHODS:
             continue
+        # `writes.write_text` is the package's one door for writing, and it
+        # fixes UTF-8 itself; `writes.py` is checked like any other module.
+        if isinstance(fn.value, ast.Name) and fn.value.id == "writes":
+            continue
         if any(kw.arg == "encoding" for kw in node.keywords):
             continue
         found.append(f"{path.name}:{node.lineno}: {fn.attr}()")

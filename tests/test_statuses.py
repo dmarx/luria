@@ -27,18 +27,27 @@ from pathlib import Path
 
 from luria import repair, adr_index, config, contract, lint, statuses
 
+from _config import successor as _successor
+
 
 def _project(root: Path, monkeypatch, uniform_share: float | None = None,
              active: str | None = None, successor: str | None = None,
-             retires_on: str | None = None) -> None:
+             retires_on: str | None = None, retiring: bool = False) -> None:
     (root / "record" / "values.d").mkdir(parents=True, exist_ok=True)
     (root / "docs").mkdir(parents=True, exist_ok=True)
     vp: dict = {"dir": "record/values.d", "render": "index",
                 "output": "docs/values"}
-    for key, value in (("uniform_share", uniform_share), ("active", active),
-                       ("successor", successor), ("retires_on", retires_on)):
-        if value is not None:
-            vp[key] = value
+    if active is not None:
+        vp["active"] = active
+    # Retirement is declared, never supplied (the ADR on explicit
+    # relations): a test that retires documents asks for the roles and the
+    # reference they point at.
+    if retiring or successor or retires_on:
+        vp.update(_successor("VP", field=successor or "superseded_by",
+                             retires_on=retires_on or "Superseded",
+                             active=active or "Active"))
+    if uniform_share is not None:
+        vp["uniform_share"] = uniform_share
     (root / "luria.yaml").write_text(merged(
         {"issue_url": "https://example.test/issues/{n}",
          "schemes": {"VP": vp}}))
@@ -459,13 +468,14 @@ def test_of_still_reads_the_combined_form_and_says_so(project):
 def test_split_moves_the_note_out_of_status(project):
     text = ("---\nstatus: 'Superseded — by [ADR-035](ADR-035.md)'\n"
             "title: 'T'\ntags:\n- record\n---\n\n# ADR-001: T\n")
-    fresh = statuses.split(text)
+    adr = config.current().schemes["ADR"]
+    fresh = statuses.split(text, adr)
     assert fresh is not None
     # A note that said only `by CODE` becomes the field and nothing else.
     assert "status: Superseded\nsuperseded_by:\n- ADR-035\n" in fresh
     assert "status_note" not in fresh
     assert fresh.endswith("# ADR-001: T\n")
-    assert statuses.split(fresh) is None
+    assert statuses.split(fresh, adr) is None
 
 
 def test_split_carries_a_quoted_multi_line_note_intact(project):
@@ -535,7 +545,7 @@ def test_the_repair_keeps_a_note_that_says_more_than_the_code(project):
     author wrote beyond the shape the machinery itself used to write."""
     text = ("---\nstatus: Superseded\nstatus_note: 'by ADR-016, which drops the "
             "local-clone path'\ntitle: 'T'\n---\n\nBody.\n")
-    fresh = statuses.repair(text)
+    fresh = statuses.repair(text, config.current().schemes["ADR"])
     from luria.adr_index import parse_frontmatter
     meta, _ = parse_frontmatter(fresh)
     assert meta["superseded_by"] == ["ADR-016"]
@@ -543,11 +553,11 @@ def test_the_repair_keeps_a_note_that_says_more_than_the_code(project):
 
 
 def test_superseded_without_a_successor_is_a_finding(tmp_path, monkeypatch):
-    """ADR-071's rule, now stated as a `required_when` on the built-in field
-    rather than a hand-written branch — so it is checked with every other
-    obligation, in `check_contracts`, and carries the same wording and
-    provenance as any declared one (#170, review of #172)."""
-    _project(tmp_path, monkeypatch)
+    """ADR-071's rule, stated as a `required_when` on the declared successor
+    reference rather than a hand-written branch — so it is checked with
+    every other obligation, in `check_contracts`, and carries the same
+    wording and provenance (#170, review of #172)."""
+    _project(tmp_path, monkeypatch, retiring=True)
     _value(tmp_path, 1, "Superseded")
     errors: list[str] = []
     lint.check_contracts(errors)
@@ -566,7 +576,7 @@ def test_the_supersession_rule_is_no_longer_a_branch_in_frontmatter(
 
 
 def test_a_successor_that_resolves_to_nothing_is_a_finding(tmp_path, monkeypatch):
-    _project(tmp_path, monkeypatch)
+    _project(tmp_path, monkeypatch, retiring=True)
     _value(tmp_path, 1, "Superseded", superseded_by="VP-099")
     errors: list[str] = []
     lint.check_contracts(errors)
@@ -654,10 +664,10 @@ def test_the_renamed_field_draws_the_succession_edge(tmp_path, monkeypatch):
     assert [(e.relation, e.target) for e in drawn] == [("supplanted_by", "VP-002")]
 
 
-def test_declaring_the_field_yourself_replaces_the_default(tmp_path, monkeypatch):
-    """The point of calling it a default: a scheme that declares the field in
-    its own `references` table owns it outright, and the default adds
-    nothing beside it."""
+def test_the_successor_is_only_what_the_scheme_declares(tmp_path, monkeypatch):
+    """No default stands beside the declaration (the ADR on explicit
+    relations): a scheme declaring the field owns it outright, with exactly
+    the conditions it wrote — none added."""
     (tmp_path / "record" / "values.d").mkdir(parents=True, exist_ok=True)
     (tmp_path / "docs").mkdir(parents=True, exist_ok=True)
     (tmp_path / "luria.yaml").write_text(
@@ -679,8 +689,9 @@ def test_declaring_the_field_yourself_replaces_the_default(tmp_path, monkeypatch
     fields = [f for f in contract.for_scheme(_scheme()).fields
               if f.name == "superseded_by"]
     assert len(fields) == 1, fields
-    assert not fields[0].builtin
     assert fields[0].reference == ("VP",)
+    assert fields[0].required_when is None
+    assert fields[0].forbidden_when is None
 
 
 # --- `status:` is an ordinary controlled vocabulary (#181) -------------------

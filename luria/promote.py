@@ -52,6 +52,7 @@ import yaml
 
 from . import yaml_edit
 from .config import current, reset
+from . import writes
 
 # What a vocabulary field may say that a reference can say too. `closed` is
 # dropped on purpose: a reference is closed by construction, which is the
@@ -264,7 +265,7 @@ def _config_edit(p: Promotion) -> None:
     del data["vocabularies"][p.vocabulary]
     if not data["vocabularies"]:
         del data["vocabularies"]
-    path.write_text(yaml_edit.dump(data), encoding="utf-8")
+    writes.write_text(path, yaml_edit.dump(data))
 
 
 def _scaffold(p: Promotion) -> None:
@@ -275,7 +276,7 @@ def _scaffold(p: Promotion) -> None:
     for path, text in _scheme_files(current().schemes[p.prefix]).items():
         if not path.exists():
             path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_text(text, encoding="utf-8")
+            writes.write_text(path, text)
 
 
 def _file_documents(p: Promotion) -> None:
@@ -283,7 +284,7 @@ def _file_documents(p: Promotion) -> None:
     the value's blurb, or a line saying where the term came from: the
     template's placeholder prose is for a person starting from nothing, and
     these documents start from something."""
-    from .new import _drop_field, new_scheme_doc
+    from .new import new_scheme_doc
     for value, slug, meta in p.values:
         reset()  # the next number is read off the directory
         blurb = str(meta.get("blurb") or "").strip()
@@ -294,11 +295,7 @@ def _file_documents(p: Promotion) -> None:
         if blurb:
             values["summary"] = blurb
         scheme = current().schemes[p.prefix]
-        path = new_scheme_doc(scheme, values)
-        # The shared template seeds `tags:`; a promoted scheme declares none.
-        if "tags" not in scheme.grouped_fields:
-            text = path.read_text(encoding="utf-8")
-            path.write_text(_drop_field(text, "tags"), encoding="utf-8")
+        new_scheme_doc(scheme, values)
 
 
 def _rewrite(path: Path, field: str, many: bool,
@@ -318,7 +315,7 @@ def _rewrite(path: Path, field: str, many: bool,
     values = raw if isinstance(raw, list) else [raw]
     codes = [mapping.get(str(v), str(v)) for v in values]
     head = _sub_line(head, field, codes if many else codes[0], many=many)
-    path.write_text(head + rest, encoding="utf-8")
+    writes.write_text(path, head + rest)
     return True
 
 

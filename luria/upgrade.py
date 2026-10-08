@@ -30,6 +30,7 @@ from pathlib import Path
 from . import comment_carry, yaml_edit
 from .config import CONFIG_NAME, find_root
 from .statuses import DEFAULT_STATUSES
+from . import writes
 
 _BLURBS = {
     "Active": "in force — the current answer, and what a citation should "
@@ -69,7 +70,26 @@ SUNSET = {
                "pin is the version rather than a list of projects because "
                "a list is never finished at the moment you read it.",
     ),
+    "explicit-relations": Upgrade(
+        summary="declare the successor reference and `influenced_by` that "
+                "older versions supplied without a declaration, and the "
+                "roles that point at them",
+        sunset="1.0.0, once nucleation and the anthology have run it. "
+               "Nothing reads the old shape at run time, so a record that "
+               "has not run it fails to load rather than drifting.",
+    ),
 }
+
+
+def pending(name: str, root: Path) -> bool:
+    """Whether upgrade NAME still has something to write at `root`."""
+    if name == "explicit-relations":
+        from . import explicit_relations
+        return explicit_relations.pending(root)
+    if name == "yaml":
+        return (root / TOML_NAME).exists()
+    writes_, lines, _ = _plan(root)
+    return bool(writes_ or lines)
 
 
 def _statuses_yaml() -> str:
@@ -333,7 +353,7 @@ def _run_yaml(where: Path, dry_run: bool) -> None:
         for f in orphans:
             print(f"  would leave {f.relative_to(where)} unread")
         return
-    (where / CONFIG_NAME).write_text(text, encoding="utf-8")
+    writes.write_text(where / CONFIG_NAME, text)
     print(f"  wrote {CONFIG_NAME}")
     if orphans:
         print(f"\n  nothing reads these now — check the result first, then:")
@@ -374,34 +394,35 @@ def run(name: str = "", *, dry_run: bool = False, root: str = "") -> None:
                          f"(have: {', '.join(SUNSET) or 'none'})")
     if name == "yaml":
         return _run_yaml(where, dry_run)
+    if name == "explicit-relations":
+        from . import explicit_relations
+        return explicit_relations.run(where, dry_run)
     if (where / TOML_NAME).exists() and not (where / CONFIG_NAME).exists():
         raise SystemExit(
             f"luria upgrade {name}: this record still has a {TOML_NAME}, "
             f"which nothing reads — run `luria upgrade yaml` first")
-    writes, lines, notes = _plan(where)
+    pending, lines, notes = _plan(where)
     for note in notes:
         print(f"  {note}")
-    if not writes and not lines:
+    if not pending and not lines:
         print(f"{name}: nothing to do — this record is already upgraded, and "
               f"`luria upgrade {name}` can be deleted once every other one is")
         return
     if dry_run:
-        for path, _ in writes:
+        for path, _ in pending:
             print(f"  would write {path.relative_to(where)}")
         if lines:
             print(f"  would declare `status` for {len(lines)} scheme(s) in "
                   f"{CONFIG_NAME}")
         return
-    for path, text in writes:
+    for path, text in pending:
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(text, encoding="utf-8")
+        writes.write_text(path, text)
         print(f"  wrote {path.relative_to(where)}")
     if lines:
         config = where / CONFIG_NAME
-        config.write_text(
-            _declared(config.read_text(encoding="utf-8"), lines,
-                      {w: _BLURBS[w] for w in DEFAULT_STATUSES}),
-            encoding="utf-8")
+        writes.write_text(config, _declared(config.read_text(encoding="utf-8"), lines,
+                      {w: _BLURBS[w] for w in DEFAULT_STATUSES}))
         print(f"  declared `status` for {len(lines)} scheme(s) "
               f"in {CONFIG_NAME}")
 

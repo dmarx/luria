@@ -213,7 +213,8 @@ def test_a_practice_names_the_paper_behind_it(example):
     `arxiv`, `doi` or `url` satisfies it, because a report never posted to
     arXiv is a paper all the same."""
     root = example("knowledge-base")
-    ref, = config.current().schemes["SOTA"].references
+    ref, = [r for r in config.current().schemes["SOTA"].references
+            if r.field == "source"]
     assert (ref.field, ref.scheme, ref.required) == ("source", ("LIT",), True)
     group, = config.current().schemes["LIT"].field_groups
     assert (group.name, group.fields) == ("source", ("arxiv", "doi", "url"))
@@ -513,18 +514,18 @@ def test_a_required_reference_makes_an_ungrounded_rule_a_finding(example):
 def test_a_document_may_be_superseded_across_schemes(example):
     """A PRACTICE retired by a BOUNDARY.
 
-    Worth pinning because it is not obvious that it should work: `superseded_by`
-    resolves across schemes, so the record can say "the rule was replaced by a
-    limit" rather than forcing the successor into the predecessor's family — and
-    the generated index renders the successor's link from the other scheme's
-    view directory.
+    Worth pinning because it is not obvious that it should work: PRACTICE's
+    `superseded_by` declares BOUNDARY as its target, so the record can say
+    "the rule was replaced by a limit" rather than forcing the successor into
+    the predecessor's family — and the generated index renders the
+    successor's link from the other scheme's view directory.
     """
     root = example("constitution")
     assert lint_errors() == []
 
     meta = adr_index.parse_frontmatter(
         (root / "record" / "practices.d" / "PRACTICE-004.md").read_text())[0]
-    status = statuses.of(meta)
+    status = statuses.of(meta, config.current().schemes["PRACTICE"])
     assert status.value == "Superseded"
     assert "BOUNDARY-002" in status.superseded_by
 

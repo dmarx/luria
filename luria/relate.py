@@ -33,15 +33,11 @@ from pathlib import Path
 
 from .adr_index import parse_frontmatter
 from .config import current
-from .contract import (ANY_SCHEME, Field, for_scheme, is_remote, local_scheme,
+from .contract import (Field, for_scheme, is_remote, local_scheme, names_remote,
                        spelled, target_of)
 from .field_edit import add_to_field
 from .referents import path_of
-
-# Standard frontmatter every scheme reads as a relation without declaring
-# it (edges.py): a list of the documents this one follows from.
-INFLUENCED_BY = "influenced_by"
-
+from . import writes
 
 @dataclass(frozen=True)
 class Related:
@@ -58,13 +54,10 @@ class Related:
 
 def relatable_fields(scheme) -> dict[str, Field]:
     """The fields of this scheme a relation can be written into: every
-    contract field that names a document, plus `influenced_by`, which the
-    index and the typed-edge module read on every scheme without a
-    declaration."""
-    fields = {f.name: f for f in for_scheme(scheme).fields if f.reference is not None}
-    fields.setdefault(INFLUENCED_BY, Field(INFLUENCED_BY, required=False,
-                                           reference=ANY_SCHEME, many=True))
-    return fields
+    contract field that names a document — which is to say every reference
+    `luria.yaml` declares on it, and nothing else."""
+    return {f.name: f for f in for_scheme(scheme).fields
+            if f.reference is not None}
 
 
 def _resolved(spelling: str) -> str:
@@ -82,12 +75,11 @@ def _scheme_of(code: str):
 def _check_target(field: Field, target: str, where: str) -> None:
     """A target the record can follow, or an exit that says why not."""
     if is_remote(target):
-        if field.reference == ANY_SCHEME:
+        if names_remote(field, target):
             return  # a citation the remote machinery verifies (ADR-016)
         sys.exit(f"{where}: {field.name} names a {spelled(field)} document, "
                  f"and {target} is a remote code")
-    if field.reference != ANY_SCHEME and \
-            target_of(field, _resolved(target)) is None:
+    if target_of(field, _resolved(target)) is None:
         sys.exit(f"{where}: {field.name} names a {spelled(field)} document, "
                  f"not {target}")
     if _scheme_of(target) is None or path_of(_resolved(target)) is None:
@@ -144,7 +136,7 @@ def relate(source: str, field: str, target: str) -> Related:
     else:
         from .new import _sub_line
         text = _sub_line(text, field, target)
-    path.write_text(text, encoding="utf-8")
+    writes.write_text(path, text)
     return Related(path, field, target, "added", tuple(notes))
 
 

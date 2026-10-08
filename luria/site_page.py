@@ -32,7 +32,7 @@ import re
 from dataclasses import replace
 from pathlib import Path
 
-from . import doc_refs, edges, statuses
+from . import doc_refs, statuses
 from .config import current
 
 # Frontmatter Quartz reads for its own purposes. Carried into the staged page
@@ -127,8 +127,9 @@ class Links:
 # because that is what the edge means.
 def _inbound_labels(scheme) -> tuple[dict[str, str], tuple[str, ...]]:
     successor = statuses.successor_field(scheme)
-    return ({successor: "Supersedes", edges.INFLUENCED_BY: "Influenced"},
-            (successor, edges.INFLUENCED_BY))
+    if not successor:
+        return {}, ()
+    return {successor: "Supersedes"}, (successor,)
 
 
 def _repeats_an_outbound(edge, held: set[tuple[str, str]]) -> bool:
@@ -158,9 +159,8 @@ def _label(field: str) -> str:
 
 def _edges(outbound, inbound, scheme, links: Links,
            known: dict[str, str]) -> list[tuple[str, list[str]]]:
-    """The typed edges. Supersession and influence already read from the
-    page's own frontmatter (the status, `influenced_by:`), so outbound adds
-    only the declared reference fields."""
+    """The typed edges. Supersession already reads from the page's own
+    status line, so outbound adds every other declared reference field."""
     labels, order_of = _inbound_labels(scheme)
     out: dict[str, list[str]] = {}
     for edge in outbound:
@@ -244,9 +244,6 @@ def properties(meta: dict, source: Path, outbound=(), inbound=(),
     # field rather than assumed to be a space.
     if issues := re.findall(r"#\d+", str(meta.get("issue", ""))):
         rows.append(("Issue", [links.text(f"[[{i}]]") for i in issues]))
-    influenced = [str(c).strip() for c in (meta.get("influenced_by") or [])]
-    if influenced := [c for c in influenced if c]:
-        rows.append(("Influenced by", [links.code(c, known) for c in influenced]))
     rows += _vocabulary(meta, source, scheme, links)
     rows += _edges(outbound, inbound, scheme, links, known)
     props = {label: values[0] if len(values) == 1 else values

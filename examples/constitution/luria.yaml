@@ -66,6 +66,20 @@ schemes:
         required: true
         closed: false
     axis: tags
+    active: Active
+    retires_on: Superseded
+    successor: superseded_by
+    references:
+      superseded_by:
+        scheme: VALUE
+        many: true
+        required: false
+        required_when:
+          status:
+          - Superseded
+        forbidden_when:
+          status:
+          - Active
   PRACTICE:
     dir: record/practices.d
     output: docs/practices
@@ -75,6 +89,16 @@ schemes:
         scheme: VALUE
         many: true
         required: true
+      superseded_by:
+        scheme: BOUNDARY
+        many: true
+        required: false
+        required_when:
+          status:
+          - Superseded
+        forbidden_when:
+          status:
+          - Active
     fields:
       surface:
         vocabulary: surfaces
@@ -89,6 +113,9 @@ schemes:
         required: true
         closed: false
     axis: tags
+    active: Active
+    retires_on: Superseded
+    successor: superseded_by
   BOUNDARY:
     dir: record/boundaries.d
     output: docs/boundaries
@@ -102,6 +129,16 @@ schemes:
         scheme: VALUE
         many: true
         required: true
+      superseded_by:
+        scheme: BOUNDARY
+        many: true
+        required: false
+        required_when:
+          status:
+          - Superseded
+        forbidden_when:
+          status:
+          - Active
     fields:
       status:
         vocabulary: value-statuses
@@ -111,6 +148,9 @@ schemes:
         required: true
         closed: false
     axis: tags
+    active: Active
+    retires_on: Superseded
+    successor: superseded_by
 journals:
   sessions:
     dir: record/sessions.d

@@ -51,6 +51,7 @@ from pathlib import Path
 from .adr_index import parse_frontmatter, read_document
 from . import slugs
 from .config import Journal, current
+from . import writes
 
 # `2026/08/03/141530.md` — the path a `created` timestamp implies.
 PATH_RE = re.compile(r"(\d{4})/(\d{2})/(\d{2})/(\d{2})(\d{2})(\d{2})\.md$")
@@ -147,7 +148,7 @@ def populate_created(journal: Journal) -> list[Path]:
             new_text = f"{head}\n{line}\n{rest}"
         else:
             new_text = f"---\n{line}\n---\n\n{text}"
-        path.write_text(new_text, encoding="utf-8")
+        writes.write_text(path, new_text)
         fixed.append(path)
     return fixed
 
@@ -323,13 +324,12 @@ def new(journal: Journal, title: str, now: dt.datetime,
         "Write the entry here: what problem was solved, what the fix was, and\n"
         "what was found along the way — the failed approaches and the traps the\n"
         "next person would otherwise rediscover.\n")
-    path.write_text(
-        "---\n"
+    writes.write_text(path, "---\n"
         f"title: {title!r}\n"
         f"created: '{now.isoformat(timespec='seconds')}'\n"
         "tags: []\n"
         "---\n\n"
-        + prose, encoding="utf-8")
+        + prose)
     return path
 
 

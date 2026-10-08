@@ -116,8 +116,21 @@ DEFAULTS: dict = {
         "historical": ["CHANGELOG.md"],
     },
     "schemes": {
+        # Every relation the default scheme has is written here, where a
+        # reader of the configuration reference can see it — none is
+        # supplied by the code (the ADR on explicit relations).
         "ADR": {"dir": "record/decisions.d", "output": "docs/decisions",
-                "active": "Active", "render": "index"},
+                "active": "Active", "render": "index",
+                "retires_on": "Superseded", "successor": "superseded_by",
+                "influence": "influenced_by",
+                "references": {
+                    "superseded_by": {
+                        "scheme": "ADR", "many": True, "required": False,
+                        "required_when": {"status": ["Superseded"]},
+                        "forbidden_when": {"status": ["Active"]}},
+                    "influenced_by": {
+                        "scheme": "ADR", "many": True, "required": False},
+                }},
     },
     # Sequences rendered from a relation the schemes already declare
     # (ADR-011 in the consumer record, #171). Empty for a project that
@@ -727,8 +740,15 @@ class Scheme:
     # replacement through `supplanted_by:` says so here, and every check,
     # edge and rendering follows its words. `active` set the precedent long
     # before: which word means in force was already the project's to choose.
-    successor: str = "superseded_by"
-    retires_on: str = "Superseded"
+    # Roles, not declarations (the ADR on explicit relations): `successor`
+    # names a reference the scheme declares, `retires_on` a word its status
+    # vocabulary holds, and both are unset unless luria.yaml sets them.
+    successor: str = ""
+    retires_on: str = ""
+    # The declared reference naming what shaped a document, which the
+    # index renders as "shaped by …" (ADR-012). A role like `successor`:
+    # it names a reference the scheme declares, and is unset unless set.
+    influence: str = ""
     # A second spelling this scheme's documents answer to, rendered from each
     # document's own frontmatter (#219):
     #
@@ -1580,68 +1600,6 @@ def _field_groups(prefix: str, raw: dict) -> tuple[FieldGroup, ...]:
     return tuple(groups)
 
 
-def _checked_converses(prefix: str, refs: tuple, schemes: dict) -> tuple:
-    """Refuse a converse declaration that cannot mean what it says.
-
-    A relation's converse is the relation read backwards: if A `extends` B
-    then B is `extended_by` A. Declaring the pair is what lets the fixer
-    complete one side from the other, and symmetry is simply the case where
-    a relation is its own converse.
-
-    **The converse lives on the scheme whose codes the field holds**, which
-    is the declaring scheme itself only when the relation does not cross one.
-    `SOTA.introduced_by` holds `LIT` codes, so its converse `introduces` is a
-    field on `LIT` holding `SOTA` codes — and until ADR-097 that could
-    not be declared at all, so a crossing relation was sayable from one end
-    and unreachable from the other (#253).
-
-    Four things have to hold, and each of them fails silently otherwise —
-    a pair that never completes looks exactly like a record with nothing
-    missing (DP-15)."""
-    for ref in refs:
-        if not ref.converse:
-            continue
-        where = f"luria.yaml: schemes.{prefix}.references.{ref.field}.converse"
-        # A field naming several schemes has its converse on each of them, by
-        # the same name: one relation, read backwards from wherever its far
-        # end lands (#160).
-        for target in ref.scheme:
-            _checked_converse(where, prefix, ref, target, schemes)
-    return refs
-
-
-def _checked_converse(where: str, prefix: str, ref, target: str,
-                      schemes: dict) -> None:
-    """One target scheme's half of `_checked_converses`."""
-    far = schemes.get(target)
-    by_name = {r.field: r for r in far.references} if far else {}
-    other = by_name.get(ref.converse)
-    if other is None:
-        raise ValueError(
-            f"{where}: {ref.converse!r} is not a reference {target} "
-            f"declares — {ref.field!r} holds {target} codes, so the "
-            f"same relation read backwards is a field on {target}, "
-            f"and it has to exist to be written into "
-            f"(declared: {', '.join(sorted(by_name)) or 'none'})")
-    if prefix not in other.scheme:
-        raise ValueError(
-            f"{where}: {ref.field!r} is on {prefix} and "
-            f"{target}.{ref.converse!r} holds {spelled(other.scheme)} codes "
-            f"— the same relation read backwards points back at {prefix}")
-    if other.converse != ref.field:
-        raise ValueError(
-            f"{where}: {ref.converse!r} does not name {ref.field!r} back "
-            f"— a converse is mutual, and half a pair completes in one "
-            f"direction only "
-            f"(saw: {ref.converse}.converse = {other.converse or 'unset'!r})")
-    for side in (ref, other):
-        if not side.many:
-            raise ValueError(
-                f"{where}: {side.field!r} needs `many = true` — either "
-                f"side of a pair is written into, and several documents "
-                f"can stand in one relation to the same one")
-
-
 def spelled(prefixes) -> str:
     """Schemes as a sentence names them: `LIT`, `LIT or CASE`, `LIT, CASE or
     NOTE` — the words a finding uses for what a reference may hold."""
@@ -2453,6 +2411,8 @@ def load(root: Path | None = None, text: str | None = None,
     root = root or find_root()
     raw = DEFAULTS
     config_file = root / CONFIG_NAME
+    if text is None:
+        text = _STAND_IN.get(Path(root).resolve())
     if text is None and config_file.exists():
         text = config_file.read_text(encoding="utf-8")
     if text is not None:
@@ -2482,7 +2442,9 @@ def load(root: Path | None = None, text: str | None = None,
         code_globs=tuple(raw["code"]["globs"]),
         historical=frozenset(root / p for p in raw["code"]["historical"]),
         schemes=(schemes := _schemes(raw["schemes"], root, scaffolding,
-                                     vocabularies, vocabulary_meta)),
+                                     vocabularies, vocabulary_meta,
+                                     remotes=tuple(str(r).upper() for r in
+                                                   raw.get("remotes") or {}))),
         remotes={
             prefix.upper(): Remote(
                 prefix.upper(),
@@ -2562,82 +2524,35 @@ def _chains(raw: dict, schemes: dict, root: Path) -> dict[str, Chain]:
     Validated here for the reason every other declaration is: a chain over a
     scheme nothing declares, or over a field that is not a reference, renders
     an empty page — and an empty page is indistinguishable from a correct
-    one (DP-15)."""
-    out = {}
-    for name, spec in raw.items():
-        where = f"luria.yaml: chains.{name}"
-        prefix = str(spec.get("scheme", "")).upper()
-        if prefix not in schemes:
-            raise ValueError(f"{where}: scheme {prefix!r} is not declared "
-                             f"(have: {', '.join(sorted(schemes))})")
-        declared = {r.field for r in schemes[prefix].references}
-        raw_facets = spec.get("facet_by", ("status",))
-        facet_by = tuple(str(f) for f in (
-            [raw_facets] if isinstance(raw_facets, str) else raw_facets))
-        known = nameable(schemes[prefix])
-        for field in facet_by:
-            if field not in known:
-                raise ValueError(
-                    f"{where}: `facet_by` names {field!r}, which {prefix} "
-                    f"does not declare, so every step would render it blank "
-                    f"(nameable: {', '.join(sorted(known))})")
-        raw_spine = spec.get("relation", "")
-        spine = tuple(str(f) for f in (
-            [raw_spine] if isinstance(raw_spine, str) else raw_spine))
-        for key, fields in (("relation", spine),
-                            ("sibling", (str(spec.get("sibling", "")),))):
-            for field in fields:
-                if key == "sibling" and not field:
-                    continue
-                if field not in declared:
-                    raise ValueError(
-                        f"{where}: `{key}` names {field!r}, which is not a "
-                        f"reference {prefix} declares — a chain over a field "
-                        f"nothing types walks no edges and renders an empty "
-                        f"page (declared: "
-                        f"{', '.join(sorted(declared)) or 'none'})")
-                # A chain is a sequence within one scheme. Walking a relation
-                # that leaves it used to reach a target the walker had never
-                # loaded and raise `KeyError` mid-render (#272); refusing here
-                # says which key is wrong, and where the assertion belongs.
-                far = next(r.scheme for r in schemes[prefix].references
-                           if r.field == field)
-                if far != (prefix,):
-                    alone = " alone" if prefix in far else ""
-                    raise ValueError(
-                        f"{where}: `{key}` names {field!r}, which points at "
-                        f"{spelled(far)} rather than {prefix}{alone} — a "
-                        f"chain is a sequence "
-                        f"within one scheme, so there is no line to walk "
-                        f"across the boundary. To assert a shared field over "
-                        f"this relation, declare `invariant` on "
-                        f"schemes.{prefix}.references.{field} instead")
-        if not spec.get("output"):
-            raise ValueError(f"{where}: needs an `output` — the page the "
-                             f"sequences render to")
-        invariant = str(spec.get("invariant", ""))
-        if invariant and invariant not in known:
-            raise ValueError(
-                f"{where}: `invariant` names {invariant!r}, which {prefix} "
-                f"does not declare — a chain asserting a shared value in a "
-                f"field nothing holds reports every line and means nothing "
-                f"(nameable: {', '.join(sorted(known))})")
-        out[name] = Chain(name=name, scheme=prefix,
-                          relation=spine,
-                          sibling=str(spec.get("sibling", "")),
-                          output=root / str(spec["output"]),
-                          facet_by=facet_by,
-                          invariant=invariant,
-                          blurb=str(spec.get("blurb", "")).strip(),
-                          title=str(spec.get("title", "")) or name.title())
-    return out
+    one (DP-15). The checks are `consistency.check_chains`."""
+    def listed(value) -> tuple[str, ...]:
+        return tuple(str(f) for f in (
+            [value] if isinstance(value, str) else value))
+
+    specs = {name: {"scheme": str(spec.get("scheme", "")).upper(),
+                    "facet_by": listed(spec.get("facet_by", ("status",))),
+                    "relation": listed(spec.get("relation", "")),
+                    "sibling": str(spec.get("sibling", "")),
+                    "output": spec.get("output"),
+                    "invariant": str(spec.get("invariant", ""))}
+             for name, spec in raw.items()}
+    from . import consistency
+    consistency.check_chains(specs, schemes)
+    return {name: Chain(name=name, scheme=s["scheme"],
+                        relation=s["relation"],
+                        sibling=s["sibling"],
+                        output=root / str(s["output"]),
+                        facet_by=s["facet_by"],
+                        invariant=s["invariant"],
+                        blurb=str(raw[name].get("blurb", "")).strip(),
+                        title=str(raw[name].get("title", "")) or name.title())
+            for name, s in specs.items()}
 
 
 # `status` alone, and only because it has a vocabulary a scheme need not
-# declare: `statuses.vocabulary` falls back to the default five, and
-# `superseded_by` is a rule `contract.built_in` writes for every scheme. Any
-# other field — `tags` included since ADR-098 — is nameable exactly when
-# the scheme declares it.
+# declare: `statuses.vocabulary` falls back to the default five. Any other
+# field — `tags` since ADR-098, the successor since the ADR on explicit
+# relations — is nameable exactly when the scheme declares it.
 BUILT_IN_CONDITION_FIELDS = ("status",)
 
 
@@ -2683,33 +2598,6 @@ def _check_conditions(prefix: str, scheme) -> None:
                 f"`{when.on}` takes, so the condition can never hold and "
                 f"`{field}` is never {key.split('_')[0]} "
                 f"(values: {', '.join(allowed)})")
-
-
-def _check_invariants(prefix: str, scheme, schemes: dict) -> None:
-    """Every `references.<field>.invariant` against both ends of the relation.
-
-    Both ends, because the assertion is symmetric: `invariant = "tags"` says
-    the two documents share a tag, and a far scheme that cannot hold `tags` at
-    all makes every single edge a finding. That is the same failure the chain
-    check refuses — a declaration that reports everything says nothing — and
-    it is easier to make here, where the near scheme holding the field looks
-    like enough."""
-    for ref in scheme.references:
-        if not ref.invariant:
-            continue
-        where = (f"luria.yaml: schemes.{prefix}.references.{ref.field}"
-                 f".invariant")
-        ends = [(prefix, scheme)] + [(t, schemes[t]) for t in ref.scheme
-                                     if t != prefix]
-        for end, target in ends:
-            known = nameable(target)
-            if ref.invariant not in known:
-                raise ValueError(
-                    f"{where}: names {ref.invariant!r}, which {end} does not "
-                    f"declare — a relation asserting a shared value in a "
-                    f"field one end cannot hold reports every edge and means "
-                    f"nothing (nameable on {end}: "
-                    f"{', '.join(sorted(known))})")
 
 
 def _check_derivations(prefix: str, scheme, schemes=None) -> None:
@@ -2919,7 +2807,8 @@ def _conditions(scheme):
 
 def _schemes(raw: dict, root: Path, scaffolding: bool = False,
              vocabularies: dict | None = None,
-             vocabulary_meta: dict | None = None) -> dict[str, Scheme]:
+             vocabulary_meta: dict | None = None,
+             remotes: tuple[str, ...] = ()) -> dict[str, Scheme]:
     """Every declared scheme, with the cross-scheme checks that need them all.
 
     A reference naming a scheme that does not exist is a config error, and it
@@ -2975,8 +2864,9 @@ def _schemes(raw: dict, root: Path, scaffolding: bool = False,
             blurb=str(spec.get("blurb", "")).strip(),
             active=spec.get("active", "Active"),
             axis=axis,
-            successor=str(spec.get("successor", "superseded_by")),
-            retires_on=str(spec.get("retires_on", "Superseded")),
+            successor=str(spec.get("successor", "") or ""),
+            retires_on=str(spec.get("retires_on", "") or ""),
+            influence=str(spec.get("influence", "") or ""),
             render=spec.get("render", "index"),
             output=root / spec["output"] if spec.get("output") else None,
             allocate=spec.get("allocate", "filing"),
@@ -2997,21 +2887,18 @@ def _schemes(raw: dict, root: Path, scaffolding: bool = False,
             uniform_ok=(spec.get("uniform_ok") or None),
             uniform_share=float(spec.get("uniform_share", 1.0)),
         )
+    # Which cross-scheme declarations are wrong is decided by rules
+    # (`luria/consistency.py`); the order they are raised in is this loop's.
+    from . import consistency
+    unknown = consistency.unknown_targets(schemes, remotes)
     for prefix, scheme in schemes.items():
         _check_conditions(prefix, scheme)
         _check_derivations(prefix, scheme, schemes)
-        for ref in scheme.references:
-            for target in ref.scheme:
-                if target not in schemes:
-                    raise ValueError(
-                        f"luria.yaml: schemes.{prefix}.references.{ref.field} "
-                        f"names scheme {target!r}, which is not declared "
-                        f"(have: {', '.join(sorted(schemes))})")
+        if prefix in unknown:
+            raise ValueError(unknown[prefix])
     # After the loop above, so that a converse naming an undeclared scheme is
     # reported as the missing scheme rather than as a missing field on it.
-    for prefix, scheme in schemes.items():
-        _checked_converses(prefix, scheme.references, schemes)
-        _check_invariants(prefix, scheme, schemes)
+    consistency.check_references(schemes, remotes)
     return schemes
 
 
@@ -3056,8 +2943,13 @@ def reset() -> None:
     forget_documents()
 
 
+# Config text standing in for a root's `luria.yaml` while `rooted(root, text)`
+# runs: a migration reads a record through a config it has not written yet.
+_STAND_IN: dict[Path, str] = {}
+
+
 @contextmanager
-def rooted(root: Path):
+def rooted(root: Path, text: str | None = None):
     """Run a block with `root` as the current project, then put it back.
 
     `load(root)` already builds any project's config, but that is not enough
@@ -3069,13 +2961,20 @@ def rooted(root: Path):
     than have callers set the environment variable and hope.
 
     Reentrant by construction: the previous value is captured and restored,
-    including its absence."""
+    including its absence. `text`, when given, is read as the project's
+    config in place of its `luria.yaml` for the length of the block — how
+    `luria upgrade explicit-relations` reads a record through the config it
+    is about to write."""
     before = os.environ.get("LURIA_ROOT")
-    os.environ["LURIA_ROOT"] = str(Path(root).resolve())
+    resolved = Path(root).resolve()
+    os.environ["LURIA_ROOT"] = str(resolved)
+    if text is not None:
+        _STAND_IN[resolved] = text
     reset()
     try:
         yield current()
     finally:
+        _STAND_IN.pop(resolved, None)
         if before is None:
             os.environ.pop("LURIA_ROOT", None)
         else:

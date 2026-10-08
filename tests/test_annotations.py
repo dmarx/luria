@@ -18,7 +18,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-from _config import merged
+from _config import merged, successor
 
 from luria import annotations, config, doc_refs, link_refs, link_targets, lint
 from luria.adr_index import parse_frontmatter
@@ -259,9 +259,10 @@ def test_a_scalar_relation_is_written_as_a_scalar(tmp_path, monkeypatch):
     assert meta(b)["source"] == "LIT-001"
 
 
-def test_the_builtin_successor_is_a_relation_like_any_other(
+def test_the_declared_successor_is_a_relation_like_any_other(
         tmp_path, monkeypatch):
-    root = project(tmp_path, monkeypatch)
+    root = project(tmp_path, monkeypatch,
+                   merged(PAIRED, {"schemes": {"LIT": successor("LIT")}}))
     note(root, 2)
     a = note(root, 1, "Replaced. <!-- ref::superseded_by: LIT-2 -->")
     a.write_text(a.read_text().replace("status: Active",
@@ -274,7 +275,8 @@ def test_a_successor_is_not_written_onto_a_document_in_force(
         tmp_path, monkeypatch):
     """The fixer refuses a write that would leave the document in breach,
     and a document in force naming its replacement is one (#191)."""
-    root = project(tmp_path, monkeypatch)
+    root = project(tmp_path, monkeypatch,
+                   merged(PAIRED, {"schemes": {"LIT": successor("LIT")}}))
     note(root, 2)
     a = note(root, 1, "Replaced. <!-- ref::superseded_by: LIT-2 -->")
     survey = annotations.complete(fix=True)

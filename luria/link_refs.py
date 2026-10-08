@@ -24,6 +24,7 @@ from pathlib import Path
 
 from . import annotations, doc_refs, relations
 from .config import current
+from . import writes
 
 
 def linkify_files(paths: list[Path], fix: bool = False) -> tuple[int, list[Path]]:
@@ -49,7 +50,7 @@ def linkify_files(paths: list[Path], fix: bool = False) -> tuple[int, list[Path]
         total += count
         print(f"{current().rel(path)}: {count} reference(s)")
         if fix:
-            path.write_text(new, encoding="utf-8")
+            writes.write_text(path, new)
             written.append(path)
     return total, written
 
@@ -89,7 +90,7 @@ def fix_anchors(fix: bool = False) -> int:
             continue
         changed += 1
         if fix:
-            path.write_text(fresh, encoding="utf-8")
+            writes.write_text(path, fresh)
     return changed
 
 

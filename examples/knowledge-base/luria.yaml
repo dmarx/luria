@@ -55,6 +55,20 @@ schemes:
         required: true
         closed: false
     axis: tags
+    active: Active
+    retires_on: Superseded
+    successor: superseded_by
+    references:
+      superseded_by:
+        scheme: LIT
+        many: true
+        required: false
+        required_when:
+          status:
+          - Superseded
+        forbidden_when:
+          status:
+          - Active
   SOTA:
     dir: record/practices.d
     output: docs/practices
@@ -63,6 +77,16 @@ schemes:
       source:
         scheme: LIT
         required: true
+      superseded_by:
+        scheme: SOTA
+        many: true
+        required: false
+        required_when:
+          status:
+          - Superseded
+        forbidden_when:
+          status:
+          - Active
     fields:
       status:
         vocabulary: sota-statuses
@@ -79,6 +103,9 @@ schemes:
             - stability
             - systems
     axis: tags
+    active: Active
+    retires_on: Superseded
+    successor: superseded_by
 remotes:
   ARXIV:
     name: arXiv
