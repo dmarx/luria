@@ -113,3 +113,21 @@ Luria's own memory, kept with the tool it ships:
 
 - [Documenting Luria](contributing/documentation.md) — how a page cites
   the record it depends on, and the house rules the lint enforces.
+
+## Essays
+
+- [The Architecture of a Living Corpus](paper/README.md) — a conceptual paper on
+  what makes a body of writing change its mind accountably, with Luria as the
+  motivating example. Its sections: [abstract](paper/00-abstract.md),
+  [introduction](paper/01-introduction.md),
+  [motivating example](paper/02-motivating-example.md),
+  [what it is to live](paper/03-what-it-is-to-live.md),
+  [secondary rules](paper/04-secondary-rules.md),
+  [standing and dependence](paper/05-standing-and-dependence.md),
+  [authority and judgment](paper/06-authority-and-judgment.md),
+  [forgetting](paper/07-forgetting.md),
+  [the record on itself](paper/08-the-record-on-itself.md),
+  [objections](paper/09-objections.md),
+  [related work](paper/10-related-work.md),
+  [conclusion](paper/11-conclusion.md),
+  [references](paper/references.md).
