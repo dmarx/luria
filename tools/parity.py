@@ -215,7 +215,7 @@ def compare(baseline: str, candidate: str, record: Path,
         for rel in sorted(set(old["tree"]) | set(new["tree"])):
             if old["tree"].get(rel) == new["tree"].get(rel):
                 continue
-            if upgrade and rel == "luria.yaml":
+            if upgrade and Path(rel).name == "luria.yaml":
                 continue        # changed by design, and shown above
             a = old["root"] / rel
             b = new["root"] / rel
