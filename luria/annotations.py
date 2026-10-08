@@ -64,7 +64,7 @@ from pathlib import Path
 from . import bibliography, directives, doc_refs, relations
 from .adr_index import Adr, load_scheme
 from .config import EXPLAIN_CITED, TEMP_TAIL, current
-from .contract import (ANY_SCHEME, for_scheme, local_scheme, reference_code,
+from .contract import (for_scheme, local_scheme, reference_code,
                        spelled, target_of)
 from .field_edit import add_to_field
 from . import writes
@@ -253,7 +253,7 @@ def _push_up(doc: Adr, code: str, st: Statement, spec,
     if st.code == code:
         s.bad.append(f"{where}: {said} relates {code} to itself")
         return
-    if spec.reference != ANY_SCHEME and target_of(spec, st.code) is None:
+    if target_of(spec, st.code) is None:
         s.bad.append(f"{where}: {said} — `{st.relation}` holds "
                      f"{spelled(spec)} codes, and {st.code} is not one")
         return

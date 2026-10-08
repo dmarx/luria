@@ -70,7 +70,26 @@ SUNSET = {
                "pin is the version rather than a list of projects because "
                "a list is never finished at the moment you read it.",
     ),
+    "explicit-relations": Upgrade(
+        summary="declare the successor reference and `influenced_by` that "
+                "older versions supplied without a declaration, and the "
+                "roles that point at them",
+        sunset="1.0.0, once nucleation and the anthology have run it. "
+               "Nothing reads the old shape at run time, so a record that "
+               "has not run it fails to load rather than drifting.",
+    ),
 }
+
+
+def pending(name: str, root: Path) -> bool:
+    """Whether upgrade NAME still has something to write at `root`."""
+    if name == "explicit-relations":
+        from . import explicit_relations
+        return explicit_relations.pending(root)
+    if name == "yaml":
+        return (root / TOML_NAME).exists()
+    writes_, lines, _ = _plan(root)
+    return bool(writes_ or lines)
 
 
 def _statuses_yaml() -> str:
@@ -375,6 +394,9 @@ def run(name: str = "", *, dry_run: bool = False, root: str = "") -> None:
                          f"(have: {', '.join(SUNSET) or 'none'})")
     if name == "yaml":
         return _run_yaml(where, dry_run)
+    if name == "explicit-relations":
+        from . import explicit_relations
+        return explicit_relations.run(where, dry_run)
     if (where / TOML_NAME).exists() and not (where / CONFIG_NAME).exists():
         raise SystemExit(
             f"luria upgrade {name}: this record still has a {TOML_NAME}, "

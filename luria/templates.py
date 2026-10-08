@@ -79,8 +79,6 @@ def rows() -> list[str]:
         where = cfg.rel(path)
         obligations = for_scheme(scheme)
         for field in obligations.fields:
-            if field.builtin:
-                continue
             cite = _cite(field.because)
             if field.name not in meta:
                 if obligations.demands(field, meta):

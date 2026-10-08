@@ -38,6 +38,16 @@ schemes:
         scheme: SCENE
         many: true
         required: false
+      superseded_by:
+        scheme: SCENE
+        many: true
+        required: false
+        required_when:
+          status:
+          - Superseded
+        forbidden_when:
+          status:
+          - Active
     fields:
       worlds:
         vocabulary: worlds
@@ -52,5 +62,8 @@ schemes:
         required: true
         closed: false
     axis: tags
+    active: Active
+    retires_on: Superseded
+    successor: superseded_by
 site:
   title: World bible

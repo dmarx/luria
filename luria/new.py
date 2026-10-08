@@ -12,7 +12,8 @@ compute — filename, number, timestamp, `date:` — are computed; every other
 field stays the template's placeholder, because a fragment is authored in a
 markdown-aware editor, not assembled on a command line (ADR-036). A tool
 driving the CLI can still set fields inline (`--title`, `--status`,
-`--summary`, `--tags`, `--influenced_by`) and hand over the prose
+`--summary`, `--tags`, or any field the scheme declares) and hand over the
+prose
 (`--body`); a human never has to.
 
 **The kinds are the config.** Every journal, scheme and fragment directory in
@@ -142,8 +143,7 @@ def declared_fields(scheme) -> tuple[str, ...]:
     document's first read — the scaffold offering a guaranteed violation."""
     from .contract import for_scheme
     c = for_scheme(scheme)
-    return tuple(f.name for f in c.fields
-                 if not f.builtin and c.derivation(f.name) is None)
+    return tuple(f.name for f in c.fields if c.derivation(f.name) is None)
 
 
 def _mint_tail(scheme) -> str:
@@ -207,8 +207,7 @@ def new_scheme_doc(scheme, fields: dict[str, str]) -> Path:
     if body is not None:
         text = replace_body(text, code, body)
     for field, value in fields.items():
-        text = _sub_line(text, field, value,
-                         many=field in plural or field in STANDARD_PLURAL)
+        text = _sub_line(text, field, value, many=field in plural)
     # A prose field the caller did not fill still carries the form's own
     # words — "one-paragraph description of the decision" — which the lint
     # reports as the form's text, not the document's. Drop the value and keep
@@ -395,7 +394,7 @@ def new_entry(kind: str | None, fields: dict[str, str],
                            body=fields.get("body"))
 
 
-UNIVERSAL = ("title", "status", "summary", "tags", "influenced_by", "body")
+UNIVERSAL = ("title", "status", "summary", "tags", "body")
 
 # What each non-scheme kind reads from its flags, as `new_entry` uses them:
 # a journal entry takes a title and prose, a fragment only prose, a
@@ -407,7 +406,7 @@ KIND_FIELDS = {"journal": ("title", "body"), "fragment": ("body", "name"),
 
 def accepted_flags(what: str, target) -> tuple[str, ...]:
     """The flags one kind takes, in the order help lists them. A scheme's
-    are the universal six plus its declared fields, once each — a scheme
+    are the universal five plus its declared fields, once each — a scheme
     declaring `status` and `tags` does not take them twice."""
     if what == "scheme":
         return tuple(dict.fromkeys((*UNIVERSAL, *declared_fields(target))))
@@ -446,15 +445,6 @@ def help_text(kind: str | None = None) -> str:
             "Kinds this record scaffolds (from luria.yaml), and the flags "
             "each takes:\n" + "\n".join(rows) + "\n\n"
             "--draft FILE files what a tool wrote instead of taking flags.\n")
-
-# `influenced_by:` is standard frontmatter for every scheme — the index and
-# the typed-edge module read it as a list of codes (ADR-012) — but it is not
-# a contract field, so the contract cannot say its shape. Named here so the
-# scaffold writes it as the list the readers expect (#301): a tool handing
-# over a draft drawn on a canvas names the documents it was drawn from, and
-# `--influenced_by ADR-231,ADR-245` is that hand-over.
-STANDARD_PLURAL = frozenset({"influenced_by"})
-
 
 # What a drafts file carries that is not a field of the document: the
 # canvas's own bookkeeping (strata-g's exporter writes these beside the
@@ -517,7 +507,7 @@ def _file_drafts(kind: str | None, drafts: list[dict], where: str) -> None:
 
 
 def run(kind: str = None, title: str = None, status: str = None,
-        summary: str = None, tags: str = None, influenced_by: str = None,
+        summary: str = None, tags: str = None,
         body: str = None, name: str = None, draft: str = None,
         **declared) -> None:
     """Scaffold an entry and print its path. KIND defaults to the journal;
@@ -532,7 +522,7 @@ def run(kind: str = None, title: str = None, status: str = None,
     a tool that authored the prose elsewhere hands it over in a draft's
     `body` key instead.
 
-    Beyond the six universal flags, a scheme's own declared fields are
+    Beyond the five universal flags, a scheme's own declared fields are
     accepted by name — `--source LIT-134,LIT-140` where the SOTA scheme
     declares `source` — and written in the shape the contract declares
     (#169). An undeclared flag is refused rather than written, because a key
@@ -552,15 +542,14 @@ def run(kind: str = None, title: str = None, status: str = None,
         print(help_text(kind), end="")
         return
     if draft is not None:
-        if any(v for v in (title, status, summary, tags, influenced_by, name)) or declared:
+        if any(v for v in (title, status, summary, tags, name)) or declared:
             sys.exit("luria new: --draft takes its fields from the file; "
                      "no other field flag applies")
         _file_drafts(kind, _read_drafts(draft), draft)
         return
     fields = {k: v for k, v in
               [("title", title), ("status", status),
-               ("summary", summary), ("tags", tags),
-               ("influenced_by", influenced_by), ("body", body)] if v}
+               ("summary", summary), ("tags", tags), ("body", body)] if v}
     # Every flag is checked against what the kind takes — the list `--help`
     # prints. A scheme's declared fields were always refused when unknown;
     # a flag the kind would simply ignore (`luria new changelog --title`)

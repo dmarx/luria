@@ -79,7 +79,7 @@ def world(tmp_path, monkeypatch, table: dict | None = None,
 def field():
     """The vocabulary field under test — not the tag axis beside it."""
     f, = [f for f in contract.for_scheme(current().schemes["SCENE"]).fields
-          if not f.builtin and f.name != "tags"]
+          if f.name != "tags"]
     return f
 
 
@@ -444,6 +444,13 @@ luria:
       fields:
         status:
           vocabulary: adr-statuses
+      retires_on: Superseded
+      successor: superseded_by
+      references:
+        superseded_by:
+          scheme: ADR
+          many: true
+          required: false
   vocabularies:
     adr-statuses:
       Active:

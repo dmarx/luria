@@ -116,8 +116,21 @@ DEFAULTS: dict = {
         "historical": ["CHANGELOG.md"],
     },
     "schemes": {
+        # Every relation the default scheme has is written here, where a
+        # reader of the configuration reference can see it — none is
+        # supplied by the code (the ADR on explicit relations).
         "ADR": {"dir": "record/decisions.d", "output": "docs/decisions",
-                "active": "Active", "render": "index"},
+                "active": "Active", "render": "index",
+                "retires_on": "Superseded", "successor": "superseded_by",
+                "influence": "influenced_by",
+                "references": {
+                    "superseded_by": {
+                        "scheme": "ADR", "many": True, "required": False,
+                        "required_when": {"status": ["Superseded"]},
+                        "forbidden_when": {"status": ["Active"]}},
+                    "influenced_by": {
+                        "scheme": "ADR", "many": True, "required": False},
+                }},
     },
     # Sequences rendered from a relation the schemes already declare
     # (ADR-011 in the consumer record, #171). Empty for a project that
@@ -727,8 +740,15 @@ class Scheme:
     # replacement through `supplanted_by:` says so here, and every check,
     # edge and rendering follows its words. `active` set the precedent long
     # before: which word means in force was already the project's to choose.
-    successor: str = "superseded_by"
-    retires_on: str = "Superseded"
+    # Roles, not declarations (the ADR on explicit relations): `successor`
+    # names a reference the scheme declares, `retires_on` a word its status
+    # vocabulary holds, and both are unset unless luria.yaml sets them.
+    successor: str = ""
+    retires_on: str = ""
+    # The declared reference naming what shaped a document, which the
+    # index renders as "shaped by …" (ADR-012). A role like `successor`:
+    # it names a reference the scheme declares, and is unset unless set.
+    influence: str = ""
     # A second spelling this scheme's documents answer to, rendered from each
     # document's own frontmatter (#219):
     #
@@ -2391,6 +2411,8 @@ def load(root: Path | None = None, text: str | None = None,
     root = root or find_root()
     raw = DEFAULTS
     config_file = root / CONFIG_NAME
+    if text is None:
+        text = _STAND_IN.get(Path(root).resolve())
     if text is None and config_file.exists():
         text = config_file.read_text(encoding="utf-8")
     if text is not None:
@@ -2420,7 +2442,9 @@ def load(root: Path | None = None, text: str | None = None,
         code_globs=tuple(raw["code"]["globs"]),
         historical=frozenset(root / p for p in raw["code"]["historical"]),
         schemes=(schemes := _schemes(raw["schemes"], root, scaffolding,
-                                     vocabularies, vocabulary_meta)),
+                                     vocabularies, vocabulary_meta,
+                                     remotes=tuple(str(r).upper() for r in
+                                                   raw.get("remotes") or {}))),
         remotes={
             prefix.upper(): Remote(
                 prefix.upper(),
@@ -2526,10 +2550,9 @@ def _chains(raw: dict, schemes: dict, root: Path) -> dict[str, Chain]:
 
 
 # `status` alone, and only because it has a vocabulary a scheme need not
-# declare: `statuses.vocabulary` falls back to the default five, and
-# `superseded_by` is a rule `contract.built_in` writes for every scheme. Any
-# other field — `tags` included since ADR-098 — is nameable exactly when
-# the scheme declares it.
+# declare: `statuses.vocabulary` falls back to the default five. Any other
+# field — `tags` since ADR-098, the successor since the ADR on explicit
+# relations — is nameable exactly when the scheme declares it.
 BUILT_IN_CONDITION_FIELDS = ("status",)
 
 
@@ -2784,7 +2807,8 @@ def _conditions(scheme):
 
 def _schemes(raw: dict, root: Path, scaffolding: bool = False,
              vocabularies: dict | None = None,
-             vocabulary_meta: dict | None = None) -> dict[str, Scheme]:
+             vocabulary_meta: dict | None = None,
+             remotes: tuple[str, ...] = ()) -> dict[str, Scheme]:
     """Every declared scheme, with the cross-scheme checks that need them all.
 
     A reference naming a scheme that does not exist is a config error, and it
@@ -2840,8 +2864,9 @@ def _schemes(raw: dict, root: Path, scaffolding: bool = False,
             blurb=str(spec.get("blurb", "")).strip(),
             active=spec.get("active", "Active"),
             axis=axis,
-            successor=str(spec.get("successor", "superseded_by")),
-            retires_on=str(spec.get("retires_on", "Superseded")),
+            successor=str(spec.get("successor", "") or ""),
+            retires_on=str(spec.get("retires_on", "") or ""),
+            influence=str(spec.get("influence", "") or ""),
             render=spec.get("render", "index"),
             output=root / spec["output"] if spec.get("output") else None,
             allocate=spec.get("allocate", "filing"),
@@ -2865,7 +2890,7 @@ def _schemes(raw: dict, root: Path, scaffolding: bool = False,
     # Which cross-scheme declarations are wrong is decided by rules
     # (`luria/consistency.py`); the order they are raised in is this loop's.
     from . import consistency
-    unknown = consistency.unknown_targets(schemes)
+    unknown = consistency.unknown_targets(schemes, remotes)
     for prefix, scheme in schemes.items():
         _check_conditions(prefix, scheme)
         _check_derivations(prefix, scheme, schemes)
@@ -2873,7 +2898,7 @@ def _schemes(raw: dict, root: Path, scaffolding: bool = False,
             raise ValueError(unknown[prefix])
     # After the loop above, so that a converse naming an undeclared scheme is
     # reported as the missing scheme rather than as a missing field on it.
-    consistency.check_references(schemes)
+    consistency.check_references(schemes, remotes)
     return schemes
 
 
@@ -2918,8 +2943,13 @@ def reset() -> None:
     forget_documents()
 
 
+# Config text standing in for a root's `luria.yaml` while `rooted(root, text)`
+# runs: a migration reads a record through a config it has not written yet.
+_STAND_IN: dict[Path, str] = {}
+
+
 @contextmanager
-def rooted(root: Path):
+def rooted(root: Path, text: str | None = None):
     """Run a block with `root` as the current project, then put it back.
 
     `load(root)` already builds any project's config, but that is not enough
@@ -2931,13 +2961,20 @@ def rooted(root: Path):
     than have callers set the environment variable and hope.
 
     Reentrant by construction: the previous value is captured and restored,
-    including its absence."""
+    including its absence. `text`, when given, is read as the project's
+    config in place of its `luria.yaml` for the length of the block — how
+    `luria upgrade explicit-relations` reads a record through the config it
+    is about to write."""
     before = os.environ.get("LURIA_ROOT")
-    os.environ["LURIA_ROOT"] = str(Path(root).resolve())
+    resolved = Path(root).resolve()
+    os.environ["LURIA_ROOT"] = str(resolved)
+    if text is not None:
+        _STAND_IN[resolved] = text
     reset()
     try:
         yield current()
     finally:
+        _STAND_IN.pop(resolved, None)
         if before is None:
             os.environ.pop("LURIA_ROOT", None)
         else:

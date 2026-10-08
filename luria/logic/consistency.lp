@@ -3,14 +3,16 @@
 % and chains. Each derived atom is one refusal; luria/consistency.py words it
 % and raises the first in the order the loader has always checked them.
 %
-% Facts: scheme/1, ref/2, ref_target/3, ref_converse/3, ref_many/2,
-% ref_invariant/3, nameable/2 (every field a scheme can hold), and per raw
+% Facts: scheme/1, remote/1, ref/2, ref_target/3, ref_converse/3,
+% ref_many/2, ref_invariant/3, nameable/2 (every field a scheme can hold),
+% role_successor/2, role_retires_on/2, role_influence/2, status_word/2, and
+% per raw
 % chain: chain_scheme/2, chain_facet/2, chain_walks/3 (relation or sibling),
 % chain_output/1, chain_invariant/2.
 
 % ── references ──────────────────────────────────────────────────────────
-% A reference may only name a scheme that is declared.
-unknown_target(S, F, T) :- ref_target(S, F, T), not scheme(T).
+% A reference may only name a scheme or a remote that is declared.
+unknown_target(S, F, T) :- ref_target(S, F, T), not scheme(T), not remote(T).
 
 % A converse lives on the scheme the field's codes land in, points back,
 % names this field as its own converse, and both sides take several codes.
@@ -29,6 +31,14 @@ converse_single(S, F, T, T, B) :- pair(S, F, B, T), ref(T, B),
 invariant_unheld(S, F, S) :- ref_invariant(S, F, I), not nameable(S, I).
 invariant_unheld(S, F, T) :- ref_invariant(S, F, I), ref_target(S, F, T),
                              T != S, scheme(T), not nameable(T, I).
+
+% ── roles ───────────────────────────────────────────────────────────────
+% A role points at something declared; it never declares it. The successor
+% role names a reference the scheme declares; the retiring role names a word
+% its status vocabulary holds.
+successor_undeclared(S, F) :- role_successor(S, F), not ref(S, F).
+retires_unknown(S, W) :- role_retires_on(S, W), not status_word(S, W).
+influence_undeclared(S, F) :- role_influence(S, F), not ref(S, F).
 
 % ── chains ──────────────────────────────────────────────────────────────
 chain_unknown(N) :- chain_scheme(N, S), not scheme(S).
@@ -49,6 +59,9 @@ chain_invariant_unheld(N, I) :- chain_invariant(N, I), chain_scheme(N, S),
 #show converse_unrequited/3.
 #show converse_single/5.
 #show invariant_unheld/3.
+#show successor_undeclared/2.
+#show retires_unknown/2.
+#show influence_undeclared/2.
 #show chain_unknown/1.
 #show facet_unheld/2.
 #show walk_undeclared/3.

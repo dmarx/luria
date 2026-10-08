@@ -198,6 +198,19 @@ def _spec_path(ref: str) -> Path:
                      f"{MIGRATIONS_DIR}/ (have: {have})")
 
 
+def _retirable(scheme) -> None:
+    """Refuse, while planning, a tombstone its scheme has no words for: the
+    `retires_on` status and the `successor` reference it is retired with.
+    Writing them anyway would invent a relation nobody declared."""
+    if not (scheme.retires_on and scheme.successor):
+        raise SystemExit(
+            f"luria migrate: strategy=\"supersede\" leaves {scheme.prefix} "
+            f"documents as tombstones, but {scheme.prefix} declares no "
+            f"`retires_on` status and `successor` reference to retire them "
+            f"with — declare both in luria.yaml (`luria upgrade "
+            f"explicit-relations` writes the old defaults)")
+
+
 def _plan_rename(plan: Plan, op: dict) -> None:
     cfg = current()
     old_prefix, new_prefix = op["from"].upper(), op["to"].upper()
@@ -214,6 +227,7 @@ def _plan_rename(plan: Plan, op: dict) -> None:
             raise SystemExit("luria migrate: strategy=\"supersede\" copies "
                              f"into an existing scheme — add {new_prefix!r} "
                              "to luria.yaml first")
+        _retirable(scheme)
         for number, path in docs.items():
             new_code, old_code = target.code(number), scheme.code(number)
             plan.copies.append((path, target.dir / target.filename(number),
@@ -293,6 +307,7 @@ def _plan_move(plan: Plan, op: dict) -> None:
     new_code = f"{target.prefix}-{tail}"
     new_path = target.dir / f"{new_code}.md"
     if op.get("strategy") == "supersede":
+        _retirable(source)
         plan.copies.append((path, new_path, old_code, new_code))
         plan.tombstones.append((path, new_code))
         return
@@ -586,8 +601,13 @@ def apply(plan: Plan) -> tuple[int, int]:
         writes.write_text(new_path, text)
     from . import statuses
     for source, new_code in plan.tombstones:
+        # Retired in its own scheme's words — checked while planning
+        # (`_retirable`), so nothing has moved if the scheme has none.
+        scheme = next(s for s in cfg.schemes.values()
+                      if source.parent.resolve() == s.dir.resolve())
         text = source.read_text(encoding="utf-8")
-        writes.write_text(source, statuses.set_status(text, "Superseded", superseded_by=[new_code]))
+        writes.write_text(source, statuses.set_status(
+            text, scheme.retires_on, superseded_by=[new_code], scheme=scheme))
     for config_file, path, old_key, new_key in plan.section_renames:
         text = config_file.read_text(encoding="utf-8")
         renamed = rename_key_at(text, path, old_key, new_key)

@@ -197,7 +197,9 @@ def test_the_site_properties_names_what_a_decision_influenced():
     where = current().schemes["ADR"].dir / "ADR-035.md"
     inbound = [edges.Edge("DP-010", "influenced_by", "ADR-035", "frontmatter")]
     props, _ = site_page.properties({"status": "Active"}, where, inbound=inbound)
-    assert props["Influenced"].startswith(
+    # An ordinary declared reference now, so its backlink reads the way every
+    # declared reference's does.
+    assert props["Cited as “influenced by” by"].startswith(
         "[[record/principles.d/DP-010|DP-010]] — ")
 
 

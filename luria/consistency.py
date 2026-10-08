@@ -35,11 +35,19 @@ from __future__ import annotations
 from .facts import Fact
 
 
-def _scheme_facts(schemes: dict) -> list[Fact]:
+def _scheme_facts(schemes: dict, remotes=()) -> list[Fact]:
     from .config import nameable
-    out: list[Fact] = []
+    from .statuses import vocabulary
+    out: list[Fact] = [Fact("remote", (r,)) for r in remotes]
     for prefix, scheme in schemes.items():
         out.append(Fact("scheme", (prefix,)))
+        if scheme.successor:
+            out.append(Fact("role_successor", (prefix, scheme.successor)))
+        if scheme.retires_on:
+            out.append(Fact("role_retires_on", (prefix, scheme.retires_on)))
+        if scheme.influence:
+            out.append(Fact("role_influence", (prefix, scheme.influence)))
+        out += [Fact("status_word", (prefix, w)) for w in vocabulary(scheme)]
         out += [Fact("nameable", (prefix, f)) for f in nameable(scheme)]
         for ref in scheme.references:
             out.append(Fact("ref", (prefix, ref.field)))
@@ -79,14 +87,16 @@ def _chain_facts(chains: dict[str, dict]) -> list[Fact]:
 _last: dict = {"schemes": None, "derived": None}
 
 
-def _derived(schemes: dict, chains: dict[str, dict]) -> dict[str, set[tuple]]:
+def _derived(schemes: dict, chains: dict[str, dict],
+             remotes=()) -> dict[str, set[tuple]]:
     from . import logic
     if chains:
         return logic.derive("consistency",
-                            found=_scheme_facts(schemes) + _chain_facts(chains))
+                            found=_scheme_facts(schemes, remotes)
+                            + _chain_facts(chains))
     if _last["schemes"] is not schemes:
         _last.update(schemes=schemes, derived=logic.derive(
-            "consistency", found=_scheme_facts(schemes)))
+            "consistency", found=_scheme_facts(schemes, remotes)))
     return _last["derived"]
 
 
@@ -97,12 +107,12 @@ def _at(seq, item) -> int:
 
 # ── the schemes ───────────────────────────────────────────────────────────
 
-def unknown_targets(schemes: dict) -> dict[str, str]:
+def unknown_targets(schemes: dict, remotes=()) -> dict[str, str]:
     """Per scheme, the refusal for its first reference naming a scheme that
     is not declared. Keyed by scheme, because the loader raises it between
     that scheme's own checks and the next scheme's."""
     found = sorted(
-        _derived(schemes, {}).get("unknown_target", ()),
+        _derived(schemes, {}, remotes).get("unknown_target", ()),
         key=lambda a: (_refs(schemes, a[0]).index(a[1]),
                        _at(_ref(schemes, a[0], a[1]).scheme, a[2])))
     out: dict[str, str] = {}
@@ -122,12 +132,12 @@ def _ref(schemes: dict, prefix: str, field: str):
     return next(r for r in schemes[prefix].references if r.field == field)
 
 
-def check_references(schemes: dict) -> None:
+def check_references(schemes: dict, remotes=()) -> None:
     """Refuse the first converse or relation invariant that cannot mean what
     it says: per scheme in declaration order, its converses before its
     invariants, each reference in order and each scheme it names in order."""
     from .config import nameable, spelled
-    derived = _derived(schemes, {})
+    derived = _derived(schemes, {}, remotes)
     order = list(schemes)
     found: list[tuple[tuple, str]] = []
 
@@ -180,6 +190,29 @@ def check_references(schemes: dict) -> None:
             f"which {end} does not declare — a relation asserting a shared "
             f"value in a field one end cannot hold reports every edge and "
             f"means nothing (nameable on {end}: {', '.join(known)})")))
+    from .statuses import vocabulary
+    for prefix, field in derived.get("successor_undeclared", ()):
+        refs = ", ".join(_refs(schemes, prefix)) or "none"
+        found.append(((order.index(prefix), 2, 0, 0, 0, 0), (
+            f"luria.yaml: schemes.{prefix}.successor: names {field!r}, which "
+            f"{prefix} does not declare under `references:` — the role says "
+            f"which declared reference names a replacement; it does not "
+            f"declare one (declared: {refs}). `luria upgrade "
+            f"explicit-relations` writes the reference older versions "
+            f"supplied")))
+    for prefix, field in derived.get("influence_undeclared", ()):
+        refs = ", ".join(_refs(schemes, prefix)) or "none"
+        found.append(((order.index(prefix), 2, 2, 0, 0, 0), (
+            f"luria.yaml: schemes.{prefix}.influence: names {field!r}, which "
+            f"{prefix} does not declare under `references:` — the role says "
+            f"which declared reference the index renders as \"shaped by\"; "
+            f"it does not declare one (declared: {refs})")))
+    for prefix, word in derived.get("retires_unknown", ()):
+        found.append(((order.index(prefix), 2, 1, 0, 0, 0), (
+            f"luria.yaml: schemes.{prefix}.retires_on: names {word!r}, which "
+            f"{prefix}'s status vocabulary does not hold — the role says "
+            f"which status means replaced; it does not add one (have: "
+            f"{', '.join(vocabulary(schemes[prefix]))})")))
     if found:
         raise ValueError(min(found)[1])
 
