@@ -394,7 +394,10 @@ def describe(contract: Contract) -> list[str]:
                  + ", ".join(f"`{v}`" for v in field.required_when.values))
                 if field.required_when is not None else "optional")
         if field.reference is not None:
-            shown = " or ".join(f"`{t}`" for t in targets(field)) or "`*`"
+            # Every target the declaration names, remotes included: a
+            # record page hiding that a successor may be a paper would
+            # describe a narrower field than the one checked.
+            shown = " or ".join(f"`{t}`" for t in field.reference or ())
             what += (f", one or more {shown} codes" if field.many
                      else f", a {shown} code")
             if not field.required:
