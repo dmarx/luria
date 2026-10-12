@@ -5,6 +5,177 @@ Assembled from `changelog.d/` fragments on a cadence — never hand-edited
 
 <!-- luria-insert-here -->
 
+## 2026-10-12
+
+### Changed
+
+- **Breaking:** configuration is the only source of relation semantics.
+  No relation is supplied by the code:
+  - The successor is an ordinary reference a scheme declares, and
+    `successor`, `retires_on` and the new `influence` are roles that point
+    at declarations. They are unset unless set, and config load refuses
+    one naming an undeclared reference or a status word the vocabulary
+    lacks.
+  - `influenced_by` is read as a relation only where a scheme declares
+    it. The index renders "shaped by" from the reference the `influence`
+    role names.
+  - Run `luria upgrade explicit-relations` once. It writes down what
+    older versions supplied, using the narrowest targets the record's
+    own values support, and refuses rather than guesses.
+- A reference may name declared remotes as targets (`scheme: [LIT, ARXIV]`).
+  A remote code in such a field passes as a citation the remote machinery
+  verifies.
+- `luria new` no longer has an `--influenced_by` flag of its own; a
+  declared reference is a flag like any declared field. Its fallback
+  document puts the placeholder value on the scheme's axis, or nowhere.
+- The site page reads an `influenced_by` backlink as `Cited as
+  “influenced by” by`, like any declared reference.
+
+### Fixed
+
+- `statuses.set_status` replaced only a literal `superseded_by:` block,
+  so a scheme with a renamed successor field got a duplicate key. It reads
+  the scheme's `successor` role now. `luria migrate`'s tombstone and the
+  status repair use the scheme's `retires_on` word instead of a literal
+  `Superseded`.
+- The unique-field finding no longer tells a scheme with no `successor`
+  role to name the survivor in an empty field.
+
+### Fixed
+
+- A document rewritten inside one process is read again even when the
+  rewrite keeps its size and the clock is too coarse to move its mtime.
+  Every write luria makes now goes through `luria/writes.py`, which drops
+  what the parse, listing and number caches hold for that path. Writing a
+  scheme document also bumps a generation that the facts, every solve
+  over them, and the reference scan are keyed on. Before, a fixer that
+  wrote and then read back in the same run (`luria link --fix`, `repair`,
+  `migrate`) could read the old document.
+- luria runs again where git is not installed, as 0.36.0 did. The logic
+  core's HEAD baseline treats a missing git as no repository instead of
+  crashing.
+
+### Added
+
+- CI builds the wheel, installs it into a clean environment and runs
+  `tools/wheel_smoke.py`. The smoke test checks that every
+  `luria/logic/*.lp` ships and loads, and that the installed CLI lints an
+  example with git and without.
+
+### Changed
+
+- `LURIA_TIMINGS` lines give the CPU time of the thread that ran each
+  phase beside its wall-clock time, so waiting for the interpreter under
+  the render pool reads as waiting rather than as cost.
+- The logic core's fixed cost per command is smaller. Rule files are read
+  once per process, a config load runs two consistency solves instead of
+  three, and whether HEAD has moved is read from `stat`s of the git
+  directory instead of a `git rev-parse` per read of the facts.
+
+### Changed
+
+- Which acknowledgement answers for which citation is decided by
+  `luria/logic/acknowledgements.lp`: an `unresolved-ok` for a code naming
+  nothing, an `inactive-ok` for a retired document, otherwise a
+  `mention-ok`. So is which annotations no longer apply, and what a
+  malformed one leaves unacknowledged. The reference-status report and
+  its lint rows are unchanged. Finding citations in prose stays in Python.
+
+### Added
+
+- `LURIA_TIMINGS=1` prints how long each phase of a run took to stderr:
+  the facts read, each logic program solved, and the command as a whole.
+- `tools/parity.py` prints each step's wall-clock time for both builds and
+  their ratio; `tools/config_parity.py` checks that a candidate build refuses
+  a broken `luria.yaml` exactly as the baseline does.
+
+### Changed
+
+- The cross-scheme checks run when `luria.yaml` loads are decided by
+  `luria/logic/consistency.lp`, through `luria/consistency.py`. They cover a
+  reference naming an undeclared scheme, a converse that is missing, points
+  elsewhere, is not mutual or is single-valued, an invariant one end cannot
+  hold, and a chain over a missing scheme, field, facet, output or
+  invariant, or over a relation that leaves its scheme. Every refusal is
+  worded as before and the first is the same one.
+- The logic core builds only the fact families its programs read, each
+  program naming them in a `% facts:` line, and builds them once however
+  many threads ask. `holds` is emitted only for fields an invariant names.
+  The HEAD baseline the converse fixer reads comes through one
+  `git cat-file --batch` rather than a process per file. On the anthology
+  this took `luria index`, `luria reports` and `luria lint` from slower
+  than 0.36.0 to faster.
+
+### Fixed
+
+- A symmetric relation that crosses schemes is read on both of its sides,
+  so `luria link --fix` no longer appends a duplicate edge on every run
+  ([#358](https://github.com/dmarx/luria/issues/358)). The converse decisions are now made by clingo rules, which keep
+  a pair's two sides apart by side rather than by field name.
+
+### Changed
+
+- What `luria link --fix` writes, removes or refuses to touch for a
+  declared converse pair is decided by `luria/logic/converse.lp`. Its
+  findings and edits are otherwise unchanged; the Python that decided them
+  is gone.
+- `luria facts` also prints `head_value(S, F, C, X)`: what each document
+  declared at HEAD in a converse-paired field, the baseline the fixer
+  reads change against.
+
+### Changed
+
+- The invariant check (unbound relations and unbound lines) is decided by
+  clingo rules, `luria/logic/invariants.lp`, over `luria/logic/relations.lp`,
+  which reads each declared relation from both sides. Findings, their order
+  and their wording are unchanged; the Python walks they replace are gone.
+- `luria facts` also prints `holds(C, F, V)`: each frontmatter value as the
+  set member the invariant check compares (stripped, a derived alias read as
+  the code it names).
+- The facts and each program's answer are read once per run while the
+  documents are unchanged, rather than once per question.
+
+### Added
+
+- `luria facts` prints the record as clingo facts: the schema (`scheme`,
+  `ref`, `ref_target`, `ref_converse`, chains), every document (`doc`,
+  `status`, `value`), the codes each reference holds (`ref_value`) and the
+  typed graph (`edge`). Its output is a program clingo reads as it stands,
+  so the record can be queried with rules of your own. It is the first step
+  of moving luria's graph decisions to a logic core (ADR on a logic core in
+  clingo).
+- `clingo` is a dependency.
+
+### Changed
+
+- `luria export` builds its `fields` table from the same rows as the facts,
+  so the two cannot describe a document differently.
+
+### Added
+
+- A reference may name several schemes: `scheme: [LIT, CASE]` accepts a code
+  from any scheme listed, and a finding names the whole union ("is not a LIT
+  or CASE code"). A single string still means one scheme, so existing
+  configs are unchanged. A converse is a field of the same name on every
+  scheme listed; `luria link --fix` completes each one. A chain walks the
+  relation only when the chain's own scheme is its sole target ([#160](https://github.com/dmarx/luria/issues/160)).
+
+### Changed
+
+- `examples/constitution` lets `overrides` name another boundary as well as
+  a practice.
+
+### Removed
+
+- `relations.converse_scheme_of`, which had no callers and could not answer
+  for a field naming several schemes.
+
+### Documentation
+
+- `docs/project-memory.md` describes multi-scheme references under typed
+  relations. The constitution example's README now names its config file
+  correctly (`luria.yaml`, not `luria.toml`).
+
 ## 2026-10-05
 
 ### Fixed
