@@ -11,14 +11,14 @@ summary: >-
   A record may declare named path patterns in Cypher's pattern syntax, such
   as `(a:CLAIM)-[:premise_of]->(i:INF)-[:concludes]->(b:CLAIM)`. Node labels
   are schemes, edge types are reference fields, and an edge is a relation as
-  `held/4` reads it. Patterns are parsed by GraphGlot and lowered by luria
-  to clingo rules over the record's facts, so the logic core stays the one
-  engine. A chain names a pattern in `relation` or `sibling` as it names a
+  `held/4` reads it. luria parses patterns with its own lark grammar for
+  the subset and lowers them to clingo rules over the record's facts, so
+  the logic core stays the one engine. A chain names a pattern in `relation` or `sibling` as it names a
   field. The pattern's end nodes are the step and its named intermediates
   render as "through". The subset is checked against the schema at load and
   is stratified by construction. Rejected: a field list on the scheme,
   clingo rule bodies as queries, a graph engine, grand-cypher over
-  networkx, Raqlet, and a hand-written grammar as the first choice.
+  networkx, Raqlet, and GraphGlot as the parser.
 influenced_by:
 - ADR-106
 - ADR-125
@@ -79,8 +79,10 @@ chains:
 
 ### What a pattern means
 
-- **A node label is a scheme.** Exactly one label per node, and every node
-  carries one, so each document's scheme is known at every position.
+- **A node label is a scheme.** A node carries exactly one label, or none
+  when it refers back to a variable bound earlier in the pattern (`(c)` in
+  `WHERE NOT (c)<-[:challenges]-(:OBJ)`) and inherits that node's scheme.
+  So each document's scheme is known at every position.
 - **An edge type is a reference field** declared on the scheme of the node
   the arrow leaves. `(a:S)-[:f]->(b:T)` holds when `held(S, f, a, b)`
   does. That is the reading every chain and invariant already uses, so a
@@ -97,14 +99,14 @@ chains:
 
 **In:**
 
-- one label per node;
+- one label per node, or a bare reference to a node already bound;
 - edge types with direction, and `|` between field names;
 - variable length on a single edge (`-[:extends*1..]->`, a lower bound of
   at least 1);
 - literal equality on a node's frontmatter (`{status: 'Active'}`);
 - `WHERE NOT` followed by a pattern that is not itself variable-length.
 
-**Out**, refused at load with the construct named:
+**Out**, refused at load:
 
 - `RETURN`, aggregation and ordering;
 - `OPTIONAL MATCH`;
@@ -113,19 +115,24 @@ chains:
 - shortest path;
 - any write clause.
 
-A pattern is written without `MATCH`. luria adds it.
+A pattern is written without `MATCH`. The grammar has no production for
+anything outside the subset, so an out-of-subset pattern fails to parse.
+The refusal names the construct for the keywords and shapes people will
+reach for (`MATCH`, `RETURN`, `OPTIONAL`, an undirected edge). Anything
+else gets the parse position.
 
 ### How patterns are parsed and evaluated
 
-- **Parsing:** [GraphGlot](https://github.com/averdeny/graphglot), a
-  pure-Python parser for GQL and Cypher modelled on sqlglot, produces the
-  AST. luria uses no other part of it.
-- **Lowering:** luria lowers the AST to a clingo program over `held/4`,
-  `doc/2` and `value/4`, one derived predicate per pattern. The logic
-  core stays the one engine ([ADR-127](ADR-127.md)).
-- **Dependency:** GraphGlot is an optional extra, imported only when a
-  config declares `patterns:`. Without it, a config that declares patterns
-  is refused with the install line.
+- **Parsing:** a [lark](https://github.com/lark-parser/lark) grammar for
+  the subset, in `luria/`, parsed LALR. The grammar is the subset's
+  definition: what it accepts is what this decision admits, and widening
+  the subset is a reviewed change to one file.
+- **Lowering:** luria lowers the parse tree to a clingo program over
+  `held/4`, `doc/2` and `value/4`, one derived predicate per pattern. The
+  logic core stays the one engine ([ADR-127](ADR-127.md)).
+- **Dependency:** `lark`, a core dependency. It is pure Python with no
+  dependencies of its own, stable at 1.x, and small enough that an extra
+  with an install-line refusal would cost more than it saves.
 
 ### Checked at load
 
@@ -191,32 +198,41 @@ converse, and is never completed by `luria link --fix`.
   Soufflé-style Datalog over a schema-generated EDB rather than clingo over
   `held/4`, and it covers full Cypher, aggregation included, which is more
   than this needs. The lowering here is small, because the subset is.
-- **A hand-written grammar** for the subset, in a library such as lark.
-  This is viable, and it is the fallback if GraphGlot's API moves faster
-  than luria can follow. As the first choice it means owning a grammar and
-  its error messages for syntax a maintained parser already handles,
-  including the 3,897-scenario openCypher conformance suite it reports
-  passing.
-- **GQL syntax instead of Cypher.** GQL is the ISO standard (39075:2024),
-  and GraphGlot parses both into the same AST. Cypher is the one people
-  know, and its variable-length and negation forms are shorter. Admitting
-  GQL spellings later is a parser switch, not a design change.
+- **[GraphGlot](https://github.com/averdeny/graphglot) as the parser.**
+  It is a pure-Python, sqlglot-style parser for GQL and Cypher, and it
+  parsed every pattern here. But it does no translation to Datalog or SQL,
+  so luria would write the lowering either way. What it would add is a
+  parse tree shaped like a full GQL program, fifteen levels of wrapper
+  above the path, for a lowering that reads only the path. It is pre-1.0
+  with releases days apart, so its shapes would need pinning. And it
+  accepts all of Cypher, so the subset would be enforced by a second pass
+  over a tree that had already said yes. A grammar of luria's own is about
+  fifteen lines, accepts only the subset, and hands the lowering the tree
+  it reads.
+- **GQL syntax instead of Cypher.** GQL is the ISO standard (39075:2024).
+  Cypher is the one people know, and its variable-length (`*1..` against
+  `->{1,}`) and negation forms are shorter. Admitting GQL spellings later
+  is a grammar change, not a design change.
 - **Status quo.** Records that argue through intermediate documents keep
   writing their lines in prose, one paragraph per participant, which is
   the duplication chains were built to end ([#171](https://github.com/dmarx/luria/issues/171)).
 
 ## Consequences
 
-- **A new optional dependency**, `graphglot`, pinned to a minor version
-  because it is pre-1.0 and releases often. It needs Python ≥ 3.11, as
-  luria does, and depends on click, PyYAML and rich. Tests pin the AST
-  shapes the lowering reads, so an upgrade that moves them fails a test
-  rather than a page.
-- **Fired before writing this.** GraphGlot 0.14.3, Cypher dialect, parsed
-  every pattern in this decision, plus the variable-length, property-map
-  and `OPTIONAL MATCH` forms. In its GQL dialect the Cypher spellings of
-  variable length and negation fail, and the GQL spellings (`->{1,}`,
-  `NOT EXISTS { MATCH … }`) parse. The lowering is not written yet.
+- **A new dependency**, `lark`, pure Python with none of its own.
+- **luria owns the grammar and its error messages.** The subset is small
+  on purpose, and the grammar is where that is enforced. A request to
+  widen it is a change to the grammar, the lowering and this decision
+  together.
+- **Fired before writing this.** A scratch grammar of 15 rule lines (lark
+  1.3.1, LALR) parsed every pattern in this decision, plus the
+  variable-length and property-map forms. It refused `OPTIONAL MATCH`, an
+  undirected edge, `MATCH … RETURN` and a trailing `RETURN`. The first try
+  caught a rule this decision had wrong: `WHERE NOT (c)…` refers to a bound
+  node without a label, so "every node carries a label" became "a label,
+  or a reference to a node already bound". Its refusals are lark's
+  "unexpected token at column N", which is why naming the common
+  constructs is a separate step. The lowering is not written yet.
 - **The facts become an interface.** Patterns lower to `held/4`, `doc/2`
   and `value/4`, so changing those predicates changes what patterns mean.
 - **Parity.** Records that declare no pattern are unchanged. Under
