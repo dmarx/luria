@@ -6,6 +6,7 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 
 ## Currently — [October 2026](2026-10.md)
 
+- [13 Oct 02:56 — Chains over path patterns: how the design got there, and what parses Cypher](2026-10.md#chains-over-path-patterns-how-the-design-got-there-and-what-parses-cypher)
 - [8 Oct 04:48 — Explicit relations: what the migration found, and the remote target it needed](2026-10.md#explicit-relations-what-the-migration-found-and-the-remote-target-it-needed)
 - [7 Oct 18:06 — Review fixes: one door for writes, a wheel smoke test, and git as optional](2026-10.md#review-fixes-one-door-for-writes-a-wheel-smoke-test-and-git-as-optional)
 - [7 Oct 15:09 — The two timing follow-ups: a fixed cost, and wall time that was waiting](2026-10.md#the-two-timing-follow-ups-a-fixed-cost-and-wall-time-that-was-waiting)
@@ -27,10 +28,10 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 
 ## All books
 
-146 entries across 3 books, newest first.
+147 entries across 3 books, newest first.
 
 | Book | Entries | First | Last |
 |---|--:|---|---|
-| [2026-10](2026-10.md) | 18 | 2026-10-01 | 2026-10-08 |
+| [2026-10](2026-10.md) | 19 | 2026-10-01 | 2026-10-13 |
 | [2026-09](2026-09.md) | 82 | 2026-09-03 | 2026-09-30 |
 | [2026-08](2026-08.md) | 46 | 2026-08-03 | 2026-08-28 |

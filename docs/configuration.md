@@ -12,11 +12,11 @@ repository.
 
 ## The shape of the file
 
-The tables below are the whole schema. Five of them — `schemes`, `fragments`,
-`journals`, `remotes` and `chains` — are *families*: you name the entries, and
-the name you choose becomes part of the vocabulary. `schemes.RFC` is how a
-project gets RFCs; `journals.incidents` is how it gets a second
-journal. No code path spells `ADR`.
+The tables below are the whole schema. Six of them — `schemes`, `fragments`,
+`journals`, `remotes`, `chains` and `patterns` — are *families*: you name the
+entries, and the name you choose becomes part of the vocabulary.
+`schemes.RFC` is how a project gets RFCs; `journals.incidents` is how it gets
+a second journal. No code path spells `ADR`.
 
 That is worth stating plainly, because this package ships one instantiation of
 its own machinery — decisions, principles, a changelog and a devlog — and it
@@ -43,6 +43,7 @@ it to inherit from.
 | `fragments.<dir>` | many small files assembled into one document | yes, keyed by directory |
 | `journals.X` | dated entries that persist, rendered into books | yes, keyed by name |
 | `chains.X` | a relation walked transitively, rendered as sequences | yes, keyed by name |
+| `patterns.X` | a path between documents no single field holds | yes, keyed by name |
 | `remotes.X` | another project's codes, cited from this one | yes, keyed by prefix |
 | `code` | which source files are scanned for stale references | — |
 | `lint` | which warning classes fail, and which are not reported | — |
@@ -510,6 +511,51 @@ like current (DP-15).
 | `facet_by` | `tuple[str, ...]` | `('status',)` |
 | `blurb` | `str` | *unset* |
 | `invariant` | `str` | *unset* |
+
+## Patterns — `patterns.X`
+
+One entry per path between documents that no single reference holds, in Cypher's pattern syntax. A chain walks one wherever it would walk a field, which is how a line passes through a document of another kind — a claim to the claims it follows from, through the inference that concludes it.
+
+A named path pattern: a relation between documents that no single
+field holds, written in Cypher's pattern syntax (#371).
+
+```yaml
+patterns:
+  follows_from: (b:CLAIM)<-[:concludes]-(i:INF)<-[:premise_of]-(a:CLAIM)
+```
+
+A node's label is a scheme and an edge's type is a reference field
+declared on the node the arrow leaves; the hop holds exactly when the
+relation does, read from either side as a chain reads a field. The
+pattern above relates a claim to the claims it follows from, through the
+inference that concludes it — a step two fields state between them and
+neither states alone.
+
+A chain names a pattern in `relation` or `sibling` wherever it names a
+field. It reads like the field it stands in for: the first node is the
+step, the last node the one it builds on, so `follows_from` nests a
+conclusion under its premises. A named inner node (`i`) is shown as what
+the step went *through*; an anonymous one (`(:INF)`) is matched and not
+shown.
+
+The subset: one label per node (or a bare `(c)` naming a node bound
+earlier), directed typed hops with `|` between fields, variable length on
+one hop (`-[:extends*]->`, `*2..`, `*..3`), literal equality on a node's
+frontmatter (`{status: 'Active'}`), and `WHERE NOT` followed by a fixed
+path. `MATCH`, `RETURN`, `OPTIONAL MATCH`, undirected and named edges,
+shortest paths and writes are refused at load, by name. Every label,
+hop and property is checked against the schemes then too — a pattern
+over a field nothing declares matches nothing, and nothing looks exactly
+like a record with nothing to say (DP-15).
+
+The value is the pattern itself, or a table with `match:` and a `blurb:`
+when the pattern wants a sentence of explanation.
+
+| key | type | default |
+|---|---|---|
+| `name` | `str` | *the table's own name* |
+| `match` | `str` | *required* |
+| `blurb` | `str` | *unset* |
 
 ## Remotes — `remotes.X`
 

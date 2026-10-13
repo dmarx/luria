@@ -352,7 +352,7 @@ patterns:
 
 Labels are schemes and edge types are reference fields, checked when the
 config loads, and the page names what each step went *through*
-([ADR-tmpfdvjo](../record/decisions.d/ADR-tmpfdvjo.md), `examples/argument-map`).
+([ADR-129](../record/decisions.d/ADR-129.md), `examples/argument-map`).
 
 **Tag rules.** A vocabulary says what a value *means*; a group says which of
 them may appear together, because some fields are an axis rather than a pile.

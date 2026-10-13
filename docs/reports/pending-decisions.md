@@ -5,21 +5,22 @@
 
 `Proposed` and `Deferred` both describe an open question. Neither says *since when*, and that is the signal: a decision proposed last week is pending; the same one a year later was either overdue or settled in code and never written back.
 
-**4 document(s) awaiting a decision.**
+**5 document(s) awaiting a decision.**
 
 ## ADRs
 
-3 of the 4.
+4 of the 5.
 
 | Open since | Status | Code | Cited | Unack. | Title |
 |---|---|---|--:|--:|---|
-| 2026-10-07 | Proposed | [ADR-126](../../record/decisions.d/ADR-126.md) | 2 | 2 | A reference may name several schemes |
-| 2026-10-07 | Proposed | [ADR-127](../../record/decisions.d/ADR-127.md) | 2 | 2 | A logic core in clingo, behind a procedural shell |
+| 2026-10-07 | Proposed | [ADR-127](../../record/decisions.d/ADR-127.md) | 9 | 9 | A logic core in clingo, behind a procedural shell |
+| 2026-10-07 | Proposed | [ADR-126](../../record/decisions.d/ADR-126.md) | 6 | 6 | A reference may name several schemes |
 | 2026-10-08 | Proposed | [ADR-128](../../record/decisions.d/ADR-128.md) | 0 | 0 | Configuration is the only source of relation semantics |
+| 2026-10-13 | Proposed | [ADR-129](../../record/decisions.d/ADR-129.md) | 1 | 1 | A chain may walk a named path pattern |
 
 ## DPs
 
-1 of the 4.
+1 of the 5.
 
 | Open since | Status | Code | Cited | Unack. | Title |
 |---|---|---|--:|--:|---|
