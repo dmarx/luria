@@ -25,6 +25,7 @@ that turned out to conflate *committed* with *hand-maintained*.
 | [`knowledge-base/`](knowledge-base/) | a record of *domain* content rather than project meta-documentation: two schemes that cite each other and carry separate statuses, with required fields and a one-primary-category rule |
 | [`world-bible/`](world-bible/) | a story bible: scenes that `follow` several scenes (a plural reference) and belong to world trajectories drawn from a closed vocabulary with a default — a field that is neither a reference, a tag nor a status |
 | [`constitution/`](constitution/) | a record with no code in it at all: an AI assistant's operating instructions decomposed into values, practices and boundaries, where **precedence is a checked reference** (`BOUNDARY.overrides → PRACTICE`) rather than escalating emphasis, and a practice is retired by a boundary from another scheme |
+| [`argument-map/`](argument-map/) | an argument as a record: claims, the inferences drawn between them, and objections — lines of argument walked as **named path patterns** through the inference documents, with an uncontested view that drops challenged steps |
 
 To run one by hand:
 

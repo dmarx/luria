@@ -127,7 +127,10 @@ def shared(docs, field: str) -> set[str]:
 # atoms in the order the report has always printed them.
 
 def _derived() -> logic.Derived:
-    return logic.derive("relations", "invariants")
+    from .pattern_rules import record_program
+    text, families = record_program()
+    return logic.derive("relations", "invariants", extra=text,
+                        families=families)
 
 
 def edges(chain: Chain) -> list[Unbound]:

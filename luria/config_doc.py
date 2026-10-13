@@ -69,7 +69,8 @@ from pathlib import Path
 from . import config as config_mod
 from .adr_index import escape_cell
 from .config import (FAMILIES, Chain, FieldGroup, Fragment, Journal,
-                     PlainField, Reference, Remote, RemoteScheme, RequiredWhen,
+                     NamedPattern, PlainField, Reference, Remote,
+                     RemoteScheme, RequiredWhen,
                      Scheme, Site, TagGroup, Vocabulary, VocabularyTable,
                      current)
 from . import writes
@@ -103,11 +104,11 @@ repository.
 
 ## The shape of the file
 
-The tables below are the whole schema. Five of them — `schemes`, `fragments`,
-`journals`, `remotes` and `chains` — are *families*: you name the entries, and
-the name you choose becomes part of the vocabulary. `schemes.RFC` is how a
-project gets RFCs; `journals.incidents` is how it gets a second
-journal. No code path spells `ADR`.
+The tables below are the whole schema. Six of them — `schemes`, `fragments`,
+`journals`, `remotes`, `chains` and `patterns` — are *families*: you name the
+entries, and the name you choose becomes part of the vocabulary.
+`schemes.RFC` is how a project gets RFCs; `journals.incidents` is how it gets
+a second journal. No code path spells `ADR`.
 
 That is worth stating plainly, because this package ships one instantiation of
 its own machinery — decisions, principles, a changelog and a devlog — and it
@@ -134,6 +135,7 @@ it to inherit from.
 | `fragments.<dir>` | many small files assembled into one document | yes, keyed by directory |
 | `journals.X` | dated entries that persist, rendered into books | yes, keyed by name |
 | `chains.X` | a relation walked transitively, rendered as sequences | yes, keyed by name |
+| `patterns.X` | a path between documents no single field holds | yes, keyed by name |
 | `remotes.X` | another project's codes, cited from this one | yes, keyed by prefix |
 | `code` | which source files are scanned for stale references | — |
 | `lint` | which warning classes fail, and which are not reported | — |
@@ -249,6 +251,12 @@ PROSE: dict[type, tuple[str, str]] = {
      "Where a reference field gives a document its neighbours, a chain "
      "answers the question no single document holds: what line of work is "
      "this a step in?"),
+    NamedPattern: ("Patterns — `patterns.X`",
+     "One entry per path between documents that no single reference holds, "
+     "in Cypher's pattern syntax. A chain walks one wherever it would walk a "
+     "field, which is how a line passes through a document of another "
+     "kind — a claim to the claims it follows from, through the inference "
+     "that concludes it."),
     Remote: ("Remotes — `remotes.X`",
      "One entry per foreign project whose codes this record cites. The `uid` "
      "key is the general case: with a regex and a URL template, a remote need "
@@ -277,7 +285,8 @@ NOT_A_TABLE = ("Config",)
 #: here is appended rather than dropped, so a new nested table lands at the end
 #: of the page instead of nowhere.
 ORDER = [Scheme, Vocabulary, PlainField, RequiredWhen, Reference, TagGroup,
-         FieldGroup, VocabularyTable, Fragment, Journal, Chain, Remote,
+         FieldGroup, VocabularyTable, Fragment, Journal, Chain,
+         NamedPattern, Remote,
          RemoteScheme, Site]
 
 
@@ -317,7 +326,8 @@ SECTIONS: list[tuple[str, type, str]] = sections()
 # whose default is a dict is a free-form mapping and belongs in the table above
 # it, as a row like any other key.
 SECTION_SUBTREES: frozenset[str] = frozenset(
-    {"paths", "lint", "site", "code", "schemes", "chains", "remotes",
+    {"paths", "lint", "site", "code", "schemes", "chains", "patterns",
+     "remotes",
      "journals", "fragments", "vocabularies"})
 
 # Prose for the tables that have no dataclass behind them: scalars at the top
@@ -456,6 +466,7 @@ def fence(text: str, lang: str = "yaml") -> str:
 FROM_TABLE_NAME: dict[type, set[str]] = {
     Scheme: {"prefix"},          # `schemes.ADR` → prefix "ADR"
     Journal: {"name"},           # `journals.devlog` → name "devlog"
+    NamedPattern: {"name"},      # `patterns.follows_from` → its name
     Remote: {"prefix"},          # …but `Remote.name` IS a key, deliberately
     RemoteScheme: {"prefix"},
 }

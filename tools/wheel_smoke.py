@@ -11,6 +11,8 @@ outside the checkout:
 - `luria` is imported from that environment, not from the source tree;
 - every `luria/logic/*.lp` in the source tree is in the wheel, readable
   through `importlib.resources` by `logic.rules`, and not empty;
+- `luria/patterns.lark` is in the wheel: the installed parser reads a path
+  pattern (#371);
 - the installed CLI lints and prints the facts of a copy of an example, once
   with the usual `PATH` and once with git out of reach — 0.36.0 ran without
   git, and a record outside any repository must still read as one.
@@ -40,7 +42,10 @@ from luria import logic
 names = sorted(p.name[:-3] for p in resources.files("luria.logic").iterdir()
                if p.name.endswith(".lp"))
 read = {n: len(logic.rules(n)) for n in names}
-print(json.dumps({"file": luria.__file__, "programs": names, "read": read}))
+from luria.patterns import parse
+hops = len(parse("probe", "(a:LIT)-[:extends*]->(b:LIT)").path.hops)
+print(json.dumps({"file": luria.__file__, "programs": names, "read": read,
+                  "pattern_hops": hops}))
 """
 
 
@@ -67,6 +72,8 @@ def main(argv: list[str] | None = None) -> int:
             problems.append(f"the wheel lacks {', '.join(missing)}.lp")
         if empty := sorted(n for n, size in found["read"].items() if not size):
             problems.append(f"empty in the wheel: {', '.join(empty)}")
+        if found["pattern_hops"] != 1:
+            problems.append("the installed parser misread a path pattern")
         record = Path(tmp) / "record"
         shutil.copytree(EXAMPLE, record)
         bin_dir = Path(args.python).parent

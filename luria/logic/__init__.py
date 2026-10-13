@@ -94,27 +94,35 @@ _memo: dict = {"results": {}}
 _lock = threading.Lock()
 
 
-def derive(*names: str, found: Iterable[Fact] | None = None) -> Derived:
+def derive(*names: str, found: Iterable[Fact] | None = None,
+           extra: str = "", families: frozenset[str] = frozenset()
+           ) -> Derived:
     """Run the named programs over the record's facts (or the facts given).
+
+    `extra` is program text generated from the configuration rather than
+    shipped as a `.lp` file — the lowered `patterns:` — and `families` the
+    fact families it reads beyond the named programs'. It is part of the
+    memo key, so two configurations never share an answer.
 
     Over the record's own facts, only the families the programs read are
     built, and the result is kept until those facts change: `facts()`
     returns the same list object while the documents are unchanged, so that
     identity is the key. Locked, because the render pool asks from several
     threads and one solve serves them all."""
-    label = "solve " + "+".join(names)
+    label = "solve " + "+".join(names) + ("+patterns" if extra else "")
+    sources = [rules(n) for n in names] + ([extra] if extra else [])
     if found is not None:
         with timed(label):
-            return solve([rules(n) for n in names], found)
-    families = set().union(*(needs(n) for n in names))
+            return solve(sources, found)
+    wanted = set(families).union(*(needs(n) for n in names))
+    key = (names, extra)
     with _lock:
-        current_facts = record_facts(families=families)
+        current_facts = record_facts(families=wanted)
         # Each entry holds the facts it was solved against, so the identity
         # test cannot be fooled by a list reused at the same address.
-        held = _memo["results"].get(names)
+        held = _memo["results"].get(key)
         if held is None or held[0] is not current_facts:
             with timed(label):
-                held = (current_facts,
-                        solve([rules(n) for n in names], current_facts))
-            _memo["results"][names] = held
+                held = (current_facts, solve(sources, current_facts))
+            _memo["results"][key] = held
         return held[1]

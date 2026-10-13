@@ -8,7 +8,11 @@
 % role_successor/2, role_retires_on/2, role_influence/2, status_word/2, and
 % per raw
 % chain: chain_scheme/2, chain_facet/2, chain_walks/3 (relation or sibling),
-% chain_output/1, chain_invariant/2.
+% chain_output/1, chain_invariant/2; and per pattern: pattern/1,
+% pat_node/4 (pattern, path, position, label — path 0 is the match, 1.. each
+% WHERE NOT), pat_hop/6 (pattern, path, hop, near position, far position,
+% field), pat_closure/3, pat_prop/4, pat_ends/3 (first and last label),
+% pat_hops/2.
 
 % ── references ──────────────────────────────────────────────────────────
 % A reference may only name a scheme or a remote that is declared.
@@ -44,14 +48,40 @@ influence_undeclared(S, F) :- role_influence(S, F), not ref(S, F).
 chain_unknown(N) :- chain_scheme(N, S), not scheme(S).
 facet_unheld(N, X) :- chain_facet(N, X), chain_scheme(N, S), scheme(S),
                       not nameable(S, X).
-% A chain walks references, and only within its own scheme.
+% A chain walks references or patterns, and only within its own scheme.
 walk_undeclared(N, K, F) :- chain_walks(N, K, F), chain_scheme(N, S),
-                            scheme(S), not ref(S, F).
+                            scheme(S), not ref(S, F), not pattern(F).
 walk_leaves(N, K, F) :- chain_walks(N, K, F), chain_scheme(N, S),
                         ref_target(S, F, T), T != S.
+walk_pattern_ends(N, K, P) :- chain_walks(N, K, P), pattern(P),
+                              chain_scheme(N, S), scheme(S),
+                              not pat_ends(P, S, S).
+walk_pattern_still(N, K, P) :- chain_walks(N, K, P), pat_hops(P, 0).
 output_missing(N) :- chain_scheme(N, S), scheme(S), not chain_output(N).
 chain_invariant_unheld(N, I) :- chain_invariant(N, I), chain_scheme(N, S),
                                 scheme(S), not nameable(S, I).
+
+% ── patterns ────────────────────────────────────────────────────────────
+% Every label a scheme; every hop a reference declared on the node the arrow
+% leaves, able to land on the node it reaches; a closure within one scheme;
+% every property a field the node's scheme can hold; and no pattern named
+% like a reference, so a name a chain walks means one thing.
+pattern_label_unknown(P, W, I) :- pat_node(P, W, I, L), not scheme(L).
+pattern_hop_undeclared(P, W, H) :- pat_hop(P, W, H, Near, _, F),
+                                   pat_node(P, W, Near, S), scheme(S),
+                                   not ref(S, F).
+pattern_hop_misses(P, W, H) :- pat_hop(P, W, H, Near, Far, F),
+                               pat_node(P, W, Near, S), ref(S, F),
+                               pat_node(P, W, Far, T), scheme(T),
+                               not ref_target(S, F, T),
+                               not ref_target(S, F, "*").
+pattern_closure_leaves(P, W, H) :- pat_closure(P, W, H),
+                                   pat_hop(P, W, H, Near, Far, _),
+                                   pat_node(P, W, Near, S),
+                                   pat_node(P, W, Far, T), S != T.
+pattern_prop_unheld(P, W, I, F) :- pat_prop(P, W, I, F), pat_node(P, W, I, S),
+                                   scheme(S), not nameable(S, F).
+pattern_shadows(P, S) :- pattern(P), ref(S, P).
 
 #show unknown_target/3.
 #show converse_missing/3.
@@ -66,5 +96,13 @@ chain_invariant_unheld(N, I) :- chain_invariant(N, I), chain_scheme(N, S),
 #show facet_unheld/2.
 #show walk_undeclared/3.
 #show walk_leaves/3.
+#show walk_pattern_ends/3.
+#show walk_pattern_still/3.
 #show output_missing/1.
+#show pattern_label_unknown/3.
+#show pattern_hop_undeclared/3.
+#show pattern_hop_misses/3.
+#show pattern_closure_leaves/3.
+#show pattern_prop_unheld/4.
+#show pattern_shadows/2.
 #show chain_invariant_unheld/2.

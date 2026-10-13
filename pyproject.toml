@@ -10,7 +10,7 @@ readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
 dependencies = ["PyYAML>=6", "fire>=0.7", "omegaconf>=2.3", "ruamel.yaml>=0.18",
-                "clingo>=5.6"]
+                "clingo>=5.6", "lark>=1.2,<2"]
 keywords = ["adr", "architecture-decision-records", "documentation", "lint",
             "project-memory", "changelog", "devlog"]
 classifiers = [

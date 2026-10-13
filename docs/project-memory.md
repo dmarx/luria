@@ -340,6 +340,20 @@ question no single document holds — *what line of work is this a step in* —
 and renders the sequences on one page. A cycle, or a comparison held on one
 side only, becomes a finding rather than a page that quietly omits it.
 
+Some lines run through documents of another kind: an argument goes claim →
+inference → claim, and no single field says which claim follows from which.
+A **path pattern** names that relation, in Cypher's pattern syntax, and a
+chain walks it wherever it would walk a field:
+
+```yaml
+patterns:
+  follows_from: (b:CLAIM)<-[:concludes]-(i:INF)<-[:premise_of]-(a:CLAIM)
+```
+
+Labels are schemes and edge types are reference fields, checked when the
+config loads, and the page names what each step went *through*
+([ADR-tmpfdvjo](../record/decisions.d/ADR-tmpfdvjo.md), `examples/argument-map`).
+
 **Tag rules.** A vocabulary says what a value *means*; a group says which of
 them may appear together, because some fields are an axis rather than a pile.
 The group is declared under the field it constrains:

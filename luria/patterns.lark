@@ -1,0 +1,29 @@
+// luria/patterns.lark
+// A path pattern: the subset of Cypher's pattern syntax a record may
+// declare (the ADR on chains walking a named path pattern). This grammar
+// IS the subset — widening it is a change to this file, the lowering in
+// `pattern_rules.py` and that decision together. `patterns.py` names the
+// constructs it refuses; a parse failure reaching it unnamed gets a column.
+
+start: path (_WHERE _NOT path)*
+
+path: node (edge node)*
+
+node: "(" [NAME] [":" NAME] [props] ")"
+props: "{" prop ("," prop)* "}"
+prop: NAME ":" (STRING | INT)
+
+// An edge variable is accepted here only so it can be refused by name.
+edge: "-[" [NAME] types [length] "]->"     -> right
+    | "<-[" [NAME] types [length] "]-"     -> left
+types: ":" NAME ("|" NAME)*
+length: "*" [INT] [RANGE [INT]]
+
+_WHERE: /where/i
+_NOT: /not/i
+RANGE: ".."
+NAME: /[A-Za-z_][A-Za-z0-9_]*/
+STRING: /'[^']*'/ | /"[^"]*"/
+%import common.INT
+%import common.WS
+%ignore WS

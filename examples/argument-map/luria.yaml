@@ -1,0 +1,81 @@
+# examples/argument-map/luria.yaml
+#
+# An argument kept as a record: claims, the inferences that draw one claim
+# from others, and objections to either. No single field says which claim
+# follows from which — that takes two, `premise_of` on a claim and
+# `concludes` on an inference — so the lines of argument are walked as
+# named path patterns (#371).
+issue_url: https://github.com/acme/bridge/issues/{n}
+vocabularies:
+  statuses:
+    Active:
+      blurb: held — the record stands behind it
+    Proposed:
+      blurb: put forward and not yet settled
+    Withdrawn:
+      blurb: no longer held; kept so what cited it still resolves
+schemes:
+  CLAIM:
+    dir: record/claims.d
+    output: docs/claims
+    render: index
+    fields:
+      status: {vocabulary: statuses}
+    references:
+      premise_of:
+        scheme: INF
+        many: true
+        required: false
+        converse: premises
+  INF:
+    dir: record/inferences.d
+    output: docs/inferences
+    render: index
+    fields:
+      status: {vocabulary: statuses}
+    references:
+      premises:
+        scheme: CLAIM
+        many: true
+        required: false
+        converse: premise_of
+      concludes:
+        scheme: CLAIM
+        required: false
+  OBJ:
+    dir: record/objections.d
+    output: docs/objections
+    render: index
+    fields:
+      status: {vocabulary: statuses}
+    references:
+      # An objection may challenge a claim or the step drawn from it.
+      challenges:
+        scheme: [CLAIM, INF]
+        many: true
+        required: true
+patterns:
+  # Read like the field it stands in for: the first node is the step, the
+  # last the claim it builds on — so a conclusion nests under its premises.
+  # `i` is named, so the page says which inference each step went through.
+  follows_from: (b:CLAIM)<-[:concludes]-(i:INF)<-[:premise_of]-(a:CLAIM)
+  stands_on:
+    match: >-
+      (b:CLAIM)<-[:concludes]-(i:INF)<-[:premise_of]-(a:CLAIM)
+      WHERE NOT (i)<-[:challenges]-(:OBJ)
+    blurb: A step no objection challenges.
+chains:
+  argument:
+    scheme: CLAIM
+    relation: follows_from
+    output: docs/argument.md
+    title: Lines of argument
+    blurb: Every step, challenged or not.
+  uncontested:
+    scheme: CLAIM
+    relation: stands_on
+    output: docs/uncontested.md
+    title: Uncontested lines
+    blurb: Only the steps no objection challenges.
+site:
+  title: Argument map
