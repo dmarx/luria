@@ -1,6 +1,6 @@
 ---
 status: Proposed
-title: 'A chain may walk a composed relation'
+title: 'A chain may walk a named path pattern'
 version: 1
 tags:
 - record
@@ -8,17 +8,17 @@ tags:
 date: '2026-10-13'
 issue: '#371'
 summary: >-
-  A scheme may declare a composed relation: a name and the reference fields
-  it follows in order, `leads_to: [premise_of, concludes]`, from the scheme
-  through one or more other schemes and back. A chain names it in
-  `relation` or `sibling` as it names a field, so a chain stays a sequence
-  within one scheme while a step passes through another. It is read-only:
-  never written, completed or converse-paired, and every leg must land in
-  exactly one scheme. The page names the document each step passed through
-  and shows where a path stops partway. Rejected: a hop key on the chain, a
-  derived reference field (`derive`/`from:`), writing the relation into
-  frontmatter, walking intermediates as steps, legs over a union of
-  schemes, and a query language in `luria.yaml`.
+  A record may declare named path patterns in Cypher's pattern syntax, such
+  as `(a:CLAIM)-[:premise_of]->(i:INF)-[:concludes]->(b:CLAIM)`. Node labels
+  are schemes, edge types are reference fields, and an edge is a relation as
+  `held/4` reads it. Patterns are parsed by GraphGlot and lowered by luria
+  to clingo rules over the record's facts, so the logic core stays the one
+  engine. A chain names a pattern in `relation` or `sibling` as it names a
+  field. The pattern's end nodes are the step and its named intermediates
+  render as "through". The subset is checked against the schema at load and
+  is stratified by construction. Rejected: a field list on the scheme,
+  clingo rule bodies as queries, a graph engine, grand-cypher over
+  networkx, Raqlet, and a hand-written grammar as the first choice.
 influenced_by:
 - ADR-106
 - ADR-125
@@ -26,55 +26,50 @@ influenced_by:
 - ADR-127
 ---
 
-# ADR-tmpfdvjo: A chain may walk a composed relation
+# ADR-tmpfdvjo: A chain may walk a named path pattern
 
 ## Context
 
 A chain walks reference fields: `relation` names one field or several
 ([#211](https://github.com/dmarx/luria/issues/211)), `sibling` one more, all declared on the chain's own scheme. A chain
-is a sequence within one scheme ([ADR-106](ADR-106.md)), and [ADR-126](ADR-126.md) kept it so when
-references gained unions: a chain walks a relation only if its own scheme
-is the sole target, because skipping the edges that leave would drop steps
-without a finding.
+is a sequence within one scheme ([ADR-106](ADR-106.md)), and [ADR-126](ADR-126.md) kept it so: a chain
+walks a relation only if its own scheme is the sole target, because
+skipping the edges that leave would drop steps without a finding.
 
-That leaves a line the record states and no chain can draw. [ADR-127](ADR-127.md) names
-it: in a downstream record, an argument runs claim → inference → claim. The
-inference is its own document, citing the claims it starts from and the
-claim it concludes, so the step from one claim to the next is real but is
-two edges through another scheme. The chain stops at the inference, and
-the line of argument the record was built to show is never rendered.
-Illustratively:
+That leaves lines the record states and no chain can draw. [ADR-127](ADR-127.md) names
+one: in a downstream record an argument runs claim → inference → claim, and
+the chain stops at the inference. A larger one is on the way. A record
+that develops arguments wants a view that walks from a question, through
+its candidate answers, the objections to them and the replies, to what was
+concluded. Such views are the units a manuscript could later be composed
+from.
 
-```yaml
-schemes:
-  CLAIM:
-    fields:
-      premise_of: {scheme: INF, many: true, converse: premises}
-  INF:
-    fields:
-      premises:   {scheme: CLAIM, many: true, converse: premise_of}
-      concludes:  {scheme: CLAIM}
-```
+[ADR-127](ADR-127.md) left "user-facing queries … and chains over a derived relation" for
+after the logic core. It rejected Cypher as an *engine* ("it needs an
+engine luria would have to ship"), but said its path patterns read well.
+[ADR-125](ADR-125.md) sets the bar for anything in `luria.yaml`: a reader sees the rule in
+the line. A path pattern meets that bar. A clingo rule body does not.
 
-[ADR-127](ADR-127.md) put "chains over a derived relation rather than a field" after the
-logic core, outside its decision. The core is in ([#360](https://github.com/dmarx/luria/issues/360)): `held/4` in
-`luria/logic/relations.lp` reads every declared relation from either side,
-and the joins this needs are one rule over it.
+The questions these views ask are path questions: which documents connect
+by this sequence of typed hops, through what. Path patterns are the
+notation built for that, and the translation from a pattern to Datalog is
+mechanical:
 
-Two words are already taken. A *derived field* is `derive` ([#216](https://github.com/dmarx/luria/issues/216)): a value
-computed from a template, read everywhere as an ordinary field. `paths:` is
-the settings table for directories. So this decision says *composed*.
+- a hop is a join;
+- alternation is a union;
+- variable length is transitive closure;
+- `WHERE NOT` over a pattern is stratified negation.
 
 ## Decision
 
-**A scheme may declare composed relations.** Each is a name and the
-reference fields it follows, in order:
+**A record may declare named path patterns**, and a chain may walk one.
 
 ```yaml
-schemes:
-  CLAIM:
-    composed:
-      leads_to: [premise_of, concludes]
+patterns:
+  leads_to: (a:CLAIM)-[:premise_of]->(i:INF)-[:concludes]->(b:CLAIM)
+  answered: (q:Q)<-[:answers]-(c:CLAIM)
+  unchallenged: (c:CLAIM) WHERE NOT (c)<-[:challenges]-(:OBJ)
+
 chains:
   argument:
     scheme: CLAIM
@@ -82,105 +77,166 @@ chains:
     output: docs/arguments.md
 ```
 
-`A leads_to B` holds when A stands in `premise_of` to some INF document I,
-and I stands in `concludes` to B. Each leg is read through `held/4`, so a
-leg stated only on its converse side counts, as it does for every chain
-today.
+### What a pattern means
 
-- **Declared on the scheme, named once.** A chain names a composed relation
-  in `relation` or `sibling` wherever it names a field, and may mix it with
-  fields in one spine as [#211](https://github.com/dmarx/luria/issues/211) mixes fields. The chain gains no key, and
-  the name is a fact of the scheme that `luria facts` prints:
-  `composed(S, N)` and `composed_leg(S, N, I, F)`.
-- **Every leg lands in exactly one scheme, and the last in the declaring
-  one.** The first field is a reference declared on the scheme. Each later
-  field is declared on the sole target of the field before it. The last
-  field's sole target is the declaring scheme. A leg whose field names a
-  union is refused at load, for [ADR-126](ADR-126.md)'s reason: following only the
-  codes that land in the next leg's scheme would drop edges with no
-  finding. These are new refusals in `consistency.lp`, beside
-  `walk_leaves`.
-- **Read-only.** A composed relation is never written into frontmatter,
-  has no converse, is never completed by `luria link --fix`, and cannot be
-  written by `luria relate`. It restates facts two fields already hold, so
-  it has no source of its own to drift from.
-- **The step says what it passed through.** A spine step from a composed
-  relation renders under its parent as a field step does, and names the
-  intermediate documents that connect the pair: "— through INF-004". With
-  several, all are named, in code order. The page shows the line; the
-  inference is still where the argument is read.
-- **A path that stops partway is shown, not dropped.** An intermediate the
-  first leg reaches and the last leg never leaves (an inference with
-  premises and no conclusion yet) is listed on the chain's page under the
-  step it hangs from, as "open at INF-007". It is not a lint finding,
-  because an inference in progress is a legitimate state, and nothing
-  mechanical can supply its conclusion. Not drawing it would read exactly
-  like a line that ends there ([DP-15](../principles.d/DP-015.md)).
-- **A chain's `invariant` covers composed steps.** It is checked between
-  the two endpoints, as for any edge the chain walks. A composed relation
-  takes no `invariant` of its own here: [ADR-106](ADR-106.md)'s relation-level
-  invariant belongs to a field, and its legs already carry one if they
-  need it.
-- **Derived in the logic core.** A rule in `luria/logic/` derives the
-  composed edges and the intermediates, recursing over leg index so
-  length is not fixed at two. Python reads the derived atoms into the same
-  spine the walk already consumes, so cycles, depth, ordering and facets
-  behave the same whichever kind of step filled them.
+- **A node label is a scheme.** Exactly one label per node, and every node
+  carries one, so each document's scheme is known at every position.
+- **An edge type is a reference field** declared on the scheme of the node
+  the arrow leaves. `(a:S)-[:f]->(b:T)` holds when `held(S, f, a, b)`
+  does. That is the reading every chain and invariant already uses, so a
+  hop stated only on its converse side counts.
+- **`<-[:f]-` reads the same field from the other end.** `(q:Q)<-[:answers]-(c:CLAIM)`
+  holds when `c`'s `answers` names `q`.
+- **The target label filters.** A field that may name several schemes
+  ([ADR-126](ADR-126.md)) is a valid hop if the next node's label is one of its targets.
+  Codes landing in the other targets are not matches, and that is visible
+  in the line. This is not the silent drop [ADR-126](ADR-126.md) refused for chains: the
+  pattern names the scheme it follows.
+
+### The subset
+
+**In:**
+
+- one label per node;
+- edge types with direction, and `|` between field names;
+- variable length on a single edge (`-[:extends*1..]->`, a lower bound of
+  at least 1);
+- literal equality on a node's frontmatter (`{status: 'Active'}`);
+- `WHERE NOT` followed by a pattern that is not itself variable-length.
+
+**Out**, refused at load with the construct named:
+
+- `RETURN`, aggregation and ordering;
+- `OPTIONAL MATCH`;
+- several `MATCH` clauses;
+- undirected edges;
+- shortest path;
+- any write clause.
+
+A pattern is written without `MATCH`. luria adds it.
+
+### How patterns are parsed and evaluated
+
+- **Parsing:** [GraphGlot](https://github.com/averdeny/graphglot), a
+  pure-Python parser for GQL and Cypher modelled on sqlglot, produces the
+  AST. luria uses no other part of it.
+- **Lowering:** luria lowers the AST to a clingo program over `held/4`,
+  `doc/2` and `value/4`, one derived predicate per pattern. The logic
+  core stays the one engine ([ADR-127](ADR-127.md)).
+- **Dependency:** GraphGlot is an optional extra, imported only when a
+  config declares `patterns:`. Without it, a config that declares patterns
+  is refused with the install line.
+
+### Checked at load
+
+- each label is a declared scheme;
+- each edge type is a reference declared on the node it leaves, and the
+  next label is among that field's targets;
+- each property is a field the node's scheme can hold;
+- the construct is in the subset.
+
+These join the refusals in `consistency.lp`.
+
+### Stratified by construction
+
+The subset admits no recursion through negation. `WHERE NOT` takes only
+patterns that are not variable-length, and variable length is positive.
+So every lowered program has one answer set, and the views it feeds are
+deterministic, as [ADR-127](ADR-127.md) requires.
+
+### How a chain uses a pattern
+
+- **The ends are the step.** A chain may name a pattern in `relation` or
+  `sibling`, alone or beside fields in one spine ([#211](https://github.com/dmarx/luria/issues/211)). The pattern's
+  first and last nodes must both be labelled with the chain's scheme. They
+  are the edge the chain walks.
+- **Named intermediates are "through".** A variable bound on an inner node
+  (`i` above) is what the step renders as "— through INF-004". An
+  anonymous inner node (`(:INF)`) is matched and not shown.
+- **A match that stops partway is shown.** A document of the chain's
+  scheme from which at least one hop of the pattern matches, and the whole
+  pattern does not, is listed on the chain's page as "open at" the
+  furthest node reached. An inference with premises and no conclusion yet
+  is a legitimate state, so this is not a lint finding. Not drawing it
+  would read exactly like a line that ends there ([DP-15](../principles.d/DP-015.md)).
+- **A chain's `invariant` is checked between the two ends**, as for any
+  edge it walks.
+
+Read-only throughout: a pattern is never written into frontmatter, has no
+converse, and is never completed by `luria link --fix`.
 
 ## Alternatives considered
 
-- **A hop key on the chain** (`through: INF`, or a leg list under the
-  chain). Smaller, but the composition would be restated in every chain
-  that walks it, and a chain's config would carry a second way to name a
-  relation beside the fields. On the scheme it is one declaration that
-  `luria facts`, and later a report or [ADR-127](ADR-127.md)'s queries, can read without
-  a chain.
-- **A derived reference field**, by extending `derive` and `from:`. That
-  machinery renders a template against one hop to one document
-  (`source[0]`), and its result is an ordinary field everywhere, which a
-  reference would then expose to the contract, converse pairing and the
-  fixer. A composed relation fans out over every intermediate, and the
-  page needs to know which intermediate connected each pair, which a field
-  value loses.
-- **Writing the relation into frontmatter**, kept by the fixer as a
-  materialized `leads_to:`. The same fact stored twice, free to disagree
-  with the two fields it restates, and a fixer writing a claim nobody
-  stated.
-- **Walking intermediates as steps** (rendering the INF documents in the
-  spine). [ADR-106](ADR-106.md) refused far-scheme nodes in a chain. Facets, status
-  vocabularies and invariants are the chain scheme's, and a line that
-  alternates schemes reads as neither.
-- **Legs over a union of schemes**, following only the codes that land in
-  the next leg's scheme. This is the union skip [ADR-126](ADR-126.md) refused, one level
-  down. A record that needs it can declare one composed relation per
-  route; widening this later is additive.
-- **A query language in `luria.yaml`** (a pattern, or ASP rules). [ADR-125](ADR-125.md)
-  keeps configuration readable as the rule in the line. A list of field
-  names is that. A rule body is not, and the `.lp` programs stay luria's
-  implementation.
+- **A field list on the scheme** (`composed: {leads_to: [premise_of,
+  concludes]}`), the first draft of this decision. It is a path pattern
+  with fixed length, no alternation, no variable length and no negation, in
+  a syntax of luria's own that the first need beyond it would have to
+  replace.
+- **clingo rule bodies as queries.** These are the most general and need
+  no parser. They fail [ADR-125](ADR-125.md)'s test of a rule read in the line. They can
+  recurse through negation and lose determinism. And luria cannot check
+  their endpoints at load, or name an intermediate, because it does not
+  know what the rule means.
+- **A graph engine** (an embedded graph database executing Cypher).
+  [ADR-127](ADR-127.md) rejected this for the engine it ships. The decision here takes
+  the syntax and leaves the engine.
+- **[grand-cypher](https://pypi.org/project/grand-cypher/)**, which executes
+  a Cypher subset over networkx graphs. It is a second evaluation engine
+  beside clingo, with results outside the logic core. Negated patterns and
+  `OPTIONAL MATCH` are listed there as unimplemented, and the first is
+  needed now, the second for the outline view.
+- **[Raqlet](https://arxiv.org/abs/2508.03978)**, a research compiler from
+  Cypher and SQL/PGQ to Datalog (CIDR 2026). It is the closest thing to a
+  ready-made translation. No public release was found, it targets
+  Soufflé-style Datalog over a schema-generated EDB rather than clingo over
+  `held/4`, and it covers full Cypher, aggregation included, which is more
+  than this needs. The lowering here is small, because the subset is.
+- **A hand-written grammar** for the subset, in a library such as lark.
+  This is viable, and it is the fallback if GraphGlot's API moves faster
+  than luria can follow. As the first choice it means owning a grammar and
+  its error messages for syntax a maintained parser already handles,
+  including the 3,897-scenario openCypher conformance suite it reports
+  passing.
+- **GQL syntax instead of Cypher.** GQL is the ISO standard (39075:2024),
+  and GraphGlot parses both into the same AST. Cypher is the one people
+  know, and its variable-length and negation forms are shorter. Admitting
+  GQL spellings later is a parser switch, not a design change.
 - **Status quo.** Records that argue through intermediate documents keep
   writing their lines in prose, one paragraph per participant, which is
   the duplication chains were built to end ([#171](https://github.com/dmarx/luria/issues/171)).
 
 ## Consequences
 
-- Records that declare no composed relation are unchanged. Under
+- **A new optional dependency**, `graphglot`, pinned to a minor version
+  because it is pre-1.0 and releases often. It needs Python ≥ 3.11, as
+  luria does, and depends on click, PyYAML and rich. Tests pin the AST
+  shapes the lowering reads, so an upgrade that moves them fails a test
+  rather than a page.
+- **Fired before writing this.** GraphGlot 0.14.3, Cypher dialect, parsed
+  every pattern in this decision, plus the variable-length, property-map
+  and `OPTIONAL MATCH` forms. In its GQL dialect the Cypher spellings of
+  variable length and negation fail, and the GQL spellings (`->{1,}`,
+  `NOT EXISTS { MATCH … }`) parse. The lowering is not written yet.
+- **The facts become an interface.** Patterns lower to `held/4`, `doc/2`
+  and `value/4`, so changing those predicates changes what patterns mean.
+- **Parity.** Records that declare no pattern are unchanged. Under
   [ADR-127](ADR-127.md)'s rule, the change merges only if `luria lint` and `luria index`
   output is byte-identical on luria's own record, every example,
   dmarx/nucleation and dmarx/anthology-of-the-sota.
-- Anything that reads a chain's `relation` as field names must accept a
-  composed name. Today that is the chain loader, `consistency.lp`'s
-  `walk_undeclared`, the chain facts and the page's intro sentence, which
-  should say `` `leads_to:` (premise_of → concludes) ``.
-- A composed relation and a field may not share a name on one scheme. A
-  refusal at load keeps every name a chain uses meaning one thing.
-- The chain page grows two renderings: "through" on a step and "open at"
-  under one. Both need tests against a real record before they are
-  trusted, and an example that declares the shape. `examples/` has none
-  today.
-- The derivation is joins only: no choice rules, one answer set, so the
-  page stays deterministic, as [ADR-127](ADR-127.md) requires.
-- Reports and invariants over composed relations, and a composed relation
-  used outside chains, are not decided here. They become possible because
-  the declaration lives on the scheme, and are left to whichever record
-  needs them first.
+- **Chain code** must accept a pattern name in `relation`. Today that
+  touches the chain loader, `consistency.lp`'s `walk_undeclared` and
+  `walk_leaves`, the chain facts, and the page's intro sentence, which
+  should print the pattern.
+- **One name, one meaning:** a pattern and a reference field may not share
+  a name on a scheme a chain walks.
+- **The chain page grows "through" and "open at".** Both need tests against
+  a real record, and an example that declares the shape. `examples/` has
+  none today.
+- **Not decided here, and made possible by it:**
+  - an outline view that walks a pattern from a root across schemes, which
+    is where `OPTIONAL MATCH` would earn its place;
+  - transcluding document bodies, so views can compose into a manuscript;
+  - patterns rendered as reports, such as `unchallenged` above.
+
+  Each is its own decision. This one keeps named intermediates and partial
+  matches available to them.
