@@ -273,10 +273,10 @@ converse, and is never completed by `luria link --fix`.
 - **Parity.** Records that declare no pattern render the same pages. The
   chain page changes only where a chain walks a pattern, and the chain
   code paths that read a field are unchanged.
-- **The "also extends" note on a step with several parents is still
-  hard-coded.** On a pattern chain it reads wrongly ("also extends" a
-  premise). [#359](https://github.com/dmarx/luria/issues/359) names each extra parent by its relation, and once it
-  merges a pattern's name reads in that place ("also follows from").
+- **A step's other parents are named by the pattern.** [#359](https://github.com/dmarx/luria/issues/359) names each
+  extra parent by the relation that holds it, its label or else its field
+  name. A pattern has no label, so its name reads there: "— through
+  INF-001 — also follows from CLAIM-002".
 - **Fired before trusting it.** `examples/argument-map` declares claims,
   inferences and objections, and two chains over patterns. One walks every
   step through its inference. The other uses `WHERE NOT` to drop a step an

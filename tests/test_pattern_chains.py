@@ -91,7 +91,7 @@ def test_the_page_names_what_each_step_went_through(tmp_path, monkeypatch):
     page = chains.outputs()[root / "docs/arguments.md"]
     assert ("  - [CLAIM-003](../record/claims.d/CLAIM-003.md) — The conclusion "
             "*(Active)* — through [INF-001](../record/inferences.d/INF-001.md)"
-            in page)
+            " — also follows from CLAIM-002\n" in page)
     assert ("walked from `follows_from` "
             "(`(b:CLAIM)<-[:concludes]-(i:INF)<-[:premise_of]-(a:CLAIM)`)"
             in page)
