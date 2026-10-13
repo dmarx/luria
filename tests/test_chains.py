@@ -757,3 +757,56 @@ def test_without_a_declared_invariant_the_page_is_ungrouped(tmp_path,
     page = chains.outputs()[root / "docs/lineage.md"]
     assert "## From The original" in page
     assert "### From" not in page
+
+
+# --- naming a second parent by the relation that holds it ---------------------
+#
+# A step with several parents nests under one and names the rest. The note
+# used to say "also extends" whatever the chain walked, so a chain over
+# `objects_to` or `supersedes` asserted a relation nobody declared.
+
+def _signed(tmp_path, monkeypatch, labels: dict | None = None) -> Path:
+    import yaml as _yaml
+    relations = _yaml.safe_load(SIGNED)
+    for field, label in (labels or {}).items():
+        relations["schemes"]["LIT"]["references"][field]["label"] = label
+    return project(tmp_path, monkeypatch, merged(relations, SIGNED_CHAIN))
+
+
+def _line_of(page: str, code: str) -> str:
+    return next(ln for ln in page.splitlines() if f"[{code}]" in ln)
+
+
+def test_a_second_parent_is_named_by_the_relation_that_holds_it(
+        tmp_path, monkeypatch):
+    root = _signed(tmp_path, monkeypatch)
+    note(root, 1, "Root A")
+    note(root, 9, "Root B")
+    note(root, 3, "Builds on A, corrects B",
+         extends=["LIT-001"], corrects=["LIT-009"])
+    line = _line_of(chains.outputs()[root / "docs/lineage.md"], "LIT-003")
+    assert "also corrects LIT-009" in line, line
+    assert "also extends" not in line, line
+
+
+def test_a_declared_label_names_the_relation(tmp_path, monkeypatch):
+    """`label` is what a view calls a relation (#254); the chain page is a
+    view."""
+    root = _signed(tmp_path, monkeypatch, {"corrects": "Shows wrong"})
+    note(root, 1, "Root A")
+    note(root, 9, "Root B")
+    note(root, 3, "Builds on A, corrects B",
+         extends=["LIT-001"], corrects=["LIT-009"])
+    line = _line_of(chains.outputs()[root / "docs/lineage.md"], "LIT-003")
+    assert "also shows wrong LIT-009" in line, line
+
+
+def test_extra_parents_by_two_relations_are_each_named(tmp_path, monkeypatch):
+    root = _signed(tmp_path, monkeypatch)
+    note(root, 1, "Root A")
+    note(root, 2, "Root B")
+    note(root, 9, "Root C")
+    note(root, 3, "Three parents",
+         extends=["LIT-001", "LIT-002"], corrects=["LIT-009"])
+    line = _line_of(chains.outputs()[root / "docs/lineage.md"], "LIT-003")
+    assert "also extends" in line and "also corrects LIT-009" in line, line
