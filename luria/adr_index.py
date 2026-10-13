@@ -524,7 +524,8 @@ def outputs(nested: bool = True) -> dict[Path, str]:
     pure function of the tree, so they run as parallel units. `pmap` returns
     in input order, which is what keeps the merged dict — and therefore the
     staleness diff — deterministic."""
-    from . import chains, config_doc, journal, record_doc, reports
+    from . import (chains, config_doc, journal, pattern_reports, record_doc,
+                   reports)
     from .parallel import pmap
     cfg = current()
     units = [lambda s=s: _render_scheme(s) for s in cfg.schemes.values()]
@@ -535,6 +536,9 @@ def outputs(nested: bool = True) -> dict[Path, str]:
     # Sequences walked from a relation the schemes declare (#171). Empty for
     # a project that declares no chains, which is every project by default.
     units += [chains.outputs]
+    # A pattern's page of matches (#373). Empty unless a pattern declares an
+    # `output`, so a record without one renders exactly what it did.
+    units += [pattern_reports.outputs]
     # The record description is a projection of *this* config's values, so
     # naming a new scheme rewrites it on the next build.
     units += [record_doc.outputs]
