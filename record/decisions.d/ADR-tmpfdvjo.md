@@ -9,16 +9,17 @@ date: '2026-10-13'
 issue: '#371'
 summary: >-
   A record may declare named path patterns in Cypher's pattern syntax, such
-  as `(a:CLAIM)-[:premise_of]->(i:INF)-[:concludes]->(b:CLAIM)`. Node labels
-  are schemes, edge types are reference fields, and an edge is a relation as
-  `held/4` reads it. luria parses patterns with its own lark grammar for
-  the subset and lowers them to clingo rules over the record's facts, so
-  the logic core stays the one engine. A chain names a pattern in `relation` or `sibling` as it names a
-  field. The pattern's end nodes are the step and its named intermediates
-  render as "through". The subset is checked against the schema at load and
-  is stratified by construction. Rejected: a field list on the scheme,
-  clingo rule bodies as queries, a graph engine, grand-cypher over
-  networkx, Raqlet, and GraphGlot as the parser.
+  as `(b:CLAIM)<-[:concludes]-(i:INF)<-[:premise_of]-(a:CLAIM)`. Node labels
+  are schemes, edge types are reference fields, and a hop holds when the
+  relation does as `held/4` reads it. luria parses patterns with its own
+  lark grammar for the subset and lowers them to clingo rules over the
+  record's facts, so the logic core stays the one engine. A chain names a
+  pattern in `relation` or `sibling` as it names a field: the pattern's two
+  ends are the step, its named inner nodes render as "through", and paths
+  that stop partway are listed as open. The subset is checked against the
+  schemes at load and is stratified by construction. Rejected: a field list
+  on the scheme, clingo rule bodies as queries, a graph engine, grand-cypher
+  over networkx, Raqlet, and GraphGlot as the parser.
 influenced_by:
 - ADR-106
 - ADR-125
@@ -66,29 +67,35 @@ mechanical:
 
 ```yaml
 patterns:
-  leads_to: (a:CLAIM)-[:premise_of]->(i:INF)-[:concludes]->(b:CLAIM)
-  answered: (q:Q)<-[:answers]-(c:CLAIM)
-  unchallenged: (c:CLAIM) WHERE NOT (c)<-[:challenges]-(:OBJ)
+  follows_from: (b:CLAIM)<-[:concludes]-(i:INF)<-[:premise_of]-(a:CLAIM)
+  stands_on:
+    match: >-
+      (b:CLAIM)<-[:concludes]-(i:INF)<-[:premise_of]-(a:CLAIM)
+      WHERE NOT (i)<-[:challenges]-(:OBJ)
+    blurb: A step no objection challenges.
 
 chains:
   argument:
     scheme: CLAIM
-    relation: leads_to
-    output: docs/arguments.md
+    relation: follows_from
+    output: docs/argument.md
 ```
+
+A pattern is the string itself, or a table with `match:` and an optional
+`blurb:`.
 
 ### What a pattern means
 
 - **A node label is a scheme.** A node carries exactly one label, or none
-  when it refers back to a variable bound earlier in the pattern (`(c)` in
-  `WHERE NOT (c)<-[:challenges]-(:OBJ)`) and inherits that node's scheme.
+  when it refers back to a variable bound earlier in the pattern (`(i)` in
+  `WHERE NOT (i)<-[:challenges]-(:OBJ)`) and inherits that node's scheme.
   So each document's scheme is known at every position.
 - **An edge type is a reference field** declared on the scheme of the node
   the arrow leaves. `(a:S)-[:f]->(b:T)` holds when `held(S, f, a, b)`
   does. That is the reading every chain and invariant already uses, so a
   hop stated only on its converse side counts.
-- **`<-[:f]-` reads the same field from the other end.** `(q:Q)<-[:answers]-(c:CLAIM)`
-  holds when `c`'s `answers` names `q`.
+- **`<-[:f]-` reads the same field from the other end.**
+  `(b:CLAIM)<-[:concludes]-(i:INF)` holds when `i`'s `concludes` names `b`.
 - **The target label filters.** A field that may name several schemes
   ([ADR-126](ADR-126.md)) is a valid hop if the next node's label is one of its targets.
   Codes landing in the other targets are not matches, and that is visible
@@ -101,10 +108,11 @@ chains:
 
 - one label per node, or a bare reference to a node already bound;
 - edge types with direction, and `|` between field names;
-- variable length on a single edge (`-[:extends*1..]->`, a lower bound of
-  at least 1);
+- variable length on a single hop, with Cypher's defaults: `*` is `*1..`,
+  `*2` is exactly two, `*..3` is one to three, and the lower bound is at
+  least 1;
 - literal equality on a node's frontmatter (`{status: 'Active'}`);
-- `WHERE NOT` followed by a pattern that is not itself variable-length.
+- `WHERE NOT` followed by a fixed path, as often as needed.
 
 **Out**, refused at load:
 
@@ -112,24 +120,32 @@ chains:
 - `OPTIONAL MATCH`;
 - several `MATCH` clauses;
 - undirected edges;
+- named edges (`[e:extends]`), since a hop is identified by its field;
 - shortest path;
 - any write clause.
 
 A pattern is written without `MATCH`. The grammar has no production for
 anything outside the subset, so an out-of-subset pattern fails to parse.
 The refusal names the construct for the keywords and shapes people will
-reach for (`MATCH`, `RETURN`, `OPTIONAL`, an undirected edge). Anything
-else gets the parse position.
+reach for (`MATCH`, `RETURN`, `OPTIONAL MATCH`, an undirected or untyped
+edge, a second label, a write). Anything else gets the parse position.
 
 ### How patterns are parsed and evaluated
 
 - **Parsing:** a [lark](https://github.com/lark-parser/lark) grammar for
-  the subset, in `luria/`, parsed LALR. The grammar is the subset's
-  definition: what it accepts is what this decision admits, and widening
-  the subset is a reviewed change to one file.
-- **Lowering:** luria lowers the parse tree to a clingo program over
-  `held/4`, `doc/2` and `value/4`, one derived predicate per pattern. The
-  logic core stays the one engine ([ADR-127](ADR-127.md)).
+  the subset, `luria/patterns.lark`, parsed LALR. The grammar is the
+  subset's definition: what it accepts is what this decision admits, and
+  widening the subset is a reviewed change to one file.
+- **Lowering:** `luria/pattern_rules.py` lowers each parse to clingo rules
+  over `held/4`, `doc/2`, `status/2` and `value/4`. The logic core stays the
+  one engine ([ADR-127](ADR-127.md)). The lowered program is generated from the
+  configuration rather than shipped as a `.lp` file, and `logic.derive`
+  takes it as extra program text, memoized like the rest.
+- **What it derives:**
+  - `pattern_edge(P, First, Last)`: a whole match, by its two ends;
+  - `pattern_via(P, First, Last, Var, X)`: a named inner node of that match;
+  - `pattern_open(P, End, X)`: a partial match that cannot be completed, by
+    the end it starts from and the furthest node it reached.
 - **Dependency:** `lark`, a core dependency. It is pure Python with no
   dependencies of its own, stable at 1.x, and small enough that an extra
   with an install-line refusal would cost more than it saves.
@@ -139,35 +155,46 @@ else gets the parse position.
 - each label is a declared scheme;
 - each edge type is a reference declared on the node it leaves, and the
   next label is among that field's targets;
+- a variable-length hop starts and ends on the same scheme, since every
+  step between its ends is held by a document of that kind;
 - each property is a field the node's scheme can hold;
-- the construct is in the subset.
+- no pattern shares its name with a reference field on any scheme, so a
+  name a chain walks means one thing.
 
 These join the refusals in `consistency.lp`.
 
 ### Stratified by construction
 
 The subset admits no recursion through negation. `WHERE NOT` takes only
-patterns that are not variable-length, and variable length is positive.
-So every lowered program has one answer set, and the views it feeds are
-deterministic, as [ADR-127](ADR-127.md) requires.
+fixed paths, and variable length is positive. A closure counts its steps up
+to the bound it needs, saturating at the lower bound when there is no upper
+one, so it terminates on a cycle. So every lowered program has one answer
+set, and the views it feeds are deterministic, as [ADR-127](ADR-127.md) requires.
 
 ### How a chain uses a pattern
 
-- **The ends are the step.** A chain may name a pattern in `relation` or
-  `sibling`, alone or beside fields in one spine ([#211](https://github.com/dmarx/luria/issues/211)). The pattern's
-  first and last nodes must both be labelled with the chain's scheme. They
-  are the edge the chain walks.
+- **The ends are the step, read like a field.** A chain may name a pattern
+  in `relation` or `sibling`, alone or beside fields in one spine ([#211](https://github.com/dmarx/luria/issues/211)).
+  The pattern's first and last nodes must both be labelled with the
+  chain's scheme, and the pattern needs at least one hop. The first node
+  is the step and the last is the one it builds on, as with a field: `A
+  extends B` nests A under B. So `follows_from` above nests a conclusion
+  under its premises.
 - **Named intermediates are "through".** A variable bound on an inner node
   (`i` above) is what the step renders as "— through INF-004". An
   anonymous inner node (`(:INF)`) is matched and not shown.
-- **A match that stops partway is shown.** A document of the chain's
-  scheme from which at least one hop of the pattern matches, and the whole
-  pattern does not, is listed on the chain's page as "open at" the
-  furthest node reached. An inference with premises and no conclusion yet
-  is a legitimate state, so this is not a lint finding. Not drawing it
-  would read exactly like a line that ends there ([DP-15](../principles.d/DP-015.md)).
-- **A chain's `invariant` is checked between the two ends**, as for any
-  edge it walks.
+- **A path that stops partway is listed as open.** A partial match that
+  cannot be completed is listed in an *Open* section at the end of the
+  chain's page, by the step it starts from and where it stops. Partial
+  matches are read from both ends. An inference with premises and no
+  conclusion is visible only walking from the premise, and one with a
+  conclusion and no premises only from the conclusion. A match that `WHERE
+  NOT` removes is excluded, not unfinished, so it is not open. This is not
+  a lint finding: an inference in progress is a legitimate state. Not
+  drawing it would read exactly like a line that ends there ([DP-15](../principles.d/DP-015.md)).
+- **A chain's `invariant` covers pattern steps.** It is checked between the
+  two ends, as for any edge the chain walks.
+- **Cycles through a pattern are the chain's existing cycle finding.**
 
 Read-only throughout: a pattern is never written into frontmatter, has no
 converse, and is never completed by `luria link --fix`.
@@ -206,53 +233,57 @@ converse, and is never completed by `luria link --fix`.
   above the path, for a lowering that reads only the path. It is pre-1.0
   with releases days apart, so its shapes would need pinning. And it
   accepts all of Cypher, so the subset would be enforced by a second pass
-  over a tree that had already said yes. A grammar of luria's own is about
-  fifteen lines, accepts only the subset, and hands the lowering the tree
-  it reads.
+  over a tree that had already said yes. A grammar of luria's own accepts
+  only the subset and hands the lowering the tree it reads.
 - **GQL syntax instead of Cypher.** GQL is the ISO standard (39075:2024).
   Cypher is the one people know, and its variable-length (`*1..` against
   `->{1,}`) and negation forms are shorter. Admitting GQL spellings later
   is a grammar change, not a design change.
+- **Open ends as a lint finding.** Rejected: an unfinished inference is a
+  legitimate state of a record being written, and nothing mechanical can
+  supply its conclusion. CLAUDE.md admits a check to the lint only when the
+  violation is always wrong and mechanically fixable.
 - **Status quo.** Records that argue through intermediate documents keep
   writing their lines in prose, one paragraph per participant, which is
   the duplication chains were built to end ([#171](https://github.com/dmarx/luria/issues/171)).
 
 ## Consequences
 
-- **A new dependency**, `lark`, pure Python with none of its own.
+- **A new dependency**, `lark`, pure Python with none of its own. The
+  wheel carries `luria/patterns.lark`, and `tools/wheel_smoke.py` now
+  parses a pattern through the installed package to prove it.
 - **luria owns the grammar and its error messages.** The subset is small
   on purpose, and the grammar is where that is enforced. A request to
   widen it is a change to the grammar, the lowering and this decision
   together.
-- **Fired before writing this.** A scratch grammar of 15 rule lines (lark
-  1.3.1, LALR) parsed every pattern in this decision, plus the
-  variable-length and property-map forms. It refused `OPTIONAL MATCH`, an
-  undirected edge, `MATCH … RETURN` and a trailing `RETURN`. The first try
-  caught a rule this decision had wrong: `WHERE NOT (c)…` refers to a bound
-  node without a label, so "every node carries a label" became "a label,
-  or a reference to a node already bound". Its refusals are lark's
-  "unexpected token at column N", which is why naming the common
-  constructs is a separate step. The lowering is not written yet.
-- **The facts become an interface.** Patterns lower to `held/4`, `doc/2`
-  and `value/4`, so changing those predicates changes what patterns mean.
-- **Parity.** Records that declare no pattern are unchanged. Under
-  [ADR-127](ADR-127.md)'s rule, the change merges only if `luria lint` and `luria index`
-  output is byte-identical on luria's own record, every example,
-  dmarx/nucleation and dmarx/anthology-of-the-sota.
-- **Chain code** must accept a pattern name in `relation`. Today that
-  touches the chain loader, `consistency.lp`'s `walk_undeclared` and
-  `walk_leaves`, the chain facts, and the page's intro sentence, which
-  should print the pattern.
-- **One name, one meaning:** a pattern and a reference field may not share
-  a name on a scheme a chain walks.
-- **The chain page grows "through" and "open at".** Both need tests against
-  a real record, and an example that declares the shape. `examples/` has
-  none today.
+- **`patterns` is a sixth config family**, replaced whole when declared
+  ([ADR-047](ADR-047.md)), with its own section in the configuration reference.
+  `luria facts` prints `pattern(P)` for each; what a pattern matches is
+  derived, not a fact.
+- **The facts become an interface.** Patterns lower to `held/4`, `doc/2`,
+  `status/2` and `value/4`, so changing those predicates changes what
+  patterns mean. `value/4` facts are built only when some pattern filters
+  on a field other than `status`.
+- **Parity.** Records that declare no pattern render the same pages. The
+  chain page changes only where a chain walks a pattern, and the chain
+  code paths that read a field are unchanged.
+- **The "also extends" note on a step with several parents is still
+  hard-coded.** On a pattern chain it reads wrongly ("also extends" a
+  premise). [#359](https://github.com/dmarx/luria/issues/359) names each extra parent by its relation, and once it
+  merges a pattern's name reads in that place ("also follows from").
+- **Fired before trusting it.** `examples/argument-map` declares claims,
+  inferences and objections, and two chains over patterns. One walks every
+  step through its inference. The other uses `WHERE NOT` to drop a step an
+  objection challenges. Both list an inference with a premise and no
+  conclusion as open. The example lints clean, and `tests/test_examples.py`
+  runs it. Writing the scratch grammar first also corrected a rule this
+  decision had wrong: `WHERE NOT (i)…` refers to a bound node without a
+  label.
 - **Not decided here, and made possible by it:**
   - an outline view that walks a pattern from a root across schemes, which
     is where `OPTIONAL MATCH` would earn its place;
   - transcluding document bodies, so views can compose into a manuscript;
-  - patterns rendered as reports, such as `unchallenged` above.
+  - patterns rendered as reports, such as claims no objection challenges.
 
   Each is its own decision. This one keeps named intermediates and partial
   matches available to them.
