@@ -17,10 +17,14 @@ and the logic core can stay the engine (ADR-127):
   match — non-recursive, so the program stays stratified and has one answer
   set.
 
-**What is shown.** Two predicates, each keyed by the pattern's name:
+**What is shown.** Three predicates, each keyed by the pattern's name:
 
     pattern_edge(P, First, Last)            a whole match, by its two ends
     pattern_via(P, First, Last, Var, X)     a named inner node of that match
+    pattern_match(P, (X, …))                a whole match, as the tuple of its
+                                            named nodes in pattern order —
+                                            what a pattern's own page lists
+                                            (#373), zero hops included
 
 Nothing about partial matches. Whether a path that stops partway is
 unfinished depends on what the record's schema requires, which a pattern
@@ -42,8 +46,20 @@ def program(patterns: dict[str, Pattern]) -> str:
     out = ["% Generated from luria.yaml `patterns:` — see pattern_rules.py."]
     for k, pattern in enumerate(patterns.values()):
         out += _Lowering(f"pat{k}", pattern).rules()
-    out += ["#show pattern_edge/3.", "#show pattern_via/5."]
+    out += ["#show pattern_edge/3.", "#show pattern_via/5.",
+            "#show pattern_match/2."]
     return "\n".join(out) + "\n"
+
+
+def columns(pattern: Pattern) -> list[tuple[str, str]]:
+    """(variable, label) for each named node of the match, first occurrence
+    only, in the order the pattern writes them. Anonymous nodes are matched
+    and not shown; a node named only under `WHERE NOT` never binds."""
+    seen: dict[str, str] = {}
+    for node in pattern.path.nodes:
+        if node.var and node.var not in seen:
+            seen[node.var] = node.label
+    return list(seen.items())
 
 
 def needs_values(patterns: dict[str, Pattern]) -> bool:
@@ -148,6 +164,11 @@ class _Lowering:
             body.append(f"not {self._negation(j, neg)}")
         args = ", ".join(self.main)
         self.lines.append(f"{self.p}_m({args}) :- {', '.join(body)}.")
+        shown = [self.bound[var] for var, _ in columns(self.pattern)]
+        if shown:
+            row = ", ".join(shown) + ("," if len(shown) == 1 else "")
+            self.lines.append(f"pattern_match({self.name}, ({row})) :- "
+                              f"{self.p}_m({args}).")
         if n == 0:
             return self.lines
         first, last = self.main[0], self.main[n]
@@ -216,3 +237,10 @@ def through(name: str) -> dict[tuple[str, str], list[str]]:
         if p == name:
             out.setdefault((first, last), set()).add(code)
     return {k: sorted(v) for k, v in out.items()}
+
+
+def matches(name: str) -> list[tuple[str, ...]]:
+    """Every match of a pattern as the codes of its named nodes, in column
+    order, sorted and without repeats."""
+    return sorted({row for p, row in derived().get("pattern_match", ())
+                   if p == name})

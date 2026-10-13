@@ -11,4 +11,4 @@ premise_of:
 
 The conclusion this record exists to support. [INF-004](../inferences.d/INF-004.md), which would price
 the repair, has premises and no conclusion yet, so it draws no step on
-either page.
+either chain and is listed with the unfinished steps.

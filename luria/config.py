@@ -1996,10 +1996,35 @@ class NamedPattern:
     like a record with nothing to say (DP-15).
 
     The value is the pattern itself, or a table with `match:` and a `blurb:`
-    when the pattern wants a sentence of explanation."""
+    when the pattern wants a sentence of explanation.
+
+    **A page of its matches (#373).** Give the table an `output:` and the
+    pattern renders there: one row per match, one column per named node in
+    the order the pattern writes them, each cell a link to its document. Any
+    pattern in the subset renders — across schemes, a single node with
+    `WHERE NOT`, a closure — which is what a chain cannot show:
+
+        patterns:
+          unopposed:
+            match: >-
+              (c:CLAIM {role: 'thesis'})
+              WHERE NOT (c)<-[:objects_to]-(:CLAIM)
+            output: docs/unopposed.md
+            title: Unopposed theses
+
+    A property map puts `: ` inside the pattern, which YAML reads as a key
+    unless the value is quoted or folded — hence `>-` above.
+
+    A report, never a failure: what a pattern matches needs judgement, so
+    nothing on the page fails the lint. An empty result says "No matches"
+    rather than rendering a table with no rows."""
     name: str
     match: str
     blurb: str = ""
+    # Where the page of matches renders; unset renders none.
+    output: Path | None = None
+    # The page's heading; defaults to the name.
+    title: str = ""
     # The parse, done once at load so a malformed pattern is a config error
     # rather than a page that fails to render.
     _parsed: object = dcfield(default=None, compare=False, repr=False)
@@ -2356,6 +2381,10 @@ class Config:
         # the reader must not edit, in a file the next build overwrites.
         if any(path == c.output for c in self.chains.values()):
             return True
+        # A pattern's page of matches (#373), for the same reason: it lists
+        # retired documents as readily as live ones, by design.
+        if any(path == p.output for p in self.patterns.values()):
+            return True
         for s in self.schemes.values():
             # The index, and a page per value of every field it groups by —
             # the axis's among them, on the same template and in the same
@@ -2541,7 +2570,8 @@ def load(root: Path | None = None, text: str | None = None,
             for name, spec in raw.get("journals", {}).items()
         },
         patterns=(patterns := _patterns(raw.get("patterns") or {},
-                                        schemes)),
+                                        schemes, root,
+                                        root / paths["reports"])),
         chains=_chains(raw.get("chains", {}), schemes, root, patterns),
         stale_days=int(raw.get("stale_days", 90)),
         user_agent=str(raw.get("user_agent")
@@ -2571,30 +2601,71 @@ def nameable(scheme) -> set[str]:
             | set(scheme.requires) | {"status"})
 
 
-def _patterns(raw: dict, schemes: dict) -> dict[str, NamedPattern]:
+def _patterns(raw: dict, schemes: dict, root: Path | None = None,
+              reports: Path | None = None) -> dict[str, NamedPattern]:
     """Every declared pattern, parsed and checked against the schemes.
 
     Parsing refuses what is outside the subset (`patterns.parse`); the
     checks against the schemes — labels, hops, properties — are
-    `consistency.check_patterns`, beside the other cross-scheme refusals."""
+    `consistency.check_patterns`, beside the other cross-scheme refusals.
+    A pattern's page is checked here: it needs a column to show, and a path
+    no other view renders to (#373)."""
     from .patterns import parse
+    from .pattern_rules import columns
+    root = root or Path(".")
     out: dict[str, NamedPattern] = {}
     for name, spec in raw.items():
         name = str(name)
+        where = f"luria.yaml: patterns.{name}: "
         table = spec if isinstance(spec, dict) else {"match": spec}
-        if unknown := set(table) - {"match", "blurb"}:
+        if unknown := set(table) - {"match", "blurb", "output", "title"}:
             raise ValueError(
-                f"luria.yaml: patterns.{name}: {', '.join(sorted(unknown))} "
-                f"is not a key — a pattern is its `match:` and an optional "
-                f"`blurb:`")
+                where + f"{', '.join(sorted(unknown))} is not a key — a "
+                f"pattern is its `match:`, with an optional `blurb:`, and an "
+                f"`output:` and `title:` for a page of its matches")
         source = str(table.get("match") or "")
+        parsed = parse(name, source)
+        output = root / str(table["output"]) if table.get("output") else None
+        title = str(table.get("title", "") or "").strip()
+        if title and output is None:
+            raise ValueError(where + "`title` names a page, and there is no "
+                             "`output` for it to head")
+        if output is not None and not columns(parsed):
+            raise ValueError(where + "names no node, so a page of its matches "
+                             "would have no columns — name the nodes to show, "
+                             "such as `(c:CLAIM)`")
         out[name] = NamedPattern(name=name, match=source.strip(),
                                  blurb=str(table.get("blurb", "")).strip(),
-                                 _parsed=parse(name, source))
+                                 output=output, title=title, _parsed=parsed)
     if out:
         from . import consistency
         consistency.check_patterns(out, schemes)
+        _check_outputs(out, schemes, reports)
     return out
+
+
+def _check_outputs(patterns: dict, schemes: dict, reports: Path | None) -> None:
+    """Refuse a pattern page whose path another view already renders to.
+    Two views at one path means one silently overwrites the other on every
+    build, and whichever wins looks exactly like a correct page (DP-15)."""
+    from . import reports as status_reports
+    taken: dict[Path, str] = {}
+    for prefix, scheme in schemes.items():
+        if scheme.output is not None:
+            taken[scheme.output] = f"where {prefix} renders"
+        if scheme.render == "index":
+            taken[scheme.index_path] = f"where {prefix} renders"
+    if reports is not None:
+        for name in status_reports.NAMES:
+            taken[reports / name] = "where a status report renders"
+    for name, pattern in patterns.items():
+        if pattern.output is None:
+            continue
+        if pattern.output in taken:
+            raise ValueError(
+                f"luria.yaml: patterns.{name}: `output` "
+                f"{pattern.output.name} is already {taken[pattern.output]}")
+        taken[pattern.output] = f"where pattern {name!r} renders"
 
 
 def _chains(raw: dict, schemes: dict, root: Path,
@@ -2618,6 +2689,12 @@ def _chains(raw: dict, schemes: dict, root: Path,
              for name, spec in raw.items()}
     from . import consistency
     consistency.check_chains(specs, schemes, patterns or {})
+    pages = {p.output: p.name for p in (patterns or {}).values() if p.output}
+    for name, s in specs.items():
+        if s["output"] and (owner := pages.get(root / str(s["output"]))):
+            raise ValueError(
+                f"luria.yaml: chains.{name}: `output` {s['output']} is "
+                f"already where pattern {owner!r} renders")
     return {name: Chain(name=name, scheme=s["scheme"],
                         relation=s["relation"],
                         sibling=s["sibling"],

@@ -655,3 +655,14 @@ def test_a_line_of_argument_runs_through_its_inferences(example):
             "[INF-002](../record/inferences.d/INF-002.md)" in argument)
     assert "through [INF-003]" in argument
     assert "INF-003" not in uncontested
+
+
+def test_what_the_record_calls_unfinished_is_a_page(example):
+    """A pattern with an `output` renders its matches (#373): INF-004 has a
+    premise and no conclusion, and is the one row."""
+    root = example("argument-map")
+    page = (root / "docs/unfinished.md").read_text()
+    assert "· 1 match\n" in page
+    assert ("| [INF-004](../record/inferences.d/INF-004.md) — What the repair "
+            "should cost | [CLAIM-005](../record/claims.d/CLAIM-005.md) — The "
+            "bridge should be repaired before winter |") in page
