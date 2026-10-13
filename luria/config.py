@@ -136,6 +136,9 @@ DEFAULTS: dict = {
     # (ADR-011 in the consumer record, #171). Empty for a project that
     # declares no relation worth walking, which is every project today.
     "chains": {},
+    # Named path patterns a chain may walk in place of a field (#371). Empty
+    # for a project whose lines all follow one reference field.
+    "patterns": {},
     # Other projects whose records this one cites, keyed by a short prefix. A
     # reference then composes: `LU-ADR-013` is that remote's decision 13
     # (ADR-016).
@@ -1961,6 +1964,52 @@ def _fragment(spec) -> Fragment:
 
 
 @dataclass(frozen=True)
+class NamedPattern:
+    """A named path pattern: a relation between documents that no single
+    field holds, written in Cypher's pattern syntax (#371).
+
+        patterns:
+          follows_from: (b:CLAIM)<-[:concludes]-(i:INF)<-[:premise_of]-(a:CLAIM)
+
+    A node's label is a scheme and an edge's type is a reference field
+    declared on the node the arrow leaves; the hop holds exactly when the
+    relation does, read from either side as a chain reads a field. The
+    pattern above relates a claim to the claims it follows from, through the
+    inference that concludes it — a step two fields state between them and
+    neither states alone.
+
+    A chain names a pattern in `relation` or `sibling` wherever it names a
+    field. It reads like the field it stands in for: the first node is the
+    step, the last node the one it builds on, so `follows_from` nests a
+    conclusion under its premises. A named inner node (`i`) is shown as what
+    the step went *through*; an anonymous one (`(:INF)`) is matched and not
+    shown.
+
+    The subset: one label per node (or a bare `(c)` naming a node bound
+    earlier), directed typed hops with `|` between fields, variable length on
+    one hop (`-[:extends*]->`, `*2..`, `*..3`), literal equality on a node's
+    frontmatter (`{status: 'Active'}`), and `WHERE NOT` followed by a fixed
+    path. `MATCH`, `RETURN`, `OPTIONAL MATCH`, undirected and named edges,
+    shortest paths and writes are refused at load, by name. Every label,
+    hop and property is checked against the schemes then too — a pattern
+    over a field nothing declares matches nothing, and nothing looks exactly
+    like a record with nothing to say (DP-15).
+
+    The value is the pattern itself, or a table with `match:` and a `blurb:`
+    when the pattern wants a sentence of explanation."""
+    name: str
+    match: str
+    blurb: str = ""
+    # The parse, done once at load so a malformed pattern is a config error
+    # rather than a page that fails to render.
+    _parsed: object = dcfield(default=None, compare=False, repr=False)
+
+    @property
+    def parsed(self):
+        return self._parsed
+
+
+@dataclass(frozen=True)
 class Chain:
     """A relation walked transitively and rendered as sequences (#171).
 
@@ -2145,6 +2194,7 @@ class Config:
     remotes: dict[str, Remote]
     journals: dict[str, Journal]
     chains: dict[str, Chain]
+    patterns: dict[str, NamedPattern]
     stale_days: int
     user_agent: str                     # what every request announces
     fail_on: tuple[str, ...]            # warning classes promoted to failures
@@ -2398,7 +2448,8 @@ class Config:
 
 # The tables whose entries a project names, as opposed to the settings tables
 # whose keys Luria names. The distinction decides the merge rule (ADR-047).
-FAMILIES = ("schemes", "fragments", "journals", "remotes", "chains")
+FAMILIES = ("schemes", "fragments", "journals", "remotes", "chains",
+            "patterns")
 
 
 def load(root: Path | None = None, text: str | None = None,
@@ -2489,7 +2540,9 @@ def load(root: Path | None = None, text: str | None = None,
             )
             for name, spec in raw.get("journals", {}).items()
         },
-        chains=_chains(raw.get("chains", {}), schemes, root),
+        patterns=(patterns := _patterns(raw.get("patterns") or {},
+                                        schemes)),
+        chains=_chains(raw.get("chains", {}), schemes, root, patterns),
         stale_days=int(raw.get("stale_days", 90)),
         user_agent=str(raw.get("user_agent")
                        or DEFAULTS["user_agent"]),
@@ -2518,7 +2571,34 @@ def nameable(scheme) -> set[str]:
             | set(scheme.requires) | {"status"})
 
 
-def _chains(raw: dict, schemes: dict, root: Path) -> dict[str, Chain]:
+def _patterns(raw: dict, schemes: dict) -> dict[str, NamedPattern]:
+    """Every declared pattern, parsed and checked against the schemes.
+
+    Parsing refuses what is outside the subset (`patterns.parse`); the
+    checks against the schemes — labels, hops, properties — are
+    `consistency.check_patterns`, beside the other cross-scheme refusals."""
+    from .patterns import parse
+    out: dict[str, NamedPattern] = {}
+    for name, spec in raw.items():
+        name = str(name)
+        table = spec if isinstance(spec, dict) else {"match": spec}
+        if unknown := set(table) - {"match", "blurb"}:
+            raise ValueError(
+                f"luria.yaml: patterns.{name}: {', '.join(sorted(unknown))} "
+                f"is not a key — a pattern is its `match:` and an optional "
+                f"`blurb:`")
+        source = str(table.get("match") or "")
+        out[name] = NamedPattern(name=name, match=source.strip(),
+                                 blurb=str(table.get("blurb", "")).strip(),
+                                 _parsed=parse(name, source))
+    if out:
+        from . import consistency
+        consistency.check_patterns(out, schemes)
+    return out
+
+
+def _chains(raw: dict, schemes: dict, root: Path,
+            patterns: dict | None = None) -> dict[str, Chain]:
     """Every declared chain, checked against the schemes it walks.
 
     Validated here for the reason every other declaration is: a chain over a
@@ -2537,7 +2617,7 @@ def _chains(raw: dict, schemes: dict, root: Path) -> dict[str, Chain]:
                     "invariant": str(spec.get("invariant", ""))}
              for name, spec in raw.items()}
     from . import consistency
-    consistency.check_chains(specs, schemes)
+    consistency.check_chains(specs, schemes, patterns or {})
     return {name: Chain(name=name, scheme=s["scheme"],
                         relation=s["relation"],
                         sibling=s["sibling"],

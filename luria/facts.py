@@ -23,6 +23,8 @@ position, an integer), so a code like `LIT-001` needs no mangling:
     ref_label(S, F, L).           …what a view calls it
     chain(N, S). chain_relation(N, F, I). chain_sibling(N, F).
     chain_invariant(N, I).
+    pattern(P).                   a named path pattern (`patterns:`); what it
+                                  matches is derived, not a fact
 
     doc(C, S).                    every document, numbered or temporary
     status(C, W).                 its status word, without the note
@@ -164,6 +166,8 @@ def schema_facts(cfg=None) -> Iterator[Fact]:
             yield Fact("chain_sibling", (name, chain.sibling))
         if chain.invariant:
             yield Fact("chain_invariant", (name, chain.invariant))
+    for name in cfg.patterns:
+        yield Fact("pattern", (name,))
 
 
 def _invariant_fields(cfg) -> set[str]:
