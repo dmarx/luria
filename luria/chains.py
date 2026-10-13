@@ -48,10 +48,8 @@ came first is not recoverable from the data.
 name a declared path pattern, which relates two documents of this scheme
 through documents of another — a claim to the claims it follows from,
 through the inference that concludes it. Its two ends are the edge, and the
-walk below cannot tell it from a field. Two things only a pattern has reach
-the page: the named inner nodes a step went *through*, and the paths that
-stop partway, listed as *open* — an absent step reads exactly like a line
-that ends there (DP-15).
+walk below cannot tell it from a field. One thing only a pattern has reaches
+the page: the named inner nodes a step went *through*.
 """
 
 from __future__ import annotations
@@ -146,13 +144,6 @@ def _through(chain) -> dict[tuple[str, str], list[str]]:
         for pair, codes in pattern_rules.through(name).items():
             out.setdefault(pair, set()).update(codes)
     return {pair: sorted(codes) for pair, codes in out.items()}
-
-
-def _open(chain) -> list[tuple[str, str]]:
-    """(end, where it stops) for every path a walked pattern starts and
-    cannot finish."""
-    return sorted({hit for name in _patterns(chain)
-                   for hit in pattern_rules.open_ends(name)})
 
 
 def _components(codes: list[str], neighbours: dict[str, set[str]]
@@ -324,8 +315,8 @@ def _reaches(start: str, spine: dict[str, list[str]]) -> set[str]:
 
 
 def _elsewhere(codes) -> dict[str, Adr]:
-    """Documents of any scheme, by code — what a step went through, or where
-    a path stops, which need not be in the chain's own scheme."""
+    """Documents of any scheme, by code — what a step went through, which
+    need not be in the chain's own scheme."""
     out: dict[str, Adr] = {}
     for prefix in {local_scheme(c) for c in codes} - {None}:
         out.update((d.code, d) for d in load_scheme(current().schemes[prefix]))
@@ -450,28 +441,10 @@ def _line_block(chain, line: Line, heading: str,
     return out
 
 
-def _open_block(chain, opens: list[tuple[str, str]],
-                elsewhere: dict[str, Adr]) -> list[str]:
-    """Paths a walked pattern starts and cannot finish, last on the page."""
-    if not opens:
-        return []
-    out = ["## Open", "",
-           "Paths that stop partway: each starts at a step and reaches a "
-           "document the rest of the pattern does not yet leave.", ""]
-    for end, at in opens:
-        doc = elsewhere.get(end)
-        title = f" — {doc.title}" if doc else ""
-        out.append(f"- {_cite(end, elsewhere, chain)}{title} — open at "
-                   f"{_cite(at, elsewhere, chain)}")
-    return out + [""]
-
-
 def _render(chain, lines: list[Line]) -> str:
-    through, opens = _through(chain), _open(chain)
-    elsewhere = (_elsewhere({c for v in through.values() for c in v}
-                            | {c for pair in opens for c in pair})
-                 if through or opens else {})
-    tail = _open_block(chain, opens, elsewhere)
+    through = _through(chain)
+    elsewhere = (_elsewhere({c for v in through.values() for c in v})
+                 if through else {})
     count = f"{len(lines)} line" + ("" if len(lines) == 1 else "s")
     out = [MARKER, "", f"# {chain.title}", "",
            f"{count}, walked from {_spine(chain)} on {chain.scheme} "
@@ -480,7 +453,7 @@ def _render(chain, lines: list[Line]) -> str:
     if not chain.invariant:
         for line in lines:
             out += _line_block(chain, line, "##", through, elsewhere)
-        return "\n".join(out + tail).rstrip() + "\n"
+        return "\n".join(out).rstrip() + "\n"
 
     # Grouping is opt-in through the same key that opts into the check, so a
     # record that declares no invariant gets exactly the page it had.
@@ -491,7 +464,7 @@ def _render(chain, lines: list[Line]) -> str:
         out.append("")
         for line in group:
             out += _line_block(chain, line, "###", through, elsewhere)
-    return "\n".join(out + tail).rstrip() + "\n"
+    return "\n".join(out).rstrip() + "\n"
 
 
 def outputs() -> dict:

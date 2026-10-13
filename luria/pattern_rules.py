@@ -17,20 +17,15 @@ and the logic core can stay the engine (ADR-127):
   match — non-recursive, so the program stays stratified and has one answer
   set.
 
-**What is shown.** Three predicates, each keyed by the pattern's name:
+**What is shown.** Two predicates, each keyed by the pattern's name:
 
     pattern_edge(P, First, Last)            a whole match, by its two ends
     pattern_via(P, First, Last, Var, X)     a named inner node of that match
-    pattern_open(P, End, X)                 a partial match from either end
-                                            that cannot be completed, by the
-                                            end it starts from and the
-                                            furthest node it reached
 
-Open ends are read from both ends because a path can stop on either side of
-its middle — an inference with premises and no conclusion is only visible
-walking from the premise, one with a conclusion and no premises only from the
-conclusion — and `WHERE NOT` is left out of them: a match a negation removes
-is excluded, not unfinished.
+Nothing about partial matches. Whether a path that stops partway is
+unfinished depends on what the record's schema requires, which a pattern
+cannot know; a record that wants that list writes it as a pattern of its own,
+`WHERE NOT` and all (#373).
 
 Every pattern's internal predicates are prefixed `pat<k>_` by position, and
 its name only ever appears as a quoted string, so no name a record chooses
@@ -47,8 +42,7 @@ def program(patterns: dict[str, Pattern]) -> str:
     out = ["% Generated from luria.yaml `patterns:` — see pattern_rules.py."]
     for k, pattern in enumerate(patterns.values()):
         out += _Lowering(f"pat{k}", pattern).rules()
-    out += ["#show pattern_edge/3.", "#show pattern_via/5.",
-            "#show pattern_open/3."]
+    out += ["#show pattern_edge/3.", "#show pattern_via/5."]
     return "\n".join(out) + "\n"
 
 
@@ -167,7 +161,6 @@ class _Lowering:
                 self.lines.append(
                     f"pattern_via({self.name}, {first}, {last}, "
                     f"{_term(node.var)}, {self.main[i]}) :- {self.p}_m({args}).")
-        self._open(path, n)
         return self.lines
 
     def _negation(self, j: int, neg: Path) -> str:
@@ -181,30 +174,6 @@ class _Lowering:
         body = self._body(tag, neg, vars_)
         self.lines.append(f"{head} :- {', '.join(body)}.")
         return head
-
-    def _open(self, path: Path, n: int) -> None:
-        """Dead ends from the first node forward and the last node back."""
-        v = self.main
-        for j in range(1, n + 1):
-            self.lines.append(
-                f"{self.p}_x{j}({', '.join(v[:j + 1])}) :- "
-                f"{', '.join(self._body(self.p, path, v, upto=j))}.")
-            self.lines.append(
-                f"{self.p}_y{j}({', '.join(v[n - j:])}) :- "
-                f"{', '.join(self._body(self.p, path, v, start=n - j))}.")
-        for j in range(1, n):
-            ahead, behind = ", ".join(v[:j + 1]), ", ".join(v[:j + 2])
-            self.lines.append(
-                f"{self.p}_xe{j}({ahead}) :- {self.p}_x{j + 1}({behind}).")
-            self.lines.append(
-                f"pattern_open({self.name}, {v[0]}, {v[j]}) :- "
-                f"{self.p}_x{j}({ahead}), not {self.p}_xe{j}({ahead}).")
-            back, further = ", ".join(v[n - j:]), ", ".join(v[n - j - 1:])
-            self.lines.append(
-                f"{self.p}_ye{j}({back}) :- {self.p}_y{j + 1}({further}).")
-            self.lines.append(
-                f"pattern_open({self.name}, {v[n]}, {v[n - j]}) :- "
-                f"{self.p}_y{j}({back}), not {self.p}_ye{j}({back}).")
 
 
 # ── over the record ────────────────────────────────────────────────────────
@@ -247,10 +216,3 @@ def through(name: str) -> dict[tuple[str, str], list[str]]:
         if p == name:
             out.setdefault((first, last), set()).add(code)
     return {k: sorted(v) for k, v in out.items()}
-
-
-def open_ends(name: str) -> list[tuple[str, str]]:
-    """(end, furthest node reached) for every partial match that cannot be
-    completed, sorted."""
-    return sorted((end, at) for p, end, at in derived().get("pattern_open", ())
-                  if p == name)

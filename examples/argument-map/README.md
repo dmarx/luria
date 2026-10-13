@@ -28,10 +28,17 @@ same pattern with `WHERE NOT (i)<-[:challenges]-(:OBJ)`. It drops the step
 from the 2025 inspection to "the repair can wait", because [OBJ-001](record/objections.d/OBJ-001.md)
 challenges it.
 
-**An unfinished step is shown, not hidden.** [INF-004](record/inferences.d/INF-004.md) has a premise and no
-conclusion yet. Both pages list it under *Open*, at the claim it starts
-from, because a missing step would otherwise read exactly like a line that
-ends there.
+**An unfinished step draws nothing.** [INF-004](record/inferences.d/INF-004.md) has a premise and no
+conclusion yet, so it is not a step on either page. What counts as
+unfinished depends on what this record requires, so luria does not guess.
+The record can say it as a pattern of its own:
+
+```yaml
+unfinished: (i:INF)<-[:premise_of]-(:CLAIM) WHERE NOT (i)-[:concludes]->(:CLAIM)
+```
+
+Rendering such a pattern as a list of its matches is luria's
+[issue 373](https://github.com/dmarx/luria/issues/373).
 
 ```
 LURIA_ROOT=$PWD luria index

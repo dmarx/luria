@@ -15,11 +15,12 @@ summary: >-
   lark grammar for the subset and lowers them to clingo rules over the
   record's facts, so the logic core stays the one engine. A chain names a
   pattern in `relation` or `sibling` as it names a field: the pattern's two
-  ends are the step, its named inner nodes render as "through", and paths
-  that stop partway are listed as open. The subset is checked against the
-  schemes at load and is stratified by construction. Rejected: a field list
-  on the scheme, clingo rule bodies as queries, a graph engine, grand-cypher
-  over networkx, Raqlet, and GraphGlot as the parser.
+  ends are the step, and its named inner nodes render as "through". A
+  partial match is no step and luria derives nothing from it. The subset is
+  checked against the schemes at load and is stratified by construction.
+  Rejected: a field list on the scheme, clingo rule bodies as queries, a
+  graph engine, grand-cypher over networkx, Raqlet, GraphGlot as the parser,
+  and built-in open ends.
 influenced_by:
 - ADR-106
 - ADR-125
@@ -143,9 +144,8 @@ edge, a second label, a write). Anything else gets the parse position.
   takes it as extra program text, memoized like the rest.
 - **What it derives:**
   - `pattern_edge(P, First, Last)`: a whole match, by its two ends;
-  - `pattern_via(P, First, Last, Var, X)`: a named inner node of that match;
-  - `pattern_open(P, End, X)`: a partial match that cannot be completed, by
-    the end it starts from and the furthest node it reached.
+  - `pattern_via(P, First, Last, Var, X)`: a named inner node of that
+    match.
 - **Dependency:** `lark`, a core dependency. It is pure Python with no
   dependencies of its own, stable at 1.x, and small enough that an extra
   with an install-line refusal would cost more than it saves.
@@ -183,15 +183,12 @@ set, and the views it feeds are deterministic, as [ADR-127](ADR-127.md) requires
 - **Named intermediates are "through".** A variable bound on an inner node
   (`i` above) is what the step renders as "— through INF-004". An
   anonymous inner node (`(:INF)`) is matched and not shown.
-- **A path that stops partway is listed as open.** A partial match that
-  cannot be completed is listed in an *Open* section at the end of the
-  chain's page, by the step it starts from and where it stops. Partial
-  matches are read from both ends. An inference with premises and no
-  conclusion is visible only walking from the premise, and one with a
-  conclusion and no premises only from the conclusion. A match that `WHERE
-  NOT` removes is excluded, not unfinished, so it is not open. This is not
-  a lint finding: an inference in progress is a legitimate state. Not
-  drawing it would read exactly like a line that ends there ([DP-15](../principles.d/DP-015.md)).
+- **A path that stops partway is no step.** luria derives nothing from a
+  partial match. Whether one is unfinished depends on what the record's
+  schema requires, and a pattern cannot know that. A record that wants the
+  list writes it as a pattern of its own, such as
+  `(i:INF)<-[:premise_of]-(:CLAIM) WHERE NOT (i)-[:concludes]->(:CLAIM)`,
+  and rendering such a pattern is [#373](https://github.com/dmarx/luria/issues/373).
 - **A chain's `invariant` covers pattern steps.** It is checked between the
   two ends, as for any edge the chain walks.
 - **Cycles through a pattern are the chain's existing cycle finding.**
@@ -239,10 +236,19 @@ converse, and is never completed by `luria link --fix`.
   Cypher is the one people know, and its variable-length (`*1..` against
   `->{1,}`) and negation forms are shorter. Admitting GQL spellings later
   is a grammar change, not a design change.
-- **Open ends as a lint finding.** Rejected: an unfinished inference is a
-  legitimate state of a record being written, and nothing mechanical can
-  supply its conclusion. CLAUDE.md admits a check to the lint only when the
-  violation is always wrong and mechanically fixable.
+- **Built-in open ends.** The first implementation listed, on each chain
+  page, every partial match that could not be completed, read from both
+  ends. Tried on dmarx/nucleation, it listed six arguments as open, and all
+  six were complete. They rest only on `grounds`, which nucleation's
+  `premises` field group allows. It also ignored `WHERE NOT`, so Rejected
+  arguments appeared too. The case it was built for, premises and no
+  conclusion, cannot occur there because `ARG.concludes` is required, and
+  the lint already says so. Whether a partial match is unfinished is a
+  question about the schema, and the record answers it better as a pattern
+  than luria does as a heuristic. Removed before merge.
+- **Open ends as a lint finding.** Rejected for the same reason, and
+  because CLAUDE.md admits a check to the lint only when the violation is
+  always wrong and mechanically fixable.
 - **Status quo.** Records that argue through intermediate documents keep
   writing their lines in prose, one paragraph per participant, which is
   the duplication chains were built to end ([#171](https://github.com/dmarx/luria/issues/171)).
@@ -274,16 +280,23 @@ converse, and is never completed by `luria link --fix`.
 - **Fired before trusting it.** `examples/argument-map` declares claims,
   inferences and objections, and two chains over patterns. One walks every
   step through its inference. The other uses `WHERE NOT` to drop a step an
-  objection challenges. Both list an inference with a premise and no
-  conclusion as open. The example lints clean, and `tests/test_examples.py`
-  runs it. Writing the scratch grammar first also corrected a rule this
-  decision had wrong: `WHERE NOT (i)…` refers to a bound node without a
-  label.
+  objection challenges. The example lints clean, and
+  `tests/test_examples.py` runs it. Writing the scratch grammar first also
+  corrected a rule this decision had wrong: `WHERE NOT (i)…` refers to a
+  bound node without a label.
+- **Tried on dmarx/nucleation.** Unchanged, every file `luria index` writes
+  is byte-identical between `main` and this change, and so is `luria lint`
+  with the network off. With `argued_from: (c:CLAIM)<-[:concludes]-(g:ARG)
+  -[:rests_on]->(p:CLAIM) WHERE NOT (g {status: 'Rejected'})` added to its
+  `argument` chain, the steps drawn through ARG-006, ARG-007 and ARG-008
+  appear, each "through" its argument. They were invisible to a chain over
+  `rests_on`. The trial is also what removed built-in open ends (above).
 - **Not decided here, and made possible by it:**
   - an outline view that walks a pattern from a root across schemes, which
     is where `OPTIONAL MATCH` would earn its place;
   - transcluding document bodies, so views can compose into a manuscript;
-  - patterns rendered as reports, such as claims no objection challenges.
+  - patterns rendered as reports, such as claims no objection challenges
+    or steps a record calls unfinished ([#373](https://github.com/dmarx/luria/issues/373)).
 
-  Each is its own decision. This one keeps named intermediates and partial
-  matches available to them.
+  Each is its own decision. This one keeps named intermediates available
+  to them.

@@ -647,8 +647,7 @@ def test_every_section_of_the_source_says_what_accounts_for_it(example):
 
 def test_a_line_of_argument_runs_through_its_inferences(example):
     """A chain over a path pattern (#371): each step names the inference it
-    went through, a challenged step is gone from the uncontested view, and
-    an inference with no conclusion yet is listed as open on both."""
+    went through, and a challenged step is gone from the uncontested view."""
     root = example("argument-map")
     argument = (root / "docs/argument.md").read_text()
     uncontested = (root / "docs/uncontested.md").read_text()
@@ -656,6 +655,3 @@ def test_a_line_of_argument_runs_through_its_inferences(example):
             "[INF-002](../record/inferences.d/INF-002.md)" in argument)
     assert "through [INF-003]" in argument
     assert "INF-003" not in uncontested
-    for page in (argument, uncontested):
-        assert ("— open at [INF-004](../record/inferences.d/INF-004.md)"
-                in page)

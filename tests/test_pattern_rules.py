@@ -66,15 +66,19 @@ def test_the_label_filters_where_a_code_lands():
     assert "pattern_edge" not in solve({"f": FOLLOWS}, facts)
 
 
-def test_a_path_stopping_partway_is_open_from_either_end():
+def test_unfinished_is_a_pattern_the_record_writes():
+    """What counts as an unfinished step depends on what the schema
+    requires, so luria derives no partial matches of its own (#373): a
+    record states it, and only the step it names is reported."""
     facts = (docs("CLAIM", "C1", "C2", "C3") + docs("INF", "I1", "I2", "I3")
-             + [F("ref_value", "C1", "premise_of", "I1"),   # full: C2 <- I1 <- C1
+             + [F("ref_value", "C1", "premise_of", "I1"),   # complete
                 F("ref_value", "I1", "concludes", "C2"),
                 F("ref_value", "C1", "premise_of", "I2"),   # premise, no conclusion
                 F("ref_value", "I3", "concludes", "C3")])   # conclusion, no premise
-    got = solve({"f": FOLLOWS}, facts)
-    assert got["pattern_edge"] == {("f", "C2", "C1")}
-    assert got["pattern_open"] == {("f", "C1", "I2"), ("f", "C3", "I3")}
+    got = solve({"unfinished": "(i:INF)<-[:premise_of]-(a:CLAIM) "
+                               "WHERE NOT (i)-[:concludes]->(:CLAIM)"}, facts)
+    assert got["pattern_edge"] == {("unfinished", "I2", "C1")}
+    assert "pattern_open" not in solve({"f": FOLLOWS}, facts)
 
 
 def test_alternation_is_a_union_of_fields():

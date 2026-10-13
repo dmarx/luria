@@ -67,7 +67,7 @@ def doc(root: Path, scheme: str, number: int, title: str, **fields) -> None:
 
 def argument(root: Path) -> None:
     """C1 and C2 are premises of I1, which concludes C3; C3 is a premise of
-    I2, which concludes nothing yet."""
+    I2, which concludes nothing yet — a partial match, which is no step."""
     doc(root, "CLAIM", 1, "First premise", premise_of=["INF-001"])
     doc(root, "CLAIM", 2, "Second premise", premise_of=["INF-001"])
     doc(root, "CLAIM", 3, "The conclusion", premise_of=["INF-002"])
@@ -97,13 +97,13 @@ def test_the_page_names_what_each_step_went_through(tmp_path, monkeypatch):
             in page)
 
 
-def test_a_path_that_stops_partway_is_listed_as_open(tmp_path, monkeypatch):
+def test_a_path_that_stops_partway_draws_no_step_and_no_section(
+        tmp_path, monkeypatch):
     root = project(tmp_path, monkeypatch)
     argument(root)
     page = chains.outputs()[root / "docs/arguments.md"]
-    assert "## Open" in page
-    assert ("- [CLAIM-003](../record/claims.d/CLAIM-003.md) — The conclusion — "
-            "open at [INF-002](../record/inferences.d/INF-002.md)" in page)
+    assert "INF-002" not in page
+    assert "## Open" not in page
 
 
 def test_a_converse_side_statement_draws_the_same_line(tmp_path, monkeypatch):

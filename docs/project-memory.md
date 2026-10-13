@@ -351,9 +351,8 @@ patterns:
 ```
 
 Labels are schemes and edge types are reference fields, checked when the
-config loads. The page names what each step went *through*, and lists as
-*open* the paths that stop partway — an inference with premises and no
-conclusion yet ([ADR-tmpfdvjo](../record/decisions.d/ADR-tmpfdvjo.md), `examples/argument-map`).
+config loads, and the page names what each step went *through*
+([ADR-tmpfdvjo](../record/decisions.d/ADR-tmpfdvjo.md), `examples/argument-map`).
 
 **Tag rules.** A vocabulary says what a value *means*; a group says which of
 them may appear together, because some fields are an axis rather than a pile.

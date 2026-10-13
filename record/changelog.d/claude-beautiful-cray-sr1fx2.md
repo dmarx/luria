@@ -17,8 +17,6 @@
 - A chain's `relation` or `sibling` may name a pattern in place of a field.
   - The step reads like a field: the first node nests under the last.
   - Its page names the document each step went *through*.
-  - It lists paths that stop partway under *Open*, such as an inference
-    with premises and no conclusion yet.
   - A chain `invariant` covers pattern steps.
 - `examples/argument-map`: claims, inferences and objections, with one
   chain over every step and one that drops steps an objection challenges.

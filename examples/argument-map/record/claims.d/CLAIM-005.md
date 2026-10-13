@@ -10,5 +10,5 @@ premise_of:
 # CLAIM-005: The bridge should be repaired before winter
 
 The conclusion this record exists to support. [INF-004](../inferences.d/INF-004.md), which would price
-the repair, has premises and no conclusion yet, so the argument page lists
-it as open.
+the repair, has premises and no conclusion yet, so it draws no step on
+either page.
