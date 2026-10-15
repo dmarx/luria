@@ -4,7 +4,7 @@
   repository, a root `CLAUDE.md` included ([ADR-tmpi08sj](record/decisions.d/ADR-tmpi08sj.md)). `luria index`
   renders each view with the others, and `--check` reports a stale one.
   A template reads the record through `doc(code)`, `docs(scheme, **where)`,
-  `vocabulary(name)` and `schemes()`; a document gives its `title`,
+  `vocabulary(name)`, `schemes()` and `journals()`; a document gives its `title`,
   `status`, `version`, `meta`, `summary`, `body` and `part(heading)`.
   Templates write codes bare: the output is linked by the same fixer
   `luria link --fix` uses, in the output's own frame, and transcluded

@@ -84,6 +84,9 @@ load from the project root, so a template can `include`, `import` or
   frontmatter equality. A list field matches when it holds the value.
 - `vocabulary(name)`: a vocabulary's values in their declared order, each
   with its `label` and `blurb`.
+- `schemes()` and `journals()`: each with its title and blurb, the
+  directory it is filed in and where its view renders, so a bootloader
+  can say where things are without restating `luria.yaml`.
 - `match(pattern)`: every match of a path pattern written inline, in
   [ADR-129](ADR-129.md)'s syntax, as rows mapping each named node to its document. The
   pattern is parsed and checked against the schemes exactly as a named one
@@ -111,8 +114,8 @@ reader of the file knows where to edit.
 
 ### Phasing
 
-1. `views`, `doc`, `docs`, `vocabulary`, `part`, the link pass, the
-   staleness check and the lint render.
+1. `views`, `doc`, `docs`, `vocabulary`, `schemes`, `journals`, `part`,
+   the link pass, the staleness check and the lint render.
 2. `match`, which needs the pattern lowering to return every named node
    rather than a chain's two ends.
 3. Reads recorded per view: a finding when a view transcludes a retired

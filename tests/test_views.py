@@ -211,8 +211,24 @@ def test_an_unknown_vocabulary_is_a_render_error(record):
 
 def test_schemes_name_where_each_scheme_is_filed(record):
     text = render(record, "{% for s in schemes() %}"
-                          "{{ s.prefix }} in `{{ s.dir }}`\n{% endfor %}")
-    assert body_of(text) == "CLAIM in `record/claims.d`\n"
+                          "{{ s.prefix }} in `{{ s.dir }}` to "
+                          "`{{ s.output }}`\n{% endfor %}")
+    assert body_of(text) == "CLAIM in `record/claims.d` to `docs/claims`\n"
+
+
+def test_journals_name_where_each_journal_is_filed(tmp_path, monkeypatch):
+    write(tmp_path, "luria.yaml", merged(BASE, VIEW, """
+journals:
+  workbench:
+    dir: record/workbench.d
+    output: docs/workbench
+    title: Workbench
+"""))
+    monkeypatch.setenv("LURIA_ROOT", str(tmp_path))
+    config.reset()
+    text = render(tmp_path, "{% for j in journals() %}{{ j.title }} in "
+                            "`{{ j.dir }}`\n{% endfor %}")
+    assert body_of(text) == "Workbench in `record/workbench.d`\n"
 
 
 # --- links ------------------------------------------------------------------
@@ -317,6 +333,14 @@ def test_index_check_reports_a_stale_view(record):
     assert record / "BOOT.md" not in adr_index.staleness().stale
     write(record, "record/views.d/BOOT.md.j2", "Changed.\n")
     assert record / "BOOT.md" in adr_index.staleness().stale
+
+
+def test_the_lint_renders_a_working_view_once(record, monkeypatch):
+    write(record, "record/views.d/BOOT.md.j2", "Hello.\n")
+    rendered = views.outputs()
+    monkeypatch.setattr(views, "render",
+                        lambda view: pytest.fail("rendered again"))
+    assert views.errors(rendered) == []
 
 
 def test_errors_collects_every_broken_view(record):

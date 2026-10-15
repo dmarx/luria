@@ -74,9 +74,22 @@ class Term:
 
 @dataclass(frozen=True)
 class SchemeInfo:
-    """What a template may say about a scheme: where its documents are filed
-    and where its view renders, both relative to the project root."""
+    """What a template may say about a scheme: what it calls itself, where
+    its documents are filed and where its view renders, both relative to
+    the project root."""
     prefix: str
+    title: str
+    blurb: str
+    dir: str
+    output: str
+
+
+@dataclass(frozen=True)
+class JournalInfo:
+    """The same for a journal: where entries are filed, where books land."""
+    name: str
+    title: str
+    blurb: str
     dir: str
     output: str
 
@@ -200,9 +213,16 @@ class _Record:
                 for v, m in values.items()]
 
     def schemes(self) -> list[SchemeInfo]:
-        return [SchemeInfo(s.prefix, self.cfg.rel(s.dir),
+        return [SchemeInfo(s.prefix, str(s.title or ""),
+                           str(s.blurb or "").strip(), self.cfg.rel(s.dir),
                            self.cfg.rel(s.output) if s.output else "")
                 for s in self.cfg.schemes.values()]
+
+    def journals(self) -> list[JournalInfo]:
+        return [JournalInfo(j.name, str(j.title or ""),
+                            str(j.blurb or "").strip(), self.cfg.rel(j.dir),
+                            self.cfg.rel(j.output))
+                for j in self.cfg.journals.values()]
 
 
 def _holds(adr, field: str, wanted) -> bool:
@@ -255,7 +275,8 @@ def render(view) -> str:
     record = _Record(view.output)
     env = _environment()
     env.globals.update(doc=record.doc, docs=record.docs,
-                       vocabulary=record.vocabulary, schemes=record.schemes)
+                       vocabulary=record.vocabulary, schemes=record.schemes,
+                       journals=record.journals)
     try:
         text = env.get_template(_name(view)).render()
     except (jinja2.TemplateError, _Refused, TypeError, ValueError,
@@ -281,10 +302,14 @@ def outputs(skip_broken: bool = False) -> dict[Path, str]:
     return out
 
 
-def errors() -> list[str]:
-    """One line per view that does not render."""
+def errors(rendered: dict[Path, str] | None = None) -> list[str]:
+    """One line per view that does not render. Given what the lint already
+    rendered, only the views missing from it are rendered again, so a lint
+    renders a working view once."""
     found = []
     for view in current().views.values():
+        if rendered is not None and view.output in rendered:
+            continue
         try:
             render(view)
         except ViewError as exc:
