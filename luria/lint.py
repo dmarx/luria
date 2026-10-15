@@ -505,6 +505,14 @@ def check_version_history(errors: list[str]) -> None:
                         f"document says {version}")
 
 
+def check_views(errors: list[str]) -> None:
+    """A template that does not render (ADR-tmpi08sj). Views are rendered
+    on the default branch only, so without this a typo in a code, a field
+    or a template's syntax would merge clean and fail the job after it."""
+    from . import views
+    errors.extend(views.errors())
+
+
 def check_view_dirs(errors: list[str],
                     rendered: dict[Path, str] | None = None) -> None:
     """A view directory holds only generated files (ADR-021), so a
@@ -1215,7 +1223,8 @@ def run() -> None:
     # rendered every view of every nested record (ADR-078) twice, re-scanning
     # every corpus for the reports in each pass. Both have taken a `rendered`
     # argument since they were written; nothing had ever passed one.
-    rendered = builder.outputs()
+    rendered = builder.outputs(skip_broken_views=True)
+    check_views(errors)
     check_view_dirs(errors, rendered)
     check_numbers(errors)
     check_alias_collisions(errors)

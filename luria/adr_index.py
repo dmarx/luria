@@ -516,7 +516,8 @@ def _render_scheme(scheme) -> dict[Path, str]:
     return out
 
 
-def outputs(nested: bool = True) -> dict[Path, str]:
+def outputs(nested: bool = True,
+            skip_broken_views: bool = False) -> dict[Path, str]:
     """Every generated view, across every scheme — one place, so the lint's
     staleness check covers a new scheme the moment it is configured.
 
@@ -524,7 +525,7 @@ def outputs(nested: bool = True) -> dict[Path, str]:
     pure function of the tree, so they run as parallel units. `pmap` returns
     in input order, which is what keeps the merged dict — and therefore the
     staleness diff — deterministic."""
-    from . import chains, config_doc, journal, record_doc, reports
+    from . import chains, config_doc, journal, record_doc, reports, views
     from .parallel import pmap
     cfg = current()
     units = [lambda s=s: _render_scheme(s) for s in cfg.schemes.values()]
@@ -535,6 +536,10 @@ def outputs(nested: bool = True) -> dict[Path, str]:
     # Sequences walked from a relation the schemes declare (#171). Empty for
     # a project that declares no chains, which is every project by default.
     units += [chains.outputs]
+    # A project's own templates over the record (ADR-tmpi08sj). The lint
+    # asks for the broken ones to be skipped, because it reports them itself
+    # and every other view still has to be checked.
+    units += [lambda: views.outputs(skip_broken=skip_broken_views)]
     # The record description is a projection of *this* config's values, so
     # naming a new scheme rewrites it on the next build.
     units += [record_doc.outputs]
@@ -562,7 +567,8 @@ def outputs(nested: bool = True) -> dict[Path, str]:
         from .config import rooted
         for record in cfg.nested_records():
             with rooted(record):
-                out.update(outputs(nested=False))
+                out.update(outputs(nested=False,
+                                   skip_broken_views=skip_broken_views))
     return out
 
 
