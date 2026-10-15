@@ -31,6 +31,10 @@ vocabularies:
     terms:
       alpha: {label: Alpha, blurb: the first}
       beta: {label: Beta, blurb: the second}
+  voices:
+    terms:
+      thesis: {blurb: the record's own}
+      objection: {blurb: against it}
 schemes:
   CLAIM:
     dir: record/claims.d
@@ -40,6 +44,16 @@ schemes:
       tags:
         vocabulary: topics
         many: true
+      role:
+        vocabulary: voices
+        default: thesis
+      warrant:
+        required_when: {status: [Active]}
+    references:
+      rests_on:
+        scheme: CLAIM
+        many: true
+        required: false
 """
 
 VIEW = """
@@ -56,6 +70,9 @@ version: 1
 tags:
 - alpha
 date: '2026-01-01'
+warrant: interpretive
+rests_on:
+- CLAIM-002
 summary: Rests on [CLAIM-002](CLAIM-002.md).
 ---
 
@@ -78,12 +95,14 @@ Not for the reader.
 
 CLAIM_2 = """---
 status: Proposed
+status_note: pending a second case
 title: 'Authority is separate'
 version: 2
 tags:
 - beta
 - alpha
 date: '2026-01-02'
+role: objection
 ---
 
 # CLAIM-002: Authority is separate
@@ -151,12 +170,59 @@ views:
 
 # --- the context ------------------------------------------------------------
 
-def test_doc_exposes_the_documents_facts(record):
+def test_any_frontmatter_field_is_an_attribute(record):
     text = render(record, "{% set c = doc('CLAIM-002') %}"
-                          "{{ c.code }}|{{ c.title }}|{{ c.status }}|"
-                          "{{ c.version }}|{{ c.meta.tags | join(',') }}\n")
+                          "{{ c.code }}|{{ c.title }}|{{ c.version }}|"
+                          "{{ c.date }}|{{ c.tags | join(',') }}\n")
     assert body_of(text) == "[CLAIM-002](record/claims.d/CLAIM-002.md)|" \
-        "Authority is separate|Proposed|2|beta,alpha\n"
+        "Authority is separate|2|2026-01-02|beta,alpha\n"
+
+
+def test_a_field_is_read_as_the_contract_reads_it(record):
+    # A status carrying a note is that status; a vocabulary field left
+    # unwritten is its default.
+    text = render(record, "{{ doc('CLAIM-002').status }}|"
+                          "{{ doc('CLAIM-002').role }}|"
+                          "{{ doc('CLAIM-001').role }}\n")
+    assert body_of(text) == "Proposed|objection|thesis\n"
+
+
+def test_a_declared_field_left_unwritten_is_empty(record):
+    text = render(record, "[{{ doc('CLAIM-002').warrant }}]"
+                          "[{{ doc('CLAIM-002').rests_on | length }}]\n")
+    assert body_of(text) == "[None][0]\n"
+
+
+def test_a_reference_field_holds_documents(record):
+    text = render(record, "{% set c = doc('CLAIM-001') %}"
+                          "{{ c.rests_on[0].title }} — "
+                          "{{ c.rests_on | join(', ') }}\n")
+    assert body_of(text) == ("Authority is separate — "
+                             "[CLAIM-002](record/claims.d/CLAIM-002.md)\n")
+
+
+def test_a_field_the_scheme_does_not_have_is_undefined(record):
+    with pytest.raises(views.ViewError,
+                       match=r"CLAIM-002 has no field 'nonesuch'.*warrant"):
+        render(record, "{{ doc('CLAIM-002').nonesuch }}\n")
+
+
+def test_an_undefined_field_still_takes_a_default(record):
+    text = render(record, "{{ doc('CLAIM-002').nonesuch | default('-') }}|"
+                          "{{ doc('CLAIM-002').nonesuch is defined }}\n")
+    assert body_of(text) == "-|False\n"
+
+
+def test_item_access_reads_the_same_fields(record):
+    text = render(record, "{{ doc('CLAIM-002')['role'] }}\n")
+    assert body_of(text) == "objection\n"
+
+
+def test_prose_fields_are_rebased(record):
+    text = body_of(render(record, "{{ doc('CLAIM-002').status_note }}|"
+                                  "{{ doc('CLAIM-001').summary }}\n"))
+    assert text == ("pending a second case|Rests on "
+                    "[CLAIM-002](record/claims.d/CLAIM-002.md).\n")
 
 
 def test_body_drops_the_title_heading(record):
@@ -190,6 +256,17 @@ def test_docs_filters_on_frontmatter_in_code_order(record):
         "Constraints bind conduct",
         "Constraints bind conduct;Authority is separate",
     ]
+
+
+def test_docs_filters_as_the_contract_reads(record):
+    titles = "| map(attribute='code') | join(';') }}"
+    text = render(record, "{{ docs('CLAIM', status='Proposed') " + titles
+                          + "|{{ docs('CLAIM', role='thesis') " + titles
+                          + "|{{ docs('CLAIM', rests_on='CLAIM-002') "
+                          + titles + "\n")
+    assert body_of(text) == ("[CLAIM-002](record/claims.d/CLAIM-002.md)|"
+                             "[CLAIM-001](record/claims.d/CLAIM-001.md)|"
+                             "[CLAIM-001](record/claims.d/CLAIM-001.md)\n")
 
 
 def test_docs_refuses_an_unknown_scheme(record):

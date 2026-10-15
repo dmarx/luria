@@ -77,11 +77,25 @@ load from the project root, so a template can `include`, `import` or
 **The record is the context.** A template reads it through a small API:
 
 - `doc(code)`: one document, or a render error if the code resolves to none.
-  A document gives `code`, `title`, `status`, `version`, `summary`, `meta`
-  (its frontmatter, derived fields included), `body`, and `part(heading)`
-  for one `##` section of the body.
-- `docs(scheme, **where)`: a scheme's documents in code order, filtered by
-  frontmatter equality. A list field matches when it holds the value.
+  **A document's attributes are its scheme's fields**, not a list luria
+  keeps. They are what the scheme's contract declares (`requires`,
+  `references`, `fields`, derived fields), the keys every scheme carries
+  (`title`, `status`, `summary`), and anything else its frontmatter holds.
+  Each is read as the contract reads it:
+  - a status is its value, without its note;
+  - a vocabulary field left unwritten is its default;
+  - a reference field holds documents, so `c.rests_on[0].title` works;
+  - a prose field is rebased;
+  - a declared field left unwritten is empty.
+
+  A name the scheme does not have is Jinja's undefined. It is an error when
+  used, and the error lists the fields the document has, but `is defined`
+  and `| default` work on it. Besides its fields a document has `code`,
+  `body` (the text below its title heading), `part(heading)` for one
+  section with its subsections, and `fields()`. Item access reads the same
+  fields, which reaches a field named like one of those.
+- `docs(scheme, **where)`: a scheme's documents in code order, filtered on
+  fields read the same way. A list field matches when it holds the value.
 - `vocabulary(name)`: a vocabulary's values in their declared order, each
   with its `label` and `blurb`.
 - `schemes()` and `journals()`: each with its title and blurb, the
@@ -138,6 +152,11 @@ reader of the file knows where to edit.
 - **A Python hook per view.** It can do anything, which is the problem:
   arbitrary code in a record is not a rule a reviewer reads, and it can
   reach the clock.
+- **A fixed set of document attributes** (`title`, `status`, `summary`,
+  a raw `meta` mapping). That is a second schema beside the scheme's own:
+  a field a project declares would be reachable only through `meta`, read
+  raw, so a defaulted vocabulary field would read as absent and a
+  reference as a string. The contract already says what each field is.
 - **A `link` filter.** It would be a second link resolver beside the fixer,
   and the two would disagree about frames. Running the output through the
   fixer means a template cannot get a target wrong.
