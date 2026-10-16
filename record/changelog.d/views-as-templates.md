@@ -16,4 +16,9 @@
   environment is sandboxed and strict, so an unknown code, field or part
   is an error naming the template's line, and `luria lint` renders every
   view so a broken template fails its own branch.
+- `match(pattern)` in a view: every match of a path pattern as a row
+  mapping each named node to its document, as in
+  `{% for r in match("(c:CLAIM)<-[:concludes]-(g:ARG)") %}`. The pattern
+  is one `luria.yaml` declares, by name, or one written inline in the same
+  syntax and checked against the schemes the same way.
 - `jinja2` is a new dependency.

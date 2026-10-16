@@ -290,6 +290,32 @@ class _Record:
                 if all(_holds(contract, a.meta, k, v)
                        for k, v in where.items())]
 
+    def match(self, pattern: str) -> list[dict[str, Document]]:
+        """Every match of a path pattern, as a row mapping each named node
+        to its document, ordered by those codes in the order the nodes are
+        named. `pattern` is a pattern `luria.yaml` declares, by name, or one
+        written here in the same syntax and checked the same way."""
+        from . import logic, pattern_rules
+        parsed = _pattern(self.cfg, pattern)
+        named = list(dict.fromkeys(
+            n.var for n in parsed.path.nodes if n.var))
+        if not named:
+            raise _Refused(f"`{pattern}` names no node, so a match has "
+                           "nothing to show — name one, as in `(c:CLAIM)`")
+        text = pattern_rules.program({parsed.name: parsed}, rows=True)
+        families = (frozenset({"values"})
+                    if pattern_rules.needs_values({parsed.name: parsed})
+                    else frozenset())
+        found: dict[str, dict[str, str]] = {}
+        for _, key, var, code in logic.derive(
+                "relations", extra=text,
+                families=families).get("pattern_row", ()):
+            found.setdefault(key, {})[var] = code
+        ordered = sorted(found.values(),
+                         key=lambda row: [row.get(v, "") for v in named])
+        return [{v: self.resolve(row[v]) for v in named if v in row}
+                for row in ordered]
+
     def vocabulary(self, name: str) -> list[Term]:
         values = self.cfg.vocabularies.get(name)
         if values is None:
@@ -311,6 +337,25 @@ class _Record:
                             str(j.blurb or "").strip(), self.cfg.rel(j.dir),
                             self.cfg.rel(j.output))
                 for j in self.cfg.journals.values()]
+
+
+def _pattern(cfg, source: str):
+    """A declared pattern by name, or `source` parsed and checked against
+    the schemes exactly as a declared one is (`config._patterns`)."""
+    from . import consistency
+    from .config import NamedPattern
+    from .patterns import parse
+    if source in cfg.patterns:
+        return cfg.patterns[source].parsed
+    name = "match"
+    try:
+        named = NamedPattern(name=name, match=source.strip(),
+                             _parsed=parse(name, source))
+        consistency.check_patterns({name: named}, cfg.schemes)
+    except ValueError as exc:
+        raise _Refused(str(exc).replace(
+            f"luria.yaml: patterns.{name}: ", "")) from None
+    return named.parsed
 
 
 def _holds(contract, meta: dict, field: str, wanted) -> bool:
@@ -361,6 +406,7 @@ def render(view) -> str:
     env = _environment()
     env.globals.update(doc=record.doc, docs=record.docs,
                        vocabulary=record.vocabulary, schemes=record.schemes,
+                       match=record.match,
                        journals=record.journals)
     try:
         text = env.get_template(_name(view)).render()

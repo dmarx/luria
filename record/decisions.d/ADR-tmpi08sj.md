@@ -104,7 +104,12 @@ load from the project root, so a template can `include`, `import` or
 - `match(pattern)`: every match of a path pattern written inline, in
   [ADR-129](ADR-129.md)'s syntax, as rows mapping each named node to its document. The
   pattern is parsed and checked against the schemes exactly as a named one
-  is. A pattern the record declares can be named instead of spelled.
+  is. A pattern the record declares can be named instead of spelled. Rows
+  are ordered by their codes, taken in the order the nodes are named. An
+  anonymous node is matched and not shown, and a pattern that names no
+  node is refused, since its rows would be empty. The lowering shows one
+  more predicate for a view, `pattern_row(P, Match, Var, X)`, and only when
+  a view asks, so the programs a chain solves are unchanged.
 
 **A template never spells a link target.** It writes codes bare. The output
 passes through the link fixer in its own frame, the directory the output
@@ -131,7 +136,8 @@ reader of the file knows where to edit.
 1. `views`, `doc`, `docs`, `vocabulary`, `schemes`, `journals`, `part`,
    the link pass, the staleness check and the lint render.
 2. `match`, which needs the pattern lowering to return every named node
-   rather than a chain's two ends.
+   of a match rather than a chain's two ends and its inner nodes, which
+   cannot be rejoined into rows.
 3. Reads recorded per view: a finding when a view transcludes a retired
    document, and each document's page naming the views it renders into.
 4. Pinned transclusion, for an output that must stop moving once it is
