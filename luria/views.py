@@ -156,7 +156,12 @@ class _Record:
             raise _Refused(f"{code} names no document in this record")
         return found
 
-    def docs(self, prefix: str, **where) -> list[Document]:
+    def docs(self, prefix: str, in_force: bool | None = None,
+             **where) -> list[Document]:
+        """A scheme's documents in code order, filtered on fields read as
+        the contract reads them. `in_force=True` keeps the documents whose
+        status is the scheme's own `active` word, `False` the rest, so a
+        template need not spell a word each scheme chooses for itself."""
         from .adr_index import load_scheme
         scheme = self.cfg.schemes.get(str(prefix).upper())
         if scheme is None:
@@ -164,8 +169,10 @@ class _Record:
                            f"(schemes: {', '.join(sorted(self.cfg.schemes))})")
         contract = self.contract(scheme)
         return [Document(a, self) for a in load_scheme(scheme)
-                if all(_holds(contract, a.meta, k, v)
-                       for k, v in where.items())]
+                if (in_force is None
+                    or (a.status_value == scheme.active) == bool(in_force))
+                and all(_holds(contract, a.meta, k, v)
+                        for k, v in where.items())]
 
     def match(self, pattern: str) -> list[dict[str, Document]]:
         """Every match of a path pattern, as a row mapping each named node

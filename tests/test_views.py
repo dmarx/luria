@@ -269,6 +269,36 @@ def test_docs_filters_as_the_contract_reads(record):
                              "[CLAIM-001](record/claims.d/CLAIM-001.md)\n")
 
 
+def test_docs_in_force_reads_the_schemes_own_word(record):
+    codes = "| map(attribute='code') | join(';') }}"
+    text = render(record, "{{ docs('CLAIM', in_force=true) " + codes + "|"
+                          "{{ docs('CLAIM', in_force=false) " + codes + "\n")
+    assert body_of(text) == ("[CLAIM-001](record/claims.d/CLAIM-001.md)|"
+                             "[CLAIM-002](record/claims.d/CLAIM-002.md)\n")
+
+
+def test_in_force_follows_a_scheme_that_names_another_word(tmp_path,
+                                                           monkeypatch):
+    write(tmp_path, "luria.yaml", merged(BASE, VIEW, """
+schemes:
+  CLAIM:
+    active: Proposed
+"""))
+    write(tmp_path, "record/claims.d/CLAIM-001.md", CLAIM_1)
+    write(tmp_path, "record/claims.d/CLAIM-002.md", CLAIM_2)
+    monkeypatch.setenv("LURIA_ROOT", str(tmp_path))
+    config.reset()
+    text = render(tmp_path, "{{ docs('CLAIM', in_force=true) "
+                            "| map(attribute='title') | join(';') }}\n")
+    assert body_of(text) == "Authority is separate\n"
+
+
+def test_in_force_combines_with_field_filters(record):
+    text = render(record, "{{ docs('CLAIM', in_force=true, tags='beta') "
+                          "| length }}\n")
+    assert body_of(text) == "0\n"
+
+
 def test_docs_refuses_an_unknown_scheme(record):
     with pytest.raises(views.ViewError, match="NOPE"):
         render(record, "{{ docs('NOPE') }}\n")

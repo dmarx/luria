@@ -8,7 +8,8 @@
   attributes are its scheme's fields, read as the scheme's contract reads
   them: any frontmatter field, a vocabulary default, a reference as the
   documents it names. A document also has `code`, `body` and
-  `part(heading)`.
+  `part(heading)`. `docs(scheme, in_force=True)` keeps the documents whose
+  status is the scheme's own `active` word.
   Templates write codes bare: the output is linked by the same fixer
   `luria link --fix` uses, in the output's own frame, and transcluded
   text is rebased from its source's frame. Templates compose with Jinja's

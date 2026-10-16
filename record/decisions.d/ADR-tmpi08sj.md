@@ -94,8 +94,12 @@ load from the project root, so a template can `include`, `import` or
   `body` (the text below its title heading), `part(heading)` for one
   section with its subsections, and `fields()`. Item access reads the same
   fields, which reaches a field named like one of those.
-- `docs(scheme, **where)`: a scheme's documents in code order, filtered on
-  fields read the same way. A list field matches when it holds the value.
+- `docs(scheme, in_force=None, **where)`: a scheme's documents in code
+  order, filtered on fields read the same way. A list field matches when it
+  holds the value. `in_force=True` keeps the documents whose status is the
+  scheme's own `active` word, and `False` keeps the rest, so a template
+  iterating "the principles in force" does not spell a word each scheme
+  chooses for itself.
 - `vocabulary(name)`: a vocabulary's values in their declared order, each
   with its `label` and `blurb`.
 - `schemes()` and `journals()`: each with its title and blurb, the
