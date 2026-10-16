@@ -78,6 +78,14 @@ class SchemeInfo:
 
 
 @dataclass(frozen=True)
+class GeneratedInfo:
+    """One thing `luria index` writes, as a template names it: a label and
+    a root-relative path (`Config.generated`)."""
+    label: str
+    path: str
+
+
+@dataclass(frozen=True)
 class JournalInfo:
     """The same for a journal: where entries are filed, where books land."""
     name: str
@@ -216,6 +224,12 @@ class _Record:
                            self.cfg.rel(s.output) if s.output else "")
                 for s in self.cfg.schemes.values()]
 
+    def generated(self) -> list[GeneratedInfo]:
+        """Everything `luria index` writes, from the generator's own list,
+        so a page telling people what not to edit cannot drift from it."""
+        return [GeneratedInfo(t.label, self.cfg.rel(t.shown))
+                for t in self.cfg.generated()]
+
     def journals(self) -> list[JournalInfo]:
         return [JournalInfo(j.name, str(j.title or ""),
                             str(j.blurb or "").strip(), self.cfg.rel(j.dir),
@@ -307,7 +321,8 @@ def render(view) -> str:
     env.globals.update(doc=record.doc, docs=record.docs,
                        vocabulary=record.vocabulary, schemes=record.schemes,
                        match=record.match,
-                       journals=record.journals)
+                       journals=record.journals,
+                       generated=record.generated)
     try:
         text = env.get_template(_name(view)).render()
     except (jinja2.TemplateError, _Refused, TypeError, ValueError,
