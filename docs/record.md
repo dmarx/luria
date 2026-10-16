@@ -88,6 +88,7 @@ Everything not listed here is at Luria's default.
 |---|---|---|
 | `issue_url` | `https://github.com/dmarx/luria/issues/{n}` | *empty* |
 | `code.globs` | `luria/*.py`, `tests/*.py`, `.github/workflows/*.yml`, `actions/**/*.yml`, `template/**/*.yml`, `template/**/*.md`, `template/**/*.stub`, `examples/**/*.yaml` | *empty* |
+| `views.bootloader` | *2 keys set* | *unset* |
 | `lint.fail_on` | `workflow-temp-codes` | *empty* |
 | `include_records` | `examples/*` | *empty* |
 | `site.exclude` | `template/**` | *empty* |
