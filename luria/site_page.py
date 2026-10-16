@@ -247,7 +247,7 @@ def properties(meta: dict, source: Path, outbound=(), inbound=(),
         rows.append(("Issue", [links.text(f"[[{i}]]") for i in issues]))
     rows += _vocabulary(meta, source, scheme, links)
     rows += _edges(outbound, inbound, scheme, links, known)
-    # The views a template renders this document into (ADR-tmpi08sj): the
+    # The views a template renders this document into (ADR-130): the
     # reverse of what each view read, so a reader of a claim learns where
     # else its words appear before changing them.
     if rendered_into:

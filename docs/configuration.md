@@ -12,8 +12,9 @@ repository.
 
 ## The shape of the file
 
-The tables below are the whole schema. Six of them — `schemes`, `fragments`,
-`journals`, `remotes`, `chains` and `patterns` — are *families*: you name the
+The tables below are the whole schema. Seven of them — `schemes`,
+`fragments`, `journals`, `remotes`, `chains`, `patterns` and `views` — are
+*families*: you name the
 entries, and the name you choose becomes part of the vocabulary.
 `schemes.RFC` is how a project gets RFCs; `journals.incidents` is how it gets
 a second journal. No code path spells `ADR`.
@@ -44,6 +45,7 @@ it to inherit from.
 | `journals.X` | dated entries that persist, rendered into books | yes, keyed by name |
 | `chains.X` | a relation walked transitively, rendered as sequences | yes, keyed by name |
 | `patterns.X` | a path between documents no single field holds | yes, keyed by name |
+| `views.X` | a Jinja template rendered over the record into a file | yes, keyed by name |
 | `remotes.X` | another project's codes, cited from this one | yes, keyed by prefix |
 | `code` | which source files are scanned for stale references | — |
 | `lint` | which warning classes fail, and which are not reported | — |
@@ -556,6 +558,33 @@ when the pattern wants a sentence of explanation.
 | `name` | `str` | *the table's own name* |
 | `match` | `str` | *required* |
 | `blurb` | `str` | *unset* |
+
+## Views — `views.X`
+
+One entry per Jinja template rendered over the record into a file. Every other view is a generator luria ships; a view is one the project writes, for any projection of its record the generators do not cover — an agent's bootloader, a manuscript, a page of documentation.
+
+A Jinja template rendered over the record into a file (ADR-130).
+
+```yaml
+views:
+  bootloader:
+    template: record/views.d/CLAUDE.md.j2
+    output: CLAUDE.md
+```
+
+`luria index` renders it with every other view, and `--check` reports it
+stale like any other. The template reads the record through `doc`,
+`docs`, `schemes` and `vocabulary`, writes codes bare, and composes with
+Jinja's own `include`, `import` and `extends`, resolved from the project
+root. The output passes through the link fixer in its own frame, so no
+template spells a link target. See `luria/views.py`.
+
+| key | type | default |
+|---|---|---|
+| `name` | `str` | *the table's own name* |
+| `template` | `Path` | *required* |
+| `output` | `Path` | *required* |
+| `pin` | `bool` | `False` |
 
 ## Remotes — `remotes.X`
 

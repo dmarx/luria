@@ -817,7 +817,7 @@ def stage(out: Path, cfg=None, nested: bool = True,
     typed = edges.graph()
     known = site_page.titles()
     # Which views each document renders into, read off one render of each
-    # view (ADR-tmpi08sj). Empty for a record that declares no views.
+    # view (ADR-130). Empty for a record that declares no views.
     from . import view_reads
     rendered_into = view_reads.rendered_into(views_tree)
 

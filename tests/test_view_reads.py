@@ -1,5 +1,5 @@
 # tests/test_view_reads.py
-"""What a view reads, and the findings that follow from it (ADR-tmpi08sj,
+"""What a view reads, and the findings that follow from it (ADR-130,
 phase 3).
 
 <!-- unresolved-ok-block: CLAIM-001 — fixture codes, not this record's -->

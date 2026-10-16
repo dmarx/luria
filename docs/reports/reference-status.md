@@ -50,9 +50,13 @@ A reference may name several schemes
 
 A chain may walk a named path pattern
 
-1 citation in 1 file awaits a look.
+5 citations in 2 files await a look.
 
 - [`docs/project-memory.md:355`](../project-memory.md)
+- [`record/decisions.d/ADR-130.md:17`](../../record/decisions.d/ADR-130.md)
+- [`record/decisions.d/ADR-130.md:31`](../../record/decisions.d/ADR-130.md)
+- [`record/decisions.d/ADR-130.md:50`](../../record/decisions.d/ADR-130.md)
+- [`record/decisions.d/ADR-130.md:112`](../../record/decisions.d/ADR-130.md)
 
 ## Codes that resolve to no document
 

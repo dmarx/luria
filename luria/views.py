@@ -1,5 +1,5 @@
 # luria/views.py
-"""A view written as a Jinja template over the record (ADR-tmpi08sj).
+"""A view written as a Jinja template over the record (ADR-130).
 
     views:
       bootloader:

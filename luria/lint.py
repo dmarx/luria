@@ -507,7 +507,7 @@ def check_version_history(errors: list[str]) -> None:
 
 def check_views(errors: list[str],
                 rendered: dict[Path, str] | None = None) -> None:
-    """A template that does not render (ADR-tmpi08sj). Views are rendered
+    """A template that does not render (ADR-130). Views are rendered
     on the default branch only, so without this a typo in a code, a field
     or a template's syntax would merge clean and fail the job after it."""
     from . import views
@@ -966,7 +966,7 @@ def status_sections(rendered: dict[Path, str] | None = None
     # structural, so neither needs an acknowledgement — there is no reading
     # under which either is what the author meant.
     # A view carrying a retired document's text into its output
-    # (ADR-tmpi08sj). The citation scan cannot see it: the output is
+    # (ADR-130). The citation scan cannot see it: the output is
     # generated, so it is excluded and nobody could annotate it there. The
     # render knows which template line read what, so the site is that line.
     from . import view_reads
@@ -978,7 +978,7 @@ def status_sections(rendered: dict[Path, str] | None = None
             "document into a view (`inactive-ok:` in a template comment at "
             "the site acknowledges it)", transcluded))
 
-    # A pinned view whose pin no longer holds (ADR-tmpi08sj): the record
+    # A pinned view whose pin no longer holds (ADR-130): the record
     # moved under a published output, or the output was edited by hand.
     from . import view_pins
     drifted = view_pins.drift_rows()

@@ -23,7 +23,7 @@ and the logic core can stay the engine (ADR-127):
     pattern_via(P, First, Last, Var, X)     a named inner node of that match
 
 A view asks for one more, and only when it asks (`rows=True`), so the
-programs a chain solves are unchanged (ADR-tmpi08sj):
+programs a chain solves are unchanged (ADR-130):
 
     pattern_row(P, Match, Var, X)           a named node of one whole match
 

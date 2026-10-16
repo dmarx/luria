@@ -536,7 +536,7 @@ def outputs(nested: bool = True,
     # Sequences walked from a relation the schemes declare (#171). Empty for
     # a project that declares no chains, which is every project by default.
     units += [chains.outputs]
-    # A project's own templates over the record (ADR-tmpi08sj). The lint
+    # A project's own templates over the record (ADR-130). The lint
     # asks for the broken ones to be skipped, because it reports them itself
     # and every other view still has to be checked.
     units += [lambda: views.outputs(skip_broken=skip_broken_views)]

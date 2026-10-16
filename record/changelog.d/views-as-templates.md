@@ -1,7 +1,7 @@
 ### Added
 
 - `views`: a Jinja template rendered over the record into any file in the
-  repository, a root `CLAUDE.md` included ([ADR-tmpi08sj](record/decisions.d/ADR-tmpi08sj.md)). `luria index`
+  repository, a root `CLAUDE.md` included ([ADR-130](record/decisions.d/ADR-130.md)). `luria index`
   renders each view with the others, and `--check` reports a stale one.
   A template reads the record through `doc(code)`, `docs(scheme, **where)`,
   `vocabulary(name)`, `schemes()` and `journals()`. A document's

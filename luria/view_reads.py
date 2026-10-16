@@ -1,5 +1,5 @@
 # luria/view_reads.py
-"""What the views read, and what follows from it (ADR-tmpi08sj, phase 3).
+"""What the views read, and what follows from it (ADR-130, phase 3).
 
     views.boot: record/views.d/CLAUDE.md.j2:12 transcludes CLAIM-012, which is Superseded (by CLAIM-031)
 

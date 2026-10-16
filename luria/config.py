@@ -139,7 +139,7 @@ DEFAULTS: dict = {
     # Named path patterns a chain may walk in place of a field (#371). Empty
     # for a project whose lines all follow one reference field.
     "patterns": {},
-    # Jinja templates rendered over the record into any file (ADR-tmpi08sj).
+    # Jinja templates rendered over the record into any file (ADR-130).
     # Empty for a project whose every view is one luria already generates.
     "views": {},
     # Other projects whose records this one cites, keyed by a short prefix. A
@@ -1968,7 +1968,7 @@ def _fragment(spec) -> Fragment:
 
 @dataclass(frozen=True)
 class View:
-    """A Jinja template rendered over the record into a file (ADR-tmpi08sj).
+    """A Jinja template rendered over the record into a file (ADR-130).
 
         views:
           bootloader:
@@ -1989,7 +1989,7 @@ class View:
     # Where the rendered text lands: any path in the repository, a root file
     # such as `CLAUDE.md` included. A markdown output is stamped as generated.
     output: Path
-    # Whether the output stops moving once endorsed (ADR-tmpi08sj). A pinned
+    # Whether the output stops moving once endorsed (ADR-130). A pinned
     # view is rendered and its reads hashed by `luria views --pin NAME`,
     # into `views.lock.json`; after that `luria index` leaves the committed
     # output alone, and `luria lint` reports `view-drift` when what the view
@@ -2420,7 +2420,7 @@ class Config:
         # the reader must not edit, in a file the next build overwrites.
         if any(path == c.output for c in self.chains.values()):
             return True
-        # A view's output (ADR-tmpi08sj), for the chain page's reason: a
+        # A view's output (ADR-130), for the chain page's reason: a
         # code in it was put there by a template, so a finding sited in the
         # output names a line nobody can annotate. What a view reads is
         # checked at the template line instead (`view_reads`).

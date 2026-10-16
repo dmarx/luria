@@ -1,6 +1,6 @@
 # luria/view_pins.py
 """A pinned view: an output that stops moving once it is published
-(ADR-tmpi08sj, phase 4).
+(ADR-130, phase 4).
 
     views:
       paper:

@@ -1,6 +1,6 @@
 # tests/test_view_match.py
 """`match()` in a view: a path pattern's matches as rows of documents
-(ADR-tmpi08sj, phase 2).
+(ADR-130, phase 2).
 
 <!-- unresolved-ok-block: CLAIM-001 — fixture codes, not this record's -->
 """

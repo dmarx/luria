@@ -1,5 +1,5 @@
 # tests/test_views.py
-"""A view may be a Jinja template over the record (ADR-tmpi08sj).
+"""A view may be a Jinja template over the record (ADR-130).
 
 <!-- unresolved-ok-block: CLAIM-001 — fixture codes, not this record's -->
 The fixture record is two claims and a vocabulary; each test writes the

@@ -1,5 +1,5 @@
 # luria/view_document.py
-"""A record document as a view's template reads it (ADR-tmpi08sj).
+"""A record document as a view's template reads it (ADR-130).
 
 Split from `views.py`, which renders a view; this is what a template holds
 in its hand while it does: a document whose attributes are its scheme's
