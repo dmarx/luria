@@ -27,6 +27,13 @@
   in the template, with `{# inactive-ok: CODE — why #}` on the line or the
   line above. `lint.fail_on` can promote it.
 - `luria site` shows "Rendered into" on each document a view reads.
+- A view can be pinned, so its output stops moving once it is published.
+  `pin: true` registers the pin. `luria views --pin NAME` renders the view
+  and endorses what it read into `views.lock.json`. After that, `luria
+  index` leaves the output alone, and the `view-drift` lint warning names
+  each document whose quoted values have changed since. Only what the view
+  read is compared, so an edit to a part it does not quote is not drift.
+  `luria views` lists every view and whether its pin holds.
 - `jinja2` is a new dependency.
 
 ### Fixed

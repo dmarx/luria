@@ -73,17 +73,22 @@ class Document:
                                    *self._adr.meta)))
 
     def _field(self, name: str):
+        """The field's value, recorded as read where the template read it."""
+        kind = "transcluded" if name in TRANSCLUDED_FIELDS else "read"
+        value = self._value(name)
+        self._record.saw(self, kind, value)
+        return value
+
+    def _value(self, name: str):
         from .contract import codes_of, effective_values
         from .doc_refs import PROSE_KEYS
         meta = self._adr.meta
-        if name in ("status", "title"):
-            self._record.saw(self, "read")
-            return (self._adr.status_value if name == "status"
-                    else self._adr.title)
+        if name == "status":
+            return self._adr.status_value
+        if name == "title":
+            return self._adr.title
         if name not in self.fields():
             raise KeyError(name)
-        self._record.saw(self, "transcluded" if name in TRANSCLUDED_FIELDS
-                         else "read")
         spec = next((f for f in self._contract.fields if f.name == name), None)
         raw = meta.get(name)
         if spec is not None and spec.reference is not None:
@@ -111,8 +116,9 @@ class Document:
 
     @property
     def body(self) -> str:
-        self._record.saw(self, "transcluded")
-        return self._rebased("\n".join(self._lines).strip())
+        text = self._rebased("\n".join(self._lines).strip())
+        self._record.saw(self, "transcluded", text)
+        return text
 
     def part(self, heading: str) -> str:
         """The section under `heading`, without the heading line, up to the
@@ -121,11 +127,12 @@ class Document:
         if found is None:
             raise _Refused(f"No such part: {self.code} has no heading "
                            f"{heading!r}")
-        self._record.saw(self, "transcluded")
-        return self._rebased("\n".join(found).strip())
+        text = self._rebased("\n".join(found).strip())
+        self._record.saw(self, "transcluded", text)
+        return text
 
     def __str__(self) -> str:
-        self._record.saw(self, "read")
+        self._record.saw(self, "read", self.code)
         return self.code
 
 
@@ -157,6 +164,19 @@ class Read:
     retired: bool           # its status is its scheme's `retires_on`
     successors: tuple[str, ...]
     sites: tuple[Site, ...]
+    # A hash of every value the render read from this document, in the
+    # order it read them: what a pinned view endorses (`view_pins`).
+    digest: str = ""
+
+
+def stable(value) -> str:
+    """`value` as text that is the same in every process: a document is its
+    code, never the object's address, and a list is its elements."""
+    if isinstance(value, Document):
+        return value.code
+    if isinstance(value, (list, tuple)):
+        return "[" + ", ".join(stable(v) for v in value) + "]"
+    return repr(value)
 
 
 def _site() -> tuple[str, int]:

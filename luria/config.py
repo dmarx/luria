@@ -1989,6 +1989,13 @@ class View:
     # Where the rendered text lands: any path in the repository, a root file
     # such as `CLAUDE.md` included. A markdown output is stamped as generated.
     output: Path
+    # Whether the output stops moving once endorsed (ADR-tmpi08sj). A pinned
+    # view is rendered and its reads hashed by `luria views --pin NAME`,
+    # into `views.lock.json`; after that `luria index` leaves the committed
+    # output alone, and `luria lint` reports `view-drift` when what the view
+    # read has changed since. For an output that is published: a submitted
+    # paper, a released document.
+    pin: bool = False
 
 
 def _views(raw: dict, root: Path) -> dict[str, View]:
@@ -2004,11 +2011,14 @@ def _views(raw: dict, root: Path) -> dict[str, View]:
                 raise ValueError(f"{where}: no `{key}` — a view needs the "
                                  "template it renders and the file it "
                                  "renders into")
-        if unknown := sorted(set(spec) - {"template", "output"}):
+        if unknown := sorted(set(spec) - {"template", "output", "pin"}):
             raise ValueError(f"{where}: unknown key(s) {', '.join(unknown)} "
-                             "(a view takes `template` and `output`)")
+                             "(a view takes `template`, `output` and `pin`)")
+        if not isinstance(spec.get("pin", False), bool):
+            raise ValueError(f"{where}: `pin` is true or false")
         view = View(name=str(name), template=root / str(spec["template"]),
-                    output=root / str(spec["output"]))
+                    output=root / str(spec["output"]),
+                    pin=bool(spec.get("pin", False)))
         if view.template.resolve() == view.output.resolve():
             raise ValueError(f"{where}: `output` is the template itself, so "
                              "the first render would overwrite its source")

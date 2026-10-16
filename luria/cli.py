@@ -17,6 +17,7 @@
     luria migrate       execute a migration spec: rename a scheme, move
                         documents between schemes (ADR-040)
     luria remotes       other projects' records cited from this one
+    luria views         the template views, and pin one whose output must hold
     luria site          stage the record as a Quartz vault, ready to build
     luria export        write the record as a SQLite database, for querying
     luria facts         print the record as clingo facts, for the logic core
@@ -50,7 +51,7 @@ import fire
 
 from . import (ack, adr_index, collect, concretize, export, facts, init,
                link_refs, lint, migrate, new, relate, remotes,
-               repair, reports, site, upgrade)
+               repair, reports, site, upgrade, view_pins)
 
 COMMANDS = {
     "lint": lint.run,
@@ -63,6 +64,7 @@ COMMANDS = {
     "concretize": concretize.run,
     "migrate": migrate.run,
     "remotes": remotes.run,
+    "views": view_pins.run,
     "site": site.run,
     "export": export.run,
     "facts": facts.run,

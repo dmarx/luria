@@ -14,7 +14,7 @@ import sys
 
 from luria import (ack, adr_index, cli, collect, concretize, export, facts,
                    init, link_refs, lint, migrate, new, relate, remotes, repair,
-                   reports, site, upgrade)
+                   reports, site, upgrade, view_pins)
 
 
 def test_every_command_is_registered():
@@ -26,7 +26,7 @@ def test_every_command_is_registered():
         "site": site.run, "export": export.run, "facts": facts.run,
         "init": init.run, "reports": reports.run,
         "collect": collect.run, "config": init.config_run,
-        "upgrade": upgrade.run,
+        "upgrade": upgrade.run, "views": view_pins.run,
     }
 
 

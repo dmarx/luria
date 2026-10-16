@@ -155,6 +155,25 @@ record:
   of the views that read it, so a reader about to change a claim learns
   where else its words appear.
 
+**A view can be pinned, so its output stops moving once it is published.**
+This follows the model of `pins.py`, pointed inward. `pin: true` on the
+view registers the pin. `luria views --pin NAME` endorses it: it renders
+the view, writes the output, and records in a committed `views.lock.json`
+a hash of the output and, per document, a hash of every value the render
+read from that document, in the order it read them. After that:
+
+- `luria index` leaves the committed output alone;
+- `luria lint` re-renders the view and reports `view-drift`, a failable
+  warning, naming each document whose read values changed. It reports a
+  template change as one, and a committed output that is not the one
+  endorsed as another;
+- re-endorsing after review is the acknowledgement, and it re-renders.
+
+Because the hashes are of what the view read, not of the files, an edit
+to a part the view does not quote is not drift. A registered pin that has
+no endorsement renders as any other view and is reported until someone
+endorses it.
+
 ### Phasing
 
 1. `views`, `doc`, `docs`, `vocabulary`, `schemes`, `journals`, `part`,
@@ -194,6 +213,17 @@ record:
   But a pattern used by one view reads best where it is used, and an inline
   pattern goes through the same parser and the same checks, so nothing is
   lost by allowing it.
+- **Pin a view to a commit**, rendering pinned transclusions from the
+  documents as they stood in history. That would let a template say
+  `doc('CLAIM-012', at='v3')`. But it puts git history on the render path
+  that every lint runs, and it answers a different question. A pin's
+  question is "has the published text stopped matching the record?", and
+  the committed output already holds the published text. The hashes say
+  which documents moved.
+- **Hash each read document's whole file.** It is simpler, and it is wrong
+  for a paper. Adding a relation to a claim, or editing a section the paper
+  never quotes, would read as drift, and a warning that fires on every edit
+  teaches people to re-endorse without reading.
 - **Report a transclusion of any document not in force**, as the citation
   scan reports any citation of one. On nucleation, a view transcluding one
   line of argument read 28 claims. 14 were Proposed, which in that record

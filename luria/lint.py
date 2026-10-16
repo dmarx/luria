@@ -698,6 +698,7 @@ FAILABLE = ("retired-citations", "unresolved-codes", "foreign-temp-codes",
             "source-mismatch", "source-unchecked",
             "legacy-spellings", "narrow-titles", "stale-directives",
             "template-drift", "broken-chains", "retired-transclusions",
+            "view-drift",
             "one-sided-relations", "unbound-relations", "unbound-lines",
             "unrecorded-relations", "unannotated-relations",
             "unexplained-relations", "bad-annotations",
@@ -976,6 +977,16 @@ def status_sections(rendered: dict[Path, str] | None = None
             f"{len(transcluded)} template site(s) transclude a retired "
             "document into a view (`inactive-ok:` in a template comment at "
             "the site acknowledges it)", transcluded))
+
+    # A pinned view whose pin no longer holds (ADR-tmpi08sj): the record
+    # moved under a published output, or the output was edited by hand.
+    from . import view_pins
+    drifted = view_pins.drift_rows()
+    if drifted:
+        sections.append((
+            "view-drift",
+            f"{len(drifted)} pinned view(s) no longer match what was "
+            "endorsed", drifted))
 
     broken = chains.rows()
     if broken:
