@@ -40,7 +40,7 @@ def test_one_lint_renders_the_view_tree_once(project, monkeypatch):
     calls = []
     real = adr_index.outputs
     monkeypatch.setattr(adr_index, "outputs",
-                        lambda nested=True: calls.append(nested) or real(nested))
+                        lambda nested=True, **kw: calls.append(nested) or real(nested, **kw))
 
     try:
         lint.run()
@@ -57,7 +57,7 @@ def test_check_view_dirs_uses_the_render_it_is_given(project, monkeypatch):
     rendered = adr_index.outputs()
 
     monkeypatch.setattr(adr_index, "outputs",
-                        lambda nested=True: pytest_fail("rendered again"))
+                        lambda nested=True, **kw: pytest_fail("rendered again"))
     lint.check_view_dirs([], rendered)      # must not re-render
 
 
@@ -66,7 +66,7 @@ def test_check_anchors_uses_the_render_it_is_given(project, monkeypatch):
     rendered = adr_index.outputs()
 
     monkeypatch.setattr(adr_index, "outputs",
-                        lambda nested=True: pytest_fail("rendered again"))
+                        lambda nested=True, **kw: pytest_fail("rendered again"))
     lint.check_anchors([], rendered)        # must not re-render
 
 

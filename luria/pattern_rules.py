@@ -22,6 +22,15 @@ and the logic core can stay the engine (ADR-127):
     pattern_edge(P, First, Last)            a whole match, by its two ends
     pattern_via(P, First, Last, Var, X)     a named inner node of that match
 
+A view asks for one more, and only when it asks (`rows=True`), so the
+programs a chain solves are unchanged (ADR-tmpi08sj):
+
+    pattern_row(P, Match, Var, X)           a named node of one whole match
+
+`Match` is the tuple of every node of the match, which only keys the row:
+the atoms sharing it are one row, and a view reads each named node as a
+document.
+
 Nothing about partial matches. Whether a path that stops partway is
 unfinished depends on what the record's schema requires, which a pattern
 cannot know; a record that wants that list writes it as a pattern of its own,
@@ -37,12 +46,15 @@ from .facts import _term
 from .patterns import Path, Pattern
 
 
-def program(patterns: dict[str, Pattern]) -> str:
-    """The clingo text for every pattern, in declaration order."""
+def program(patterns: dict[str, Pattern], rows: bool = False) -> str:
+    """The clingo text for every pattern, in declaration order. `rows` adds
+    `pattern_row/4`, which only a view reads."""
     out = ["% Generated from luria.yaml `patterns:` — see pattern_rules.py."]
     for k, pattern in enumerate(patterns.values()):
-        out += _Lowering(f"pat{k}", pattern).rules()
+        out += _Lowering(f"pat{k}", pattern, rows).rules()
     out += ["#show pattern_edge/3.", "#show pattern_via/5."]
+    if rows:
+        out.append("#show pattern_row/4.")
     return "\n".join(out) + "\n"
 
 
@@ -56,8 +68,9 @@ def needs_values(patterns: dict[str, Pattern]) -> bool:
 
 
 class _Lowering:
-    def __init__(self, prefix: str, pattern: Pattern):
+    def __init__(self, prefix: str, pattern: Pattern, rows: bool = False):
         self.p = prefix
+        self.rows = rows
         self.pattern = pattern
         self.name = _term(pattern.name)
         self.lines: list[str] = []
@@ -148,6 +161,8 @@ class _Lowering:
             body.append(f"not {self._negation(j, neg)}")
         args = ", ".join(self.main)
         self.lines.append(f"{self.p}_m({args}) :- {', '.join(body)}.")
+        if self.rows:
+            self._rows(args)
         if n == 0:
             return self.lines
         first, last = self.main[0], self.main[n]
@@ -162,6 +177,15 @@ class _Lowering:
                     f"pattern_via({self.name}, {first}, {last}, "
                     f"{_term(node.var)}, {self.main[i]}) :- {self.p}_m({args}).")
         return self.lines
+
+    def _rows(self, args: str) -> None:
+        """One `pattern_row` per named node, keyed by the whole match. A
+        node named twice is one variable and one row entry."""
+        match = f"({args},)" if len(self.main) == 1 else f"({args})"
+        for var, clingo_var in self.bound.items():
+            self.lines.append(
+                f"pattern_row({self.name}, {match}, {_term(var)}, "
+                f"{clingo_var}) :- {self.p}_m({args}).")
 
     def _negation(self, j: int, neg: Path) -> str:
         tag = f"{self.p}_n{j}"

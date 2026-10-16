@@ -139,6 +139,9 @@ DEFAULTS: dict = {
     # Named path patterns a chain may walk in place of a field (#371). Empty
     # for a project whose lines all follow one reference field.
     "patterns": {},
+    # Jinja templates rendered over the record into any file (ADR-tmpi08sj).
+    # Empty for a project whose every view is one luria already generates.
+    "views": {},
     # Other projects whose records this one cites, keyed by a short prefix. A
     # reference then composes: `LU-ADR-013` is that remote's decision 13
     # (ADR-016).
@@ -1964,6 +1967,66 @@ def _fragment(spec) -> Fragment:
 
 
 @dataclass(frozen=True)
+class View:
+    """A Jinja template rendered over the record into a file (ADR-tmpi08sj).
+
+        views:
+          bootloader:
+            template: record/views.d/CLAUDE.md.j2
+            output: CLAUDE.md
+
+    `luria index` renders it with every other view, and `--check` reports it
+    stale like any other. The template reads the record through `doc`,
+    `docs`, `schemes` and `vocabulary`, writes codes bare, and composes with
+    Jinja's own `include`, `import` and `extends`, resolved from the project
+    root. The output passes through the link fixer in its own frame, so no
+    template spells a link target. See `luria/views.py`."""
+    name: str
+    # The Jinja source, relative to the project root. Keep it out of every
+    # directory the link fixer scans: a code inside an expression would be
+    # rewritten into a link.
+    template: Path
+    # Where the rendered text lands: any path in the repository, a root file
+    # such as `CLAUDE.md` included. A markdown output is stamped as generated.
+    output: Path
+    # Whether the output stops moving once endorsed (ADR-tmpi08sj). A pinned
+    # view is rendered and its reads hashed by `luria views --pin NAME`,
+    # into `views.lock.json`; after that `luria index` leaves the committed
+    # output alone, and `luria lint` reports `view-drift` when what the view
+    # read has changed since. For an output that is published: a submitted
+    # paper, a released document.
+    pin: bool = False
+
+
+def _views(raw: dict, root: Path) -> dict[str, View]:
+    """Every declared view. Both paths are required: a view without a
+    template renders nothing, and a view without an output renders it
+    nowhere — either looks exactly like a view that is current (DP-15)."""
+    out: dict[str, View] = {}
+    for name, spec in raw.items():
+        spec = spec or {}
+        where = f"luria.yaml: views.{name}"
+        for key in ("template", "output"):
+            if not str(spec.get(key) or "").strip():
+                raise ValueError(f"{where}: no `{key}` — a view needs the "
+                                 "template it renders and the file it "
+                                 "renders into")
+        if unknown := sorted(set(spec) - {"template", "output", "pin"}):
+            raise ValueError(f"{where}: unknown key(s) {', '.join(unknown)} "
+                             "(a view takes `template`, `output` and `pin`)")
+        if not isinstance(spec.get("pin", False), bool):
+            raise ValueError(f"{where}: `pin` is true or false")
+        view = View(name=str(name), template=root / str(spec["template"]),
+                    output=root / str(spec["output"]),
+                    pin=bool(spec.get("pin", False)))
+        if view.template.resolve() == view.output.resolve():
+            raise ValueError(f"{where}: `output` is the template itself, so "
+                             "the first render would overwrite its source")
+        out[str(name)] = view
+    return out
+
+
+@dataclass(frozen=True)
 class NamedPattern:
     """A named path pattern: a relation between documents that no single
     field holds, written in Cypher's pattern syntax (#371).
@@ -2194,6 +2257,7 @@ class Config:
     remotes: dict[str, Remote]
     journals: dict[str, Journal]
     chains: dict[str, Chain]
+    views: dict[str, "View"]
     patterns: dict[str, NamedPattern]
     stale_days: int
     user_agent: str                     # what every request announces
@@ -2356,6 +2420,12 @@ class Config:
         # the reader must not edit, in a file the next build overwrites.
         if any(path == c.output for c in self.chains.values()):
             return True
+        # A view's output (ADR-tmpi08sj), for the chain page's reason: a
+        # code in it was put there by a template, so a finding sited in the
+        # output names a line nobody can annotate. What a view reads is
+        # checked at the template line instead (`view_reads`).
+        if any(path == v.output for v in self.views.values()):
+            return True
         for s in self.schemes.values():
             # The index, and a page per value of every field it groups by —
             # the axis's among them, on the same template and in the same
@@ -2449,7 +2519,7 @@ class Config:
 # The tables whose entries a project names, as opposed to the settings tables
 # whose keys Luria names. The distinction decides the merge rule (ADR-047).
 FAMILIES = ("schemes", "fragments", "journals", "remotes", "chains",
-            "patterns")
+            "patterns", "views")
 
 
 def load(root: Path | None = None, text: str | None = None,
@@ -2543,6 +2613,7 @@ def load(root: Path | None = None, text: str | None = None,
         patterns=(patterns := _patterns(raw.get("patterns") or {},
                                         schemes)),
         chains=_chains(raw.get("chains", {}), schemes, root, patterns),
+        views=_views(raw.get("views") or {}, root),
         stale_days=int(raw.get("stale_days", 90)),
         user_agent=str(raw.get("user_agent")
                        or DEFAULTS["user_agent"]),
