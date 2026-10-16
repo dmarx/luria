@@ -131,6 +131,30 @@ merged.
 **A markdown output carries the generated stamp**, naming its template, so a
 reader of the file knows where to edit.
 
+**A view's output is generated**, for the citation scan as for the fixer,
+like a chain page. A code in it was put there by a template, so a finding
+sited in the output would name a line nobody can annotate.
+
+**What a view reads is recorded, by template line.** Each read of a
+document is sited at the template file and line it ran on, found through
+the mapping Jinja's own tracebacks use, so a read inside an `include`d file
+is sited there. A read is either a *transclusion* or a plain *read*. A
+transclusion carries the document's assertion into the output: its `body`,
+a `part`, its `summary` or `origin`. A plain read names the document: its
+code, its title, its status, a reference. Two things follow from the
+record:
+
+- **`retired-transclusions`**, a lint warning that `fail_on` can promote
+  like the other reference findings. It reports a transclusion of a
+  document whose status is its scheme's `retires_on`, naming its
+  successor. It is acknowledged in the template, with `inactive-ok:` in a
+  Jinja comment on the site's line or the line above. Naming a retired
+  document is not a finding, because that is what a page about revisions
+  does.
+- **"Rendered into"** on each document's page in `luria site`: the outputs
+  of the views that read it, so a reader about to change a claim learns
+  where else its words appear.
+
 ### Phasing
 
 1. `views`, `doc`, `docs`, `vocabulary`, `schemes`, `journals`, `part`,
@@ -170,6 +194,13 @@ reader of the file knows where to edit.
   But a pattern used by one view reads best where it is used, and an inline
   pattern goes through the same parser and the same checks, so nothing is
   lost by allowing it.
+- **Report a transclusion of any document not in force**, as the citation
+  scan reports any citation of one. On nucleation, a view transcluding one
+  line of argument read 28 claims. 14 were Proposed, which in that record
+  means held provisionally: the argument in progress. The scan's rule would
+  have reported 17 sites, and `retires_on` reports 2. A view of an argument
+  is made of claims still in play, so reporting them would bury the two
+  that the record has stopped holding.
 - **A manuscript scheme**, with sections as documents. A manuscript is one
   template among many. A scheme for it would fix one shape and leave the
   bootloader and the documentation without one.
@@ -186,5 +217,11 @@ reader of the file knows where to edit.
   see it. Removing a view means deleting its output in the same change.
 - `luria lint` gets slower by one render per view. For the views this is for
   it is milliseconds.
-- What a view depends on is unknown until phase 3. Until then, a view that
-  transcludes a superseded claim renders it without comment.
+- Retirement is the one word `retires_on` names. A Rejected claim
+  transcluded into a view is not reported, because luria has no role
+  saying that Rejected means "no longer held". If that is wanted, it needs
+  a role of its own, and adding one is a decision for that role, not for
+  this one.
+- An `inactive-ok:` on a line inside a loop excuses that code wherever the
+  loop runs. A loop that transcludes several retired documents names each
+  of them there.

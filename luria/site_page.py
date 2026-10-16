@@ -218,7 +218,8 @@ def _vocabulary(meta: dict, source: Path, scheme, links: Links):
 
 def properties(meta: dict, source: Path, outbound=(), inbound=(),
                known: dict[str, str] | None = None, cfg=None,
-               prefix: str = "") -> tuple[dict[str, object], list[str]]:
+               prefix: str = "", rendered_into=()
+               ) -> tuple[dict[str, object], list[str]]:
     """The record's facts as `{label: value}`, in reading order, plus any
     reference that resolved to nothing — frontmatter is data, which the
     prose scanner never reads, so this is the only place it can be counted.
@@ -246,6 +247,11 @@ def properties(meta: dict, source: Path, outbound=(), inbound=(),
         rows.append(("Issue", [links.text(f"[[{i}]]") for i in issues]))
     rows += _vocabulary(meta, source, scheme, links)
     rows += _edges(outbound, inbound, scheme, links, known)
+    # The views a template renders this document into (ADR-tmpi08sj): the
+    # reverse of what each view read, so a reader of a claim learns where
+    # else its words appear before changing them.
+    if rendered_into:
+        rows.append(("Rendered into", list(rendered_into)))
     props = {label: values[0] if len(values) == 1 else values
              for label, values in rows}
     return props, links.unresolved

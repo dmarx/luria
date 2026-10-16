@@ -141,12 +141,14 @@ class Document:
         from .contract import codes_of, effective_values
         from .doc_refs import PROSE_KEYS
         meta = self._adr.meta
-        if name == "status":
-            return self._adr.status_value
-        if name == "title":
-            return self._adr.title
+        if name in ("status", "title"):
+            self._record.saw(self, "read")
+            return (self._adr.status_value if name == "status"
+                    else self._adr.title)
         if name not in self.fields():
             raise KeyError(name)
+        self._record.saw(self, "transcluded" if name in TRANSCLUDED_FIELDS
+                         else "read")
         spec = next((f for f in self._contract.fields if f.name == name), None)
         raw = meta.get(name)
         if spec is not None and spec.reference is not None:
@@ -174,6 +176,7 @@ class Document:
 
     @property
     def body(self) -> str:
+        self._record.saw(self, "transcluded")
         return self._rebased("\n".join(self._lines).strip())
 
     def part(self, heading: str) -> str:
@@ -183,9 +186,11 @@ class Document:
         if found is None:
             raise _Refused(f"No such part: {self.code} has no heading "
                            f"{heading!r}")
+        self._record.saw(self, "transcluded")
         return self._rebased("\n".join(found).strip())
 
     def __str__(self) -> str:
+        self._record.saw(self, "read")
         return self.code
 
 
@@ -193,6 +198,54 @@ class Document:
 # them, which are the ones `luria new` takes for every scheme. `body` is the
 # document's text, not a frontmatter key, and is a member of its own.
 UNIVERSAL = tuple(k for k in SCAFFOLDED if k != "body")
+
+# A read of these is the document's assertion carried into the output, which
+# is what makes it a transclusion; reading a title, a status or a reference
+# names the document without asserting what it says. `status_note` is prose
+# but not the claim: it is the record saying why the claim stands as it does.
+TRANSCLUDED_FIELDS = ("summary", "origin")
+
+
+@dataclass(frozen=True)
+class Site:
+    """Where in a template a document was read, and how."""
+    template: str           # the file the read is in, an `include` included
+    line: int
+    kind: str               # "read" or "transcluded"
+
+
+@dataclass(frozen=True)
+class Read:
+    """Everything one render read of one document."""
+    code: str
+    status: str
+    retired: bool           # its status is its scheme's `retires_on`
+    successors: tuple[str, ...]
+    sites: tuple[Site, ...]
+
+
+@dataclass(frozen=True)
+class Rendering:
+    """One view's output, and what producing it read."""
+    text: str
+    reads: dict[str, Read]
+
+
+def _site() -> tuple[str, int]:
+    """The template file and line the innermost template frame is on.
+
+    Jinja compiles a template to Python whose globals carry the template,
+    and the template maps a compiled line back to its source line: the same
+    mapping its tracebacks use. An `include`d file is a template of its own,
+    so a read inside one is sited there."""
+    frame = sys._getframe(1)
+    while frame is not None:
+        template = frame.f_globals.get("__jinja_template__")
+        if template is not None:
+            return (template.name or "",
+                    template.get_corresponding_lineno(frame.f_lineno))
+        frame = frame.f_back
+    return "", 0
 
 
 class _Undefined(jinja2.StrictUndefined):
@@ -250,6 +303,25 @@ class _Record:
         self.cfg = current()
         self.out_dir = output.parent
         self._contracts: dict[str, object] = {}
+        self._reads: dict[str, tuple[object, list[Site]]] = {}
+
+    def saw(self, document: Document, kind: str) -> None:
+        """Record that the template read `document` here."""
+        template, line = _site()
+        _, sites = self._reads.setdefault(document.code,
+                                          (document._adr, []))
+        site = Site(template, line, kind)
+        if site not in sites:
+            sites.append(site)
+
+    def reads(self) -> dict[str, Read]:
+        out = {}
+        for code, (adr, sites) in self._reads.items():
+            status = adr.status_value
+            word = adr.scheme.retires_on
+            out[code] = Read(code, status, bool(word) and status == word,
+                             tuple(adr.superseded_by), tuple(sites))
+        return out
 
     def contract(self, scheme):
         """The scheme's contract, compiled once per render."""
@@ -399,6 +471,22 @@ def _located(view, exc: BaseException) -> ViewError:
     return ViewError(f"{where}: {exc}")
 
 
+# The last rendering of each output in this process. A lint renders every
+# view to build the view tree, then asks what each read; the text it holds
+# says whether the rendering here is the one it means.
+_RENDERED: dict[Path, Rendering] = {}
+
+
+def rendering(view, text: str | None = None) -> Rendering:
+    """`view` rendered, with what it read. Given the text a caller already
+    rendered, the rendering that produced it is reused rather than redone."""
+    held = _RENDERED.get(view.output)
+    if text is not None and held is not None and held.text == text:
+        return held
+    render(view)
+    return _RENDERED[view.output]
+
+
 def render(view) -> str:
     """The text `view` renders to, linked and stamped. Raises ViewError."""
     from . import doc_refs
@@ -416,6 +504,7 @@ def render(view) -> str:
     text, _ = doc_refs.linkify(text, view.output)
     if view.output.suffix == ".md":
         text = STAMP.format(template=_name(view)) + text
+    _RENDERED[view.output] = Rendering(text, record.reads())
     return text
 
 

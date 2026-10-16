@@ -697,7 +697,7 @@ FAILABLE = ("retired-citations", "unresolved-codes", "foreign-temp-codes",
             "broken-targets", "remote-drift", "inert-status",
             "source-mismatch", "source-unchecked",
             "legacy-spellings", "narrow-titles", "stale-directives",
-            "template-drift", "broken-chains",
+            "template-drift", "broken-chains", "retired-transclusions",
             "one-sided-relations", "unbound-relations", "unbound-lines",
             "unrecorded-relations", "unannotated-relations",
             "unexplained-relations", "bad-annotations",
@@ -777,9 +777,12 @@ def spent_upgrades() -> list[str]:
     return out
 
 
-def status_sections() -> list[tuple[str, str, list[str]]]:
+def status_sections(rendered: dict[Path, str] | None = None
+                    ) -> list[tuple[str, str, list[str]]]:
     """Every status finding, as (class, headline, detail lines) — computed
-    once, so the warning path and the `fail_on` path cannot disagree."""
+    once, so the warning path and the `fail_on` path cannot disagree.
+    `rendered` is the view tree the lint already built, so a view is not
+    rendered a second time to learn what it read."""
     docs = ref_status.load_docs()
     result = ref_status.scan(docs=docs)
     sections: list[tuple[str, str, list[str]]] = []
@@ -961,6 +964,19 @@ def status_sections() -> list[tuple[str, str, list[str]]]:
     # a comparison one side declares and the other does not. Both are
     # structural, so neither needs an acknowledgement — there is no reading
     # under which either is what the author meant.
+    # A view carrying a retired document's text into its output
+    # (ADR-tmpi08sj). The citation scan cannot see it: the output is
+    # generated, so it is excluded and nobody could annotate it there. The
+    # render knows which template line read what, so the site is that line.
+    from . import view_reads
+    transcluded = view_reads.retired_rows(rendered)
+    if transcluded:
+        sections.append((
+            "retired-transclusions",
+            f"{len(transcluded)} template site(s) transclude a retired "
+            "document into a view (`inactive-ok:` in a template comment at "
+            "the site acknowledges it)", transcluded))
+
     broken = chains.rows()
     if broken:
         sections.append((
@@ -1094,7 +1110,8 @@ def expired_directives(as_of: dt.date | None = None) -> list[str]:
     return sorted(out)
 
 
-def report_warnings(errors: list[str]) -> None:
+def report_warnings(errors: list[str],
+                    rendered: dict[Path, str] | None = None) -> None:
     """Status findings: warnings by default, failures on request (ADR-035).
 
     Citing a retired document is often correct — a `Rejected` decision exists
@@ -1164,7 +1181,7 @@ def report_warnings(errors: list[str]) -> None:
     # A class with no findings yields no section, so a baseline it has already
     # met would otherwise go unmentioned forever — the one state where the
     # number is certainly stale is the one nothing would have reported.
-    sections = status_sections()
+    sections = status_sections(rendered)
     seen = {name for name, _, _ in sections}
     for name in sorted(set(base) - seen - mute - fail):
         print(f"luria: {name}: 0 against a `baseline` of {base[name]} — the "
@@ -1235,7 +1252,7 @@ def run() -> None:
     check_bare_refs(errors)
     check_wikilinks(errors)
     check_anchors(errors, rendered)
-    report_warnings(errors)
+    report_warnings(errors, rendered)
     if errors:
         print(f"luria: {len(errors)} violation(s)", file=sys.stderr)
         for e in errors:

@@ -21,4 +21,16 @@
   `{% for r in match("(c:CLAIM)<-[:concludes]-(g:ARG)") %}`. The pattern
   is one `luria.yaml` declares, by name, or one written inline in the same
   syntax and checked against the schemes the same way.
+- `retired-transclusions`, a lint warning: a template line that
+  transcludes a document whose status is its scheme's `retires_on` (its
+  body, a part or its summary), named with its successor. Acknowledge it
+  in the template, with `{# inactive-ok: CODE — why #}` on the line or the
+  line above. `lint.fail_on` can promote it.
+- `luria site` shows "Rendered into" on each document a view reads.
 - `jinja2` is a new dependency.
+
+### Fixed
+
+- A view's output is a generated file. Before this, the citation scan
+  reported a retired code in a rendered view at a line nobody could
+  annotate.

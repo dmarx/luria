@@ -2410,6 +2410,12 @@ class Config:
         # the reader must not edit, in a file the next build overwrites.
         if any(path == c.output for c in self.chains.values()):
             return True
+        # A view's output (ADR-tmpi08sj), for the chain page's reason: a
+        # code in it was put there by a template, so a finding sited in the
+        # output names a line nobody can annotate. What a view reads is
+        # checked at the template line instead (`view_reads`).
+        if any(path == v.output for v in self.views.values()):
+            return True
         for s in self.schemes.values():
             # The index, and a page per value of every field it groups by —
             # the axis's among them, on the same template and in the same
