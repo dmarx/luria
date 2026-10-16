@@ -1,5 +1,5 @@
 ---
-status: Proposed
+status: Active
 title: 'A view may be a Jinja template over the record'
 version: 1
 tags:
