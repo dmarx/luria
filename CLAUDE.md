@@ -31,10 +31,17 @@ Orient first:
   anything the next person would otherwise rediscover, a decision document
   when a real alternative was rejected. Filed with context loaded it costs
   a paragraph; re-derived cold it costs a session.
-- **Never edit a generated file.** Anything stamped `GENERATED` — the
-  decision index, tag pages, `docs/design-principles.md`, journal books,
-  reports, `docs/record.md`, `docs/configuration.md`, the README badge
-  region — is rebuilt by `luria index`. Edit the sources, rerun it.
+- **Never edit a generated file.** Anything stamped `GENERATED` is rebuilt
+  by `luria index`; edit the sources and rerun it. The README's generated
+  regions are rebuilt too, and so is everything below, derived from this
+  record's configuration:
+  - the ADR index and its per-value pages: `docs/decisions`
+  - the DP document: `docs/design-principles.md`
+  - the Development log books: `docs/devlog`
+  - the `bootloader` view: `CLAUDE.md`
+  - the status reports: `docs/reports`
+  - the record description: `docs/record.md`
+  - the configuration reference: `docs/configuration.md`
 - **Never hand-write a link target for a code.** Write the bare code and
   run `luria link --fix`; record prose renders into views in other
   directories, so only the fixer knows the frame a target must resolve
