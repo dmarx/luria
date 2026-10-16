@@ -31,11 +31,24 @@ Orient first:
   a paragraph; re-derived cold it costs a session.
 - **Never edit a generated file.** Anything stamped `GENERATED` is rebuilt
   by `luria index`; edit the sources and rerun it. The README's generated
-  regions are rebuilt too, and so is everything below, which is the
-  generator's own list:
-{% for g in generated() %}
-  - {{ g.label }}: `{{ g.path }}`
+  regions are rebuilt too, and so is everything below, derived from this
+  record's configuration:
+{% for s in schemes() if s.output %}
+  - the {{ s.title or s.prefix }} {{ "index and its per-value pages" if s.render == "index" else "document" }}: `{{ s.output }}`
 {% endfor %}
+{% for j in journals() %}
+  - the {{ j.title }} books: `{{ j.output }}`
+{% endfor %}
+{% for c in chains() %}
+  - the {{ c.title }} chain page: `{{ c.output }}`
+{% endfor %}
+{% for v in views() %}
+  - the `{{ v.name }}` view: `{{ v.output }}`
+{% endfor %}
+{% set p = paths() %}
+  - the status reports: `{{ p.reports }}`
+  - the record description: `{{ p.record }}`
+  - the configuration reference: `{{ p.configuration }}`
 - **Never hand-write a link target for a code.** Write the bare code and
   run `luria link --fix`; record prose renders into views in other
   directories, so only the fixer knows the frame a target must resolve

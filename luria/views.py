@@ -75,14 +75,28 @@ class SchemeInfo:
     blurb: str
     dir: str
     output: str
+    # "index" (a table and per-value pages under `output`) or "document"
+    # (the bodies assembled into the one page `output`).
+    render: str = "index"
 
 
 @dataclass(frozen=True)
-class GeneratedInfo:
-    """One thing `luria index` writes, as a template names it: a label and
-    a root-relative path (`Config.generated`)."""
-    label: str
-    path: str
+class OutputInfo:
+    """A chain or a view, as a template names it: its name, its title where
+    it has one, and the page it renders into, relative to the project root."""
+    name: str
+    title: str
+    output: str
+
+
+@dataclass(frozen=True)
+class PathsInfo:
+    """The pages and directories luria renders at fixed, configured places,
+    relative to the project root."""
+    docs: str
+    reports: str
+    record: str             # the record description
+    configuration: str      # the configuration reference
 
 
 @dataclass(frozen=True)
@@ -221,14 +235,23 @@ class _Record:
     def schemes(self) -> list[SchemeInfo]:
         return [SchemeInfo(s.prefix, str(s.title or ""),
                            str(s.blurb or "").strip(), self.cfg.rel(s.dir),
-                           self.cfg.rel(s.output) if s.output else "")
+                           self.cfg.rel(s.output) if s.output else "",
+                           s.render)
                 for s in self.cfg.schemes.values()]
 
-    def generated(self) -> list[GeneratedInfo]:
-        """Everything `luria index` writes, from the generator's own list,
-        so a page telling people what not to edit cannot drift from it."""
-        return [GeneratedInfo(t.label, self.cfg.rel(t.shown))
-                for t in self.cfg.generated()]
+    def chains(self) -> list[OutputInfo]:
+        return [OutputInfo(c.name, c.title, self.cfg.rel(c.output))
+                for c in self.cfg.chains.values()]
+
+    def views(self) -> list[OutputInfo]:
+        return [OutputInfo(v.name, v.name, self.cfg.rel(v.output))
+                for v in self.cfg.views.values()]
+
+    def paths(self) -> PathsInfo:
+        return PathsInfo(self.cfg.rel(self.cfg.docs),
+                         self.cfg.rel(self.cfg.reports),
+                         self.cfg.rel(self.cfg.record_doc),
+                         self.cfg.rel(self.cfg.config_doc))
 
     def journals(self) -> list[JournalInfo]:
         return [JournalInfo(j.name, str(j.title or ""),
@@ -321,8 +344,8 @@ def render(view) -> str:
     env.globals.update(doc=record.doc, docs=record.docs,
                        vocabulary=record.vocabulary, schemes=record.schemes,
                        match=record.match,
-                       journals=record.journals,
-                       generated=record.generated)
+                       journals=record.journals, chains=record.chains,
+                       views=record.views, paths=record.paths)
     try:
         text = env.get_template(_name(view)).render()
     except (jinja2.TemplateError, _Refused, TypeError, ValueError,

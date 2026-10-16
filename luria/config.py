@@ -1998,24 +1998,6 @@ class View:
     pin: bool = False
 
 
-@dataclass(frozen=True)
-class Generated:
-    """One thing `luria index` writes, named for a reader (DP-004).
-
-    `files` are generated outright, and so is every page directly inside
-    one of `dirs`. `shown` is the path a reader is pointed at: a view's
-    directory, not each of its pages. `Config.generated` lists them, and
-    `Config.is_generated` asks them, so the generator's own answer and the
-    list a bootloader prints are one list."""
-    label: str
-    shown: Path
-    files: tuple[Path, ...] = ()
-    dirs: tuple[Path, ...] = ()
-
-    def covers(self, path: Path) -> bool:
-        return path in self.files or path.parent in self.dirs
-
-
 def _views(raw: dict, root: Path) -> dict[str, View]:
     """Every declared view. Both paths are required: a view without a
     template renders nothing, and a view without an output renders it
@@ -2408,53 +2390,64 @@ class Config:
         and a private remote can only be read from a local clone anyway."""
         return self.root / "remotes.lock.json"
 
-    def generated(self) -> list[Generated]:
-        """Everything `luria index` writes, in the order a reader meets it.
-
-        Each target carries the reason it is generated where the reason is
-        not just "a view": the status reports *list* retired and dangling
-        codes, so scanning them would report the report (#35); the
-        configuration reference and the record description are made of
-        example codes; a chain page shows a line *including* its retired
-        steps; and a view's codes were put there by its template. An index
-        scheme's view directory is not a target as a whole: in the
-        collocated layout it holds the sources, so its index page and the
-        directory of each grouped field's pages are (ADR-098)."""
-        out: list[Generated] = []
-        for s in self.schemes.values():
-            name = s.title or s.prefix
-            if s.render == "index":
-                out.append(Generated(
-                    f"the {name} index and its per-value pages",
-                    s.view, files=(s.index_path,),
-                    dirs=tuple(s.vocab_dir(f) for f in s.grouped_fields)))
-            elif s.output:
-                out.append(Generated(f"the {name} document", s.output,
-                                     files=(s.output,)))
-        for j in self.journals.values():
-            out.append(Generated(f"the {j.title} books", j.output,
-                                 dirs=(j.output,)))
-        for c in self.chains.values():
-            out.append(Generated(f"the {c.title} chain page", c.output,
-                                 files=(c.output,)))
-        for v in self.views.values():
-            out.append(Generated(f"the `{v.name}` view", v.output,
-                                 files=(v.output,)))
-        out.append(Generated("the status reports", self.reports,
-                             dirs=(self.reports,)))
-        out.append(Generated("the record description", self.record_doc,
-                             files=(self.record_doc,)))
-        out.append(Generated("the configuration reference", self.config_doc,
-                             files=(self.config_doc,)))
-        return out
-
     def is_generated(self, path: Path) -> bool:
         """A view the generator owns. Rewriting one is pointless — the next
-        build undoes it — so the reference fixer skips them, and the
-        reference report does not scan them: a finding sited in a page the
-        next build overwrites names a line nobody can annotate. What counts
-        is `generated()`, the one list of what the generator writes."""
-        return any(t.covers(path) for t in self.generated())
+        build undoes it — so the reference fixer skips them.
+
+        The status reports count too (#35): they *list* retired and dangling
+        codes, so scanning them would report the report — every flagged code
+        would gain a citation site inside the page that flags it, and the
+        view could never converge."""
+        if path.parent == self.reports:
+            return True
+        # The configuration reference (`luria index` renders it from this
+        # module's own dataclasses). Generated for the usual reason — a
+        # hand-written copy of a schema drifts — and flagged here for a second
+        # one: the page is *made* of example codes, and `doc_refs.doc_files`
+        # filters on this method, so the bare-reference lint and the fixer
+        # both leave it alone.
+        if path == self.config_doc:
+            return True
+        # The record description, generated from this config for the same two
+        # reasons: a hand-written "how our record works" drifts, and the page
+        # is made of example codes.
+        if path == self.record_doc:
+            return True
+        # A chain page (#171). Generated for the usual reason, and excluded
+        # here for a sharper one: its whole job is to show a line *including*
+        # its retired steps, so scanning it would report every superseded
+        # document in every chain as an unacknowledged citation — at a site
+        # the reader must not edit, in a file the next build overwrites.
+        if any(path == c.output for c in self.chains.values()):
+            return True
+        # A view's output (ADR-130), for the chain page's reason: a
+        # code in it was put there by a template, so a finding sited in the
+        # output names a line nobody can annotate. What a view reads is
+        # checked at the template line instead (`view_reads`).
+        if any(path == v.output for v in self.views.values()):
+            return True
+        for s in self.schemes.values():
+            # The index, and a page per value of every field it groups by —
+            # the axis's among them, on the same template and in the same
+            # kind of directory (ADR-098).
+            #
+            # The non-axis half of this was missing for as long as
+            # vocabularies existed, and invisible until a *retired* document
+            # became a vocabulary member: the reference report scans what
+            # this method does not exclude, so it found a citation of a
+            # superseded document inside a page nobody can annotate — an
+            # `inactive-ok:` written there is erased by the next build.
+            # Worse, the page is written in the same pass that renders the
+            # report, so the report saw the *previous* run's copy and
+            # `luria index` stopped converging.
+            if s.render == "index" and (
+                    path == s.index_path
+                    or any(path.parent == s.vocab_dir(f)
+                           for f in s.grouped_fields)):
+                return True
+            if s.output == path:
+                return True
+        return any(path.parent == j.output for j in self.journals.values())
 
     def is_template(self, path: Path) -> bool:
         """A scheme's `_template.md` — a form, not a document.
