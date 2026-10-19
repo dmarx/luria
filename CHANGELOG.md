@@ -5,6 +5,110 @@ Assembled from `changelog.d/` fragments on a cadence — never hand-edited
 
 <!-- luria-insert-here -->
 
+## 2026-10-19
+
+### Added
+
+- `views`: a Jinja template rendered over the record into any file in the
+  repository, a root `CLAUDE.md` included ([ADR-130](record/decisions.d/ADR-130.md)). `luria index`
+  renders each view with the others, and `--check` reports a stale one.
+  A template reads the record through `doc(code)`, `docs(scheme, **where)`,
+  `vocabulary(name)`, `schemes()` and `journals()`. A document's
+  attributes are its scheme's fields, read as the scheme's contract reads
+  them: any frontmatter field, a vocabulary default, a reference as the
+  documents it names. A document also has `code`, `body` and
+  `part(heading)`. `docs(scheme, in_force=True)` keeps the documents whose
+  status is the scheme's own `active` word.
+  Templates write codes bare: the output is linked by the same fixer
+  `luria link --fix` uses, in the output's own frame, and transcluded
+  text is rebased from its source's frame. Templates compose with Jinja's
+  `include`, `import` and `extends`, resolved from the project root. The
+  environment is sandboxed and strict, so an unknown code, field or part
+  is an error naming the template's line, and `luria lint` renders every
+  view so a broken template fails its own branch.
+- `match(pattern)` in a view: every match of a path pattern as a row
+  mapping each named node to its document, as in
+  `{% for r in match("(c:CLAIM)<-[:concludes]-(g:ARG)") %}`. The pattern
+  is one `luria.yaml` declares, by name, or one written inline in the same
+  syntax and checked against the schemes the same way.
+- `retired-transclusions`, a lint warning: a template line that
+  transcludes a document whose status is its scheme's `retires_on` (its
+  body, a part or its summary), named with its successor. Acknowledge it
+  in the template, with `{# inactive-ok: CODE — why #}` on the line or the
+  line above. `lint.fail_on` can promote it.
+- `luria site` shows "Rendered into" on each document a view reads.
+- A view can be pinned, so its output stops moving once it is published.
+  `pin: true` registers the pin. `luria views --pin NAME` renders the view
+  and endorses what it read into `views.lock.json`. After that, `luria
+  index` leaves the output alone, and the `view-drift` lint warning names
+  each document whose quoted values have changed since. Only what the view
+  read is compared, so an edit to a part it does not quote is not drift.
+  `luria views` lists every view and whether its pin holds.
+- `jinja2` is a new dependency.
+
+### Fixed
+
+- A view's output is a generated file. Before this, the citation scan
+  reported a retired code in a rendered view at a line nobody could
+  annotate.
+
+### Added
+
+- More of the configuration reaches a view template: each scheme's
+  `render` kind on `schemes()`, `chains()` and `views()` with their
+  outputs, and `paths()` for the status reports, the record description
+  and the configuration reference. This repository's `CLAUDE.md` uses
+  them to derive its "never edit a generated file" list in the template.
+  A test holds that every file `luria index` writes falls under a path
+  the bootloader names.
+
+### Documentation
+
+- This repository's `CLAUDE.md` is now a view ([ADR-130](record/decisions.d/ADR-130.md)), rendered by
+  `luria index` from `record/views.d/CLAUDE.md.j2`. The hand-written map
+  stays prose in the template. A new "Principles in force" section lists
+  the active design principles, derived from the record. Edit the
+  template, never `CLAUDE.md`.
+
+### Added
+
+- **Path patterns** (`patterns:`): a named relation between documents that
+  no single field holds, in Cypher's pattern syntax. For example,
+  `(b:CLAIM)<-[:concludes]-(i:INF)<-[:premise_of]-(a:CLAIM)` relates a
+  claim to the claims it follows from, through the inference that
+  concludes it.
+  - Node labels are schemes and edge types are reference fields. A hop
+    holds when the relation does, read from either side.
+  - The subset: one label per node, `|` between fields, variable length
+    (`*`, `*2..`, `*..3`), property maps such as `{status: 'Active'}`, and
+    `WHERE NOT` followed by a fixed path. `MATCH`, `RETURN`,
+    `OPTIONAL MATCH`, undirected and named edges, shortest paths and writes
+    are refused at load, by name.
+  - Labels, hops and properties are checked against the schemes when
+    `luria.yaml` loads.
+- A chain's `relation` or `sibling` may name a pattern in place of a field.
+  - The step reads like a field: the first node nests under the last.
+  - Its page names the document each step went *through*.
+  - A chain `invariant` covers pattern steps.
+- `examples/argument-map`: claims, inferences and objections, with one
+  chain over every step and one that drops steps an objection challenges.
+- `luria facts` prints `pattern(P)` for each declared pattern.
+
+### Changed
+
+- `lark` is a new dependency; luria parses patterns with its own grammar
+  for the subset.
+
+### Fixed
+
+- A chain page names a step's other parents by the relation that holds
+  them. It said "also extends" whatever the chain walked, so a chain over
+  `objects_to` or `supersedes` asserted a relation nobody declared. The
+  word is the relation's `label` when one is declared, else its field name,
+  with one clause per relation when several hold the extra parents. A
+  record that labels its relations will see the label: a lineage over
+  `extends` labelled "Carries further" now reads "also carries further".
+
 ## 2026-10-12
 
 ### Changed
