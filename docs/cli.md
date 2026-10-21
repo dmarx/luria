@@ -637,8 +637,10 @@ scheme, number, title, status, version, date, path, the whole frontmatter
 as JSON, and the body), a row per field value with list fields exploded
 into positioned rows, the typed edges (`superseded_by:`, `influenced_by:`,
 every declared reference field), every citation the lint's scanner counts
-— where it sits, whether it resolves, whether a directive excuses it — and
-every journal entry with its tags. Rebuilt from scratch on each run, so a
+— where it sits, whether it resolves, its `standing` (`in-force`,
+`acknowledged`, `sanctioned`, `unacknowledged` or `dangling`, as the lint
+reads it), whether a directive or a `lint.inactive_ok` rule excuses it and
+`excused_by` naming which — and every journal entry with its tags. Rebuilt from scratch on each run, so a
 row never outlives its source; refuses to overwrite a file it did not
 write. It is a generated view for asking the record questions with
 `sqlite3`, Datasette or pandas — never a source, and not committed

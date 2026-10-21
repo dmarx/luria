@@ -498,3 +498,24 @@ def test_the_acknowledged_counts_are_partitioned_too(project):
         "ADR-777 and ADR-tmpab12c\n")
     assert ref_status.dangling_acknowledged_count(result, docs) == 1
     assert ref_status.dangling_acknowledged_count(result, docs, temps=True) == 1
+
+
+def test_each_site_has_one_standing(project):
+    """`Citation.standing` is the one reading of what a site needs — the
+    export's column and anything else that asks read it here (DP-004)."""
+    docs, result = scan(project, "in force: ADR-001\n"
+                        "<!-- inactive-ok: ADR-012 — history -->\n"
+                        "retired: ADR-012\n"
+                        "\n"
+                        "loud: ADR-012\n"
+                        "nothing: ADR-920\n")
+    got = sorted((c.line, c.code, c.standing, c.cleared_by)
+                 for pool in (result.cited, result.dangling)
+                 for sites in pool.values() for c in sites)
+    assert got == [
+        (1, "ADR-001", ref_status.IN_FORCE, None),
+        (3, "ADR-012", ref_status.ACKNOWLEDGED,
+         "inactive-ok @ notes.md:2"),
+        (5, "ADR-012", ref_status.UNACKNOWLEDGED, None),
+        (6, "ADR-920", ref_status.DANGLING, None),
+    ]

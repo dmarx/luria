@@ -243,6 +243,17 @@ def annotations(path: Path, text: str, known: set[str],
 # ── Scanning ─────────────────────────────────────────────────────────────
 
 
+# What a site needs, in one word each — the lint's reading of a citation,
+# named once so the export's `standing` column and any report that asks
+# read it from here rather than re-deriving it (DP-004).
+IN_FORCE = "in-force"              # the cited document is in force
+ACKNOWLEDGED = "acknowledged"      # a directive answers for the finding
+SANCTIONED = "sanctioned"          # a `lint.inactive_ok` rule does
+UNACKNOWLEDGED = "unacknowledged"  # retired, and nothing answers: loud
+DANGLING = "dangling"              # names no document, and nothing answers
+STANDINGS = (IN_FORCE, ACKNOWLEDGED, SANCTIONED, UNACKNOWLEDGED, DANGLING)
+
+
 @dataclass(frozen=True)
 class Citation:
     path: Path
@@ -252,6 +263,10 @@ class Citation:
     # The `lint.inactive_ok` rule this citation matches, as its key: nothing
     # to acknowledge, and so nothing for an `inactive-ok` to answer for.
     sanctioned_by: str = field(default="", compare=False)
+    # Whether the code names a document here, and whether it is in force:
+    # what the site would need with nothing answering for it.
+    resolves: bool = field(default=True, compare=False)
+    in_force: bool = field(default=False, compare=False)
 
     def __str__(self) -> str:
         return f"{_rel(self.path)}:{self.line}"
@@ -265,6 +280,38 @@ class Citation:
         """Whether this site still wants a reader's attention: nothing
         acknowledges it and no `lint.inactive_ok` rule sanctions it."""
         return self.excused_by is None and not self.sanctioned
+
+    @property
+    def standing(self) -> str:
+        """What this site needs, as one of `STANDINGS`.
+
+        A document in force needs nothing, whatever answers for it — a
+        `mention-ok` over it is only keeping itself alive (ADR-105). Any
+        other site stands on what clears it: a rule before a directive,
+        since a `mention-ok` is the only directive that can sit over a
+        sanctioned site and it claims nothing. A `mention-ok` over a retired
+        or dangling target answers its finding, so the site is
+        `acknowledged`."""
+        if self.resolves and self.in_force:
+            return IN_FORCE
+        if self.sanctioned:
+            return SANCTIONED
+        if self.excused_by is not None:
+            return ACKNOWLEDGED
+        return UNACKNOWLEDGED if self.resolves else DANGLING
+
+    @property
+    def cleared_by(self) -> str | None:
+        """What answers for this site, or None: the rule's key
+        (`lint.inactive_ok[0]`), else the directive's kind and where it
+        sits (`inactive-ok @ docs/x.md:12`)."""
+        if self.sanctioned:
+            return self.sanctioned_by
+        if self.excused_by is not None:
+            ann = self.excused_by
+            suffix = "-file" if ann.scope == directives.FILE else ""
+            return f"{ann.kind}{suffix} @ {ann}"
+        return None
 
 
 @dataclass
@@ -540,7 +587,8 @@ def _acknowledge(result: Scan, sites: list[tuple[Path, int, str]],
         rule = (f"lint.inactive_ok[{sanctioned[i]}]" if i in sanctioned
                 else "")
         pool.setdefault(code, []).append(
-            Citation(path, line, code, ann, rule))
+            Citation(path, line, code, ann, rule, resolves=code in docs,
+                     in_force=code in docs and docs[code].active))
     result.sanctioning = frozenset(sanctioned.values())
     result.unused = frozenset(a for (a,) in derived.get("unused", ()))
     for a, code, _ in derived.get("lost", ()):

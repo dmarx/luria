@@ -26,9 +26,12 @@ read it without a schema lesson:
     edges            the typed graph `luria/edges.py` derives — a reference
                      field, `superseded_by:`, `influenced_by:`
     citations        every code the lint's scanner counts as a citation, with
-                     the file and line it sits on, whether it resolves, and
-                     whether a directive excuses it — a suppression is
-                     counted, never hidden (DP-1)
+                     the file and line it sits on, whether it resolves, its
+                     `standing` — `in-force`, `acknowledged`, `sanctioned`,
+                     `unacknowledged` or `dangling`, read off the same scan
+                     the lint reads — and what clears it, a directive or a
+                     `lint.inactive_ok` rule: a suppression is counted,
+                     never hidden (DP-1)
     journal_entries  one row per entry, keyed on the timestamp that is its
                      identity; `journal_tags` holds their tags
     meta             which version of luria wrote it, when, and from where
@@ -89,7 +92,11 @@ CREATE TABLE citations (
     line     INTEGER NOT NULL,
     code     TEXT NOT NULL,
     resolves INTEGER NOT NULL,      -- 0 when the code names no document here
-    excused  INTEGER NOT NULL       -- 1 when a directive acknowledges it
+    standing TEXT NOT NULL,         -- in-force | acknowledged | sanctioned
+                                    -- | unacknowledged | dangling
+    excused  INTEGER NOT NULL,      -- 1 when a directive or a rule clears it
+    excused_by TEXT                 -- `inactive-ok @ path:line`, or
+                                    -- `lint.inactive_ok[N]`; NULL if nothing
 );
 CREATE INDEX citations_by_code ON citations(code);
 CREATE TABLE journal_entries (
@@ -137,8 +144,9 @@ def _citation_rows(cfg) -> list[tuple]:
     rows: list[tuple] = []
     for pool, resolves in ((scan.cited, 1), (scan.dangling, 0)):
         for code, sites in pool.items():
-            rows += [(cfg.rel(c.path), c.line, code, resolves,
-                      int(c.excused_by is not None)) for c in sites]
+            rows += [(cfg.rel(c.path), c.line, code, resolves, c.standing,
+                      int(c.cleared_by is not None), c.cleared_by)
+                     for c in sites]
     return sorted(rows)
 
 
@@ -191,7 +199,7 @@ def write(out: Path, cfg=None) -> Path:
         conn.executemany("INSERT INTO edges VALUES (?,?,?,?)",
                          [(e.source, e.relation, e.target, e.because)
                           for e in graph.edges])
-        conn.executemany("INSERT INTO citations VALUES (?,?,?,?,?)",
+        conn.executemany("INSERT INTO citations VALUES (?,?,?,?,?,?,?)",
                          _citation_rows(cfg))
         conn.executemany("INSERT INTO journal_entries VALUES (?,?,?,?,?)",
                          entries)
