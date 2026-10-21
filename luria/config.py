@@ -207,6 +207,12 @@ DEFAULTS: dict = {
         # is what CI wants: a green build then means the references were
         # verified rather than merely remembered.
         "network": "auto",
+        # The config-level form of the `inactive-ok` directive: citations of
+        # a retired document that need no acknowledgement, named by a
+        # one-hop pattern over the reserved `cites` edge, each with its
+        # reason. Empty means every such citation is judged at its site,
+        # which is what every project had before the key.
+        "inactive_ok": [],
     },
     # Whole records nested inside this one (ADR-077, ADR-078). Empty for the
     # ordinary project, which contains no others.
@@ -2072,6 +2078,59 @@ class NamedPattern:
         return self._parsed
 
 
+# The edge an `inactive_ok` pattern walks. Reserved rather than declared:
+# it is the citation the lint already reads out of a document's text, which
+# no reference field holds, so it is never a `patterns.X` hop.
+CITES = "cites"
+
+
+@dataclass(frozen=True)
+class InactiveOk:
+    """A citation of a retired document that needs no acknowledgement:
+    the config-level form of the `inactive-ok` directive.
+
+        lint:
+          inactive_ok:
+            - match: "(:QUESTION {status: 'Open'})-[:cites]->(:QUESTION {status: 'Answered'})"
+              reason: a split parent cites the Answered child split off it
+
+    Quote the pattern when it has a property map: YAML reads an unquoted
+    `{` as the start of a mapping and refuses the line.
+
+    The pattern is one hop over `cites`, the reserved edge meaning "this
+    document's text cites that one"; the arrow points from the citer to the
+    cited, either way round. A citation of a document that is not in force
+    is sanctioned when the document it sits in matches the citer's node and
+    the cited document matches the other: labels are schemes, and a
+    property is literal equality on any frontmatter field, as in
+    `patterns.X`. A citation from anywhere else — another scheme, another
+    status, a file that is no document of the record — is judged as before.
+
+    A directive says why at the site; a rule says why once, for every site
+    it matches, so `reason` is mandatory for the same purpose. An
+    `inactive-ok` that a rule has made redundant is reported stale, and a
+    rule that sanctions no citation is reported too: a dead rule otherwise
+    reads exactly like a working one (DP-015)."""
+    index: int
+    match: str
+    reason: str
+    _parsed: object = dcfield(default=None, repr=False, compare=False)
+
+    @property
+    def key(self) -> str:
+        return f"lint.inactive_ok[{self.index}]"
+
+    @property
+    def citer(self):
+        """The node the `cites` arrow leaves."""
+        return self._parsed.path.near(0)
+
+    @property
+    def cited(self):
+        """The node the `cites` arrow lands on."""
+        return self._parsed.path.far(0)
+
+
 @dataclass(frozen=True)
 class Chain:
     """A relation walked transitively and rendered as sequences (#171).
@@ -2292,6 +2351,9 @@ class Config:
     # key that `index` has to reach into the site table to read is DP-16's
     # awkwardness — a distinction the layout had stopped expressing.
     include_records: tuple[str, ...] = ()
+    # Citations of retired documents that need no acknowledgement
+    # (`lint.inactive_ok`, see `InactiveOk`).
+    inactive_ok: tuple[InactiveOk, ...] = ()
     site: Site = None  # type: ignore[assignment]
     _raw: dict = dcfield(default_factory=dict, repr=False)
 
@@ -2622,6 +2684,7 @@ def load(root: Path | None = None, text: str | None = None,
         mute=tuple(raw["lint"]["mute"]),
         narrow_terms=tuple(raw["lint"].get("narrow_terms", [])),
         network=str(raw["lint"].get("network", "auto")),
+        inactive_ok=_inactive_ok(raw["lint"].get("inactive_ok"), schemes),
         include_records=tuple(raw.get("include_records", ())),
         site=_site(raw, root),
         _raw=raw,
@@ -2666,6 +2729,78 @@ def _patterns(raw: dict, schemes: dict) -> dict[str, NamedPattern]:
         from . import consistency
         consistency.check_patterns(out, schemes)
     return out
+
+
+def _inactive_ok(raw, schemes: dict) -> tuple[InactiveOk, ...]:
+    """Every `lint.inactive_ok` rule, refused by name when it cannot mean
+    what it says.
+
+    The pattern is parsed by the one grammar every pattern uses, then held
+    to what a citation is: one hop, typed `cites` alone, fixed length, no
+    `WHERE NOT` (a condition on a citation is a widening for when a record
+    needs one). Labels and properties are checked as `patterns.X` checks
+    them, with the `cites` hop left out — it is no reference field."""
+    from types import SimpleNamespace
+
+    from . import consistency
+    from .patterns import Path as PatternPath
+    from .patterns import Pattern, parse
+    if not raw:
+        return ()
+    if not isinstance(raw, list):
+        raise ValueError(
+            "luria.yaml: lint.inactive_ok: has to be a list of entries, each "
+            "a `match:` pattern and a `reason:`, not "
+            f"{type(raw).__name__}")
+    out: list[InactiveOk] = []
+    for i, entry in enumerate(raw):
+        key = f"lint.inactive_ok[{i}]"
+        where = f"luria.yaml: {key}: "
+        if not isinstance(entry, dict):
+            raise ValueError(
+                where + f"has to be a mapping with `match:` and `reason:`, "
+                f"not {entry!r}")
+        if unknown := set(entry) - {"match", "reason"}:
+            raise ValueError(
+                where + f"{', '.join(sorted(map(str, unknown)))} is not a key "
+                f"— an entry is its `match:` and its `reason:`")
+        reason = str(entry.get("reason") or "").strip()
+        if not reason:
+            raise ValueError(
+                where + "needs a `reason` — a rule excuses every citation it "
+                "matches, and silence that carries no argument is "
+                "indistinguishable from an oversight")
+        source = str(entry.get("match") or "")
+        pattern = parse(key, source, where=where)
+        if pattern.negations:
+            raise ValueError(
+                where + "`WHERE NOT` is not taken here — a rule names the "
+                "citer and the cited document, and nothing else")
+        hops = pattern.path.hops
+        if len(hops) != 1:
+            raise ValueError(
+                where + f"has {len(hops)} hops; a rule takes exactly one hop "
+                f"— the citation, `-[:{CITES}]->`")
+        (hop,) = hops
+        if hop.fields != (CITES,):
+            raise ValueError(
+                where + f"`[:{'|'.join(hop.fields)}]` — the hop is `[:{CITES}]` "
+                f"and only that: it is the citation in a document's text, "
+                f"which no reference field holds")
+        if hop.variable:
+            raise ValueError(
+                where + "a variable-length hop is not taken here — a citation "
+                "is one document's text naming another")
+        out.append(InactiveOk(i, source.strip(), reason, _parsed=pattern))
+    # Labels and properties, by the checks `patterns.X` gets; the hop is left
+    # out because `cites` is no reference field.
+    stripped = {
+        str(r.index): SimpleNamespace(parsed=Pattern(
+            r.key, r.match, PatternPath(r._parsed.path.nodes, ()), ()))
+        for r in out}
+    consistency.check_patterns(stripped, schemes,
+                               declared_at="lint.inactive_ok[{}]")
+    return tuple(out)
 
 
 def _chains(raw: dict, schemes: dict, root: Path,

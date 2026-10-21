@@ -354,10 +354,14 @@ def _hop_text(hop) -> str:
     return f"-{inner}->" if hop.right else f"<-{inner}-"
 
 
-def check_patterns(patterns: dict, schemes: dict) -> None:
+def check_patterns(patterns: dict, schemes: dict,
+                   declared_at: str = "patterns.{}") -> None:
     """Refuse the first pattern that cannot match what it says: per pattern
     in order, a name a reference already uses, then each path (the match,
-    then each `WHERE NOT`) node by node and hop by hop."""
+    then each `WHERE NOT`) node by node and hop by hop.
+
+    `declared_at` spells where each pattern was declared, for the patterns written
+    somewhere other than `patterns.X` (`lint.inactive_ok[N]`)."""
     from .config import nameable, spelled
     derived = _derived(schemes, {}, patterns=patterns)
     order = list(patterns)
@@ -368,7 +372,7 @@ def check_patterns(patterns: dict, schemes: dict) -> None:
         return (p.path, *p.negations)[w]
 
     def where(name):
-        return f"luria.yaml: patterns.{name}: "
+        return f"luria.yaml: {declared_at.format(name)}: "
 
     for name, prefix in derived.get("pattern_shadows", ()):
         found.append(((order.index(name), -1, 0, 0, 0), where(name) + (
