@@ -18,7 +18,7 @@ from luria.config import current
 
 from _scheme import decision
 
-# unresolved-ok-file: ADR-918, ADR-919 — fixture codes, deliberately not
+# unresolved-ok-file: ADR-917, ADR-918, ADR-919 — fixture codes, deliberately not
 # real: the citations test checks that they land in the table as unresolved.
 
 
@@ -92,6 +92,81 @@ def test_citations_come_from_the_record_s_own_scanner(project):
     assert got == [("docs/notes.md", 3, "ADR-001", 1, 0),
                    ("docs/notes.md", 6, "ADR-918", 0, 1),
                    ("docs/notes.md", 3, "ADR-919", 0, 0)]
+
+
+def _with_rule(project: Path) -> None:
+    """Add a `lint.inactive_ok` rule letting an Active decision cite a
+    Superseded one."""
+    import yaml
+    path = project / "luria.yaml"
+    raw = yaml.safe_load(path.read_text())
+    raw.setdefault("lint", {})["inactive_ok"] = [{
+        "match": "(:ADR {status: 'Active'})-[:cites]->"
+                 "(:ADR {status: 'Superseded'})",
+        "reason": "a successor names what it replaced"}]
+    path.write_text(yaml.safe_dump(raw, sort_keys=False))
+    config.reset()
+
+
+def test_every_citation_carries_its_standing(project):
+    """`standing` says what a site needs, in the lint's own reading: nothing
+    (in force), nothing because a directive or a rule answers for it, a
+    reader's attention (unacknowledged), or a target (dangling). `excused`
+    is 1 whenever a directive OR a rule clears the site, and `excused_by`
+    names which."""
+    _with_rule(project)
+    decision(project, 1, "Active")
+    decision(project, 2, "Superseded", superseded_by="ADR-001")
+    decision(project, 3, "Active", "The successor",
+             summary="Replaces ADR-002.")
+    (project / "docs" / "notes.md").write_text(
+        "# Notes\n"
+        "\n"
+        "In force: ADR-001.\n"
+        "<!-- inactive-ok: ADR-002 — the history -->\n"
+        "Acknowledged: ADR-002.\n"
+        "\n"
+        "\n"
+        "Loud: ADR-002 again.\n"
+        "Dangling: ADR-919.\n"
+        "<!-- unresolved-ok: ADR-918 — kept on purpose -->\n"
+        "Acknowledged dangling: ADR-918.\n")
+    out = export.write(project / "record.sqlite")
+    got = rows(out, "SELECT path, line, code, standing, excused, excused_by "
+                    "FROM citations WHERE path IN ('docs/notes.md', "
+                    "'record/decisions.d/ADR-003.md') ORDER BY path, line")
+    assert got == [
+        ("docs/notes.md", 3, "ADR-001", "in-force", 0, None),
+        ("docs/notes.md", 5, "ADR-002", "acknowledged", 1,
+         "inactive-ok @ docs/notes.md:4"),
+        ("docs/notes.md", 8, "ADR-002", "unacknowledged", 0, None),
+        ("docs/notes.md", 9, "ADR-919", "dangling", 0, None),
+        ("docs/notes.md", 11, "ADR-918", "acknowledged", 1,
+         "unresolved-ok @ docs/notes.md:10"),
+        ("record/decisions.d/ADR-003.md", 7, "ADR-002", "sanctioned", 1,
+         "lint.inactive_ok[0]"),
+    ]
+
+
+def test_a_mention_counts_by_what_the_site_would_need(project):
+    """`mention-ok` claims nothing about state, so a site under one stands
+    where its target puts it: in force stays `in-force`, and a retired or
+    dangling target is `acknowledged` — the mention answered the finding.
+    Either way `excused_by` names it."""
+    decision(project, 1, "Active")
+    decision(project, 2, "Superseded", superseded_by="ADR-001")
+    (project / "docs" / "notes.md").write_text(
+        "# Notes\n"
+        "\n"
+        "<!-- mention-ok: ADR-001 ADR-002 ADR-917 — named, not cited -->\n"
+        "ADR-001, ADR-002 and ADR-917 as spellings.\n")
+    out = export.write(project / "record.sqlite")
+    got = rows(out, "SELECT code, standing, excused, excused_by "
+                    "FROM citations WHERE path = 'docs/notes.md' ORDER BY code")
+    by = "mention-ok @ docs/notes.md:3"
+    assert got == [("ADR-001", "in-force", 1, by),
+                   ("ADR-002", "acknowledged", 1, by),
+                   ("ADR-917", "acknowledged", 1, by)]
 
 
 def test_journal_entries_are_exported(tmp_path, monkeypatch):
