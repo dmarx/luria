@@ -207,6 +207,12 @@ DEFAULTS: dict = {
         # is what CI wants: a green build then means the references were
         # verified rather than merely remembered.
         "network": "auto",
+        # The config-level form of the `inactive-ok` directive: citations of
+        # a retired document that need no acknowledgement, named by a
+        # one-hop pattern over the reserved `cites` edge, each with its
+        # reason. Empty means every such citation is judged at its site,
+        # which is what every project had before the key.
+        "inactive_ok": [],
     },
     # Whole records nested inside this one (ADR-077, ADR-078). Empty for the
     # ordinary project, which contains no others.
@@ -900,23 +906,6 @@ class Scheme:
     # Lowering this asks the sharper question — is the vocabulary *exercised*
     # — and is opt-in because the answer is a matter of what a scheme is for.
     uniform_share: float = 1.0
-    # Retired statuses that particular citers may cite without an
-    # acknowledgement, as (cited status, citer prefix, citer status):
-    #
-    #     citable_from:
-    #       Answered: [QUESTION:Open]
-    #
-    # `active` is one word because it answers one question — is this document
-    # in force — and every citation of a document that is not draws a
-    # warning. Some retired documents have a citer for whom that warning is
-    # always wrong: an `Open` question naming the child question split off it
-    # is the record working, though the child is `Answered`. Widening `active`
-    # would silence every OTHER citation of an answered question too, and
-    # those are the ones that should cite whatever answered it instead. So
-    # the exemption names its citer exactly; anything else, a non-record file
-    # included, is judged as it always was. Empty for every scheme that sets
-    # nothing, which is the behaviour every project had before the key.
-    citable_from: tuple[tuple[str, str, str], ...] = ()
 
     @property
     def view(self) -> Path:
@@ -2089,6 +2078,59 @@ class NamedPattern:
         return self._parsed
 
 
+# The edge an `inactive_ok` pattern walks. Reserved rather than declared:
+# it is the citation the lint already reads out of a document's text, which
+# no reference field holds, so it is never a `patterns.X` hop.
+CITES = "cites"
+
+
+@dataclass(frozen=True)
+class InactiveOk:
+    """A citation of a retired document that needs no acknowledgement:
+    the config-level form of the `inactive-ok` directive.
+
+        lint:
+          inactive_ok:
+            - match: "(:QUESTION {status: 'Open'})-[:cites]->(:QUESTION {status: 'Answered'})"
+              reason: a split parent cites the Answered child split off it
+
+    Quote the pattern when it has a property map: YAML reads an unquoted
+    `{` as the start of a mapping and refuses the line.
+
+    The pattern is one hop over `cites`, the reserved edge meaning "this
+    document's text cites that one"; the arrow points from the citer to the
+    cited, either way round. A citation of a document that is not in force
+    is sanctioned when the document it sits in matches the citer's node and
+    the cited document matches the other: labels are schemes, and a
+    property is literal equality on any frontmatter field, as in
+    `patterns.X`. A citation from anywhere else — another scheme, another
+    status, a file that is no document of the record — is judged as before.
+
+    A directive says why at the site; a rule says why once, for every site
+    it matches, so `reason` is mandatory for the same purpose. An
+    `inactive-ok` that a rule has made redundant is reported stale, and a
+    rule that sanctions no citation is reported too: a dead rule otherwise
+    reads exactly like a working one (DP-015)."""
+    index: int
+    match: str
+    reason: str
+    _parsed: object = dcfield(default=None, repr=False, compare=False)
+
+    @property
+    def key(self) -> str:
+        return f"lint.inactive_ok[{self.index}]"
+
+    @property
+    def citer(self):
+        """The node the `cites` arrow leaves."""
+        return self._parsed.path.near(0)
+
+    @property
+    def cited(self):
+        """The node the `cites` arrow lands on."""
+        return self._parsed.path.far(0)
+
+
 @dataclass(frozen=True)
 class Chain:
     """A relation walked transitively and rendered as sequences (#171).
@@ -2309,6 +2351,9 @@ class Config:
     # key that `index` has to reach into the site table to read is DP-16's
     # awkwardness — a distinction the layout had stopped expressing.
     include_records: tuple[str, ...] = ()
+    # Citations of retired documents that need no acknowledgement
+    # (`lint.inactive_ok`, see `InactiveOk`).
+    inactive_ok: tuple[InactiveOk, ...] = ()
     site: Site = None  # type: ignore[assignment]
     _raw: dict = dcfield(default_factory=dict, repr=False)
 
@@ -2639,6 +2684,7 @@ def load(root: Path | None = None, text: str | None = None,
         mute=tuple(raw["lint"]["mute"]),
         narrow_terms=tuple(raw["lint"].get("narrow_terms", [])),
         network=str(raw["lint"].get("network", "auto")),
+        inactive_ok=_inactive_ok(raw["lint"].get("inactive_ok"), schemes),
         include_records=tuple(raw.get("include_records", ())),
         site=_site(raw, root),
         _raw=raw,
@@ -2683,6 +2729,78 @@ def _patterns(raw: dict, schemes: dict) -> dict[str, NamedPattern]:
         from . import consistency
         consistency.check_patterns(out, schemes)
     return out
+
+
+def _inactive_ok(raw, schemes: dict) -> tuple[InactiveOk, ...]:
+    """Every `lint.inactive_ok` rule, refused by name when it cannot mean
+    what it says.
+
+    The pattern is parsed by the one grammar every pattern uses, then held
+    to what a citation is: one hop, typed `cites` alone, fixed length, no
+    `WHERE NOT` (a condition on a citation is a widening for when a record
+    needs one). Labels and properties are checked as `patterns.X` checks
+    them, with the `cites` hop left out — it is no reference field."""
+    from types import SimpleNamespace
+
+    from . import consistency
+    from .patterns import Path as PatternPath
+    from .patterns import Pattern, parse
+    if not raw:
+        return ()
+    if not isinstance(raw, list):
+        raise ValueError(
+            "luria.yaml: lint.inactive_ok: has to be a list of entries, each "
+            "a `match:` pattern and a `reason:`, not "
+            f"{type(raw).__name__}")
+    out: list[InactiveOk] = []
+    for i, entry in enumerate(raw):
+        key = f"lint.inactive_ok[{i}]"
+        where = f"luria.yaml: {key}: "
+        if not isinstance(entry, dict):
+            raise ValueError(
+                where + f"has to be a mapping with `match:` and `reason:`, "
+                f"not {entry!r}")
+        if unknown := set(entry) - {"match", "reason"}:
+            raise ValueError(
+                where + f"{', '.join(sorted(map(str, unknown)))} is not a key "
+                f"— an entry is its `match:` and its `reason:`")
+        reason = str(entry.get("reason") or "").strip()
+        if not reason:
+            raise ValueError(
+                where + "needs a `reason` — a rule excuses every citation it "
+                "matches, and silence that carries no argument is "
+                "indistinguishable from an oversight")
+        source = str(entry.get("match") or "")
+        pattern = parse(key, source, where=where)
+        if pattern.negations:
+            raise ValueError(
+                where + "`WHERE NOT` is not taken here — a rule names the "
+                "citer and the cited document, and nothing else")
+        hops = pattern.path.hops
+        if len(hops) != 1:
+            raise ValueError(
+                where + f"has {len(hops)} hops; a rule takes exactly one hop "
+                f"— the citation, `-[:{CITES}]->`")
+        (hop,) = hops
+        if hop.fields != (CITES,):
+            raise ValueError(
+                where + f"`[:{'|'.join(hop.fields)}]` — the hop is `[:{CITES}]` "
+                f"and only that: it is the citation in a document's text, "
+                f"which no reference field holds")
+        if hop.variable:
+            raise ValueError(
+                where + "a variable-length hop is not taken here — a citation "
+                "is one document's text naming another")
+        out.append(InactiveOk(i, source.strip(), reason, _parsed=pattern))
+    # Labels and properties, by the checks `patterns.X` gets; the hop is left
+    # out because `cites` is no reference field.
+    stripped = {
+        str(r.index): SimpleNamespace(parsed=Pattern(
+            r.key, r.match, PatternPath(r._parsed.path.nodes, ()), ()))
+        for r in out}
+    consistency.check_patterns(stripped, schemes,
+                               declared_at="lint.inactive_ok[{}]")
+    return tuple(out)
 
 
 def _chains(raw: dict, schemes: dict, root: Path,
@@ -2919,38 +3037,6 @@ def _check_target_fields(where: str, rule, ref, schemes, many: bool = False) -> 
         _check_cardinality(where, rule, plural_fields(target), many, prefix)
 
 
-def _citable_from(prefix: str, raw) -> tuple[tuple[str, str, str], ...]:
-    """A scheme's `citable_from`, as (cited status, citer prefix, citer
-    status) triples, refused here when it is not the shape it has to be.
-
-    Whether the words it names exist is a cross-scheme question, decided
-    once every scheme is known (`consistency.check_references`)."""
-    if not raw:
-        return ()
-    where = f"luria.yaml: schemes.{prefix}.citable_from"
-    if not isinstance(raw, dict):
-        raise ValueError(
-            f"{where}: has to be a mapping of this scheme's status words to "
-            f"lists of `PREFIX:Status` citers, not {type(raw).__name__} "
-            f"(e.g. `Answered: [{prefix}:Open]`)")
-    out: list[tuple[str, str, str]] = []
-    for status, citers in raw.items():
-        if not isinstance(citers, list):
-            raise ValueError(
-                f"{where}.{status}: has to be a list of `PREFIX:Status` "
-                f"citers, not {citers!r} — write `[{citers}]` for one")
-        for citer in citers:
-            parts = str(citer).split(":")
-            if (not isinstance(citer, str) or len(parts) != 2
-                    or not all(p.strip() for p in parts)):
-                raise ValueError(
-                    f"{where}.{status}: {citer!r} is not a `PREFIX:Status` "
-                    f"citer — name the citing scheme and the status it has "
-                    f"to be at (e.g. `{prefix}:Open`)")
-            out.append((str(status), parts[0].strip(), parts[1].strip()))
-    return tuple(out)
-
-
 def _alias_template(prefix: str, raw) -> str:
     """A scheme's `alias` template, validated for shape where it is read.
 
@@ -3086,7 +3172,6 @@ def _schemes(raw: dict, root: Path, scaffolding: bool = False,
             field_groups=_field_groups(prefix, spec.get("field_groups", {})),
             uniform_ok=(spec.get("uniform_ok") or None),
             uniform_share=float(spec.get("uniform_share", 1.0)),
-            citable_from=_citable_from(prefix, spec.get("citable_from")),
         )
     # Which cross-scheme declarations are wrong is decided by rules
     # (`luria/consistency.py`); the order they are raised in is this loop's.

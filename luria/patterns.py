@@ -105,10 +105,11 @@ def _parser() -> lark.Lark:
     return lark.Lark(grammar, parser="lalr", maybe_placeholders=True)
 
 
-def parse(name: str, source: str) -> Pattern:
+def parse(name: str, source: str, where: str = "") -> Pattern:
     """`source` as a pattern, or a `PatternError` saying what is outside the
-    subset."""
-    where = f"luria.yaml: patterns.{name}: "
+    subset. `where` names the key it was written at, for a pattern declared
+    somewhere other than `patterns.X` (`lint.inactive_ok`)."""
+    where = where or f"luria.yaml: patterns.{name}: "
     text = str(source or "")
     if not text.strip():
         raise PatternError(where + "is empty — a pattern is a path, such as "

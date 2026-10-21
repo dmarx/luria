@@ -1,11 +1,14 @@
 ### Added
 
-- `schemes.X.citable_from` lets a scheme name the citers that may cite one of
-  its retired statuses with no acknowledgement, as `PREFIX:Status` lists
-  keyed by status: `Answered: [QUESTION:Open]` lets an open question cite an
-  answered one without warning. A citation from any other scheme, any other
-  status, or a file outside the record still warns. An `inactive-ok` that
-  covered only such a site is now reported stale, with the reason. The
-  loader refuses an entry naming an unknown status, the scheme's own
-  `active` word, an undeclared citer scheme, or a status the citer's
-  vocabulary lacks ([ADR-tmpfu1s6](record/decisions.d/ADR-tmpfu1s6.md)).
+- `lint.inactive_ok`, the config-level form of the `inactive-ok` directive:
+  a list of entries, each a one-hop path pattern over the reserved `cites`
+  edge and a mandatory reason.
+  `match: "(:QUESTION {status: 'Open'})-[:cites]->(:QUESTION {status: 'Answered'})"`
+  lets an open question cite an answered one without warning. A citation
+  from any other scheme, any other status, or a file outside the record
+  still warns. Properties are literal equality on any frontmatter field, as
+  in `patterns.X`. An `inactive-ok` made redundant by a rule is reported
+  stale, naming the rule, and so is a rule that sanctions no citation. The
+  loader refuses, by `lint.inactive_ok[N]`, anything but one `cites` hop,
+  variable length, `WHERE NOT`, an unknown scheme or field, and a missing
+  reason ([ADR-tmpfu1s6](record/decisions.d/ADR-tmpfu1s6.md)).

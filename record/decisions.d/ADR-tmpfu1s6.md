@@ -1,28 +1,33 @@
 ---
 status: Active
-title: 'A retired status may name the citers that need not acknowledge it'
+title: 'A citation that needs no acknowledgement may be declared once, as a pattern'
 version: 1
 tags:
 - config
 - mechanism
 date: '2026-10-21'
 summary: >-
-  A scheme may declare `citable_from`, which maps a status of its own to the
-  citers that may cite a document at that status with no acknowledgement:
-  `Answered: [QUESTION:Open]`. A citer is a scheme and a status of it, and
-  a citation from anywhere else is judged exactly as before. Such a site is
-  `sanctioned`, so an `inactive-ok` over it answers for nothing and is
-  reported stale, which is the migration signal. The loader refuses an
-  entry that could exempt nothing. Rejected: `active` as a list, per-site
-  annotations only, and a global flag that counts a status as in force.
+  `lint.inactive_ok` is the config-level form of the `inactive-ok`
+  directive: a list of one-hop path patterns over the reserved `cites` edge,
+  each with a mandatory reason. A citation of a retired document is
+  sanctioned when the document it sits in matches the citing node and the
+  cited document matches the other, by scheme and by literal equality on
+  any frontmatter field. A citation from anywhere else is judged as before.
+  An `inactive-ok` the rule made redundant, and a rule that sanctions
+  nothing, are both reported stale. The pattern is read by the grammar
+  `patterns.X` uses, and anything beyond one `cites` hop is refused by
+  name. Rejected: `active` as a list, per-site annotations only, a global
+  flag counting a status as in force, and a per-scheme `citable_from`
+  keyed by status.
 influenced_by:
 - ADR-035
 - ADR-085
 - ADR-105
 - DP-010
+- DP-015
 ---
 
-# ADR-tmpfu1s6: A retired status may name the citers that need not acknowledge it
+# ADR-tmpfu1s6: A citation that needs no acknowledgement may be declared once, as a pattern
 
 ## Context
 
@@ -47,71 +52,93 @@ saying the same thing.
 
 ## Decision
 
-**The cited scheme names the citers its retired statuses are citable from.**
+**A record may state the acknowledgement once, in its lint settings.**
 
 ```yaml
-schemes:
-  QUESTION:
-    active: Open
-    citable_from:
-      Answered: [QUESTION:Open]
+lint:
+  inactive_ok:
+    - match: "(:QUESTION {status: 'Open'})-[:cites]->(:QUESTION {status: 'Answered'})"
+      reason: a split parent cites the Answered child split off it
 ```
 
-Each entry maps a status word of this scheme to a list of `PREFIX:Status`
-citers. A citation of an `Answered` question from a document of scheme
-`QUESTION` whose status is `Open` needs no acknowledgement. A citation from
-any other scheme, any other status, or a file that is no document of the
-record is judged exactly as before.
+The entry is the config-level form of the `inactive-ok` directive, and is
+named for it. A directive says why at one site; a rule says why once, for
+every site it matches.
 
-**A sanctioned site is not retired.** `luria/ref_status.py` works out which
-document each site sits in, and states `sanctioned(I)` when the cited
-document's status and the citer's scheme and status are a declared triple.
-`luria/logic/acknowledgements.lp` reads a retired site as one that is not
-sanctioned. So a sanctioned site wants no `inactive-ok`, and one written
-over it answers for nothing. It is reported stale, with the reason ("cited
-here from where its scheme's `citable_from` allows"). That stale report is
-how a record finds the annotations the key has made redundant.
+**The pattern is a path pattern, over one reserved edge.** `cites` means
+"this document's text cites that one", the citation the lint already reads
+out of a document. It is not a reference field, which is why a rule is not
+a `patterns.X` entry. The arrow points from the citer to the cited, either
+way round (`<-[:cites]-` reverses the roles). A node's label is a scheme,
+and a property is literal equality on any frontmatter field (`status`,
+`role`, `warrant`, …), exactly as in `patterns.X`.
 
-`Citation.loud` is the one test of whether a site still wants attention:
-not acknowledged and not sanctioned. `flagged`, `luria ack` and the pending
-report read it. The export's `excused` column still means "a directive
-acknowledges it", because that is what its schema says.
+**What it sanctions.** A citation of a document that is not in force is
+sanctioned when the document the site sits in matches the citing node and
+the cited document matches the other. A citation from another scheme,
+another status, or a file that is no document of the record is judged as
+before. `luria/ref_status.py` states `sanctioned(I)`, and
+`luria/logic/acknowledgements.lp` reads a sanctioned site as not retired.
+So the site wants no `inactive-ok`, and one written over it answers for
+nothing. It is reported stale with the rule that took over ("cited here
+where `lint.inactive_ok[0]` allows it"), which is how a record finds the
+annotations to delete.
 
-**A declaration that could exempt nothing is refused when the config
-loads**, as `retires_on` is: a status the scheme's vocabulary lacks, the
-scheme's own `active` word (a document in force needs no exemption), a
-citer scheme that is not declared, and a citer status that scheme's
-vocabulary lacks. A malformed shape is refused too, naming the key.
+**A rule that sanctions nothing is reported** in the same
+`stale-directives` class, with its pattern and reason. A dead rule
+otherwise reads exactly like a working one ([DP-015](../principles.d/DP-015.md)).
+
+`Citation.loud`, not acknowledged and not sanctioned, is the one test of
+whether a site still wants attention. `flagged`, `luria ack` and the
+pending report read it. The export's `excused` column still means "a
+directive acknowledges it", as its schema says.
+
+**One grammar, held to what a citation is.** The pattern is parsed by the
+grammar every pattern uses (`luria/patterns.lark`), and its labels and
+properties are checked by the checks `patterns.X` gets. The loader then
+refuses, naming `lint.inactive_ok[N]`:
+
+- anything but exactly one hop;
+- a hop typed anything but `cites`, alone;
+- a variable-length hop;
+- `WHERE NOT`, which could be widened later if a record needs a condition;
+- a label that is not a scheme, a property that scheme cannot hold, and an
+  unlabelled node;
+- a missing or empty `reason`, for the reason a directive's reason is
+  mandatory;
+- an entry that is not a mapping of `match` and `reason`.
 
 ## Alternatives considered
 
 - **`active` as a list.** Counting `Answered` as in force silences the
   parent's citation, and also every citation that should warn: a theory
   still treating the question as open, a note that should cite the answer.
-  Those are the warnings the scheme exists for. This was the first idea
-  and the reason a narrower key is needed.
+  Those are the warnings the scheme exists for.
 - **Per-site annotations only.** This is the status quo, and it works. But
   each annotation restates a rule that holds for every parent and every
-  answered child, so the record pays for one rule thirteen times, and the
+  answered child. The record pays for one rule thirteen times, and the
   fourteenth is a warning until someone writes the same sentence again.
-  A rule stated once belongs in the config.
 - **A global flag that counts a status as in force for some purpose.** It
-  has the same defect as the list: it cannot say who the citer is. Naming
-  the citer by scheme and status is what keeps the other warnings.
-- **Declaring the exemption on the citing scheme.** The cited scheme is
-  the one whose status vocabulary gives the words their meaning, and it is
-  where a reader looks to find out what `Answered` permits.
+  has the same defect as the list: it cannot say who the citer is.
+- **A per-scheme `citable_from`, keyed by status:** `Answered:
+  [QUESTION:Open]` on the cited scheme. It was built first. It could only
+  express status: status words are scheme-specific, so a rule over a
+  claim's `role` or `warrant` had no spelling, and the `PREFIX:Status`
+  string was a second, ad hoc notation for what a pattern node already
+  says. The pattern needs no new syntax, reads like every other pattern in
+  the config, and takes any field.
 
 ## Consequences
 
 - A record states a citation rule once, in its config, and the redundant
   annotations surface as stale findings to delete.
-- The exemption applies only to record documents. A citation from code or
-  from a page outside every scheme cannot match a citer, so it is judged as
-  before. A rule for those would need another shape.
+- A rule applies only to record documents. A citation from code or from a
+  page outside every scheme cannot match a node, so it is judged as before.
+- A pattern with a property map must be quoted in YAML, which reads an
+  unquoted `{` as a mapping. The configuration reference's example is
+  quoted, and a test parses it.
 - A sanctioned site is not counted in the "acknowledged" totals. It is not
-  a suppression: the rule is written in `luria.yaml` and the configuration
-  reference lists the key.
-- Fired on a copy of nucleation with the key above: the thirteen parent
-  annotations were reported stale, each naming the answered question, and
-  no other finding changed. The tests are in `tests/test_citable_from.py`.
+  a suppression: the rule and its reason are written in `luria.yaml`.
+- Fired on a copy of nucleation with the rule above: the thirteen parent
+  annotations went stale, each naming `lint.inactive_ok[0]`, and no other
+  finding changed. The tests are in `tests/test_inactive_ok_rules.py`.

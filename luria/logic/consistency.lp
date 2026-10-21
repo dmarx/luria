@@ -5,9 +5,7 @@
 %
 % Facts: scheme/1, remote/1, ref/2, ref_target/3, ref_converse/3,
 % ref_many/2, ref_invariant/3, nameable/2 (every field a scheme can hold),
-% role_successor/2, role_retires_on/2, role_influence/2, status_word/2,
-% active_word/2, citable_from/4 (scheme, cited status, citer scheme, citer
-% status), and
+% role_successor/2, role_retires_on/2, role_influence/2, status_word/2, and
 % per raw
 % chain: chain_scheme/2, chain_facet/2, chain_walks/3 (relation or sibling),
 % chain_output/1, chain_invariant/2; and per pattern: pattern/1,
@@ -45,17 +43,6 @@ invariant_unheld(S, F, T) :- ref_invariant(S, F, I), ref_target(S, F, T),
 successor_undeclared(S, F) :- role_successor(S, F), not ref(S, F).
 retires_unknown(S, W) :- role_retires_on(S, W), not status_word(S, W).
 influence_undeclared(S, F) :- role_influence(S, F), not ref(S, F).
-
-% ── citable_from ────────────────────────────────────────────────────────
-% A retired status a named citer may cite without acknowledgement. The
-% status is one this scheme holds and is not its `active` word, which needs
-% no exemption; the citer is a declared scheme at a word its vocabulary holds.
-citable_unknown(S, W) :- citable_from(S, W, _, _), not status_word(S, W).
-citable_active(S, W) :- citable_from(S, W, _, _), status_word(S, W),
-                        active_word(S, W).
-citable_by_unknown(S, W, B, A) :- citable_from(S, W, B, A), not scheme(B).
-citable_at_unknown(S, W, B, A) :- citable_from(S, W, B, A), scheme(B),
-                                  not status_word(B, A).
 
 % ── chains ──────────────────────────────────────────────────────────────
 chain_unknown(N) :- chain_scheme(N, S), not scheme(S).
@@ -105,10 +92,6 @@ pattern_shadows(P, S) :- pattern(P), ref(S, P).
 #show successor_undeclared/2.
 #show retires_unknown/2.
 #show influence_undeclared/2.
-#show citable_unknown/2.
-#show citable_active/2.
-#show citable_by_unknown/4.
-#show citable_at_unknown/4.
 #show chain_unknown/1.
 #show facet_unheld/2.
 #show walk_undeclared/3.
