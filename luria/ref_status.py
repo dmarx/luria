@@ -100,6 +100,7 @@ class Doc:
     title: str
     path: Path
     active: bool
+    scheme: str = ""          # the prefix of the scheme it belongs to
 
 
 def _load_scheme(scheme) -> dict[str, Doc]:
@@ -118,7 +119,7 @@ def _load_scheme(scheme) -> dict[str, Doc]:
     for doc in builder.load_scheme(scheme):
         status = doc.status_value
         docs[doc.code] = Doc(doc.code, status, doc.title, doc.path,
-                             status == scheme.active)
+                             status == scheme.active, scheme.prefix)
     return docs
 
 
@@ -245,9 +246,19 @@ class Citation:
     line: int
     code: str
     excused_by: Annotation | None = field(default=None, compare=False)
+    # Cited from where the cited scheme's `citable_from` says a document at
+    # this status may be: nothing to acknowledge, and so nothing for an
+    # `inactive-ok` to answer for either.
+    sanctioned: bool = field(default=False, compare=False)
 
     def __str__(self) -> str:
         return f"{_rel(self.path)}:{self.line}"
+
+    @property
+    def loud(self) -> bool:
+        """Whether this site still wants a reader's attention: nothing
+        acknowledges it and no `citable_from` sanctions it."""
+        return self.excused_by is None and not self.sanctioned
 
 
 @dataclass
@@ -429,15 +440,30 @@ def _scan(files: list[Path] | None = None, docs: dict[str, Doc] | None = None) -
                           for m in scheme.temp_pattern.finditer(bare)}
             sites += [(path, line_no, code) for code in sorted(codes)
                       if own.get(path) != code]
-    _acknowledge(result, sites, docs)
+    _acknowledge(result, sites, docs, own)
     for pool in (result.cited, result.dangling):
         for sites in pool.values():
             sites.sort(key=lambda c: (str(c.path), c.line))
     return result
 
 
+def _sanctioned(path: Path, code: str, docs: dict[str, Doc],
+                own: dict[Path, str]) -> bool:
+    """Whether the cited scheme's `citable_from` admits this citer: the
+    citing file is one of the record's documents, and its scheme and status,
+    with the cited document's status, are a declared triple. A file that is
+    no document here is never a sanctioned citer."""
+    cited, citer = docs.get(code), docs.get(own.get(path, ""))
+    if cited is None or citer is None or cited.active:
+        return False
+    scheme = schemes().get(cited.scheme)
+    return scheme is not None and (
+        (cited.status, citer.scheme, citer.status) in scheme.citable_from)
+
+
 def _acknowledge(result: Scan, sites: list[tuple[Path, int, str]],
-                 docs: dict[str, Doc]) -> None:
+                 docs: dict[str, Doc],
+                 own: dict[Path, str] | None = None) -> None:
     """File every site under `cited` or `dangling`, with the annotation that
     answers for it, and record which annotations answer for nothing.
 
@@ -448,12 +474,19 @@ def _acknowledge(result: Scan, sites: list[tuple[Path, int, str]],
     the first `mention-ok`, which claims nothing and so answers either. A
     document in force is no finding, so only a mention is recorded against
     it, which is what keeps that mention alive when its document goes
-    Active (ADR-105)."""
+    Active (ADR-105). Nor is a retired one cited from where its scheme's
+    `citable_from` allows: that site is `sanctioned`, and an `inactive-ok`
+    over it answers for nothing."""
     from . import logic
     from .facts import Fact
+    own = own or {}
     found: list[Fact] = []
+    sanctioned: set[int] = set()
     for i, (path, line, code) in enumerate(sites):
         found.append(Fact("site", (i, str(path), line, code)))
+        if _sanctioned(path, code, docs, own):
+            sanctioned.add(i)
+            found.append(Fact("sanctioned", (i,)))
     for code in {c for _, _, c in sites} & set(docs):
         found.append(Fact("resolves", (code,)))
         if docs[code].active:
@@ -473,7 +506,8 @@ def _acknowledge(result: Scan, sites: list[tuple[Path, int, str]],
     for i, (path, line, code) in enumerate(sites):
         ann = result.annotations[excused[i]] if i in excused else None
         pool = result.cited if code in docs else result.dangling
-        pool.setdefault(code, []).append(Citation(path, line, code, ann))
+        pool.setdefault(code, []).append(
+            Citation(path, line, code, ann, i in sanctioned))
     result.unused = frozenset(a for (a,) in derived.get("unused", ()))
     for a, code, _ in derived.get("lost", ()):
         lost = result.lost.setdefault(a, {})
@@ -509,7 +543,7 @@ def flagged(result: Scan | None = None, docs: dict[str, Doc] | None = None):
         doc = docs[code]
         if doc.active:
             continue
-        loud = [c for c in sites if c.excused_by is None]
+        loud = [c for c in sites if c.loud]
         if loud:
             rows.append((doc, loud, len(sites) - len(loud)))
     return sorted(rows, key=lambda r: (-len(r[1]), r[0].code))
@@ -649,7 +683,19 @@ def stale_annotations(result: Scan | None = None,
             else:
                 active = sorted(c for c in ann.codes
                                 if c in docs and docs[c].active)
+                # Cited in scope, but from where the cited scheme's
+                # `citable_from` allows: the site needs nothing, so say
+                # why rather than that the citation is gone.
+                allowed = sorted(
+                    c for c in ann.codes
+                    for site in result.cited.get(c, ())
+                    if site.sanctioned and site.path == ann.directive.path
+                    and ann.covers(site.line))
                 why = (f"{', '.join(active)} is Active now" if active
+                       else (f"{', '.join(dict.fromkeys(allowed))} is cited "
+                             f"here from where its scheme's `citable_from` "
+                             f"allows, so needs no acknowledgement")
+                       if allowed
                        else f"nothing in scope cites {named}")
             out.append(f"{ann}: annotation no longer applies — {why}")
     return sorted(out)

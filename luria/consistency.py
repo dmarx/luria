@@ -31,6 +31,12 @@ it once reached a document the walker had never loaded (#272); the refusal
 says where the assertion belongs instead. A chain walking a pattern (#371)
 holds the same line at the pattern's two ends, wherever its middle goes.
 
+**An exemption names a citer that can exist.** `citable_from` lets a named
+citer cite a retired status without acknowledgement. Its status has to be one
+the scheme holds and not its `active` word (which needs no exemption), and
+each citer a declared scheme at a word that scheme holds — otherwise the entry
+exempts nothing, and looks exactly like one that works.
+
 **A pattern names schemes and fields.** Every label a declared scheme, every
 hop a reference held by the node the arrow leaves and able to land on the
 node it reaches, every property a field the node can hold. A pattern that
@@ -53,6 +59,9 @@ def _scheme_facts(schemes: dict, remotes=()) -> list[Fact]:
             out.append(Fact("role_retires_on", (prefix, scheme.retires_on)))
         if scheme.influence:
             out.append(Fact("role_influence", (prefix, scheme.influence)))
+        out.append(Fact("active_word", (prefix, scheme.active)))
+        out += [Fact("citable_from", (prefix, cited, by, at))
+                for cited, by, at in scheme.citable_from]
         out += [Fact("status_word", (prefix, w)) for w in vocabulary(scheme)]
         out += [Fact("nameable", (prefix, f)) for f in nameable(scheme)]
         for ref in scheme.references:
@@ -163,9 +172,11 @@ def _ref(schemes: dict, prefix: str, field: str):
 
 
 def check_references(schemes: dict, remotes=()) -> None:
-    """Refuse the first converse or relation invariant that cannot mean what
-    it says: per scheme in declaration order, its converses before its
-    invariants, each reference in order and each scheme it names in order."""
+    """Refuse the first converse, relation invariant, role or
+    `citable_from` entry that cannot mean what it says: per scheme in
+    declaration order, its converses before its invariants, each reference
+    in order and each scheme it names in order, then its roles, then its
+    `citable_from` entries in the order they are written."""
     from .config import nameable, spelled
     derived = _derived(schemes, {}, remotes)
     order = list(schemes)
@@ -243,8 +254,43 @@ def check_references(schemes: dict, remotes=()) -> None:
             f"{prefix}'s status vocabulary does not hold — the role says "
             f"which status means replaced; it does not add one (have: "
             f"{', '.join(vocabulary(schemes[prefix]))})")))
+    for prefix, word in derived.get("citable_unknown", ()):
+        found.append(((order.index(prefix), 3, _cited_at(schemes, prefix, word),
+                       0, 0, 0), (
+            f"luria.yaml: schemes.{prefix}.citable_from: names {word!r}, "
+            f"which {prefix}'s status vocabulary does not hold — the key "
+            f"says which retired status a citer may cite; it does not add "
+            f"one (have: {', '.join(vocabulary(schemes[prefix]))})")))
+    for prefix, word in derived.get("citable_active", ()):
+        found.append(((order.index(prefix), 3, _cited_at(schemes, prefix, word),
+                       0, 0, 0), (
+            f"luria.yaml: schemes.{prefix}.citable_from: names {word!r}, "
+            f"{prefix}'s `active` word — a document in force can be cited "
+            f"from anywhere already, so the entry exempts nothing")))
+    for prefix, cited, by, at in derived.get("citable_by_unknown", ()):
+        found.append(((order.index(prefix), 3, _cited_at(schemes, prefix, cited),
+                       _citer_at(schemes, prefix, cited, by, at), 0, 0), (
+            f"luria.yaml: schemes.{prefix}.citable_from.{cited}: names "
+            f"scheme {by!r}, which is not declared — a citer is a scheme "
+            f"and a status of it (have: {', '.join(sorted(schemes))})")))
+    for prefix, cited, by, at in derived.get("citable_at_unknown", ()):
+        found.append(((order.index(prefix), 3, _cited_at(schemes, prefix, cited),
+                       _citer_at(schemes, prefix, cited, by, at), 0, 0), (
+            f"luria.yaml: schemes.{prefix}.citable_from.{cited}: names "
+            f"'{by}:{at}', but {by}'s status vocabulary does not hold "
+            f"{at!r} — no {by} document could ever be that citer (have: "
+            f"{', '.join(vocabulary(schemes[by]))})")))
     if found:
         raise ValueError(min(found)[1])
+
+
+def _cited_at(schemes: dict, prefix: str, word: str) -> int:
+    """Where a `citable_from` status sits in its declaration, for order."""
+    return [c for c, _, _ in schemes[prefix].citable_from].index(word)
+
+
+def _citer_at(schemes: dict, prefix: str, cited: str, by: str, at: str) -> int:
+    return schemes[prefix].citable_from.index((cited, by, at))
 
 
 # ── the chains ────────────────────────────────────────────────────────────

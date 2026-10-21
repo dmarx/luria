@@ -900,6 +900,23 @@ class Scheme:
     # Lowering this asks the sharper question — is the vocabulary *exercised*
     # — and is opt-in because the answer is a matter of what a scheme is for.
     uniform_share: float = 1.0
+    # Retired statuses that particular citers may cite without an
+    # acknowledgement, as (cited status, citer prefix, citer status):
+    #
+    #     citable_from:
+    #       Answered: [QUESTION:Open]
+    #
+    # `active` is one word because it answers one question — is this document
+    # in force — and every citation of a document that is not draws a
+    # warning. Some retired documents have a citer for whom that warning is
+    # always wrong: an `Open` question naming the child question split off it
+    # is the record working, though the child is `Answered`. Widening `active`
+    # would silence every OTHER citation of an answered question too, and
+    # those are the ones that should cite whatever answered it instead. So
+    # the exemption names its citer exactly; anything else, a non-record file
+    # included, is judged as it always was. Empty for every scheme that sets
+    # nothing, which is the behaviour every project had before the key.
+    citable_from: tuple[tuple[str, str, str], ...] = ()
 
     @property
     def view(self) -> Path:
@@ -2902,6 +2919,38 @@ def _check_target_fields(where: str, rule, ref, schemes, many: bool = False) -> 
         _check_cardinality(where, rule, plural_fields(target), many, prefix)
 
 
+def _citable_from(prefix: str, raw) -> tuple[tuple[str, str, str], ...]:
+    """A scheme's `citable_from`, as (cited status, citer prefix, citer
+    status) triples, refused here when it is not the shape it has to be.
+
+    Whether the words it names exist is a cross-scheme question, decided
+    once every scheme is known (`consistency.check_references`)."""
+    if not raw:
+        return ()
+    where = f"luria.yaml: schemes.{prefix}.citable_from"
+    if not isinstance(raw, dict):
+        raise ValueError(
+            f"{where}: has to be a mapping of this scheme's status words to "
+            f"lists of `PREFIX:Status` citers, not {type(raw).__name__} "
+            f"(e.g. `Answered: [{prefix}:Open]`)")
+    out: list[tuple[str, str, str]] = []
+    for status, citers in raw.items():
+        if not isinstance(citers, list):
+            raise ValueError(
+                f"{where}.{status}: has to be a list of `PREFIX:Status` "
+                f"citers, not {citers!r} — write `[{citers}]` for one")
+        for citer in citers:
+            parts = str(citer).split(":")
+            if (not isinstance(citer, str) or len(parts) != 2
+                    or not all(p.strip() for p in parts)):
+                raise ValueError(
+                    f"{where}.{status}: {citer!r} is not a `PREFIX:Status` "
+                    f"citer — name the citing scheme and the status it has "
+                    f"to be at (e.g. `{prefix}:Open`)")
+            out.append((str(status), parts[0].strip(), parts[1].strip()))
+    return tuple(out)
+
+
 def _alias_template(prefix: str, raw) -> str:
     """A scheme's `alias` template, validated for shape where it is read.
 
@@ -3037,6 +3086,7 @@ def _schemes(raw: dict, root: Path, scaffolding: bool = False,
             field_groups=_field_groups(prefix, spec.get("field_groups", {})),
             uniform_ok=(spec.get("uniform_ok") or None),
             uniform_share=float(spec.get("uniform_share", 1.0)),
+            citable_from=_citable_from(prefix, spec.get("citable_from")),
         )
     # Which cross-scheme declarations are wrong is decided by rules
     # (`luria/consistency.py`); the order they are raised in is this loop's.
