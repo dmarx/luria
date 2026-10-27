@@ -8,7 +8,8 @@
 % file P; resolves(C) and active(C) for local documents; ann(A, P, K), the
 % A-th annotation found, of kind K, in file P; ann_code(A, C); ann_line(A, L)
 % for each line it governs, or ann_file(A) when it governs the whole file;
-% ann_problem(A) when it is malformed.
+% ann_problem(A) when it is malformed; sanctioned(I) when a `lint.inactive_ok`
+% rule matches the document the site sits in and the document it cites.
 
 covers(A, L) :- ann(A, P, _), ann_file(A), site(_, P, L, _).
 covers(A, L) :- ann_line(A, L).
@@ -20,11 +21,12 @@ can(I, A, K) :- site(I, P, L, C), ann(A, P, K), usable(A), ann_code(A, C),
                 covers(A, L).
 
 % What a site needs excusing for. A code naming nothing here wants an
-% `unresolved-ok`; a retired document wants an `inactive-ok`; a document in
-% force is no finding, so only a mention is recorded against it — which is
-% what keeps that mention alive when its document goes Active (ADR-105).
+% `unresolved-ok`; a retired document wants an `inactive-ok`, unless it is
+% cited where a `lint.inactive_ok` rule allows; a document in force is no
+% finding, so only a mention is recorded against it — which is what keeps
+% that mention alive when its document goes Active (ADR-105).
 dangling(I) :- site(I, _, _, C), not resolves(C).
-retired(I) :- site(I, _, _, C), resolves(C), not active(C).
+retired(I) :- site(I, _, _, C), resolves(C), not active(C), not sanctioned(I).
 wants(I, "unresolved-ok") :- dangling(I).
 wants(I, "inactive-ok") :- retired(I).
 

@@ -95,7 +95,7 @@ def plan(code: str, docs=None, result=None) -> tuple[str, list[ref_status.Citati
         return "", [], (f"{code} is not cited anywhere this record scans — "
                         f"nothing to acknowledge")
 
-    loud = [c for c in sites if c.excused_by is None]
+    loud = [c for c in sites if c.loud]
     if not loud:
         return "", [], (f"every citation of {code} is already acknowledged "
                         f"({len(sites)} site(s))")

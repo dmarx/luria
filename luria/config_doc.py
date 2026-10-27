@@ -68,8 +68,8 @@ from pathlib import Path
 
 from . import config as config_mod
 from .adr_index import escape_cell
-from .config import (FAMILIES, Chain, FieldGroup, Fragment, Journal,
-                     NamedPattern, PlainField, Reference, Remote,
+from .config import (FAMILIES, Chain, FieldGroup, Fragment, InactiveOk,
+                     Journal, NamedPattern, PlainField, Reference, Remote,
                      RemoteScheme, RequiredWhen,
                      Scheme, Site, TagGroup, View, Vocabulary, VocabularyTable,
                      current)
@@ -259,6 +259,11 @@ PROSE: dict[type, tuple[str, str]] = {
      "field, which is how a line passes through a document of another "
      "kind — a claim to the claims it follows from, through the inference "
      "that concludes it."),
+    InactiveOk: ("Citation rules — `lint.inactive_ok[N]`",
+     "One entry per kind of citation of a retired document that needs no "
+     "acknowledgement: a one-hop pattern over the reserved `cites` edge, and "
+     "the reason. The `inactive-ok` directive says this at one site; an "
+     "entry says it once, for every site it matches."),
     View: ("Views — `views.X`",
      "One entry per Jinja template rendered over the record into a file. "
      "Every other view is a generator luria ships; a view is one the project "
@@ -293,7 +298,7 @@ NOT_A_TABLE = ("Config",)
 #: of the page instead of nowhere.
 ORDER = [Scheme, Vocabulary, PlainField, RequiredWhen, Reference, TagGroup,
          FieldGroup, VocabularyTable, Fragment, Journal, Chain,
-         NamedPattern, View, Remote,
+         NamedPattern, InactiveOk, View, Remote,
          RemoteScheme, Site]
 
 
@@ -428,6 +433,21 @@ PLAIN: list[tuple[str, str, str, dict[str, str]]] = [
                    "lockfile alone, for the hermetic build; `require` makes "
                    "an unreachable remote a failure, so a green run means the "
                    "references were verified rather than remembered.",
+        "inactive_ok": "The config-level form of the `inactive-ok` "
+                       "directive: a list of entries, each a `match:` "
+                       "pattern and a mandatory `reason:`. The pattern is "
+                       "one hop over the reserved `cites` edge — "
+                       "`(:QUESTION {status: 'Open'})-[:cites]->(:QUESTION "
+                       "{status: 'Answered'})` — and a citation of a "
+                       "retired document needs no acknowledgement when the "
+                       "document it sits in matches the citing node and the "
+                       "cited document the other. Labels are schemes and "
+                       "properties are literal equality on any frontmatter "
+                       "field, as in `patterns.X`; more than one hop, "
+                       "another edge type, variable length and `WHERE NOT` "
+                       "are refused. A directive the rule made redundant, "
+                       "and a rule that sanctions no citation, are both "
+                       "`stale-directives` findings.",
     }),
 ]
 
@@ -474,6 +494,7 @@ FROM_TABLE_NAME: dict[type, set[str]] = {
     Scheme: {"prefix"},          # `schemes.ADR` → prefix "ADR"
     Journal: {"name"},           # `journals.devlog` → name "devlog"
     NamedPattern: {"name"},      # `patterns.follows_from` → its name
+    InactiveOk: {"index"},       # `lint.inactive_ok[0]` → its position
     View: {"name"},              # `views.bootloader` → its name
     Remote: {"prefix"},          # …but `Remote.name` IS a key, deliberately
     RemoteScheme: {"prefix"},

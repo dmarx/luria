@@ -96,7 +96,7 @@ def pending() -> list[Pending]:
             sites = cited.get(doc.code, [])
             rows.append(Pending(doc.code, doc.number, status, doc.title,
                                 _date(doc.meta), len(sites),
-                                sum(1 for c in sites if c.excused_by is None),
+                                sum(1 for c in sites if c.loud),
                                 doc.path))
     return sorted(rows, key=lambda r: (r.date is None, r.date, -r.cites, r.code))
 
