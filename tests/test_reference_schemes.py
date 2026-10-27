@@ -274,7 +274,7 @@ def test_a_chain_refuses_a_relation_that_can_leave_its_scheme(
             "scheme": ["CLAIM", "LIT"], "required": False, "many": True}}}},
         "chains": {"line": {"scheme": "CLAIM", "relation": "builds_on",
                             "output": "docs/lines.md"}}})
-    with pytest.raises(ValueError, match="rather than CLAIM alone"):
+    with pytest.raises(ValueError, match="can point at LIT .* it lists CLAIM"):
         config.current()
 
 

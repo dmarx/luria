@@ -2101,8 +2101,18 @@ class Chain:
 
     Both fields must be declared references on the scheme; a chain over a
     field nothing declares would render nothing, and nothing looks exactly
-    like current (DP-15)."""
+    like current (DP-15).
+
+    `scheme` names one scheme or a list of them. A line can run through
+    documents of several kinds: an objection thread is claim, then the
+    argument for it, then the claim that undercuts that argument, and an
+    argument nobody has objected to yet is still a step the thread should
+    hold. With one scheme the argument could only be what a step went
+    *through*, never a step. A field or a pattern a chain walks may land on
+    any scheme listed, and on no other (ADR-tmp5vjuy)."""
     name: str
+    # The first scheme listed: what a page names when it names one, and what
+    # every single-scheme chain has always had here.
     scheme: str
     # The spine, always a tuple — one relation is the common case and reads
     # as `relation = "extends"`, which is why the key stays singular: it
@@ -2134,6 +2144,9 @@ class Chain:
     # The other half of the pair (#279). `title` was already here; a chain
     # is a rendered page like a journal, so it takes `blurb` too.
     blurb: str = ""
+    # Every scheme whose documents may be a step, in declared order; a single
+    # string in `luria.yaml` is a tuple of one, so no config changes meaning.
+    schemes: tuple[str, ...] = ()
     # The field a step in this chain asserts it shares with its neighbours
     # (#214) — both with the neighbour directly, and with every other member
     # of the line it lands in, which is the part only a chain can assert.
@@ -2680,16 +2693,20 @@ def _chains(raw: dict, schemes: dict, root: Path,
         return tuple(str(f) for f in (
             [value] if isinstance(value, str) else value))
 
-    specs = {name: {"scheme": str(spec.get("scheme", "")).upper(),
+    specs = {name: {"schemes": tuple(s.upper() for s in listed(
+                        spec.get("scheme", ""))),
                     "facet_by": listed(spec.get("facet_by", ("status",))),
                     "relation": listed(spec.get("relation", "")),
                     "sibling": str(spec.get("sibling", "")),
                     "output": spec.get("output"),
                     "invariant": str(spec.get("invariant", ""))}
              for name, spec in raw.items()}
+    for s in specs.values():
+        s["scheme"] = s["schemes"][0] if s["schemes"] else ""
     from . import consistency
     consistency.check_chains(specs, schemes, patterns or {})
     return {name: Chain(name=name, scheme=s["scheme"],
+                        schemes=s["schemes"],
                         relation=s["relation"],
                         sibling=s["sibling"],
                         output=root / str(s["output"]),

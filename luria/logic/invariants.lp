@@ -15,11 +15,11 @@ unbound_relation(S, F, A, B) :- rel_pair(S, F, A, B), not rel_shares(S, F, A, B)
 walks(N, F) :- chain_relation(N, F, _).
 walks(N, F) :- chain_sibling(N, F).
 near(N, A, B) :- chain(N, S), chain_invariant(N, _), walks(N, F),
-                 held(S, F, A, B), doc(A, S), doc(B, S).
+                 held(S, F, A, B), doc(A, S), doc(B, T), chain(N, T).
 % A walked pattern (#371) is an edge by its two ends; `pattern_edge/3`
 % comes from the lowered `patterns:` solved alongside, absent otherwise.
 near(N, A, B) :- chain(N, S), chain_invariant(N, _), walks(N, P),
-                 pattern_edge(P, A, B), doc(A, S), doc(B, S).
+                 pattern_edge(P, A, B), doc(A, S), doc(B, T), chain(N, T).
 near(N, A, B) :- near(N, B, A).
 
 chain_pair(N, A, B) :- near(N, A, B), A <= B.

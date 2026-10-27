@@ -7,7 +7,7 @@
 % ref_many/2, ref_invariant/3, nameable/2 (every field a scheme can hold),
 % role_successor/2, role_retires_on/2, role_influence/2, status_word/2, and
 % per raw
-% chain: chain_scheme/2, chain_facet/2, chain_walks/3 (relation or sibling),
+% chain: chain_scheme/2 (one per listed scheme), chain_facet/2, chain_walks/3 (relation or sibling),
 % chain_output/1, chain_invariant/2; and per pattern: pattern/1,
 % pat_node/4 (pattern, path, position, label — path 0 is the match, 1.. each
 % WHERE NOT), pat_hop/6 (pattern, path, hop, near position, far position,
@@ -45,21 +45,30 @@ retires_unknown(S, W) :- role_retires_on(S, W), not status_word(S, W).
 influence_undeclared(S, F) :- role_influence(S, F), not ref(S, F).
 
 % ── chains ──────────────────────────────────────────────────────────────
-chain_unknown(N) :- chain_scheme(N, S), not scheme(S).
-facet_unheld(N, X) :- chain_facet(N, X), chain_scheme(N, S), scheme(S),
-                      not nameable(S, X).
-% A chain walks references or patterns, and only within its own scheme.
-walk_undeclared(N, K, F) :- chain_walks(N, K, F), chain_scheme(N, S),
-                            scheme(S), not ref(S, F), not pattern(F).
-walk_leaves(N, K, F) :- chain_walks(N, K, F), chain_scheme(N, S),
-                        ref_target(S, F, T), T != S.
-walk_pattern_ends(N, K, P) :- chain_walks(N, K, P), pattern(P),
-                              chain_scheme(N, S), scheme(S),
-                              not pat_ends(P, S, S).
+% A chain lists one scheme or several, and any listed scheme's documents may
+% be a step. A field it walks may be declared on any of them and land on any
+% of them; a pattern may start and end on any of them.
+chain_unknown(N, S) :- chain_scheme(N, S), not scheme(S).
+chain_known(N) :- chain_scheme(N, _), #count { S : chain_scheme(N, S),
+                                               not scheme(S) } = 0.
+facet_held(N, X) :- chain_facet(N, X), chain_scheme(N, S), nameable(S, X).
+facet_unheld(N, X) :- chain_facet(N, X), chain_known(N), not facet_held(N, X).
+walk_declared(N, F) :- chain_walks(N, _, F), chain_scheme(N, S), ref(S, F).
+walk_undeclared(N, K, F) :- chain_walks(N, K, F), chain_known(N),
+                            not walk_declared(N, F), not pattern(F).
+walk_leaves(N, K, F, T) :- chain_walks(N, K, F), chain_scheme(N, S),
+                           ref_target(S, F, T), not chain_scheme(N, T).
+walk_pattern_ends(N, K, P, L) :- chain_walks(N, K, P), pattern(P),
+                                 chain_known(N), pat_ends(P, L, _),
+                                 not chain_scheme(N, L).
+walk_pattern_ends(N, K, P, L) :- chain_walks(N, K, P), pattern(P),
+                                 chain_known(N), pat_ends(P, _, L),
+                                 not chain_scheme(N, L).
 walk_pattern_still(N, K, P) :- chain_walks(N, K, P), pat_hops(P, 0).
-output_missing(N) :- chain_scheme(N, S), scheme(S), not chain_output(N).
-chain_invariant_unheld(N, I) :- chain_invariant(N, I), chain_scheme(N, S),
-                                scheme(S), not nameable(S, I).
+output_missing(N) :- chain_known(N), not chain_output(N).
+% Every listed scheme holds an invariant, since every step is checked.
+chain_invariant_unheld(N, I, S) :- chain_invariant(N, I), chain_known(N),
+                                   chain_scheme(N, S), not nameable(S, I).
 
 % ── patterns ────────────────────────────────────────────────────────────
 % Every label a scheme; every hop a reference declared on the node the arrow
@@ -92,11 +101,11 @@ pattern_shadows(P, S) :- pattern(P), ref(S, P).
 #show successor_undeclared/2.
 #show retires_unknown/2.
 #show influence_undeclared/2.
-#show chain_unknown/1.
+#show chain_unknown/2.
 #show facet_unheld/2.
 #show walk_undeclared/3.
-#show walk_leaves/3.
-#show walk_pattern_ends/3.
+#show walk_leaves/4.
+#show walk_pattern_ends/4.
 #show walk_pattern_still/3.
 #show output_missing/1.
 #show pattern_label_unknown/3.
@@ -105,4 +114,4 @@ pattern_shadows(P, S) :- pattern(P), ref(S, P).
 #show pattern_closure_leaves/3.
 #show pattern_prop_unheld/4.
 #show pattern_shadows/2.
-#show chain_invariant_unheld/2.
+#show chain_invariant_unheld/3.
