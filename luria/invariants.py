@@ -138,7 +138,7 @@ def edges(chain: Chain) -> list[Unbound]:
     edge the chain walks, spine and cross-link alike, as sorted pairs."""
     if not chain.invariant:
         return []
-    docs = _documents(chain.scheme)
+    docs = _documents(*chain.schemes)
     pairs = sorted((a, b) for n, a, b in _derived().get("unbound_edge", ())
                    if n == chain.name)
     return [Unbound(chain.name, chain.invariant, (docs[a], docs[b]))
@@ -158,7 +158,7 @@ def paths(chain: Chain) -> list[Unbound]:
     for n, root, code in derived.get("member", ()):
         if n == chain.name:
             groups.setdefault(root, []).append(code)
-    docs = _documents(chain.scheme)
+    docs = _documents(*chain.schemes)
     out = []
     for n, root in sorted(derived.get("unbound_line", ())):
         group = sorted(groups.get(root, ())) if n == chain.name else []

@@ -159,7 +159,8 @@ def schema_facts(cfg=None) -> Iterator[Fact]:
             if ref.label:
                 yield Fact("ref_label", (prefix, ref.field, ref.label))
     for name, chain in cfg.chains.items():
-        yield Fact("chain", (name, chain.scheme))
+        for scheme in chain.schemes:
+            yield Fact("chain", (name, scheme))
         for i, field in enumerate(chain.relation):
             yield Fact("chain_relation", (name, field, i))
         if chain.sibling:

@@ -73,7 +73,7 @@ def _scheme_facts(schemes: dict, remotes=()) -> list[Fact]:
 def _chain_facts(chains: dict[str, dict]) -> list[Fact]:
     out: list[Fact] = []
     for name, spec in chains.items():
-        out.append(Fact("chain_scheme", (name, spec["scheme"])))
+        out += [Fact("chain_scheme", (name, s)) for s in spec["schemes"]]
         out += [Fact("chain_facet", (name, f)) for f in spec["facet_by"]]
         out += [Fact("chain_walks", (name, "relation", f))
                 for f in spec["relation"]]
@@ -249,15 +249,23 @@ def check_references(schemes: dict, remotes=()) -> None:
 
 # ── the chains ────────────────────────────────────────────────────────────
 
+def _among(listed, conj: str = "and") -> str:
+    """Listed schemes as prose: `CLAIM`, `CLAIM and ARG`, `A, B and C`."""
+    listed = list(listed)
+    if len(listed) < 3:
+        return f" {conj} ".join(listed)
+    return ", ".join(listed[:-1]) + f" {conj} {listed[-1]}"
+
+
 def check_chains(chains: dict[str, dict], schemes: dict,
                  patterns: dict | None = None) -> None:
     """Refuse the first chain that would render an empty or meaningless
     page: per chain in order — its scheme, each `facet_by`, each field it
     walks (spine, then sibling), its `output`, its `invariant`.
 
-    `chains` is each chain's raw declaration, normalised: `scheme` upper-
-    cased, `relation` and `facet_by` as tuples."""
-    from .config import nameable, spelled
+    `chains` is each chain's raw declaration, normalised: `schemes` upper-
+    cased and `scheme` its first, `relation` and `facet_by` as tuples."""
+    from .config import nameable
     patterns = patterns or {}
     derived = _derived(schemes, chains, patterns=patterns)
     order = list(chains)
@@ -271,63 +279,72 @@ def check_chains(chains: dict[str, dict], schemes: dict,
     def listing(prefix):
         return ", ".join(sorted(nameable(schemes[prefix])))
 
-    for (name,) in derived.get("chain_unknown", ()):
+    def among(name):
+        return _among(chains[name]["schemes"])
+
+    def holds_none(name):
+        listed = chains[name]["schemes"]
+        return (f"{listed[0]} does not declare" if len(listed) == 1
+                else f"neither {_among(listed, 'nor')} declares")
+
+    def listing_all(name):
+        return ", ".join(sorted({f for s in chains[name]["schemes"]
+                                 for f in nameable(schemes[s])}))
+
+    for name, scheme in derived.get("chain_unknown", ()):
         found.append(((order.index(name), 0, 0), (
-            f"luria.yaml: chains.{name}: scheme {chains[name]['scheme']!r} is "
+            f"luria.yaml: chains.{name}: scheme {scheme!r} is "
             f"not declared (have: {', '.join(sorted(schemes))})")))
     for name, facet in derived.get("facet_unheld", ()):
-        prefix = chains[name]["scheme"]
         found.append(((order.index(name), 1,
                        chains[name]["facet_by"].index(facet)), (
             f"luria.yaml: chains.{name}: `facet_by` names {facet!r}, which "
-            f"{prefix} does not declare, so every step would render it blank "
-            f"(nameable: {listing(prefix)})")))
+            f"{holds_none(name)}, so every step would render it blank "
+            f"(nameable: {listing_all(name)})")))
     for name, key, field in derived.get("walk_undeclared", ()):
-        prefix = chains[name]["scheme"]
-        declared = ", ".join(sorted(_refs(schemes, prefix))) or "none"
-        what = (f"neither a reference {prefix} declares nor a declared "
+        listed = chains[name]["schemes"]
+        declared = ", ".join(sorted({r for s in listed
+                                     for r in _refs(schemes, s)})) or "none"
+        what = (f"neither a reference {among(name)} declares nor a declared "
                 f"pattern" if patterns
-                else f"not a reference {prefix} declares")
+                else f"not a reference {among(name)} declares")
         also = (f"; patterns: {', '.join(patterns)}" if patterns else "")
         found.append(((order.index(name), 2,
                        walked(name).index((key, field)), 0), (
             f"luria.yaml: chains.{name}: `{key}` names {field!r}, which is "
             f"{what} — a chain over a field nothing types walks no edges "
             f"and renders an empty page (declared: {declared}{also})")))
-    for name, key, field in derived.get("walk_pattern_ends", ()):
-        prefix = chains[name]["scheme"]
+    for name, key, field, label in sorted(
+            derived.get("walk_pattern_ends", ())):
         pattern = patterns[field].parsed
         found.append(((order.index(name), 2,
                        walked(name).index((key, field)), 1), (
             f"luria.yaml: chains.{name}: `{key}` names pattern {field!r}, "
             f"which runs from {pattern.first.label} to {pattern.last.label} "
-            f"— a chain is a sequence of {prefix} documents, so the pattern "
-            f"it walks starts and ends on {prefix}, wherever its middle "
-            f"goes")))
+            f"— every step of a chain is a document of a scheme it lists, "
+            f"and it lists {among(name)}. To draw {label} documents as "
+            f"steps, list {label} in its `scheme`")))
     for name, key, field in derived.get("walk_pattern_still", ()):
         found.append(((order.index(name), 2,
                        walked(name).index((key, field)), 1), (
             f"luria.yaml: chains.{name}: `{key}` names pattern {field!r}, "
             f"which has no hop — a chain walks from one document to "
             f"another, and a single node relates nothing")))
-    for name, key, field in derived.get("walk_leaves", ()):
-        prefix = chains[name]["scheme"]
-        far = _ref(schemes, prefix, field).scheme
-        alone = " alone" if prefix in far else ""
+    for name, key, field, far in sorted(derived.get("walk_leaves", ())):
         found.append(((order.index(name), 2,
                        walked(name).index((key, field)), 1), (
             f"luria.yaml: chains.{name}: `{key}` names {field!r}, which "
-            f"points at {spelled(far)} rather than {prefix}{alone} — a chain "
-            f"is a sequence within one scheme, so there is no line to walk "
-            f"across the boundary. To assert a shared field over this "
-            f"relation, declare `invariant` on "
-            f"schemes.{prefix}.references.{field} instead")))
+            f"can point at {far} — every step of a chain is a document of a "
+            f"scheme it lists, and it lists {among(name)}. To draw {far} "
+            f"documents as steps, list {far} in its `scheme`; to assert a "
+            f"shared field over this relation without a page, declare "
+            f"`invariant` on the reference instead")))
     for (name,) in derived.get("output_missing", ()):
         found.append(((order.index(name), 3, 0), (
             f"luria.yaml: chains.{name}: needs an `output` — the page the "
             f"sequences render to")))
-    for name, invariant in derived.get("chain_invariant_unheld", ()):
-        prefix = chains[name]["scheme"]
+    for name, invariant, prefix in sorted(
+            derived.get("chain_invariant_unheld", ())):
         found.append(((order.index(name), 4, 0), (
             f"luria.yaml: chains.{name}: `invariant` names {invariant!r}, "
             f"which {prefix} does not declare — a chain asserting a shared "

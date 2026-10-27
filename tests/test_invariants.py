@@ -369,7 +369,7 @@ chains:
     relation: source
     output: docs/evidence.md
 """)
-    with pytest.raises(ValueError, match="points at LIT rather than SOTA"):
+    with pytest.raises(ValueError, match="names 'source', which can point at LIT .* list LIT in its `scheme`; .* declare `invariant` on the reference"):
         config.current()
 
 
