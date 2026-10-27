@@ -44,6 +44,17 @@ on:
     - cron: "0 9 * * 1"
   workflow_dispatch:
 
+# On a pull request, a newer push cancels the run it overtakes. The repair in
+# docs-check rebases onto the branch before it pushes, and the newer push's run
+# repairs and lints the same commits, so the older run's work is wasted. Every
+# other run gets a group of its own, so nothing on the default branch is
+# cancelled or queued behind another run: concretizing and regenerating views
+# there must serialize, and a shared group would drop a queued run even without
+# cancel-in-progress.
+concurrency:
+  group: ${{ github.event_name == 'pull_request' && format('docs-pr-{0}', github.head_ref) || format('docs-run-{0}', github.run_id) }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   docs-generate:
     if: github.event_name == 'push'
