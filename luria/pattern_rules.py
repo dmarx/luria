@@ -31,6 +31,14 @@ programs a chain solves are unchanged (ADR-130):
 the atoms sharing it are one row, and a view reads each named node as a
 document.
 
+The lint asks for the last, again only when it asks (`nodes=True`), for the
+patterns a record declares `report: true`:
+
+    pattern_node(P, Match, I, X)            node I of one whole match
+
+Positional rather than named, because a warning row names the match's first
+node's document whether or not the pattern named that node.
+
 Nothing about partial matches. Whether a path that stops partway is
 unfinished depends on what the record's schema requires, which a pattern
 cannot know; a record that wants that list writes it as a pattern of its own,
@@ -46,15 +54,19 @@ from .facts import _term
 from .patterns import Path, Pattern
 
 
-def program(patterns: dict[str, Pattern], rows: bool = False) -> str:
+def program(patterns: dict[str, Pattern], rows: bool = False,
+            nodes: bool = False) -> str:
     """The clingo text for every pattern, in declaration order. `rows` adds
-    `pattern_row/4`, which only a view reads."""
+    `pattern_row/4`, which only a view reads; `nodes` adds `pattern_node/4`,
+    which only the lint's pattern-backed classes read."""
     out = ["% Generated from luria.yaml `patterns:` — see pattern_rules.py."]
     for k, pattern in enumerate(patterns.values()):
-        out += _Lowering(f"pat{k}", pattern, rows).rules()
+        out += _Lowering(f"pat{k}", pattern, rows, nodes).rules()
     out += ["#show pattern_edge/3.", "#show pattern_via/5."]
     if rows:
         out.append("#show pattern_row/4.")
+    if nodes:
+        out.append("#show pattern_node/4.")
     return "\n".join(out) + "\n"
 
 
@@ -68,9 +80,11 @@ def needs_values(patterns: dict[str, Pattern]) -> bool:
 
 
 class _Lowering:
-    def __init__(self, prefix: str, pattern: Pattern, rows: bool = False):
+    def __init__(self, prefix: str, pattern: Pattern, rows: bool = False,
+                 nodes: bool = False):
         self.p = prefix
         self.rows = rows
+        self.nodes = nodes
         self.pattern = pattern
         self.name = _term(pattern.name)
         self.lines: list[str] = []
@@ -163,6 +177,8 @@ class _Lowering:
         self.lines.append(f"{self.p}_m({args}) :- {', '.join(body)}.")
         if self.rows:
             self._rows(args)
+        if self.nodes:
+            self._nodes(args)
         if n == 0:
             return self.lines
         first, last = self.main[0], self.main[n]
@@ -186,6 +202,15 @@ class _Lowering:
             self.lines.append(
                 f"pattern_row({self.name}, {match}, {_term(var)}, "
                 f"{clingo_var}) :- {self.p}_m({args}).")
+
+    def _nodes(self, args: str) -> None:
+        """One `pattern_node` per position, keyed by the whole match, so a
+        match whose nodes are all anonymous is still a row."""
+        match = f"({args},)" if len(self.main) == 1 else f"({args})"
+        for i, clingo_var in enumerate(self.main):
+            self.lines.append(
+                f"pattern_node({self.name}, {match}, {i}, {clingo_var}) :- "
+                f"{self.p}_m({args}).")
 
     def _negation(self, j: int, neg: Path) -> str:
         tag = f"{self.p}_n{j}"
@@ -240,3 +265,27 @@ def through(name: str) -> dict[tuple[str, str], list[str]]:
         if p == name:
             out.setdefault((first, last), set()).add(code)
     return {k: sorted(v) for k, v in out.items()}
+
+
+def reported(cfg=None) -> dict[str, list[tuple[str, ...]]]:
+    """Every match of every pattern declared `report: true`, as the codes of
+    its nodes in path order, sorted — one solve for all of them. A pattern
+    that matches nothing is absent."""
+    from . import logic
+    from .config import current
+    cfg = cfg or current()
+    parsed = {name: p.parsed for name, p in cfg.patterns.items() if p.report}
+    if not parsed:
+        return {}
+    text = program(parsed, nodes=True)
+    families = (frozenset({"values"}) if needs_values(parsed)
+                else frozenset())
+    found: dict[tuple[str, str], dict[int, str]] = {}
+    for name, key, i, code in logic.derive(
+            "relations", extra=text, families=families).get("pattern_node", ()):
+        found.setdefault((name, key), {})[i] = code
+    out: dict[str, list[tuple[str, ...]]] = {}
+    for (name, _), nodes in found.items():
+        out.setdefault(name, []).append(
+            tuple(nodes[i] for i in sorted(nodes)))
+    return {name: sorted(rows) for name, rows in out.items()}

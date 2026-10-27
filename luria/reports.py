@@ -188,12 +188,19 @@ def reference_status(base: Path | None = None) -> str:
 def _pending_table(rows, base: Path) -> list[str]:
     """One table of undecided documents. Shared by the flat rendering and the
     per-scheme one, so the columns cannot drift apart between them."""
-    out = ["| Open since | Status | Code | Cited | Unack. | Title |",
-           "|---|---|---|--:|--:|---|"]
+    # The dependents column exists only where `reliance:` makes it mean
+    # something; a column of zeros nothing computed would read as "nothing
+    # rests on any of these" (DP-15).
+    counted = any(r.dependents is not None for r in rows)
+    out = ["| Open since | Status | Code | "
+           + ("Relied on | " if counted else "")
+           + "Cited | Unack. | Title |",
+           "|---|---|---|" + ("--:|" if counted else "") + "--:|--:|---|"]
     for r in rows:
         since = r.date.isoformat() if r.date is not None else "undated"
         link = f"[{r.code}]({_link(r.path, base)})"
-        out.append(f"| {since} | {r.status} | {link} | {r.cites} | "
+        relied = f"{r.dependents or 0} | " if counted else ""
+        out.append(f"| {since} | {r.status} | {link} | {relied}{r.cites} | "
                    f"{r.unacknowledged} | {r.title} |")
     out.append("")
     return out
@@ -244,6 +251,13 @@ def pending_decisions(base: Path | None = None) -> str:
             out += _pending_table(group, base)
     elif rows:
         out += _pending_table(rows, base)
+    if current().reliance:
+        fields = ", ".join(f"`{f}`" for f in current().reliance)
+        out += [
+            f"*Relied on* counts the documents that depend on each one, "
+            f"directly or transitively, through {fields} — and ranks the "
+            "table, age breaking ties. An open question many documents rest "
+            "on is a decision the record has already built on.", ""]
     out += [
         "The citation count is the second axis, and it flips the priority: an "
         "old proposal nothing references is a stalled idea worth closing, while "
