@@ -356,7 +356,7 @@ config loads, and the page names what each step went *through*
 
 A pattern that is not a line — a thesis nothing objects to, an inference
 with no conclusion yet — takes an `output:` instead, and renders as a page
-of its matches, a view luria supplies ([ADR-tmpgicpu](../record/decisions.d/ADR-tmpgicpu.md)).
+of its matches, a view luria supplies ([ADR-132](../record/decisions.d/ADR-132.md)).
 
 **Tag rules.** A vocabulary says what a value *means*; a group says which of
 them may appear together, because some fields are an axis rather than a pile.

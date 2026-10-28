@@ -577,12 +577,19 @@ acknowledges its rows with `pattern-ok: inverted_premise — reason`
 (any scope; one that answers for no row is reported stale). A pattern
 named like a built-in class is refused at load: one name, one class.
 
+**A pattern as a page.** `output: docs/unopposed.md` (and an optional
+`title:`) renders every match there, acknowledged or not: one row per
+match, one column per named node. It is a view luria supplies (ADR-130),
+a list and never a finding; a pattern may have a page, a class, or both.
+
 | key | type | default |
 |---|---|---|
 | `name` | `str` | *the table's own name* |
 | `match` | `str` | *required* |
 | `blurb` | `str` | *unset* |
 | `report` | `bool` | `False` |
+| `output` | `Path \| None` | *unset* |
+| `title` | `str` | *unset* |
 
 ## Views — `views.X`
 
@@ -607,9 +614,11 @@ template spells a link target. See `luria/views.py`.
 | key | type | default |
 |---|---|---|
 | `name` | `str` | *the table's own name* |
-| `template` | `Path` | *required* |
+| `template` | `Path \| str` | *required* |
 | `output` | `Path` | *required* |
 | `pin` | `bool` | `False` |
+| `context` | `dict` | *unset* |
+| `origin` | `str` | *unset* |
 
 ## Remotes — `remotes.X`
 
