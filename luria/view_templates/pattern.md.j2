@@ -1,0 +1,25 @@
+{#- A pattern's page of matches (#373): the view luria supplies for a
+    pattern with an `output:`. Its values come from `config._views`;
+    `match` is the same function every template calls. Codes are written
+    bare, so the link fixer makes the links in the page's own frame. -#}
+{% set rows = match(pattern) %}
+# {{ title }}
+
+{% if blurb %}
+{{ blurb }}
+
+{% endif %}
+`{{ source }}` · {{ rows | length }} match{{ "" if rows | length == 1 else "es" }}
+
+{% if not rows %}
+No matches.
+{% else %}
+|{% for var, label in columns %} {{ var }} ({{ label }}) |{% endfor %}
+
+|{% for _ in columns %}---|{% endfor %}
+
+{% for row in rows %}
+|{% for var, _ in columns %} {{ row[var].code }} — {{ row[var].title | cell }} |{% endfor %}
+
+{% endfor %}
+{% endif %}

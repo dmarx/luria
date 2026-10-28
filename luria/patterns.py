@@ -97,6 +97,15 @@ class Pattern:
     def last(self) -> Node:
         return self.path.nodes[-1]
 
+    @property
+    def named(self) -> tuple[tuple[str, str], ...]:
+        """(variable, label) for each named node of the match, first
+        occurrence only, in the order the pattern writes them. An anonymous
+        node is matched and not named; one named only under `WHERE NOT`
+        never binds."""
+        return tuple(dict.fromkeys(
+            (n.var, n.label) for n in self.path.nodes if n.var and not n.bound))
+
 
 @functools.cache
 def _parser() -> lark.Lark:

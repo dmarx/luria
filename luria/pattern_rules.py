@@ -42,7 +42,8 @@ node's document whether or not the pattern named that node.
 Nothing about partial matches. Whether a path that stops partway is
 unfinished depends on what the record's schema requires, which a pattern
 cannot know; a record that wants that list writes it as a pattern of its own,
-`WHERE NOT` and all (#373).
+`WHERE NOT` and all, and gives it an `output:` for a page of its matches
+(#373), which is a view over `pattern_row` like any other.
 
 Every pattern's internal predicates are prefixed `pat<k>_` by position, and
 its name only ever appears as a quoted string, so no name a record chooses

@@ -57,10 +57,6 @@ def _python(symbol: clingo.Symbol):
         return symbol.number
     if symbol.type == clingo.SymbolType.Function and not symbol.arguments:
         return symbol.name
-    # A tuple (`("C1", "I1")`) is a function with no name: a row of values,
-    # which a caller reads as one, not as the text clingo would print.
-    if symbol.type == clingo.SymbolType.Function and not symbol.name:
-        return tuple(_python(a) for a in symbol.arguments)
     return str(symbol)
 
 
