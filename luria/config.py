@@ -158,6 +158,14 @@ DEFAULTS: dict = {
         },
     },
     "stale_days": 90,
+    # The reference fields that carry dependence: a document holding one of
+    # these names a document it rests on. Empty is today's behaviour — the
+    # pending report ranks by age and citation count, and nothing counts
+    # what rests on an undecided document. Named, it adds that count.
+    "reliance": [],
+    # The dependents at which an undecided document is reported as
+    # `load-bearing`. Unset, the class never fires.
+    "load_bearing": None,
     # What luria announces when it opens a socket. The stdlib default is
     # `Python-urllib/3.x`, which names the language and nothing else — not
     # the tool, not the project, not a way to be reached — and is the shape
@@ -2059,10 +2067,31 @@ class NamedPattern:
     like a record with nothing to say (DP-15).
 
     The value is the pattern itself, or a table with `match:` and a `blurb:`
-    when the pattern wants a sentence of explanation."""
+    when the pattern wants a sentence of explanation.
+
+    **A pattern as a finding.** `report: true` makes every match a row of a
+    warning class named after the pattern, so a shape the record should not
+    contain becomes configuration rather than a luria release:
+
+        patterns:
+          inverted_premise:
+            match: "(c:CLAIM {status: 'Active'})-[:rests_on]->(p:CLAIM {status: 'Proposed'})"
+            report: true
+            blurb: An Active claim resting on a Proposed one.
+
+    (Quoted, because a property map's `: ` is not allowed in a plain YAML
+    scalar.)
+
+    The class `inverted_premise` is then reported by `luria lint` and named
+    in `lint.fail_on`, `lint.mute` and `lint.baseline` like any built-in
+    one. A row names the match's first node's document, and that document
+    acknowledges its rows with `pattern-ok: inverted_premise — reason`
+    (any scope; one that answers for no row is reported stale). A pattern
+    named like a built-in class is refused at load: one name, one class."""
     name: str
     match: str
     blurb: str = ""
+    report: bool = False
     # The parse, done once at load so a malformed pattern is a config error
     # rather than a page that fails to render.
     _parsed: object = dcfield(default=None, compare=False, repr=False)
@@ -2292,6 +2321,10 @@ class Config:
     # key that `index` has to reach into the site table to read is DP-16's
     # awkwardness — a distinction the layout had stopped expressing.
     include_records: tuple[str, ...] = ()
+    # The reference fields that carry dependence, and the dependents at which
+    # an undecided document is `load-bearing` (`reliance.py`).
+    reliance: tuple[str, ...] = ()
+    load_bearing: int | None = None
     site: Site = None  # type: ignore[assignment]
     _raw: dict = dcfield(default_factory=dict, repr=False)
 
@@ -2623,6 +2656,8 @@ def load(root: Path | None = None, text: str | None = None,
         narrow_terms=tuple(raw["lint"].get("narrow_terms", [])),
         network=str(raw["lint"].get("network", "auto")),
         include_records=tuple(raw.get("include_records", ())),
+        reliance=(reliance := _reliance(raw.get("reliance") or [], schemes)),
+        load_bearing=_load_bearing(raw.get("load_bearing"), reliance),
         site=_site(raw, root),
         _raw=raw,
     )
@@ -2653,19 +2688,66 @@ def _patterns(raw: dict, schemes: dict) -> dict[str, NamedPattern]:
     for name, spec in raw.items():
         name = str(name)
         table = spec if isinstance(spec, dict) else {"match": spec}
-        if unknown := set(table) - {"match", "blurb"}:
+        if unknown := set(table) - {"match", "blurb", "report"}:
             raise ValueError(
                 f"luria.yaml: patterns.{name}: {', '.join(sorted(unknown))} "
-                f"is not a key — a pattern is its `match:` and an optional "
-                f"`blurb:`")
+                f"is not a key — a pattern is its `match:`, an optional "
+                f"`blurb:` and an optional `report:`")
+        report = table.get("report", False)
+        if not isinstance(report, bool):
+            raise ValueError(
+                f"luria.yaml: patterns.{name}.report: {report!r} is not true "
+                f"or false")
+        if report:
+            # A pattern-backed class shares the dials' namespace with the
+            # built-in ones, so a name both could mean is refused rather
+            # than resolved (DP-1).
+            from .lint import BUILTIN_CLASSES
+            if name in BUILTIN_CLASSES:
+                raise ValueError(
+                    f"luria.yaml: patterns.{name}: `report: true` would make "
+                    f"a warning class named {name!r}, which is already a "
+                    f"built-in class — rename the pattern")
         source = str(table.get("match") or "")
         out[name] = NamedPattern(name=name, match=source.strip(),
                                  blurb=str(table.get("blurb", "")).strip(),
+                                 report=report,
                                  _parsed=parse(name, source))
     if out:
         from . import consistency
         consistency.check_patterns(out, schemes)
     return out
+
+
+def _reliance(raw, schemes: dict) -> tuple[str, ...]:
+    """The fields that carry dependence, each one a reference some scheme
+    declares. A field nothing declares would count nothing, and a count of
+    nothing reads exactly like a record where nothing depends on anything
+    (DP-15)."""
+    fields = [raw] if isinstance(raw, str) else list(raw)
+    declared = {r.field for s in schemes.values() for r in s.references}
+    if unknown := sorted({str(f) for f in fields} - declared):
+        raise ValueError(
+            f"luria.yaml: reliance: {', '.join(unknown)} is no reference "
+            f"field any scheme declares (declared: "
+            f"{', '.join(sorted(declared)) or 'none'})")
+    return tuple(dict.fromkeys(str(f) for f in fields))
+
+
+def _load_bearing(raw, reliance: tuple[str, ...]) -> int | None:
+    """The dependents at which an undecided document is `load-bearing`. A
+    threshold over a count nothing computes is a dial set to nothing, so it
+    is refused without `reliance` (DP-1)."""
+    if raw is None:
+        return None
+    if isinstance(raw, bool) or not isinstance(raw, int) or raw < 1:
+        raise ValueError(f"luria.yaml: load_bearing: {raw!r} is not a "
+                         f"positive whole number of dependents")
+    if not reliance:
+        raise ValueError("luria.yaml: load_bearing is set but `reliance` "
+                         "names no field, so there are no dependents to "
+                         "count — name the fields that carry dependence")
+    return raw
 
 
 def _chains(raw: dict, schemes: dict, root: Path,

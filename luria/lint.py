@@ -40,7 +40,11 @@ It also prints WARNINGS, which by default never affect the exit code
 at all, remote links whose URL is hand-written rather than constructed,
 pinned remote documents whose upstream content changed since it was endorsed,
 relative link targets that resolve to nothing from where the prose renders,
-directives that no longer apply, and a count of undecided decisions. Citing a
+directives that no longer apply, a count of undecided decisions, and — where
+`luria.yaml` asks — each match of a pattern declared `report: true` (a class
+named after the pattern), undecided documents many others rest on
+(`load-bearing`) and acknowledgements of a retired premise with no expiry
+(`unbounded-acknowledgements`). Citing a
 `Rejected` decision — or leaving one `Proposed`, or naming another project's
 LU-ADR-013 — is often right, so none is an error unless the project says so:
 a class named in `lint.fail_on` is promoted to a failure. Either way
@@ -704,7 +708,7 @@ FAILABLE = ("retired-citations", "unresolved-codes", "foreign-temp-codes",
             "unexplained-relations", "bad-annotations",
             "spent-upgrades",
             "pending-documents", "unlinted-files", "workflow-temp-codes",
-            "unlinked-site")
+            "unlinked-site", "load-bearing", "unbounded-acknowledgements")
 
 # Classes `lint.mute` may suppress: every failable class, plus
 # `acknowledged-uniformity` — which is not failable (a project cannot promote
@@ -719,6 +723,27 @@ FAILABLE = ("retired-citations", "unresolved-codes", "foreign-temp-codes",
 # `luria reports` still renders the full accounting either way — muting
 # changes what the command prints, not what the record says.
 MUTABLE = FAILABLE + ("acknowledged-uniformity",)
+
+# Every class name luria itself emits. A pattern declared `report: true` is a
+# class named after the pattern (`pattern_report.py`), so a pattern may not
+# take one of these names — refused at load, in `config._patterns`.
+BUILTIN_CLASSES = MUTABLE + ("expired-directives",)
+
+
+def reported_patterns() -> tuple[str, ...]:
+    """The classes this record adds, one per pattern declared `report: true`."""
+    return tuple(n for n, p in current().patterns.items() if p.report)
+
+
+def failable() -> tuple[str, ...]:
+    """The classes `fail_on` and `baseline` may name in this record: the
+    built-in ones and its pattern-backed ones."""
+    return FAILABLE + reported_patterns()
+
+
+def mutable() -> tuple[str, ...]:
+    """The classes `mute` may name in this record."""
+    return MUTABLE + reported_patterns()
 
 
 def unlinked_site() -> list[str]:
@@ -1067,9 +1092,37 @@ def status_sections(rendered: dict[Path, str] | None = None
             f"{len(spent)} one-shot upgrade(s) this record no longer needs",
             spent))
 
+    # A record's own shapes, one class per pattern declared `report: true`:
+    # the blind spots a release of luria cannot know about, stated as
+    # configuration (`pattern_report.py`).
+    from . import pattern_report
+    shaped = pattern_report.findings()
+    for name in reported_patterns():
+        if found := shaped.rows.get(name):
+            sections.append((name, pattern_report.headline(name, len(found)),
+                             found))
+
+    # What rests on an undecided document, and acknowledgements of a retired
+    # premise that never come due — both only where `reliance:` names the
+    # fields that carry dependence (`reliance.py`).
+    from . import reliance
+    pending_rows = adr_pending.pending()
+    if heavy := reliance.load_bearing_rows(pending_rows):
+        sections.append((
+            "load-bearing",
+            f"{len(heavy)} undecided document(s) with at least "
+            f"{current().load_bearing} transitive dependents (`luria reports` "
+            "ranks the rest)", heavy))
+    if unbounded := reliance.unbounded_rows():
+        sections.append((
+            "unbounded-acknowledgements",
+            f"{len(unbounded)} acknowledgement(s) of a retired premise carry "
+            "no `until` — a dependence on a retired document is a question "
+            "with a date", unbounded))
+
     # A directive that silently does nothing is worse than no directive.
     stale = ref_status.stale_annotations(result, docs) + stale_urls \
-        + stale_targets + stale_sources + pins.flag_problems()
+        + stale_targets + stale_sources + pins.flag_problems() + shaped.stale
     for path in doc_refs.doc_files():
         stale += doc_refs.directive_problems(path, path.read_text(encoding="utf-8"))
     if stale:
@@ -1085,7 +1138,7 @@ def status_sections(rendered: dict[Path, str] | None = None
 
     # One line, not the table: the point is that the number is never zero
     # silently. `luria reports` ranks them by age and citation count.
-    rows = adr_pending.pending()
+    rows = pending_rows
     if rows:
         sections.append((
             "pending-documents",
@@ -1137,11 +1190,12 @@ def report_warnings(errors: list[str],
     # having to name it in `fail_on` as well — the setting already said it.
     if current().network == "require":
         fail.add("source-unchecked")
-    for name in sorted(fail - set(FAILABLE)):
+    known, quiet = failable(), mutable()
+    for name in sorted(fail - set(known)):
         # A dial set to a notch that doesn't exist must not silently enforce
         # nothing (DP-1).
         errors.append(f"luria.yaml: `fail_on` names {name!r}, which is no "
-                      f"warning class (known: {', '.join(FAILABLE)})")
+                      f"warning class (known: {', '.join(known)})")
 
     # A class the project has decided it does not want reported at all.
     # `fail_on` changes a finding's consequence; `mute` removes it from the
@@ -1150,17 +1204,17 @@ def report_warnings(errors: list[str],
     # shape when the finding is about a document, and the wrong shape when a
     # project has simply decided a whole check is not useful to it.
     mute = set(current().mute)
-    for name in sorted(mute - set(MUTABLE)):
+    for name in sorted(mute - set(quiet)):
         # Same rule as `fail_on`: a dial set to a notch that does not exist
         # must say so rather than silently do nothing (DP-1).
         errors.append(f"luria.yaml: `mute` names {name!r}, which is no "
-                      f"mutable warning class (known: {', '.join(MUTABLE)})")
+                      f"mutable warning class (known: {', '.join(quiet)})")
     # Same contract as the two dials above: a notch that does not exist must
     # say so rather than silently hold no line (DP-1).
     base = current().baseline
-    for name in sorted(set(base) - set(FAILABLE)):
+    for name in sorted(set(base) - set(known)):
         errors.append(f"luria.yaml: `baseline` names {name!r}, which is no "
-                      f"warning class (known: {', '.join(FAILABLE)})")
+                      f"warning class (known: {', '.join(known)})")
     for name in sorted(set(base) & mute):
         # A held line nobody is allowed to see cannot be checked by the person
         # the report is for, and the number would decay unread.
@@ -1180,7 +1234,7 @@ def report_warnings(errors: list[str],
     # class against a number that is not a number would bury the one message
     # the reader can act on under every row of the class it mis-describes.
     base = {k: v for k, v in base.items()
-            if k in FAILABLE and v >= 0 and k not in mute and k not in fail}
+            if k in known and v >= 0 and k not in mute and k not in fail}
 
     for name in sorted(mute & fail):
         # Not a precedence question. A project cannot both enforce a check

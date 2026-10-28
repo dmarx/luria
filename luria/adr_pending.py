@@ -28,6 +28,13 @@ one still means the codebase depends on the answer. The reference-status report 
 the unacknowledged ones, so its total is smaller — the headline names both so
 the two reports visibly reconcile.
 
+A third axis, when the record names one: **reliance**. With `reliance:` set
+to the fields that carry dependence, each row carries the count of documents
+that transitively depend on it (`reliance.py`), and the table ranks by that
+count, age breaking ties — an open question forty claims rest on is the
+first thing to decide, however young it is. Unset, the order is the one
+above, exactly.
+
 Like the non-Active reference report this ships beside, it warns by default
 and fails only when `lint.fail_on` says so (ADR-035). An ADR can be
 legitimately open for a long time; only a human can say which of these is
@@ -59,6 +66,9 @@ class Pending:
     cites: int
     unacknowledged: int      # of those, the ones the reference report still lists
     path: Path
+    # Transitive dependents along `reliance:` fields; None when the record
+    # names no such field, so "not counted" never reads as "nothing".
+    dependents: int | None = None
 
     def age(self, today: dt.date) -> int | None:
         return None if self.date is None else (today - self.date).days
@@ -87,6 +97,10 @@ def pending() -> list[Pending]:
     the same way, and a report that covered one scheme would go quietly blind
     the day a project configured a second (ADR-018)."""
     cited = ref_status.scan().cited
+    counted = bool(current().reliance)
+    if counted:
+        from . import reliance
+        relied = reliance.dependents()
     rows = []
     for scheme in current().schemes.values():
         for doc in builder.load_scheme(scheme):
@@ -97,7 +111,11 @@ def pending() -> list[Pending]:
             rows.append(Pending(doc.code, doc.number, status, doc.title,
                                 _date(doc.meta), len(sites),
                                 sum(1 for c in sites if c.excused_by is None),
-                                doc.path))
+                                doc.path,
+                                relied.get(doc.code, 0) if counted else None))
+    if counted:
+        return sorted(rows, key=lambda r: (-r.dependents, r.date is None,
+                                           r.date, -r.cites, r.code))
     return sorted(rows, key=lambda r: (r.date is None, r.date, -r.cites, r.code))
 
 
@@ -106,14 +124,17 @@ def table(rows: list[Pending], today: dt.date, stale_days: int) -> list[str]:
         return []
     width = max(len(r.title) for r in rows)
     code_width = max(len(r.code) for r in rows)
+    counted = any(r.dependents is not None for r in rows)
+    relied = f"{'relied':>6}  " if counted else ""
     lines = [f"{'age':>6}  {'status':<8}  {'code':<{code_width}}  "
-             f"{'cites':>5}  title"]
+             f"{relied}{'cites':>5}  title"]
     for r in rows:
         age = r.age(today)
         mark = "!" if r.is_stale(today, stale_days) else " "
+        relied = f"{r.dependents or 0:>6}  " if counted else ""
         lines.append(
             f"{(f'{age}d' if age is not None else '?'):>6}{mark} {r.status:<8}  "
-            f"{r.code:<{code_width}}  {r.cites:>5}  {r.title[:width]}"
+            f"{r.code:<{code_width}}  {relied}{r.cites:>5}  {r.title[:width]}"
         )
     return lines
 
@@ -137,6 +158,10 @@ def headline(rows: list[Pending], today: dt.date, stale_days: int) -> str:
     # UNACKNOWLEDGED citation, which is exactly this number.
     if loud != len(rows):
         parts.append(f"{loud} with unacknowledged references")
+    if any(r.dependents for r in rows):
+        top = max(rows, key=lambda r: r.dependents or 0)
+        parts.append(f"most relied on {top.code} "
+                     f"({top.dependents} dependent(s))")
     return "pending decisions: " + ", ".join(parts)
 
 

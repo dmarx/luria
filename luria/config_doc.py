@@ -353,6 +353,20 @@ PLAIN: list[tuple[str, str, str, dict[str, str]]] = [
                      "linking somewhere wrong.",
         "stale_days": "How long a document may sit undecided before the "
                       "pending-decisions report calls it out.",
+        "reliance": "The reference fields that carry dependence — "
+                    "`[rests_on, grounds, uses]` — each one a reference "
+                    "some scheme declares. A document depends on another "
+                    "when one of these fields names it, read from either "
+                    "side as a pattern's hop is. Set, the pending-documents "
+                    "report counts each undecided document's transitive "
+                    "dependents and ranks by that count (age breaks ties), "
+                    "and `unbounded-acknowledgements` names an `inactive-ok` "
+                    "directive excusing a retired document held in one of "
+                    "these fields that carries no `until`. Unset, the report "
+                    "is age-first and neither class fires.",
+        "load_bearing": "The number of transitive dependents at which an "
+                        "undecided document is reported as `load-bearing`. "
+                        "Requires `reliance`; unset, the class never fires.",
         "user_agent": "What Luria announces when it opens a socket — the "
                       "identifier check and remote discovery both send it. "
                       "The default is `luria/<version>`: honest about the "
