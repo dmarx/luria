@@ -37,7 +37,7 @@ A logic core in clingo, behind a procedural shell
 
 A chain may walk a named path pattern
 
-7 citations in 3 files await a look; 2 other citations of it are acknowledged.
+8 citations in 4 files await a look; 2 other citations of it are acknowledged.
 
 - [`docs/project-memory.md:355`](../project-memory.md)
 - [`record/decisions.d/ADR-130.md:17`](../../record/decisions.d/ADR-130.md)
@@ -46,6 +46,22 @@ A chain may walk a named path pattern
 - [`record/decisions.d/ADR-130.md:112`](../../record/decisions.d/ADR-130.md)
 - [`record/decisions.d/ADR-132.md:22`](../../record/decisions.d/ADR-132.md)
 - [`record/decisions.d/ADR-132.md:32`](../../record/decisions.d/ADR-132.md)
+- [`record/decisions.d/ADR-133.md:24`](../../record/decisions.d/ADR-133.md)
+
+### [ADR-132](../../record/decisions.d/ADR-132.md) — Proposed
+
+A named path pattern may render a page of its matches
+
+8 citations in 3 files await a look.
+
+- [`docs/project-memory.md:359`](../project-memory.md)
+- [`record/decisions.d/ADR-129.md:195`](../../record/decisions.d/ADR-129.md)
+- [`record/decisions.d/ADR-133.md:16`](../../record/decisions.d/ADR-133.md)
+- [`record/decisions.d/ADR-133.md:18`](../../record/decisions.d/ADR-133.md)
+- [`record/decisions.d/ADR-133.md:23`](../../record/decisions.d/ADR-133.md)
+- [`record/decisions.d/ADR-133.md:31`](../../record/decisions.d/ADR-133.md)
+- [`record/decisions.d/ADR-133.md:53`](../../record/decisions.d/ADR-133.md)
+- [`record/decisions.d/ADR-133.md:64`](../../record/decisions.d/ADR-133.md)
 
 ### [ADR-126](../../record/decisions.d/ADR-126.md) — Proposed
 
@@ -59,15 +75,6 @@ A reference may name several schemes
 - [`record/decisions.d/ADR-129.md:40`](../../record/decisions.d/ADR-129.md)
 - [`record/decisions.d/ADR-129.md:104`](../../record/decisions.d/ADR-129.md)
 - [`record/decisions.d/ADR-129.md:106`](../../record/decisions.d/ADR-129.md)
-
-### [ADR-132](../../record/decisions.d/ADR-132.md) — Proposed
-
-A named path pattern may render a page of its matches
-
-2 citations in 2 files await a look.
-
-- [`docs/project-memory.md:359`](../project-memory.md)
-- [`record/decisions.d/ADR-129.md:195`](../../record/decisions.d/ADR-129.md)
 
 ## Codes that resolve to no document
 

@@ -5,23 +5,24 @@
 
 `Proposed` and `Deferred` both describe an open question. Neither says *since when*, and that is the signal: a decision proposed last week is pending; the same one a year later was either overdue or settled in code and never written back.
 
-**6 document(s) awaiting a decision.**
+**7 document(s) awaiting a decision.**
 
 ## ADRs
 
-5 of the 6.
+6 of the 7.
 
 | Open since | Status | Code | Cited | Unack. | Title |
 |---|---|---|--:|--:|---|
 | 2026-10-07 | Proposed | [ADR-127](../../record/decisions.d/ADR-127.md) | 11 | 9 | A logic core in clingo, behind a procedural shell |
 | 2026-10-07 | Proposed | [ADR-126](../../record/decisions.d/ADR-126.md) | 6 | 6 | A reference may name several schemes |
 | 2026-10-08 | Proposed | [ADR-128](../../record/decisions.d/ADR-128.md) | 0 | 0 | Configuration is the only source of relation semantics |
-| 2026-10-13 | Proposed | [ADR-129](../../record/decisions.d/ADR-129.md) | 9 | 7 | A chain may walk a named path pattern |
-| 2026-10-13 | Proposed | [ADR-132](../../record/decisions.d/ADR-132.md) | 2 | 2 | A named path pattern may render a page of its matches |
+| 2026-10-13 | Proposed | [ADR-129](../../record/decisions.d/ADR-129.md) | 10 | 8 | A chain may walk a named path pattern |
+| 2026-10-13 | Proposed | [ADR-132](../../record/decisions.d/ADR-132.md) | 8 | 8 | A named path pattern may render a page of its matches |
+| 2026-10-28 | Proposed | [ADR-133](../../record/decisions.d/ADR-133.md) | 0 | 0 | A pattern page nests its matches as an outline, and patterns may share one |
 
 ## DPs
 
-1 of the 6.
+1 of the 7.
 
 | Open since | Status | Code | Cited | Unack. | Title |
 |---|---|---|--:|--:|---|
@@ -31,4 +32,4 @@ The citation count is the second axis, and it flips the priority: an old proposa
 
 This count and the reference-status report's will differ, and that is not an off-by-one. That report covers documents something actually **cites** and hasn't acknowledged; this one covers every **undecided** document. One here is missing from there for exactly one of two reasons: nothing cites it, or every citation carries an `inactive-ok` annotation.
 
-**Cited nowhere at all** (1): [ADR-128](../../record/decisions.d/ADR-128.md) — this is the cheapest to close, since nothing depends on the answer.
+**Cited nowhere at all** (2): [ADR-128](../../record/decisions.d/ADR-128.md), [ADR-133](../../record/decisions.d/ADR-133.md) — these are the cheapest to close, since nothing depends on the answer.

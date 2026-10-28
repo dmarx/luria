@@ -578,9 +578,40 @@ acknowledges its rows with `pattern-ok: inverted_premise — reason`
 named like a built-in class is refused at load: one name, one class.
 
 **A pattern as a page.** `output: docs/unopposed.md` (and an optional
-`title:`) renders every match there, acknowledged or not: one row per
-match, one column per named node. It is a view luria supplies (ADR-130),
-a list and never a finding; a pattern may have a page, a class, or both.
+`title:`) renders every match there, acknowledged or not. It is a view
+luria supplies (ADR-130), a list and never a finding; a pattern may have
+a page, a class, or both.
+
+The page is an outline. A match is the path of its named nodes in
+pattern order, and matches merge where they share a prefix: each node
+renders once under its parent as a chain step does,
+`- [CODE](link) — title *(facets)*`, siblings and roots in code order.
+`facet_by` names what a step shows beside its title, `[status]` unless
+set; each facet is a field some scheme of the named nodes can hold, and
+a node whose scheme cannot hold one omits it. `layout: table` gives one
+row per match and one column per named node instead, for pairs that
+nesting would not help.
+
+**Patterns may share a page.** Several naming one `output` render one
+outline of all their matches, merged by position — the n-th named node
+of each is the n-th column, whatever its variable is called — so a
+pattern that is a prefix of a longer one lists what the longer one
+misses:
+
+```yaml
+patterns:
+  bare: (c:CLAIM)<-[:concludes]-(g:ARG)
+  undercut: (c:CLAIM)<-[:concludes]-(g:ARG)<-[:undercuts]-(u:CLAIM)
+```
+
+With `output: docs/dialectic.md` on both, every argument sits under its
+conclusion, undercut or not, and each undercutter under the argument.
+Tables sharing a page are listed one after another, each with its own
+columns. They share one `layout`; `title`, `blurb` and `facet_by` are
+set on any one of them (or the same on several), and the page is titled
+after the first pattern when none sets one. An outline is as deep as
+its longest pattern: a reply to a reply to a reply, unbounded, is a
+transitive walk, which is a chain's.
 
 | key | type | default |
 |---|---|---|
@@ -590,6 +621,8 @@ a list and never a finding; a pattern may have a page, a class, or both.
 | `report` | `bool` | `False` |
 | `output` | `Path \| None` | *unset* |
 | `title` | `str` | *unset* |
+| `layout` | `str` | `"outline"` |
+| `facet_by` | `tuple[str, ...]` | `('status',)` |
 
 ## Views — `views.X`
 
