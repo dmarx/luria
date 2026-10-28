@@ -12,7 +12,8 @@
 % pat_node/4 (pattern, path, position, label — path 0 is the match, 1.. each
 % WHERE NOT), pat_hop/6 (pattern, path, hop, near position, far position,
 % field), pat_closure/3, pat_prop/4, pat_ends/3 (first and last label),
-% pat_hops/2.
+% pat_hops/2, and for an outline page pat_facet/2 (each `facet_by`) and
+% pat_shown/2 (the label of each named node).
 
 % ── references ──────────────────────────────────────────────────────────
 % A reference may only name a scheme or a remote that is declared.
@@ -82,6 +83,10 @@ pattern_closure_leaves(P, W, H) :- pat_closure(P, W, H),
 pattern_prop_unheld(P, W, I, F) :- pat_prop(P, W, I, F), pat_node(P, W, I, S),
                                    scheme(S), not nameable(S, F).
 pattern_shadows(P, S) :- pattern(P), ref(S, P).
+% An outline's facet is shown by some node it names, as a chain's is by its
+% scheme.
+pattern_facet_held(P, X) :- pat_facet(P, X), pat_shown(P, S), nameable(S, X).
+pattern_facet_unheld(P, X) :- pat_facet(P, X), not pattern_facet_held(P, X).
 
 #show unknown_target/3.
 #show converse_missing/3.
@@ -105,4 +110,5 @@ pattern_shadows(P, S) :- pattern(P), ref(S, P).
 #show pattern_closure_leaves/3.
 #show pattern_prop_unheld/4.
 #show pattern_shadows/2.
+#show pattern_facet_unheld/2.
 #show chain_invariant_unheld/2.

@@ -72,6 +72,17 @@ patterns:
     blurb: Inferences with premises in place and no conclusion yet.
     output: docs/unfinished.md
     title: Unfinished steps
+  # Two patterns, one page: every step to a conclusion, and under each step
+  # whatever objects to it. They merge by position into one outline, so a
+  # step nothing challenges is listed too, with nothing under it.
+  steps:
+    match: (b:CLAIM)<-[:concludes]-(i:INF)
+    output: docs/disputes.md
+    title: Steps and their objections
+    blurb: Each conclusion, the inference drawing it, and what challenges that.
+  disputed:
+    match: (b:CLAIM)<-[:concludes]-(i:INF)<-[:challenges]-(o:OBJ)
+    output: docs/disputes.md
 chains:
   argument:
     scheme: CLAIM

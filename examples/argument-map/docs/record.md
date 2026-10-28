@@ -92,5 +92,7 @@ Everything not listed here is at Luria's default.
 | `patterns.follows_from` | `(b:CLAIM)<-[:concludes]-(i:INF)<-[:premise_of]-(a:CLAIM)` | *unset* |
 | `patterns.stands_on` | *2 keys set* | *unset* |
 | `patterns.unfinished` | *4 keys set* | *unset* |
+| `patterns.steps` | *4 keys set* | *unset* |
+| `patterns.disputed` | *2 keys set* | *unset* |
 | `site.title` | `Argument map` | *empty* |
 | `vocabularies.statuses` | *3 keys set* | *unset* |

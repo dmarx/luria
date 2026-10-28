@@ -6,6 +6,5 @@ Inferences with premises in place and no conclusion yet.
 
 `(i:INF)<-[:premise_of]-(p:CLAIM) WHERE NOT (i)-[:concludes]->(:CLAIM)` · 1 match
 
-| i (INF) | p (CLAIM) |
-|---|---|
-| [INF-004](../record/inferences.d/INF-004.md) — What the repair should cost | [CLAIM-005](../record/claims.d/CLAIM-005.md) — The bridge should be repaired before winter |
+- [INF-004](../record/inferences.d/INF-004.md) — What the repair should cost *(Proposed)*
+  - [CLAIM-005](../record/claims.d/CLAIM-005.md) — The bridge should be repaired before winter *(Active)*

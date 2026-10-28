@@ -35,6 +35,11 @@ prose.
 
 A template named `luria:NAME` is one of luria's own (`view_templates/`),
 given its values as `context`: a pattern's page is such a view (#373).
+
+`outline(names)` merges the matches of one or several patterns into one
+tree by shared prefix, and the `step` filter renders a document as a chain
+page renders a step, `[CODE](link) — title *(facets)*`, so a pattern page's
+outline and a chain read the same.
 """
 
 from __future__ import annotations
@@ -114,6 +119,22 @@ class JournalInfo:
     blurb: str
     dir: str
     output: str
+
+
+@dataclass(frozen=True)
+class Step:
+    """One node of an outline: how deep it sits, and its document (or its
+    code, when it names no document in this record)."""
+    depth: int
+    doc: object
+
+
+@dataclass(frozen=True)
+class Outline:
+    """Matches merged into one tree, in render order, and how many matches
+    each pattern contributed."""
+    steps: list
+    counts: dict
 
 
 @dataclass(frozen=True)
@@ -228,6 +249,43 @@ class _Record:
                 for row in found.values()}
         return [{v: self.resolve(rows[k][v]) for v in named if v in rows[k]}
                 for k in sorted(rows)]
+
+    def outline(self, patterns) -> "Outline":
+        """The matches of one or several patterns as one tree.
+
+        A match is the path of its named nodes, in pattern order, and the
+        tree merges every shared prefix: a node renders once per distinct
+        path to it, under its parent, children and roots in code order.
+        Patterns merge by position, not by variable name, so a short pattern
+        that is a prefix of a longer one is the same nodes: the longer one
+        hangs its extra nodes under the shorter one's."""
+        names = [patterns] if isinstance(patterns, str) else list(patterns)
+        counts: dict[str, int] = {}
+        # Each distinct prefix, by its codes, to the document it ends on.
+        nodes: dict[tuple[str, ...], object] = {}
+        for name in names:
+            named = [var for var, _ in _pattern(self.cfg, name).named]
+            rows = self.match(name)
+            counts[name] = len(rows)
+            for row in rows:
+                path = [row[v] for v in named if v in row]
+                codes = tuple(getattr(d, "code", None) or str(d) for d in path)
+                for k in range(1, len(path) + 1):
+                    nodes.setdefault(codes[:k], path[k - 1])
+        # Sorting the prefixes puts each node after its parent and its
+        # siblings in code order: the outline in reading order.
+        steps = [Step(len(key) - 1, nodes[key]) for key in sorted(nodes)]
+        return Outline(steps, counts)
+
+    def step(self, document, facet_by=("status",)) -> str:
+        """One step as a chain page renders it (`steps.step`), linked from
+        this output: `[CODE](link) — title *(facets)*`."""
+        from . import steps
+        if not isinstance(document, Document):
+            return str(document)
+        text = steps.step(document._adr, self.out_dir, tuple(facet_by))
+        self.saw(document, "read", text)
+        return text
 
     def vocabulary(self, name: str) -> list[Term]:
         values = self.cfg.vocabularies.get(name)
@@ -368,9 +426,10 @@ def render(view) -> str:
     env = _environment()
     env.globals.update(doc=record.doc, docs=record.docs,
                        vocabulary=record.vocabulary, schemes=record.schemes,
-                       match=record.match,
+                       match=record.match, outline=record.outline,
                        journals=record.journals, chains=record.chains,
                        views=record.views, paths=record.paths)
+    env.filters["step"] = record.step
     try:
         text = env.get_template(_name(view)).render(view.context)
     except (jinja2.TemplateError, _Refused, TypeError, ValueError,

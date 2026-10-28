@@ -1,0 +1,135 @@
+---
+status: Proposed
+title: 'A pattern page nests its matches as an outline, and patterns may share one'
+version: 1
+tags:
+- record
+- mechanism
+date: '2026-10-28'
+summary: >-
+  A pattern page renders as an outline by default: each match is the path of
+  its named nodes, matches merge by shared prefix, and each node is written
+  by the step renderer chain pages use, with `facet_by` as on a chain.
+  `layout: table` keeps [ADR-132](ADR-132.md)'s flat table. Patterns naming one `output`
+  merge by position into one outline, which draws claim, argument and
+  undercutter at fixed depth with no change to chains. Reverses [ADR-132](ADR-132.md)'s
+  deferral of grouping. Rejected: grouping by the first column only,
+  `OPTIONAL MATCH`, and a `pages:` family. Unbounded-depth threads stay a
+  chain's.
+influenced_by:
+- ADR-132
+- ADR-129
+---
+
+# ADR-tmpkfq4c: A pattern page nests its matches as an outline, and patterns may share one
+
+## Context
+
+[ADR-132](ADR-132.md) rendered a pattern page as a flat table, one row per match, and
+deferred grouping. Chain pages nest, so the two kinds of page told the same
+kind of fact in two shapes, and a table repeats the shared part of every
+match on every row: with three undercutters, a claim and its argument are
+written three times.
+
+The case that forced the question was nucleation's dialectic: a claim, an
+argument (ARG) concluding it, and claims undercutting that argument. A chain
+is a sequence within one scheme, so it cannot hold the ARG as a step; PR
+[#380](https://github.com/dmarx/luria/issues/380) proposed multi-scheme chains to make room for it. An ARG that nothing
+undercuts had no place on any page. The owner's reading was that this is a
+problem with how pattern pages render, not a reason to make chains more
+complex.
+
+## Decision
+
+**The default layout is an outline.**
+
+- A match is the path of its named nodes, in pattern order. All matches
+  merge into one tree by shared prefix: a node renders once per distinct
+  path to it, indented under its parent, siblings in code order, roots in
+  code order. The heading, the blurb, each pattern in a code span with its
+  match count, and "No matches." for an empty page stay as [ADR-132](ADR-132.md) had them.
+- **One step renderer.** Each node is written as a chain writes a step,
+  `- [CODE](link) — title *(facets)*`, by `luria/steps.py`. Chain pages call
+  it in place of their own link, annotation and step functions, and render
+  byte for byte as before (a test pins a page captured from `main`). The
+  view reaches it through a `step` filter, beside an `outline()` function
+  that builds the tree, both open to any template.
+- **`facet_by`** works as on a chain: `[status]` unless set. Each facet
+  must be a field some scheme of the pattern's named nodes can hold, or the
+  config is refused at load. A node whose scheme cannot hold a facet omits
+  it.
+- **`layout: table`** keeps [ADR-132](ADR-132.md)'s table, for wide pairs where nesting
+  adds nothing. `layout` is `outline` or `table`. Anything else, and
+  `layout` or `facet_by` without an `output`, is refused, as is `facet_by`
+  on a table, which has no step to annotate.
+
+**Patterns naming one `output` render one page.** Their matches merge into
+one tree, **by position, not by variable name**: the n-th named node of each
+pattern is the n-th level. So a pattern that is a prefix of a longer one
+covers what the longer one misses:
+
+```yaml
+patterns:
+  bare:
+    match: (c:CLAIM)<-[:concludes]-(g:ARG)
+    output: docs/dialectic-outline.md
+  undercut:
+    match: (c:CLAIM)<-[:concludes]-(g:ARG)<-[:undercuts]-(u:CLAIM)
+    output: docs/dialectic-outline.md
+```
+
+Every ARG sits at depth 2 under its conclusion, undercut or not, and each
+undercutter at depth 3. That is the shape [#380](https://github.com/dmarx/luria/issues/380) was written for, at fixed
+depth, with no change to chains.
+
+The patterns on one page share its `layout`, and a disagreement is refused.
+Tables sharing a page do not merge, since rows do not nest: each pattern's
+table follows the last, with its own columns.
+`title`, `blurb` and `facet_by` belong to the page, so they may be set on
+any one of the patterns (or the same on several). Two different values are
+refused. The first pattern that sets one supplies it, and an untitled page
+is named after the first pattern. The one output-collision check still
+refuses a page shared with any other renderer. The page is one view, keyed
+by the first pattern and stamped with all of them.
+
+**What an outline cannot do.** It is as deep as its longest pattern. A
+thread of unbounded depth, such as a reply to a reply to a reply, needs a
+transitive walk, and walking is what a chain does. If a record needs that
+across schemes, PR [#380](https://github.com/dmarx/luria/issues/380)'s multi-scheme chains remain the route.
+
+## Alternatives considered
+
+- **Grouping by the first column only.** This removes one repetition and
+  keeps the rest. A claim with two arguments and three undercutters would
+  still repeat each argument per undercutter. Merging every shared prefix
+  costs no more and nests all the way down.
+- **`OPTIONAL MATCH` in the pattern subset**, so one pattern could match a
+  claim and argument with or without an undercutter. This is a bigger
+  language change: nullable bindings, in a subset that every consumer
+  reads, including the lint classes, chains and `match()`. Two patterns
+  sharing a page say the same thing with what exists.
+- **A `pages:` family** that names patterns and a layout. This gives every
+  page a second name, and a pattern's `output:` already means "renders a
+  page here", as it does on a chain.
+- **Multi-scheme chains ([#380](https://github.com/dmarx/luria/issues/380)) as the only route.** That fits threads that
+  have no fixed depth. For a dialectic of fixed shape it adds complexity
+  to chains to fix what was a rendering problem.
+
+## Consequences
+
+- A pattern page with no `layout` changes from a table to an outline. Pages
+  that want rows say `layout: table`.
+- `View.context` for a pattern page now carries `patterns` (name, source,
+  columns), `layout`, `facet_by`, `title` and `blurb`. A page's view is
+  keyed `patterns.<first>`, and its `where` names every pattern on it.
+- `examples/argument-map`: `unfinished` renders as an outline, and a new
+  pair, `steps` and `disputed`, shares `docs/disputes.md`. Every step is
+  listed there, and OBJ-001 sits under INF-003.
+- **Tried on nucleation** (scratch copy of 86ba4cd16, network off). With no
+  pattern `output`, `luria index` writes the same files and `luria lint`
+  prints the same lines as luria `main`. With `bare` and `undercut` sharing
+  `docs/dialectic-outline.md`, the outline draws 9 conclusions, 11 argument
+  nodes (10 ARGs; ARG-001 concludes two claims) and 9 undercutters, the
+  sets a script reading the frontmatter found. All 10 ARGs appear,
+  including the four nothing undercuts (ARG-001, -005, -007, -009). The
+  lint added only the docs-index entry for the page.
