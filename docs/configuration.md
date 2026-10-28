@@ -12,8 +12,9 @@ repository.
 
 ## The shape of the file
 
-The tables below are the whole schema. Six of them — `schemes`, `fragments`,
-`journals`, `remotes`, `chains` and `patterns` — are *families*: you name the
+The tables below are the whole schema. Seven of them — `schemes`,
+`fragments`, `journals`, `remotes`, `chains`, `patterns` and `views` — are
+*families*: you name the
 entries, and the name you choose becomes part of the vocabulary.
 `schemes.RFC` is how a project gets RFCs; `journals.incidents` is how it gets
 a second journal. No code path spells `ADR`.
@@ -44,6 +45,7 @@ it to inherit from.
 | `journals.X` | dated entries that persist, rendered into books | yes, keyed by name |
 | `chains.X` | a relation walked transitively, rendered as sequences | yes, keyed by name |
 | `patterns.X` | a path between documents no single field holds | yes, keyed by name |
+| `views.X` | a Jinja template rendered over the record into a file | yes, keyed by name |
 | `remotes.X` | another project's codes, cited from this one | yes, keyed by prefix |
 | `code` | which source files are scanned for stale references | — |
 | `lint` | which warning classes fail, and which are not reported | — |
@@ -55,6 +57,8 @@ it to inherit from.
 |---|---|---|
 | `issue_url` | *unset* | A template for issue links, with `{n}` for the number. Writing it also tells Luria which GitHub repository this is, which is where every `site` default comes from. Unset, issue numbers stay bare rather than linking somewhere wrong. |
 | `stale_days` | `90` | How long a document may sit undecided before the pending-decisions report calls it out. |
+| `reliance` | *unset* | The reference fields that carry dependence — `[rests_on, grounds, uses]` — each one a reference some scheme declares. A document depends on another when one of these fields names it, read from either side as a pattern's hop is. Set, the pending-documents report counts each undecided document's transitive dependents and ranks by that count (age breaks ties), and `unbounded-acknowledgements` names an `inactive-ok` directive excusing a retired document held in one of these fields that carries no `until`. Unset, the report is age-first and neither class fires. |
+| `load_bearing` | *unset* | The number of transitive dependents at which an undecided document is reported as `load-bearing`. Requires `reliance`; unset, the class never fires. |
 | `user_agent` | `"luria/0.1.dev1"` | What Luria announces when it opens a socket — the identifier check and remote discovery both send it. The default is `luria/<version>`: honest about the software, the way `curl/8.0` is, and carrying no contact, because a URL or mailbox in a shipped default would route every user's traffic to whoever maintains Luria. Add your own contact here if you want the treatment some hosts reserve for callers who identify themselves — CrossRef's polite pool wants a real address — since that address belongs to your record rather than to Luria. |
 | `include_records` | *unset* | Globs naming further records inside this repository — `examples/*` — each read with its own `luria.yaml` and linted in the same run. What makes a worked example a thing CI exercises rather than a directory of prose nobody runs. |
 
@@ -551,11 +555,61 @@ like a record with nothing to say (DP-15).
 The value is the pattern itself, or a table with `match:` and a `blurb:`
 when the pattern wants a sentence of explanation.
 
+**A pattern as a finding.** `report: true` makes every match a row of a
+warning class named after the pattern, so a shape the record should not
+contain becomes configuration rather than a luria release:
+
+```yaml
+patterns:
+  inverted_premise:
+    match: "(c:CLAIM {status: 'Active'})-[:rests_on]->(p:CLAIM {status: 'Proposed'})"
+    report: true
+    blurb: An Active claim resting on a Proposed one.
+```
+
+(Quoted, because a property map's `: ` is not allowed in a plain YAML
+scalar.)
+
+The class `inverted_premise` is then reported by `luria lint` and named
+in `lint.fail_on`, `lint.mute` and `lint.baseline` like any built-in
+one. A row names the match's first node's document, and that document
+acknowledges its rows with `pattern-ok: inverted_premise — reason`
+(any scope; one that answers for no row is reported stale). A pattern
+named like a built-in class is refused at load: one name, one class.
+
 | key | type | default |
 |---|---|---|
 | `name` | `str` | *the table's own name* |
 | `match` | `str` | *required* |
 | `blurb` | `str` | *unset* |
+| `report` | `bool` | `False` |
+
+## Views — `views.X`
+
+One entry per Jinja template rendered over the record into a file. Every other view is a generator luria ships; a view is one the project writes, for any projection of its record the generators do not cover — an agent's bootloader, a manuscript, a page of documentation.
+
+A Jinja template rendered over the record into a file (ADR-130).
+
+```yaml
+views:
+  bootloader:
+    template: record/views.d/CLAUDE.md.j2
+    output: CLAUDE.md
+```
+
+`luria index` renders it with every other view, and `--check` reports it
+stale like any other. The template reads the record through `doc`,
+`docs`, `schemes` and `vocabulary`, writes codes bare, and composes with
+Jinja's own `include`, `import` and `extends`, resolved from the project
+root. The output passes through the link fixer in its own frame, so no
+template spells a link target. See `luria/views.py`.
+
+| key | type | default |
+|---|---|---|
+| `name` | `str` | *the table's own name* |
+| `template` | `Path` | *required* |
+| `output` | `Path` | *required* |
+| `pin` | `bool` | `False` |
 
 ## Remotes — `remotes.X`
 

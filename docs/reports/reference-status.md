@@ -9,7 +9,7 @@ Every reference in the record is a claim — "this is why things are the way the
 
 Only an `Active` document is in force. `Proposed` and `Deferred` mean *not in force yet* — an open question, being cited as if it were settled — while `Superseded` and `Rejected` mean *no longer in force*, which is often a perfectly good thing to cite: history, or a rejection worth pointing at. Either way the citation should be deliberate, and this section lists the ones nobody has vouched for yet.
 
-**3 documents cited without acknowledgement.** Not listed: 62 citations someone has already vouched for with an `inactive-ok:` comment at the citing site.
+**3 documents cited without acknowledgement.** Not listed: 66 citations someone has already vouched for with an `inactive-ok:` comment at the citing site.
 
 To vouch for one, put the reason where the citation is — `inactive-ok:` covers its own line and the line below it, `inactive-ok-block:` its paragraph, `inactive-ok-file:` the whole page:
 
@@ -21,7 +21,7 @@ To vouch for one, put the reason where the citation is — `inactive-ok:` covers
 
 A logic core in clingo, behind a procedural shell
 
-9 citations in 3 files await a look.
+9 citations in 3 files await a look; 2 other citations of it are acknowledged.
 
 - [`luria/pattern_rules.py:5`](../../luria/pattern_rules.py)
 - [`record/decisions.d/ADR-128.md:70`](../../record/decisions.d/ADR-128.md)
@@ -50,9 +50,13 @@ A reference may name several schemes
 
 A chain may walk a named path pattern
 
-1 citation in 1 file awaits a look.
+5 citations in 2 files await a look; 2 other citations of it are acknowledged.
 
 - [`docs/project-memory.md:355`](../project-memory.md)
+- [`record/decisions.d/ADR-130.md:17`](../../record/decisions.d/ADR-130.md)
+- [`record/decisions.d/ADR-130.md:31`](../../record/decisions.d/ADR-130.md)
+- [`record/decisions.d/ADR-130.md:50`](../../record/decisions.d/ADR-130.md)
+- [`record/decisions.d/ADR-130.md:112`](../../record/decisions.d/ADR-130.md)
 
 ## Codes that resolve to no document
 

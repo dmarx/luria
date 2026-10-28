@@ -165,6 +165,12 @@ schemes:
         many: true
         required: false
     influence: influenced_by
+# Files rendered from a template over the record (ADR-130). The
+# bootloader keeps its prose in the template and derives what would drift.
+views:
+  bootloader:
+    template: record/views.d/CLAUDE.md.j2
+    output: CLAUDE.md
 remotes:
   SG:
     name: strata-g

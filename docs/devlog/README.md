@@ -6,6 +6,10 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 
 ## Currently — [October 2026](2026-10.md)
 
+- [27 Oct 20:01 — Pattern-backed warning classes, reliance and bounded acknowledgements](2026-10.md#pattern-backed-warning-classes-reliance-and-bounded-acknowledgements)
+- [27 Oct 03:40 — A pull request's repair rebased in a newer push's unrepaired commits, and the lint read them](2026-10.md#a-pull-requests-repair-rebased-in-a-newer-pushs-unrepaired-commits-and-the-lint-read-them)
+- [16 Oct 04:56 — CLAUDE.md derives its list of generated files](2026-10.md#claudemd-derives-its-list-of-generated-files)
+- [15 Oct 22:55 — Views as templates: fired on nucleation's CLAUDE.md](2026-10.md#views-as-templates-fired-on-nucleations-claudemd)
 - [13 Oct 02:56 — Chains over path patterns: how the design got there, and what parses Cypher](2026-10.md#chains-over-path-patterns-how-the-design-got-there-and-what-parses-cypher)
 - [8 Oct 04:48 — Explicit relations: what the migration found, and the remote target it needed](2026-10.md#explicit-relations-what-the-migration-found-and-the-remote-target-it-needed)
 - [7 Oct 18:06 — Review fixes: one door for writes, a wheel smoke test, and git as optional](2026-10.md#review-fixes-one-door-for-writes-a-wheel-smoke-test-and-git-as-optional)
@@ -28,10 +32,10 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 
 ## All books
 
-147 entries across 3 books, newest first.
+151 entries across 3 books, newest first.
 
 | Book | Entries | First | Last |
 |---|--:|---|---|
-| [2026-10](2026-10.md) | 19 | 2026-10-01 | 2026-10-13 |
+| [2026-10](2026-10.md) | 23 | 2026-10-01 | 2026-10-27 |
 | [2026-09](2026-09.md) | 82 | 2026-09-03 | 2026-09-30 |
 | [2026-08](2026-08.md) | 46 | 2026-08-03 | 2026-08-28 |

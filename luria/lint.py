@@ -40,7 +40,11 @@ It also prints WARNINGS, which by default never affect the exit code
 at all, remote links whose URL is hand-written rather than constructed,
 pinned remote documents whose upstream content changed since it was endorsed,
 relative link targets that resolve to nothing from where the prose renders,
-directives that no longer apply, and a count of undecided decisions. Citing a
+directives that no longer apply, a count of undecided decisions, and — where
+`luria.yaml` asks — each match of a pattern declared `report: true` (a class
+named after the pattern), undecided documents many others rest on
+(`load-bearing`) and acknowledgements of a retired premise with no expiry
+(`unbounded-acknowledgements`). Citing a
 `Rejected` decision — or leaving one `Proposed`, or naming another project's
 LU-ADR-013 — is often right, so none is an error unless the project says so:
 a class named in `lint.fail_on` is promoted to a failure. Either way
@@ -505,6 +509,15 @@ def check_version_history(errors: list[str]) -> None:
                         f"document says {version}")
 
 
+def check_views(errors: list[str],
+                rendered: dict[Path, str] | None = None) -> None:
+    """A template that does not render (ADR-130). Views are rendered
+    on the default branch only, so without this a typo in a code, a field
+    or a template's syntax would merge clean and fail the job after it."""
+    from . import views
+    errors.extend(views.errors(rendered))
+
+
 def check_view_dirs(errors: list[str],
                     rendered: dict[Path, str] | None = None) -> None:
     """A view directory holds only generated files (ADR-021), so a
@@ -688,13 +701,14 @@ FAILABLE = ("retired-citations", "unresolved-codes", "foreign-temp-codes",
             "broken-targets", "remote-drift", "inert-status",
             "source-mismatch", "source-unchecked",
             "legacy-spellings", "narrow-titles", "stale-directives",
-            "template-drift", "broken-chains",
+            "template-drift", "broken-chains", "retired-transclusions",
+            "view-drift",
             "one-sided-relations", "unbound-relations", "unbound-lines",
             "unrecorded-relations", "unannotated-relations",
             "unexplained-relations", "bad-annotations",
             "spent-upgrades",
             "pending-documents", "unlinted-files", "workflow-temp-codes",
-            "unlinked-site")
+            "unlinked-site", "load-bearing", "unbounded-acknowledgements")
 
 # Classes `lint.mute` may suppress: every failable class, plus
 # `acknowledged-uniformity` — which is not failable (a project cannot promote
@@ -709,6 +723,27 @@ FAILABLE = ("retired-citations", "unresolved-codes", "foreign-temp-codes",
 # `luria reports` still renders the full accounting either way — muting
 # changes what the command prints, not what the record says.
 MUTABLE = FAILABLE + ("acknowledged-uniformity",)
+
+# Every class name luria itself emits. A pattern declared `report: true` is a
+# class named after the pattern (`pattern_report.py`), so a pattern may not
+# take one of these names — refused at load, in `config._patterns`.
+BUILTIN_CLASSES = MUTABLE + ("expired-directives",)
+
+
+def reported_patterns() -> tuple[str, ...]:
+    """The classes this record adds, one per pattern declared `report: true`."""
+    return tuple(n for n, p in current().patterns.items() if p.report)
+
+
+def failable() -> tuple[str, ...]:
+    """The classes `fail_on` and `baseline` may name in this record: the
+    built-in ones and its pattern-backed ones."""
+    return FAILABLE + reported_patterns()
+
+
+def mutable() -> tuple[str, ...]:
+    """The classes `mute` may name in this record."""
+    return MUTABLE + reported_patterns()
 
 
 def unlinked_site() -> list[str]:
@@ -768,9 +803,12 @@ def spent_upgrades() -> list[str]:
     return out
 
 
-def status_sections() -> list[tuple[str, str, list[str]]]:
+def status_sections(rendered: dict[Path, str] | None = None
+                    ) -> list[tuple[str, str, list[str]]]:
     """Every status finding, as (class, headline, detail lines) — computed
-    once, so the warning path and the `fail_on` path cannot disagree."""
+    once, so the warning path and the `fail_on` path cannot disagree.
+    `rendered` is the view tree the lint already built, so a view is not
+    rendered a second time to learn what it read."""
     docs = ref_status.load_docs()
     result = ref_status.scan(docs=docs)
     sections: list[tuple[str, str, list[str]]] = []
@@ -952,6 +990,29 @@ def status_sections() -> list[tuple[str, str, list[str]]]:
     # a comparison one side declares and the other does not. Both are
     # structural, so neither needs an acknowledgement — there is no reading
     # under which either is what the author meant.
+    # A view carrying a retired document's text into its output
+    # (ADR-130). The citation scan cannot see it: the output is
+    # generated, so it is excluded and nobody could annotate it there. The
+    # render knows which template line read what, so the site is that line.
+    from . import view_reads
+    transcluded = view_reads.retired_rows(rendered)
+    if transcluded:
+        sections.append((
+            "retired-transclusions",
+            f"{len(transcluded)} template site(s) transclude a retired "
+            "document into a view (`inactive-ok:` in a template comment at "
+            "the site acknowledges it)", transcluded))
+
+    # A pinned view whose pin no longer holds (ADR-130): the record
+    # moved under a published output, or the output was edited by hand.
+    from . import view_pins
+    drifted = view_pins.drift_rows()
+    if drifted:
+        sections.append((
+            "view-drift",
+            f"{len(drifted)} pinned view(s) no longer match what was "
+            "endorsed", drifted))
+
     broken = chains.rows()
     if broken:
         sections.append((
@@ -1031,9 +1092,37 @@ def status_sections() -> list[tuple[str, str, list[str]]]:
             f"{len(spent)} one-shot upgrade(s) this record no longer needs",
             spent))
 
+    # A record's own shapes, one class per pattern declared `report: true`:
+    # the blind spots a release of luria cannot know about, stated as
+    # configuration (`pattern_report.py`).
+    from . import pattern_report
+    shaped = pattern_report.findings()
+    for name in reported_patterns():
+        if found := shaped.rows.get(name):
+            sections.append((name, pattern_report.headline(name, len(found)),
+                             found))
+
+    # What rests on an undecided document, and acknowledgements of a retired
+    # premise that never come due — both only where `reliance:` names the
+    # fields that carry dependence (`reliance.py`).
+    from . import reliance
+    pending_rows = adr_pending.pending()
+    if heavy := reliance.load_bearing_rows(pending_rows):
+        sections.append((
+            "load-bearing",
+            f"{len(heavy)} undecided document(s) with at least "
+            f"{current().load_bearing} transitive dependents (`luria reports` "
+            "ranks the rest)", heavy))
+    if unbounded := reliance.unbounded_rows():
+        sections.append((
+            "unbounded-acknowledgements",
+            f"{len(unbounded)} acknowledgement(s) of a retired premise carry "
+            "no `until` — a dependence on a retired document is a question "
+            "with a date", unbounded))
+
     # A directive that silently does nothing is worse than no directive.
     stale = ref_status.stale_annotations(result, docs) + stale_urls \
-        + stale_targets + stale_sources + pins.flag_problems()
+        + stale_targets + stale_sources + pins.flag_problems() + shaped.stale
     for path in doc_refs.doc_files():
         stale += doc_refs.directive_problems(path, path.read_text(encoding="utf-8"))
     if stale:
@@ -1049,7 +1138,7 @@ def status_sections() -> list[tuple[str, str, list[str]]]:
 
     # One line, not the table: the point is that the number is never zero
     # silently. `luria reports` ranks them by age and citation count.
-    rows = adr_pending.pending()
+    rows = pending_rows
     if rows:
         sections.append((
             "pending-documents",
@@ -1085,7 +1174,8 @@ def expired_directives(as_of: dt.date | None = None) -> list[str]:
     return sorted(out)
 
 
-def report_warnings(errors: list[str]) -> None:
+def report_warnings(errors: list[str],
+                    rendered: dict[Path, str] | None = None) -> None:
     """Status findings: warnings by default, failures on request (ADR-035).
 
     Citing a retired document is often correct — a `Rejected` decision exists
@@ -1100,11 +1190,12 @@ def report_warnings(errors: list[str]) -> None:
     # having to name it in `fail_on` as well — the setting already said it.
     if current().network == "require":
         fail.add("source-unchecked")
-    for name in sorted(fail - set(FAILABLE)):
+    known, quiet = failable(), mutable()
+    for name in sorted(fail - set(known)):
         # A dial set to a notch that doesn't exist must not silently enforce
         # nothing (DP-1).
         errors.append(f"luria.yaml: `fail_on` names {name!r}, which is no "
-                      f"warning class (known: {', '.join(FAILABLE)})")
+                      f"warning class (known: {', '.join(known)})")
 
     # A class the project has decided it does not want reported at all.
     # `fail_on` changes a finding's consequence; `mute` removes it from the
@@ -1113,17 +1204,17 @@ def report_warnings(errors: list[str]) -> None:
     # shape when the finding is about a document, and the wrong shape when a
     # project has simply decided a whole check is not useful to it.
     mute = set(current().mute)
-    for name in sorted(mute - set(MUTABLE)):
+    for name in sorted(mute - set(quiet)):
         # Same rule as `fail_on`: a dial set to a notch that does not exist
         # must say so rather than silently do nothing (DP-1).
         errors.append(f"luria.yaml: `mute` names {name!r}, which is no "
-                      f"mutable warning class (known: {', '.join(MUTABLE)})")
+                      f"mutable warning class (known: {', '.join(quiet)})")
     # Same contract as the two dials above: a notch that does not exist must
     # say so rather than silently hold no line (DP-1).
     base = current().baseline
-    for name in sorted(set(base) - set(FAILABLE)):
+    for name in sorted(set(base) - set(known)):
         errors.append(f"luria.yaml: `baseline` names {name!r}, which is no "
-                      f"warning class (known: {', '.join(FAILABLE)})")
+                      f"warning class (known: {', '.join(known)})")
     for name in sorted(set(base) & mute):
         # A held line nobody is allowed to see cannot be checked by the person
         # the report is for, and the number would decay unread.
@@ -1143,7 +1234,7 @@ def report_warnings(errors: list[str]) -> None:
     # class against a number that is not a number would bury the one message
     # the reader can act on under every row of the class it mis-describes.
     base = {k: v for k, v in base.items()
-            if k in FAILABLE and v >= 0 and k not in mute and k not in fail}
+            if k in known and v >= 0 and k not in mute and k not in fail}
 
     for name in sorted(mute & fail):
         # Not a precedence question. A project cannot both enforce a check
@@ -1155,7 +1246,7 @@ def report_warnings(errors: list[str]) -> None:
     # A class with no findings yields no section, so a baseline it has already
     # met would otherwise go unmentioned forever — the one state where the
     # number is certainly stale is the one nothing would have reported.
-    sections = status_sections()
+    sections = status_sections(rendered)
     seen = {name for name, _, _ in sections}
     for name in sorted(set(base) - seen - mute - fail):
         print(f"luria: {name}: 0 against a `baseline` of {base[name]} — the "
@@ -1215,7 +1306,8 @@ def run() -> None:
     # rendered every view of every nested record (ADR-078) twice, re-scanning
     # every corpus for the reports in each pass. Both have taken a `rendered`
     # argument since they were written; nothing had ever passed one.
-    rendered = builder.outputs()
+    rendered = builder.outputs(skip_broken_views=True)
+    check_views(errors, rendered)
     check_view_dirs(errors, rendered)
     check_numbers(errors)
     check_alias_collisions(errors)
@@ -1225,7 +1317,7 @@ def run() -> None:
     check_bare_refs(errors)
     check_wikilinks(errors)
     check_anchors(errors, rendered)
-    report_warnings(errors)
+    report_warnings(errors, rendered)
     if errors:
         print(f"luria: {len(errors)} violation(s)", file=sys.stderr)
         for e in errors:

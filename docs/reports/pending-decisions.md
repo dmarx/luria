@@ -13,10 +13,10 @@
 
 | Open since | Status | Code | Cited | Unack. | Title |
 |---|---|---|--:|--:|---|
-| 2026-10-07 | Proposed | [ADR-127](../../record/decisions.d/ADR-127.md) | 9 | 9 | A logic core in clingo, behind a procedural shell |
+| 2026-10-07 | Proposed | [ADR-127](../../record/decisions.d/ADR-127.md) | 11 | 9 | A logic core in clingo, behind a procedural shell |
 | 2026-10-07 | Proposed | [ADR-126](../../record/decisions.d/ADR-126.md) | 6 | 6 | A reference may name several schemes |
 | 2026-10-08 | Proposed | [ADR-128](../../record/decisions.d/ADR-128.md) | 0 | 0 | Configuration is the only source of relation semantics |
-| 2026-10-13 | Proposed | [ADR-129](../../record/decisions.d/ADR-129.md) | 1 | 1 | A chain may walk a named path pattern |
+| 2026-10-13 | Proposed | [ADR-129](../../record/decisions.d/ADR-129.md) | 7 | 5 | A chain may walk a named path pattern |
 
 ## DPs
 

@@ -139,6 +139,9 @@ DEFAULTS: dict = {
     # Named path patterns a chain may walk in place of a field (#371). Empty
     # for a project whose lines all follow one reference field.
     "patterns": {},
+    # Jinja templates rendered over the record into any file (ADR-130).
+    # Empty for a project whose every view is one luria already generates.
+    "views": {},
     # Other projects whose records this one cites, keyed by a short prefix. A
     # reference then composes: `LU-ADR-013` is that remote's decision 13
     # (ADR-016).
@@ -155,6 +158,14 @@ DEFAULTS: dict = {
         },
     },
     "stale_days": 90,
+    # The reference fields that carry dependence: a document holding one of
+    # these names a document it rests on. Empty is today's behaviour — the
+    # pending report ranks by age and citation count, and nothing counts
+    # what rests on an undecided document. Named, it adds that count.
+    "reliance": [],
+    # The dependents at which an undecided document is reported as
+    # `load-bearing`. Unset, the class never fires.
+    "load_bearing": None,
     # What luria announces when it opens a socket. The stdlib default is
     # `Python-urllib/3.x`, which names the language and nothing else — not
     # the tool, not the project, not a way to be reached — and is the shape
@@ -1964,6 +1975,66 @@ def _fragment(spec) -> Fragment:
 
 
 @dataclass(frozen=True)
+class View:
+    """A Jinja template rendered over the record into a file (ADR-130).
+
+        views:
+          bootloader:
+            template: record/views.d/CLAUDE.md.j2
+            output: CLAUDE.md
+
+    `luria index` renders it with every other view, and `--check` reports it
+    stale like any other. The template reads the record through `doc`,
+    `docs`, `schemes` and `vocabulary`, writes codes bare, and composes with
+    Jinja's own `include`, `import` and `extends`, resolved from the project
+    root. The output passes through the link fixer in its own frame, so no
+    template spells a link target. See `luria/views.py`."""
+    name: str
+    # The Jinja source, relative to the project root. Keep it out of every
+    # directory the link fixer scans: a code inside an expression would be
+    # rewritten into a link.
+    template: Path
+    # Where the rendered text lands: any path in the repository, a root file
+    # such as `CLAUDE.md` included. A markdown output is stamped as generated.
+    output: Path
+    # Whether the output stops moving once endorsed (ADR-130). A pinned
+    # view is rendered and its reads hashed by `luria views --pin NAME`,
+    # into `views.lock.json`; after that `luria index` leaves the committed
+    # output alone, and `luria lint` reports `view-drift` when what the view
+    # read has changed since. For an output that is published: a submitted
+    # paper, a released document.
+    pin: bool = False
+
+
+def _views(raw: dict, root: Path) -> dict[str, View]:
+    """Every declared view. Both paths are required: a view without a
+    template renders nothing, and a view without an output renders it
+    nowhere — either looks exactly like a view that is current (DP-15)."""
+    out: dict[str, View] = {}
+    for name, spec in raw.items():
+        spec = spec or {}
+        where = f"luria.yaml: views.{name}"
+        for key in ("template", "output"):
+            if not str(spec.get(key) or "").strip():
+                raise ValueError(f"{where}: no `{key}` — a view needs the "
+                                 "template it renders and the file it "
+                                 "renders into")
+        if unknown := sorted(set(spec) - {"template", "output", "pin"}):
+            raise ValueError(f"{where}: unknown key(s) {', '.join(unknown)} "
+                             "(a view takes `template`, `output` and `pin`)")
+        if not isinstance(spec.get("pin", False), bool):
+            raise ValueError(f"{where}: `pin` is true or false")
+        view = View(name=str(name), template=root / str(spec["template"]),
+                    output=root / str(spec["output"]),
+                    pin=bool(spec.get("pin", False)))
+        if view.template.resolve() == view.output.resolve():
+            raise ValueError(f"{where}: `output` is the template itself, so "
+                             "the first render would overwrite its source")
+        out[str(name)] = view
+    return out
+
+
+@dataclass(frozen=True)
 class NamedPattern:
     """A named path pattern: a relation between documents that no single
     field holds, written in Cypher's pattern syntax (#371).
@@ -1998,33 +2069,29 @@ class NamedPattern:
     The value is the pattern itself, or a table with `match:` and a `blurb:`
     when the pattern wants a sentence of explanation.
 
-    **A page of its matches (#373).** Give the table an `output:` and the
-    pattern renders there: one row per match, one column per named node in
-    the order the pattern writes them, each cell a link to its document. Any
-    pattern in the subset renders — across schemes, a single node with
-    `WHERE NOT`, a closure — which is what a chain cannot show:
+    **A pattern as a finding.** `report: true` makes every match a row of a
+    warning class named after the pattern, so a shape the record should not
+    contain becomes configuration rather than a luria release:
 
         patterns:
-          unopposed:
-            match: >-
-              (c:CLAIM {role: 'thesis'})
-              WHERE NOT (c)<-[:objects_to]-(:CLAIM)
-            output: docs/unopposed.md
-            title: Unopposed theses
+          inverted_premise:
+            match: "(c:CLAIM {status: 'Active'})-[:rests_on]->(p:CLAIM {status: 'Proposed'})"
+            report: true
+            blurb: An Active claim resting on a Proposed one.
 
-    A property map puts `: ` inside the pattern, which YAML reads as a key
-    unless the value is quoted or folded — hence `>-` above.
+    (Quoted, because a property map's `: ` is not allowed in a plain YAML
+    scalar.)
 
-    A report, never a failure: what a pattern matches needs judgement, so
-    nothing on the page fails the lint. An empty result says "No matches"
-    rather than rendering a table with no rows."""
+    The class `inverted_premise` is then reported by `luria lint` and named
+    in `lint.fail_on`, `lint.mute` and `lint.baseline` like any built-in
+    one. A row names the match's first node's document, and that document
+    acknowledges its rows with `pattern-ok: inverted_premise — reason`
+    (any scope; one that answers for no row is reported stale). A pattern
+    named like a built-in class is refused at load: one name, one class."""
     name: str
     match: str
     blurb: str = ""
-    # Where the page of matches renders; unset renders none.
-    output: Path | None = None
-    # The page's heading; defaults to the name.
-    title: str = ""
+    report: bool = False
     # The parse, done once at load so a malformed pattern is a config error
     # rather than a page that fails to render.
     _parsed: object = dcfield(default=None, compare=False, repr=False)
@@ -2219,6 +2286,7 @@ class Config:
     remotes: dict[str, Remote]
     journals: dict[str, Journal]
     chains: dict[str, Chain]
+    views: dict[str, "View"]
     patterns: dict[str, NamedPattern]
     stale_days: int
     user_agent: str                     # what every request announces
@@ -2253,6 +2321,10 @@ class Config:
     # key that `index` has to reach into the site table to read is DP-16's
     # awkwardness — a distinction the layout had stopped expressing.
     include_records: tuple[str, ...] = ()
+    # The reference fields that carry dependence, and the dependents at which
+    # an undecided document is `load-bearing` (`reliance.py`).
+    reliance: tuple[str, ...] = ()
+    load_bearing: int | None = None
     site: Site = None  # type: ignore[assignment]
     _raw: dict = dcfield(default_factory=dict, repr=False)
 
@@ -2381,9 +2453,11 @@ class Config:
         # the reader must not edit, in a file the next build overwrites.
         if any(path == c.output for c in self.chains.values()):
             return True
-        # A pattern's page of matches (#373), for the same reason: it lists
-        # retired documents as readily as live ones, by design.
-        if any(path == p.output for p in self.patterns.values()):
+        # A view's output (ADR-130), for the chain page's reason: a
+        # code in it was put there by a template, so a finding sited in the
+        # output names a line nobody can annotate. What a view reads is
+        # checked at the template line instead (`view_reads`).
+        if any(path == v.output for v in self.views.values()):
             return True
         for s in self.schemes.values():
             # The index, and a page per value of every field it groups by —
@@ -2478,7 +2552,7 @@ class Config:
 # The tables whose entries a project names, as opposed to the settings tables
 # whose keys Luria names. The distinction decides the merge rule (ADR-047).
 FAMILIES = ("schemes", "fragments", "journals", "remotes", "chains",
-            "patterns")
+            "patterns", "views")
 
 
 def load(root: Path | None = None, text: str | None = None,
@@ -2570,9 +2644,9 @@ def load(root: Path | None = None, text: str | None = None,
             for name, spec in raw.get("journals", {}).items()
         },
         patterns=(patterns := _patterns(raw.get("patterns") or {},
-                                        schemes, root,
-                                        root / paths["reports"])),
+                                        schemes)),
         chains=_chains(raw.get("chains", {}), schemes, root, patterns),
+        views=_views(raw.get("views") or {}, root),
         stale_days=int(raw.get("stale_days", 90)),
         user_agent=str(raw.get("user_agent")
                        or DEFAULTS["user_agent"]),
@@ -2582,6 +2656,8 @@ def load(root: Path | None = None, text: str | None = None,
         narrow_terms=tuple(raw["lint"].get("narrow_terms", [])),
         network=str(raw["lint"].get("network", "auto")),
         include_records=tuple(raw.get("include_records", ())),
+        reliance=(reliance := _reliance(raw.get("reliance") or [], schemes)),
+        load_bearing=_load_bearing(raw.get("load_bearing"), reliance),
         site=_site(raw, root),
         _raw=raw,
     )
@@ -2601,71 +2677,77 @@ def nameable(scheme) -> set[str]:
             | set(scheme.requires) | {"status"})
 
 
-def _patterns(raw: dict, schemes: dict, root: Path | None = None,
-              reports: Path | None = None) -> dict[str, NamedPattern]:
+def _patterns(raw: dict, schemes: dict) -> dict[str, NamedPattern]:
     """Every declared pattern, parsed and checked against the schemes.
 
     Parsing refuses what is outside the subset (`patterns.parse`); the
     checks against the schemes — labels, hops, properties — are
-    `consistency.check_patterns`, beside the other cross-scheme refusals.
-    A pattern's page is checked here: it needs a column to show, and a path
-    no other view renders to (#373)."""
+    `consistency.check_patterns`, beside the other cross-scheme refusals."""
     from .patterns import parse
-    from .pattern_rules import columns
-    root = root or Path(".")
     out: dict[str, NamedPattern] = {}
     for name, spec in raw.items():
         name = str(name)
-        where = f"luria.yaml: patterns.{name}: "
         table = spec if isinstance(spec, dict) else {"match": spec}
-        if unknown := set(table) - {"match", "blurb", "output", "title"}:
+        if unknown := set(table) - {"match", "blurb", "report"}:
             raise ValueError(
-                where + f"{', '.join(sorted(unknown))} is not a key — a "
-                f"pattern is its `match:`, with an optional `blurb:`, and an "
-                f"`output:` and `title:` for a page of its matches")
+                f"luria.yaml: patterns.{name}: {', '.join(sorted(unknown))} "
+                f"is not a key — a pattern is its `match:`, an optional "
+                f"`blurb:` and an optional `report:`")
+        report = table.get("report", False)
+        if not isinstance(report, bool):
+            raise ValueError(
+                f"luria.yaml: patterns.{name}.report: {report!r} is not true "
+                f"or false")
+        if report:
+            # A pattern-backed class shares the dials' namespace with the
+            # built-in ones, so a name both could mean is refused rather
+            # than resolved (DP-1).
+            from .lint import BUILTIN_CLASSES
+            if name in BUILTIN_CLASSES:
+                raise ValueError(
+                    f"luria.yaml: patterns.{name}: `report: true` would make "
+                    f"a warning class named {name!r}, which is already a "
+                    f"built-in class — rename the pattern")
         source = str(table.get("match") or "")
-        parsed = parse(name, source)
-        output = root / str(table["output"]) if table.get("output") else None
-        title = str(table.get("title", "") or "").strip()
-        if title and output is None:
-            raise ValueError(where + "`title` names a page, and there is no "
-                             "`output` for it to head")
-        if output is not None and not columns(parsed):
-            raise ValueError(where + "names no node, so a page of its matches "
-                             "would have no columns — name the nodes to show, "
-                             "such as `(c:CLAIM)`")
         out[name] = NamedPattern(name=name, match=source.strip(),
                                  blurb=str(table.get("blurb", "")).strip(),
-                                 output=output, title=title, _parsed=parsed)
+                                 report=report,
+                                 _parsed=parse(name, source))
     if out:
         from . import consistency
         consistency.check_patterns(out, schemes)
-        _check_outputs(out, schemes, reports)
     return out
 
 
-def _check_outputs(patterns: dict, schemes: dict, reports: Path | None) -> None:
-    """Refuse a pattern page whose path another view already renders to.
-    Two views at one path means one silently overwrites the other on every
-    build, and whichever wins looks exactly like a correct page (DP-15)."""
-    from . import reports as status_reports
-    taken: dict[Path, str] = {}
-    for prefix, scheme in schemes.items():
-        if scheme.output is not None:
-            taken[scheme.output] = f"where {prefix} renders"
-        if scheme.render == "index":
-            taken[scheme.index_path] = f"where {prefix} renders"
-    if reports is not None:
-        for name in status_reports.NAMES:
-            taken[reports / name] = "where a status report renders"
-    for name, pattern in patterns.items():
-        if pattern.output is None:
-            continue
-        if pattern.output in taken:
-            raise ValueError(
-                f"luria.yaml: patterns.{name}: `output` "
-                f"{pattern.output.name} is already {taken[pattern.output]}")
-        taken[pattern.output] = f"where pattern {name!r} renders"
+def _reliance(raw, schemes: dict) -> tuple[str, ...]:
+    """The fields that carry dependence, each one a reference some scheme
+    declares. A field nothing declares would count nothing, and a count of
+    nothing reads exactly like a record where nothing depends on anything
+    (DP-15)."""
+    fields = [raw] if isinstance(raw, str) else list(raw)
+    declared = {r.field for s in schemes.values() for r in s.references}
+    if unknown := sorted({str(f) for f in fields} - declared):
+        raise ValueError(
+            f"luria.yaml: reliance: {', '.join(unknown)} is no reference "
+            f"field any scheme declares (declared: "
+            f"{', '.join(sorted(declared)) or 'none'})")
+    return tuple(dict.fromkeys(str(f) for f in fields))
+
+
+def _load_bearing(raw, reliance: tuple[str, ...]) -> int | None:
+    """The dependents at which an undecided document is `load-bearing`. A
+    threshold over a count nothing computes is a dial set to nothing, so it
+    is refused without `reliance` (DP-1)."""
+    if raw is None:
+        return None
+    if isinstance(raw, bool) or not isinstance(raw, int) or raw < 1:
+        raise ValueError(f"luria.yaml: load_bearing: {raw!r} is not a "
+                         f"positive whole number of dependents")
+    if not reliance:
+        raise ValueError("luria.yaml: load_bearing is set but `reliance` "
+                         "names no field, so there are no dependents to "
+                         "count — name the fields that carry dependence")
+    return raw
 
 
 def _chains(raw: dict, schemes: dict, root: Path,
@@ -2689,12 +2771,6 @@ def _chains(raw: dict, schemes: dict, root: Path,
              for name, spec in raw.items()}
     from . import consistency
     consistency.check_chains(specs, schemes, patterns or {})
-    pages = {p.output: p.name for p in (patterns or {}).values() if p.output}
-    for name, s in specs.items():
-        if s["output"] and (owner := pages.get(root / str(s["output"]))):
-            raise ValueError(
-                f"luria.yaml: chains.{name}: `output` {s['output']} is "
-                f"already where pattern {owner!r} renders")
     return {name: Chain(name=name, scheme=s["scheme"],
                         relation=s["relation"],
                         sibling=s["sibling"],

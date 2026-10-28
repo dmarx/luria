@@ -579,7 +579,8 @@ def split_frontmatter(text: str) -> tuple[str | None, str]:
 
 
 def _page(text: str, path: Path, cfg, typed, known: dict[str, str],
-          report: Report, prefix: str, landing: bool) -> str:
+          report: Report, prefix: str, landing: bool,
+          rendered_into: dict[str, list[str]] | None = None) -> str:
     """One page as Quartz should read it: a composed frontmatter — the keys
     Quartz uses, the title with its code, and the record's facts as
     properties (`site_page`) — over the body minus the heading the title now
@@ -597,7 +598,8 @@ def _page(text: str, path: Path, cfg, typed, known: dict[str, str],
         meta, path,
         outbound=typed.outbound(code) if code else (),
         inbound=typed.inbound(code) if code else (),
-        known=known, cfg=cfg, prefix=prefix)
+        known=known, cfg=cfg, prefix=prefix,
+        rendered_into=(rendered_into or {}).get(code, ()) if code else ())
     if props:
         report.described += 1
     if unresolved:
@@ -807,17 +809,23 @@ def stage(out: Path, cfg=None, nested: bool = True,
     # otherwise have every link to it reported as leaving the site. `pages` is
     # still the disk walk, because only a file that exists can be staged; the
     # question `_retarget` asks is a different one.
-    published = set(pages) | set(adr_index.outputs(nested=nested))
+    views_tree = adr_index.outputs(nested=nested)
+    published = set(pages) | set(views_tree)
     report, assets = Report(), {}
     # Read once for the whole record: a page's backlinks are somebody else's
     # frontmatter.
     typed = edges.graph()
     known = site_page.titles()
+    # Which views each document renders into, read off one render of each
+    # view (ADR-130). Empty for a record that declares no views.
+    from . import view_reads
+    rendered_into = view_reads.rendered_into(views_tree)
 
     for path in pages:
         text = path.read_text(encoding="utf-8")
         dest_rel = destination(path, cfg)
         text = _page(text, path, cfg, typed, known, report, prefix,
+                     rendered_into=rendered_into,
                      landing=dest_rel.as_posix() == "index.md")
         if dest_rel.as_posix() == "index.md":
             text = landing_page(text, cfg)

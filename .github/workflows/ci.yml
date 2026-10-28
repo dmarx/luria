@@ -17,6 +17,17 @@ on:
     - cron: "0 9 * * 1"
   workflow_dispatch:
 
+# On a pull request, a newer push cancels the run it overtakes: the newer
+# push's run repeats its tests and its docs-check, whose repair rebases onto
+# the branch before it pushes, so the older run's work is wasted. Every other
+# run gets a group of its own, so nothing on the default branch is cancelled
+# or queued behind another run: concretizing and regenerating views there must
+# serialize, and a shared group would drop a queued run even without
+# cancel-in-progress.
+concurrency:
+  group: ${{ github.event_name == 'pull_request' && format('ci-pr-{0}', github.head_ref) || format('ci-run-{0}', github.run_id) }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   # Where merges serialize, the sources are repaired, the views regenerated,
   # and both committed and pushed as the bot; the lint then reads that

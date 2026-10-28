@@ -121,7 +121,16 @@ runs:
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git commit -m "$MSG"
+          checkout=$(git rev-parse HEAD~1)
           git pull --rebase origin "$(git rev-parse --abbrev-ref HEAD)"
+          # A newer push landed while this run worked. The rebase brought
+          # its commits in unrepaired, and the lint after this step reads
+          # this tree, so repair them too rather than lint them red.
+          if [ "$(git rev-parse HEAD~1)" != "$checkout" ]; then
+            luria repair
+            git add -A
+            git diff --staged --quiet || git commit -m "$MSG"
+          fi
           git push
         fi
     # Before the views, so the lockfile it writes is staged into the same

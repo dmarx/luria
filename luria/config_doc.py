@@ -71,7 +71,7 @@ from .adr_index import escape_cell
 from .config import (FAMILIES, Chain, FieldGroup, Fragment, Journal,
                      NamedPattern, PlainField, Reference, Remote,
                      RemoteScheme, RequiredWhen,
-                     Scheme, Site, TagGroup, Vocabulary, VocabularyTable,
+                     Scheme, Site, TagGroup, View, Vocabulary, VocabularyTable,
                      current)
 from . import writes
 
@@ -104,8 +104,9 @@ repository.
 
 ## The shape of the file
 
-The tables below are the whole schema. Six of them — `schemes`, `fragments`,
-`journals`, `remotes`, `chains` and `patterns` — are *families*: you name the
+The tables below are the whole schema. Seven of them — `schemes`,
+`fragments`, `journals`, `remotes`, `chains`, `patterns` and `views` — are
+*families*: you name the
 entries, and the name you choose becomes part of the vocabulary.
 `schemes.RFC` is how a project gets RFCs; `journals.incidents` is how it gets
 a second journal. No code path spells `ADR`.
@@ -136,6 +137,7 @@ it to inherit from.
 | `journals.X` | dated entries that persist, rendered into books | yes, keyed by name |
 | `chains.X` | a relation walked transitively, rendered as sequences | yes, keyed by name |
 | `patterns.X` | a path between documents no single field holds | yes, keyed by name |
+| `views.X` | a Jinja template rendered over the record into a file | yes, keyed by name |
 | `remotes.X` | another project's codes, cited from this one | yes, keyed by prefix |
 | `code` | which source files are scanned for stale references | — |
 | `lint` | which warning classes fail, and which are not reported | — |
@@ -257,6 +259,11 @@ PROSE: dict[type, tuple[str, str]] = {
      "field, which is how a line passes through a document of another "
      "kind — a claim to the claims it follows from, through the inference "
      "that concludes it."),
+    View: ("Views — `views.X`",
+     "One entry per Jinja template rendered over the record into a file. "
+     "Every other view is a generator luria ships; a view is one the project "
+     "writes, for any projection of its record the generators do not cover — "
+     "an agent's bootloader, a manuscript, a page of documentation."),
     Remote: ("Remotes — `remotes.X`",
      "One entry per foreign project whose codes this record cites. The `uid` "
      "key is the general case: with a regex and a URL template, a remote need "
@@ -286,7 +293,7 @@ NOT_A_TABLE = ("Config",)
 #: of the page instead of nowhere.
 ORDER = [Scheme, Vocabulary, PlainField, RequiredWhen, Reference, TagGroup,
          FieldGroup, VocabularyTable, Fragment, Journal, Chain,
-         NamedPattern, Remote,
+         NamedPattern, View, Remote,
          RemoteScheme, Site]
 
 
@@ -327,7 +334,7 @@ SECTIONS: list[tuple[str, type, str]] = sections()
 # it, as a row like any other key.
 SECTION_SUBTREES: frozenset[str] = frozenset(
     {"paths", "lint", "site", "code", "schemes", "chains", "patterns",
-     "remotes",
+     "views", "remotes",
      "journals", "fragments", "vocabularies"})
 
 # Prose for the tables that have no dataclass behind them: scalars at the top
@@ -346,6 +353,20 @@ PLAIN: list[tuple[str, str, str, dict[str, str]]] = [
                      "linking somewhere wrong.",
         "stale_days": "How long a document may sit undecided before the "
                       "pending-decisions report calls it out.",
+        "reliance": "The reference fields that carry dependence — "
+                    "`[rests_on, grounds, uses]` — each one a reference "
+                    "some scheme declares. A document depends on another "
+                    "when one of these fields names it, read from either "
+                    "side as a pattern's hop is. Set, the pending-documents "
+                    "report counts each undecided document's transitive "
+                    "dependents and ranks by that count (age breaks ties), "
+                    "and `unbounded-acknowledgements` names an `inactive-ok` "
+                    "directive excusing a retired document held in one of "
+                    "these fields that carries no `until`. Unset, the report "
+                    "is age-first and neither class fires.",
+        "load_bearing": "The number of transitive dependents at which an "
+                        "undecided document is reported as `load-bearing`. "
+                        "Requires `reliance`; unset, the class never fires.",
         "user_agent": "What Luria announces when it opens a socket — the "
                       "identifier check and remote discovery both send it. "
                       "The default is `luria/<version>`: honest about the "
@@ -467,6 +488,7 @@ FROM_TABLE_NAME: dict[type, set[str]] = {
     Scheme: {"prefix"},          # `schemes.ADR` → prefix "ADR"
     Journal: {"name"},           # `journals.devlog` → name "devlog"
     NamedPattern: {"name"},      # `patterns.follows_from` → its name
+    View: {"name"},              # `views.bootloader` → its name
     Remote: {"prefix"},          # …but `Remote.name` IS a key, deliberately
     RemoteScheme: {"prefix"},
 }
