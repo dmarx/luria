@@ -97,6 +97,13 @@ class Pattern:
     def last(self) -> Node:
         return self.path.nodes[-1]
 
+    @property
+    def named(self) -> tuple[tuple[str, str], ...]:
+        """(variable, label) of each node the match binds by name, in
+        pattern order; anonymous and `WHERE NOT` nodes bind none."""
+        return tuple(dict.fromkeys(
+            (n.var, n.label) for n in self.path.nodes if n.var and not n.bound))
+
 
 @functools.cache
 def _parser() -> lark.Lark:

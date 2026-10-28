@@ -339,16 +339,20 @@ def unbound_lineage(base: Path | None = None) -> str:
     return "\n".join(out)
 
 
+# One table, which `outputs` and the config's collision check both read.
+NAMES = {
+    "reference-status.md": reference_status,
+    "pending-decisions.md": pending_decisions,
+    "unbound-lineage.md": unbound_lineage,
+}
+
+
 def outputs(out_dir: Path | None = None) -> dict[Path, str]:
     """Every report, keyed by where it lands — the unit `luria index`
     renders, so a stale report fails the same staleness check as every other
     view (#35)."""
     out_dir = current().reports if out_dir is None else out_dir
-    return {
-        out_dir / "reference-status.md": reference_status(out_dir),
-        out_dir / "pending-decisions.md": pending_decisions(out_dir),
-        out_dir / "unbound-lineage.md": unbound_lineage(out_dir),
-    }
+    return {out_dir / name: render(out_dir) for name, render in NAMES.items()}
 
 
 def write(out_dir: Path | None = None) -> list[Path]:

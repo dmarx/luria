@@ -72,7 +72,8 @@ def retired_rows(rendered: dict | None = None) -> list[str]:
                 if site.kind != "transcluded" or _acknowledged(
                         site.template, site.line, read.code):
                     continue
-                rows.append(f"views.{name}: {site.template}:{site.line} "
+                rows.append(f"{current().views[name].where}: "
+                            f"{site.template}:{site.line} "
                             f"transcludes {read.code}, which is "
                             f"{read.status}{after}")
     return rows

@@ -354,6 +354,10 @@ Labels are schemes and edge types are reference fields, checked when the
 config loads, and the page names what each step went *through*
 ([ADR-129](../record/decisions.d/ADR-129.md), `examples/argument-map`).
 
+A pattern that is not a line — a thesis nothing objects to, an inference
+with no conclusion yet — takes an `output:` instead, and renders as a page
+of its matches, a view luria supplies ([ADR-tmpgicpu](../record/decisions.d/ADR-tmpgicpu.md)).
+
 **Tag rules.** A vocabulary says what a value *means*; a group says which of
 them may appear together, because some fields are an axis rather than a pile.
 The group is declared under the field it constrains:

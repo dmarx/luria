@@ -1,0 +1,23 @@
+{#- A pattern's page (#373); values from `config._views`. Codes are bare:
+    the link fixer links them in the page's frame. -#}
+{% set rows = match(pattern) %}
+# {{ title }}
+
+{% if blurb %}
+{{ blurb }}
+
+{% endif %}
+`{{ source }}` · {{ rows | length }} match{{ "" if rows | length == 1 else "es" }}
+
+{% if not rows %}
+No matches.
+{% else %}
+|{% for var, label in columns %} {{ var }} ({{ label }}) |{% endfor %}
+
+|{% for _ in columns %}---|{% endfor %}
+
+{% for row in rows %}
+|{% for var, _ in columns %} {{ row[var].code }} — {{ row[var].title | cell }} |{% endfor %}
+
+{% endfor %}
+{% endif %}

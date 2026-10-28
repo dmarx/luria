@@ -64,6 +64,14 @@ patterns:
       (b:CLAIM)<-[:concludes]-(i:INF)<-[:premise_of]-(a:CLAIM)
       WHERE NOT (i)<-[:challenges]-(:OBJ)
     blurb: A step no objection challenges.
+  # What this record calls unfinished: an inference with premises and no
+  # conclusion. It renders as a page of its matches rather than a chain,
+  # since it relates an inference to a claim, not a claim to a claim.
+  unfinished:
+    match: (i:INF)<-[:premise_of]-(p:CLAIM) WHERE NOT (i)-[:concludes]->(:CLAIM)
+    blurb: Inferences with premises in place and no conclusion yet.
+    output: docs/unfinished.md
+    title: Unfinished steps
 chains:
   argument:
     scheme: CLAIM
