@@ -57,6 +57,8 @@ it to inherit from.
 |---|---|---|
 | `issue_url` | *unset* | A template for issue links, with `{n}` for the number. Writing it also tells Luria which GitHub repository this is, which is where every `site` default comes from. Unset, issue numbers stay bare rather than linking somewhere wrong. |
 | `stale_days` | `90` | How long a document may sit undecided before the pending-decisions report calls it out. |
+| `reliance` | *unset* | The reference fields that carry dependence — `[rests_on, grounds, uses]` — each one a reference some scheme declares. A document depends on another when one of these fields names it, read from either side as a pattern's hop is. Set, the pending-documents report counts each undecided document's transitive dependents and ranks by that count (age breaks ties), and `unbounded-acknowledgements` names an `inactive-ok` directive excusing a retired document held in one of these fields that carries no `until`. Unset, the report is age-first and neither class fires. |
+| `load_bearing` | *unset* | The number of transitive dependents at which an undecided document is reported as `load-bearing`. Requires `reliance`; unset, the class never fires. |
 | `user_agent` | `"luria/0.1.dev1"` | What Luria announces when it opens a socket — the identifier check and remote discovery both send it. The default is `luria/<version>`: honest about the software, the way `curl/8.0` is, and carrying no contact, because a URL or mailbox in a shipped default would route every user's traffic to whoever maintains Luria. Add your own contact here if you want the treatment some hosts reserve for callers who identify themselves — CrossRef's polite pool wants a real address — since that address belongs to your record rather than to Luria. |
 | `include_records` | *unset* | Globs naming further records inside this repository — `examples/*` — each read with its own `luria.yaml` and linted in the same run. What makes a worked example a thing CI exercises rather than a directory of prose nobody runs. |
 
@@ -553,11 +555,34 @@ like a record with nothing to say (DP-15).
 The value is the pattern itself, or a table with `match:` and a `blurb:`
 when the pattern wants a sentence of explanation.
 
+**A pattern as a finding.** `report: true` makes every match a row of a
+warning class named after the pattern, so a shape the record should not
+contain becomes configuration rather than a luria release:
+
+```yaml
+patterns:
+  inverted_premise:
+    match: "(c:CLAIM {status: 'Active'})-[:rests_on]->(p:CLAIM {status: 'Proposed'})"
+    report: true
+    blurb: An Active claim resting on a Proposed one.
+```
+
+(Quoted, because a property map's `: ` is not allowed in a plain YAML
+scalar.)
+
+The class `inverted_premise` is then reported by `luria lint` and named
+in `lint.fail_on`, `lint.mute` and `lint.baseline` like any built-in
+one. A row names the match's first node's document, and that document
+acknowledges its rows with `pattern-ok: inverted_premise — reason`
+(any scope; one that answers for no row is reported stale). A pattern
+named like a built-in class is refused at load: one name, one class.
+
 | key | type | default |
 |---|---|---|
 | `name` | `str` | *the table's own name* |
 | `match` | `str` | *required* |
 | `blurb` | `str` | *unset* |
+| `report` | `bool` | `False` |
 
 ## Views — `views.X`
 
