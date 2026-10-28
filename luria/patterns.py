@@ -99,10 +99,8 @@ class Pattern:
 
     @property
     def named(self) -> tuple[tuple[str, str], ...]:
-        """(variable, label) for each named node of the match, first
-        occurrence only, in the order the pattern writes them. An anonymous
-        node is matched and not named; one named only under `WHERE NOT`
-        never binds."""
+        """(variable, label) of each node the match binds by name, in
+        pattern order; anonymous and `WHERE NOT` nodes bind none."""
         return tuple(dict.fromkeys(
             (n.var, n.label) for n in self.path.nodes if n.var and not n.bound))
 

@@ -356,10 +356,7 @@ config loads, and the page names what each step went *through*
 
 A pattern that is not a line — a thesis nothing objects to, an inference
 with no conclusion yet — takes an `output:` instead, and renders as a page
-of its matches: one row per match, one column per named node. The page is a
-view luria supplies, so it is held fresh and kept out of the reference scan
-like any other view, and it is a list, never a finding; `report: true` is
-what makes matches a lint class, and a pattern may have both ([ADR-tmpgicpu](../record/decisions.d/ADR-tmpgicpu.md)).
+of its matches, a view luria supplies ([ADR-tmpgicpu](../record/decisions.d/ADR-tmpgicpu.md)).
 
 **Tag rules.** A vocabulary says what a value *means*; a group says which of
 them may appear together, because some fields are an axis rather than a pile.

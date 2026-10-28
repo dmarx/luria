@@ -1992,8 +1992,7 @@ class View:
     name: str
     # The Jinja source, relative to the project root. Keep it out of every
     # directory the link fixer scans: a code inside an expression would be
-    # rewritten into a link. A `luria:NAME` string is one of luria's own
-    # templates instead (`luria/view_templates/`).
+    # rewritten into a link. Or `luria:NAME`, one of luria's own.
     template: Path | str
     # Where the rendered text lands: any path in the repository, a root file
     # such as `CLAUDE.md` included. A markdown output is stamped as generated.
@@ -2005,24 +2004,21 @@ class View:
     # read has changed since. For an output that is published: a submitted
     # paper, a released document.
     pin: bool = False
-    # Values the template reads by name, for a view luria supplies.
+    # For a view luria supplies: the values its template reads, and the
+    # config key that asked for it (`patterns.NAME`).
     context: dict = dcfield(default_factory=dict, compare=False, hash=False)
-    # The declaration that asked luria for this view (`patterns.NAME`), or ""
-    # for one the project declared under `views:`.
     origin: str = ""
 
     @property
     def where(self) -> str:
-        """The config key a finding about this view names."""
         return self.origin or f"views.{self.name}"
 
 
 def _views(raw: dict, root: Path,
            patterns: dict | None = None) -> dict[str, View]:
-    """Every declared view, then the page of each pattern with an `output`.
-    Both paths are required: a view without a template renders nothing, and
-    a view without an output renders it nowhere — either looks exactly like
-    a view that is current (DP-15)."""
+    """Every declared view. Both paths are required: a view without a
+    template renders nothing, and a view without an output renders it
+    nowhere — either looks exactly like a view that is current (DP-15)."""
     out: dict[str, View] = {}
     for name, spec in raw.items():
         spec = spec or {}
@@ -2044,20 +2040,16 @@ def _views(raw: dict, root: Path,
             raise ValueError(f"{where}: `output` is the template itself, so "
                              "the first render would overwrite its source")
         out[str(name)] = view
-    # A pattern's page is a view luria supplies (#373): one template for
-    # every record, read through the same `match` a template calls.
-    for pattern in (patterns or {}).values():
-        if pattern.output is None:
-            continue
-        key = f"patterns.{pattern.name}"
-        out[key] = View(
-            name=key, template="luria:pattern.md.j2", output=pattern.output,
-            origin=key,
-            context={"pattern": pattern.name, "source": pattern.match,
-                     "blurb": pattern.blurb,
-                     "title": pattern.title or pattern.name.replace(
-                         "_", " ").capitalize(),
-                     "columns": list(pattern.parsed.named)})
+    # A pattern's page is a view luria supplies (#373).
+    for p in (patterns or {}).values():
+        if p.output is not None:
+            key = f"patterns.{p.name}"
+            out[key] = View(key, "luria:pattern.md.j2", p.output, origin=key,
+                            context={
+                                "pattern": p.name, "source": p.match,
+                                "blurb": p.blurb, "columns": p.parsed.named,
+                                "title": p.title or p.name.replace(
+                                    "_", " ").capitalize()})
     return out
 
 
@@ -2116,31 +2108,15 @@ class NamedPattern:
     (any scope; one that answers for no row is reported stale). A pattern
     named like a built-in class is refused at load: one name, one class.
 
-    **A pattern as a page.** `output:` renders every match there, and an
-    optional `title:` heads it: one row per match, one column per named node
-    in the order the pattern writes them, each cell its document's code and
-    title. Any pattern renders — a single node with `WHERE NOT`, a path
-    across schemes — which a chain cannot show:
-
-        patterns:
-          unopposed:
-            match: >-
-              (c:CLAIM {role: 'thesis'})
-              WHERE NOT (c)<-[:objects_to]-(:CLAIM)
-            output: docs/unopposed.md
-            title: Unopposed theses
-
-    The page is a view luria supplies (ADR-130): `luria index` writes it,
-    `--check` holds it fresh, and nothing on it is a lint failure. It lists
-    every match, acknowledged or not; a pattern may have a page, a class, or
-    both."""
+    **A pattern as a page.** `output: docs/unopposed.md` (and an optional
+    `title:`) renders every match there, acknowledged or not: one row per
+    match, one column per named node. It is a view luria supplies (ADR-130),
+    a list and never a finding; a pattern may have a page, a class, or both."""
     name: str
     match: str
     blurb: str = ""
     report: bool = False
-    # Where the page of matches renders; unset renders none.
     output: Path | None = None
-    # The page's heading; defaults to the name.
     title: str = ""
     # The parse, done once at load so a malformed pattern is a config error
     # rather than a page that fails to render.
@@ -2741,14 +2717,13 @@ def _patterns(raw: dict, schemes: dict,
     out: dict[str, NamedPattern] = {}
     for name, spec in raw.items():
         name = str(name)
-        where = f"luria.yaml: patterns.{name}: "
         table = spec if isinstance(spec, dict) else {"match": spec}
         if unknown := set(table) - {"match", "blurb", "report", "output",
                                     "title"}:
             raise ValueError(
-                where + f"{', '.join(sorted(unknown))} is not a key — a "
-                f"pattern is its `match:`, an optional `blurb:`, `report:` "
-                f"for a warning class, and `output:` and `title:` for a page")
+                f"luria.yaml: patterns.{name}: {', '.join(sorted(unknown))} "
+                f"is not a key — a pattern is its `match:`, an optional "
+                f"`blurb:`, `report:`, `output:` and `title:`")
         report = table.get("report", False)
         if not isinstance(report, bool):
             raise ValueError(
@@ -2768,13 +2743,14 @@ def _patterns(raw: dict, schemes: dict,
         parsed = parse(name, source)
         output = root / str(table["output"]) if table.get("output") else None
         title = str(table.get("title") or "").strip()
+        where = f"luria.yaml: patterns.{name}: "
         if title and output is None:
             raise ValueError(where + "`title` names a page, and there is no "
                              "`output` for it to head")
         if output is not None and not parsed.named:
             raise ValueError(where + "names no node, so a page of its matches "
-                             "would have no columns — name the nodes to show, "
-                             "such as `(c:CLAIM)`")
+                             "would have no columns — name one, as in "
+                             "`(c:CLAIM)`")
         out[name] = NamedPattern(name=name, match=source.strip(),
                                  blurb=str(table.get("blurb", "")).strip(),
                                  report=report, output=output, title=title,
@@ -2849,22 +2825,17 @@ def _chains(raw: dict, schemes: dict, root: Path,
 
 
 def _check_rendered(cfg: "Config") -> None:
-    """Refuse two renderers writing one path, naming both.
-
-    Two views at one path overwrite each other on every build, and whichever
-    wins looks exactly like a correct page (DP-15). Every renderer whose path
-    the config chooses is gathered here, in one place, so a new kind of view
-    cannot be checked against some of the others and not the rest."""
+    """Refuse two renderers writing one path, naming both: whichever wins
+    looks exactly like a correct page (DP-15). Every renderer is gathered
+    here, so none is checked against only some of the others."""
     from . import reports
-    claimed: list[tuple[Path, str, str]] = []      # path, owner, its key
+    claimed = []                                    # (path, owner, key)
     for prefix, s in cfg.schemes.items():
         key = f"schemes.{prefix}"
-        if s.output is not None:            # the page, or the index's folder
-            claimed.append((s.output, key, key))
-        if s.render == "index":
-            claimed.append((s.index_path, key, key))
-    claimed += [(cfg.reports / name, f"the status report {name}",
-                 "paths.reports") for name in reports.NAMES]
+        claimed += [(p, key, key) for p in (s.output, s.render == "index"
+                                            and s.index_path) if p]
+    claimed += [(cfg.reports / n, f"the status report {n}", "paths.reports")
+                for n in reports.NAMES]
     claimed.append((cfg.record_doc, "the record description", "paths.docs"))
     if cfg.owns_schema:
         claimed.append((cfg.config_doc, "the configuration reference",
@@ -2874,13 +2845,11 @@ def _check_rendered(cfg: "Config") -> None:
     claimed += [(v.output, v.where, v.where) for v in cfg.views.values()]
     taken: dict[Path, str] = {}
     for path, owner, key in claimed:
-        path = Path(os.path.normpath(path))     # `docs/./x.md` is `docs/x.md`
-        if path in taken and taken[path] != owner:
+        path = Path(os.path.normpath(path))
+        if taken.setdefault(path, owner) != owner:
             raise ValueError(
                 f"luria.yaml: {key}: `output` {cfg.rel(path)} is already "
-                f"where {taken[path]} renders — two views at one path "
-                f"overwrite each other on every build")
-        taken.setdefault(path, owner)
+                f"where {taken[path]} renders")
 
 
 # `status` alone, and only because it has a vocabulary a scheme need not

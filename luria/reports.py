@@ -339,9 +339,7 @@ def unbound_lineage(base: Path | None = None) -> str:
     return "\n".join(out)
 
 
-# Each report's file name and renderer — one table, so `outputs` and the
-# config's check that nothing else claims these paths (#373) read the same
-# names.
+# One table, which `outputs` and the config's collision check both read.
 NAMES = {
     "reference-status.md": reference_status,
     "pending-decisions.md": pending_decisions,

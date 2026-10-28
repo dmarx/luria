@@ -1,7 +1,5 @@
-{#- A pattern's page of matches (#373): the view luria supplies for a
-    pattern with an `output:`. Its values come from `config._views`;
-    `match` is the same function every template calls. Codes are written
-    bare, so the link fixer makes the links in the page's own frame. -#}
+{#- A pattern's page (#373); values from `config._views`. Codes are bare:
+    the link fixer links them in the page's frame. -#}
 {% set rows = match(pattern) %}
 # {{ title }}
 
