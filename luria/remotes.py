@@ -110,6 +110,11 @@ def references(text: str) -> list[RemoteRef]:
     found: list[RemoteRef] = []
     for remote in sorted(current().remotes.values(),
                          key=lambda r: len(r.prefix), reverse=True):
+        # The pattern opens with the escaped prefix and delimiter, so a text
+        # without them cannot match: skipped before the regex, which every
+        # scanned file would otherwise run once per remote.
+        if remote.prefix + remote.delim not in text:
+            continue
         for m in remote_pattern(remote).finditer(text):
             if any(r.start < m.end() and m.start() < r.end for r in found):
                 continue

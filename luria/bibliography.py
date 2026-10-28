@@ -58,8 +58,15 @@ _NAME = (r"(?:(?:van|von|de|der|den|du|da|di|la|le|el|al)\s+)*"
 # Texas at Austin`); a lower-case word that is not one of them ends the lead.
 _JOIN = r"(?:(?:\s*(?:,|&|\band\b)\s*)+|\s+(?:(?:of|at|for|the)\s+)?)"
 _ETAL = r"(?:,?\s+et\s+al\.?)"
+# The run of names is possessive (`{0,40}+`): once taken, it is not given
+# back. `_NAME` and `_JOIN` overlap — `A.` is a surname and an initial, a run
+# of commas splits several ways — so a run the engine may give back is tried
+# every way it splits before a lead that cannot match fails. A 26-author
+# entry took four minutes that way, holding the GIL throughout. The one match
+# committing loses is a year carved out of a name's tail — `F2013 and F2016`
+# read as `F2013 and F` in 2016 — which was never a lead.
 _LEAD_RE = re.compile(
-    rf"^(?:\*\*)?{_NAME}(?:{_ETAL}|{_JOIN}{_NAME}){{0,40}}{_ETAL}?"
+    rf"^(?:\*\*)?{_NAME}(?:{_ETAL}|{_JOIN}{_NAME}){{0,40}}+{_ETAL}?"
     r",?\s*\(?(?:1[89]|20)\d{2}[a-z]?\)?(?:\*\*)?[.,]?")
 # A classic author list ahead of the title: `A. Vaswani, N. Shazeer, et al.`
 _INITIAL_NAME = r"(?:[A-Z]\.\s?)+[A-Z][\w'’-]+"

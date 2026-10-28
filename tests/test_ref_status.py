@@ -48,6 +48,15 @@ def test_repeated_reference_on_one_line_is_one_site(project):
     assert len(result.cited["ADR-012"]) == 1
 
 
+def test_a_line_is_numbered_as_splitlines_counts_it(project):
+    """The scan matches the whole text and files each code by line, so its
+    line breaks have to be the ones `str.splitlines` breaks on — a form feed
+    and a Unicode line separator among them — or a site would name a line
+    the per-line scan it replaced did not."""
+    docs, result = scan(project, "one\x0ctwo\u2028per ADR-012\nADR-012 again\n")
+    assert [c.line for c in result.cited["ADR-012"]] == [3, 4]
+
+
 def test_a_document_does_not_cite_itself(project):
     """Every decision's own title names it; that is not a reference to follow."""
     path = decision(project, 12, "Superseded")

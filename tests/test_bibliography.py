@@ -121,3 +121,18 @@ def test_fences_comments_headings_and_tables_are_never_entries():
             "# Kingma et al. (2014), LIT-001\n\n"
             "| Kingma et al. (2014) | LIT-001 |\n| --- | --- |\n")
     assert bibliography.regions(body) == []
+
+
+def test_an_author_list_longer_than_the_lead_allows_fails_fast():
+    """A lead that cannot match must fail in time linear in its length.
+
+    The name and joiner patterns overlap — `A.` is a surname and an
+    initial, and a run of commas splits several ways — so a repetition the
+    engine may give back explores every split before it fails. A real
+    26-author entry in dmarx/nucleation took four minutes, holding the GIL
+    the whole time, and stalled every other thread of the lint with it."""
+    import time
+    authors = ", ".join(f"Surname{i}, A. B. C." for i in range(60))
+    start = time.perf_counter()
+    bibliography.is_entry(f"{authors} (2026). A title. *Nature* 1: 2–3.")
+    assert time.perf_counter() - start < 1.0
