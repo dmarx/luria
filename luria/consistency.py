@@ -34,7 +34,8 @@ holds the same line at the pattern's two ends, wherever its middle goes.
 **A pattern names schemes and fields.** Every label a declared scheme, every
 hop a reference held by the node the arrow leaves and able to land on the
 node it reaches, every property a field the node can hold. A pattern that
-misses any of these matches nothing, silently.
+misses any of these matches nothing, silently. A pattern page's `facet_by`
+names a field some scheme of its named nodes can hold, as a chain's does.
 """
 from __future__ import annotations
 
@@ -105,6 +106,10 @@ def _pattern_facts(patterns: dict) -> list[Fact]:
                         for f in hop.fields]
                 if hop.variable:
                     out.append(Fact("pat_closure", (name, w, h)))
+        if spec.output is not None and spec.layout == "outline":
+            out += [Fact("pat_facet", (name, f)) for f in spec.facet_by]
+            out += [Fact("pat_shown", (name, label))
+                    for label in dict.fromkeys(l for _, l in pattern.named)]
     return out
 
 
@@ -431,5 +436,19 @@ def check_patterns(patterns: dict, schemes: dict) -> None:
             f"`{_node_text(node)}`: `{key}` is not a field {node.label} "
             f"declares, so the property never holds "
             f"(nameable: {', '.join(known)})")))
+    for name, facet in derived.get("pattern_facet_unheld", ()):
+        labels = list(dict.fromkeys(l for _, l in patterns[name].parsed.named))
+        who = (f"{labels[0]} does not declare" if len(labels) == 1
+               else f"neither {labels[0]} nor {labels[1]} declares"
+               if len(labels) == 2
+               else f"none of {', '.join(labels[:-1])} or {labels[-1]} "
+                    f"declares")
+        known = sorted(set().union(*(nameable(schemes[l]) for l in labels
+                                     if l in schemes)))
+        found.append(((order.index(name), 99,
+                       patterns[name].facet_by.index(facet), 0, 0),
+                      where(name) + (
+            f"`facet_by` names {facet!r}, which {who}, so every step would "
+            f"render it blank (nameable: {', '.join(known)})")))
     if found:
         raise ValueError(min(found)[1])

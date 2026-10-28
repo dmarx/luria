@@ -39,8 +39,28 @@ unfinished:
   output: docs/unfinished.md
 ```
 
-[Unfinished steps](docs/unfinished.md) lists each match, one column per
-named node: the inference and the premise it has.
+[Unfinished steps](docs/unfinished.md) lists each match as an outline:
+the inference, and under it the premise it has. A page nests its matches by
+shared prefix, the way a chain nests its steps; `layout: table` gives one
+row per match instead.
+
+**Two patterns can share a page.** A step and the objection to it are a
+pattern and a longer one, and naming one `output` for both merges their
+matches into one outline:
+
+```yaml
+steps:
+  match: (b:CLAIM)<-[:concludes]-(i:INF)
+  output: docs/disputes.md
+disputed:
+  match: (b:CLAIM)<-[:concludes]-(i:INF)<-[:challenges]-(o:OBJ)
+  output: docs/disputes.md
+```
+
+[Steps and their objections](docs/disputes.md) puts every inference under
+the claim it concludes, and [OBJ-001](record/objections.d/OBJ-001.md) under the one step it challenges.
+The other steps are there too, with nothing under them: the shorter pattern
+matched them, and the longer one only adds what it finds.
 
 ```
 LURIA_ROOT=$PWD luria index

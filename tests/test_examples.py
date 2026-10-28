@@ -659,10 +659,23 @@ def test_a_line_of_argument_runs_through_its_inferences(example):
 
 def test_what_the_record_calls_unfinished_is_a_page(example):
     """A pattern with an `output` renders its matches (#373): INF-004 has a
-    premise and no conclusion, and is the one row."""
+    premise and no conclusion, and is the one match, outlined."""
     root = example("argument-map")
     page = (root / "docs/unfinished.md").read_text()
     assert "· 1 match\n" in page
-    assert ("| [INF-004](../record/inferences.d/INF-004.md) — What the repair "
-            "should cost | [CLAIM-005](../record/claims.d/CLAIM-005.md) — The "
-            "bridge should be repaired before winter |") in page
+    assert ("- [INF-004](../record/inferences.d/INF-004.md) — What the repair "
+            "should cost *(Proposed)*\n  - [CLAIM-005](../record/claims.d/"
+            "CLAIM-005.md) — The bridge should be repaired before winter "
+            "*(Active)*\n") in page
+
+
+def test_a_step_and_its_objections_share_one_outline(example):
+    """Two patterns naming one output merge: every step is listed, and the
+    objection sits under the one step it challenges."""
+    root = example("argument-map")
+    page = (root / "docs/disputes.md").read_text()
+    steps = [line.split("](")[0].strip(" -[") for line in page.splitlines()
+             if line.lstrip().startswith("- [")]
+    assert steps == ["CLAIM-003", "INF-001", "CLAIM-005", "INF-002",
+                     "CLAIM-006", "INF-003", "OBJ-001"]
+    assert "    - [OBJ-001](../record/objections.d/OBJ-001.md)" in page

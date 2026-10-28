@@ -1,23 +1,46 @@
-{#- A pattern's page (#373); values from `config._views`. Codes are bare:
+{#- A pattern's page (#373), shared by every pattern naming its output;
+    values from `config._views`. An outline's steps go through the `step`
+    filter, the renderer a chain's steps use; a table writes codes bare and
     the link fixer links them in the page's frame. -#}
-{% set rows = match(pattern) %}
 # {{ title }}
 
 {% if blurb %}
 {{ blurb }}
 
 {% endif %}
-`{{ source }}` · {{ rows | length }} match{{ "" if rows | length == 1 else "es" }}
+{% if layout == "table" %}
+{% for p in patterns %}
+{% set rows = match(p.name) %}
+{% if patterns | length > 1 %}**{{ p.name }}** · {% endif %}`{{ p.source }}` · {{ rows | length }} match{{ "" if rows | length == 1 else "es" }}
 
 {% if not rows %}
 No matches.
 {% else %}
-|{% for var, label in columns %} {{ var }} ({{ label }}) |{% endfor %}
+|{% for var, label in p.columns %} {{ var }} ({{ label }}) |{% endfor %}
 
-|{% for _ in columns %}---|{% endfor %}
+|{% for _ in p.columns %}---|{% endfor %}
 
 {% for row in rows %}
-|{% for var, _ in columns %} {{ row[var].code }} — {{ row[var].title | cell }} |{% endfor %}
+|{% for var, _ in p.columns %} {{ row[var].code }} — {{ row[var].title | cell }} |{% endfor %}
 
 {% endfor %}
+{% endif %}
+{% if not loop.last %}
+
+{% endif %}
+{% endfor %}
+{% else %}
+{% set tree = outline(patterns | map(attribute="name") | list) %}
+{% for p in patterns %}
+{% set n = tree.counts[p.name] %}
+{% if patterns | length > 1 %}**{{ p.name }}** · {% endif %}`{{ p.source }}` · {{ n }} match{{ "" if n == 1 else "es" }}
+
+{% endfor %}
+{% if not tree.steps %}
+No matches.
+{% else %}
+{% for s in tree.steps %}
+{{ "  " * s.depth }}- {{ s.doc | step(facet_by) }}
+{% endfor %}
+{% endif %}
 {% endif %}

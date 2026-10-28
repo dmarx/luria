@@ -2040,16 +2040,28 @@ def _views(raw: dict, root: Path,
             raise ValueError(f"{where}: `output` is the template itself, so "
                              "the first render would overwrite its source")
         out[str(name)] = view
-    # A pattern's page is a view luria supplies (#373).
-    for p in (patterns or {}).values():
-        if p.output is not None:
-            key = f"patterns.{p.name}"
-            out[key] = View(key, "luria:pattern.md.j2", p.output, origin=key,
-                            context={
-                                "pattern": p.name, "source": p.match,
-                                "blurb": p.blurb, "columns": p.parsed.named,
-                                "title": p.title or p.name.replace(
-                                    "_", " ").capitalize()})
+    # A pattern's page is a view luria supplies (#373), one per output
+    # however many patterns share it.
+    for group in pages(patterns or {}).values():
+        first = group[0]
+
+        def chosen(key, default):
+            return next((getattr(p, key) for p in group if key in p._set),
+                        default)
+        key = f"patterns.{first.name}"
+        names = [f"patterns.{p.name}" for p in group]
+        origin = (" and ".join(names) if len(names) < 3
+                  else ", ".join(names[:-1]) + " and " + names[-1])
+        out[key] = View(key, "luria:pattern.md.j2", first.output,
+                        origin=origin, context={
+                            "patterns": [
+                                {"name": p.name, "source": p.match,
+                                 "columns": p.parsed.named} for p in group],
+                            "layout": first.layout,
+                            "facet_by": chosen("facet_by", ("status",)),
+                            "blurb": chosen("blurb", ""),
+                            "title": chosen("title", "") or first.name.replace(
+                                "_", " ").capitalize()})
     return out
 
 
@@ -2109,15 +2121,52 @@ class NamedPattern:
     named like a built-in class is refused at load: one name, one class.
 
     **A pattern as a page.** `output: docs/unopposed.md` (and an optional
-    `title:`) renders every match there, acknowledged or not: one row per
-    match, one column per named node. It is a view luria supplies (ADR-130),
-    a list and never a finding; a pattern may have a page, a class, or both."""
+    `title:`) renders every match there, acknowledged or not. It is a view
+    luria supplies (ADR-130), a list and never a finding; a pattern may have
+    a page, a class, or both.
+
+    The page is an outline. A match is the path of its named nodes in
+    pattern order, and matches merge where they share a prefix: each node
+    renders once under its parent as a chain step does,
+    `- [CODE](link) — title *(facets)*`, siblings and roots in code order.
+    `facet_by` names what a step shows beside its title, `[status]` unless
+    set; each facet is a field some scheme of the named nodes can hold, and
+    a node whose scheme cannot hold one omits it. `layout: table` gives one
+    row per match and one column per named node instead, for pairs that
+    nesting would not help.
+
+    **Patterns may share a page.** Several naming one `output` render one
+    outline of all their matches, merged by position — the n-th named node
+    of each is the n-th column, whatever its variable is called — so a
+    pattern that is a prefix of a longer one lists what the longer one
+    misses:
+
+        patterns:
+          bare: (c:CLAIM)<-[:concludes]-(g:ARG)
+          undercut: (c:CLAIM)<-[:concludes]-(g:ARG)<-[:undercuts]-(u:CLAIM)
+
+    With `output: docs/dialectic.md` on both, every argument sits under its
+    conclusion, undercut or not, and each undercutter under the argument.
+    Tables sharing a page are listed one after another, each with its own
+    columns. They share one `layout`; `title`, `blurb` and `facet_by` are
+    set on any one of them (or the same on several), and the page is titled
+    after the first pattern when none sets one. An outline is as deep as
+    its longest pattern: a reply to a reply to a reply, unbounded, is a
+    transitive walk, which is a chain's."""
     name: str
     match: str
     blurb: str = ""
     report: bool = False
     output: Path | None = None
     title: str = ""
+    # How the page arranges its matches: `outline` nests them by shared
+    # prefix, `table` lists one row per match.
+    layout: str = "outline"
+    # What each step of an outline shows beside its title, as on a chain.
+    facet_by: tuple[str, ...] = ("status",)
+    # The keys the table set, so a page several patterns share can tell a
+    # value one of them chose from a default.
+    _set: frozenset = dcfield(default=frozenset(), compare=False, repr=False)
     # The parse, done once at load so a malformed pattern is a config error
     # rather than a page that fails to render.
     _parsed: object = dcfield(default=None, compare=False, repr=False)
@@ -2719,11 +2768,12 @@ def _patterns(raw: dict, schemes: dict,
         name = str(name)
         table = spec if isinstance(spec, dict) else {"match": spec}
         if unknown := set(table) - {"match", "blurb", "report", "output",
-                                    "title"}:
+                                    "title", "layout", "facet_by"}:
             raise ValueError(
                 f"luria.yaml: patterns.{name}: {', '.join(sorted(unknown))} "
                 f"is not a key — a pattern is its `match:`, an optional "
-                f"`blurb:`, `report:`, `output:` and `title:`")
+                f"`blurb:`, `report:`, `output:`, `title:`, `layout:` and "
+                f"`facet_by:`")
         report = table.get("report", False)
         if not isinstance(report, bool):
             raise ValueError(
@@ -2751,14 +2801,77 @@ def _patterns(raw: dict, schemes: dict,
             raise ValueError(where + "names no node, so a page of its matches "
                              "would have no columns — name one, as in "
                              "`(c:CLAIM)`")
+        layout = str(table.get("layout") or "outline")
+        if "layout" in table and output is None:
+            raise ValueError(where + "`layout` arranges a page, and there is "
+                             "no `output` for it to arrange")
+        if layout not in LAYOUTS:
+            raise ValueError(where + f"`layout` is {layout!r} — it is "
+                             "`outline` (the default) or `table`")
+        facets = table.get("facet_by", ("status",))
+        facet_by = tuple(str(f) for f in (
+            [facets] if isinstance(facets, str) else facets or ()))
+        if "facet_by" in table and output is None:
+            raise ValueError(where + "`facet_by` annotates a page's steps, "
+                             "and there is no `output` for it to annotate")
+        if "facet_by" in table and layout == "table":
+            raise ValueError(where + "`facet_by` annotates an outline's "
+                             "steps, and a `layout: table` page has none — "
+                             "drop it, or the `layout`")
         out[name] = NamedPattern(name=name, match=source.strip(),
                                  blurb=str(table.get("blurb", "")).strip(),
                                  report=report, output=output, title=title,
-                                 _parsed=parsed)
+                                 layout=layout, facet_by=facet_by,
+                                 _set=frozenset(table), _parsed=parsed)
     if out:
         from . import consistency
         consistency.check_patterns(out, schemes)
+        _shared_pages(out, root)
     return out
+
+
+LAYOUTS = ("outline", "table")
+
+
+def pages(patterns: dict) -> dict[Path, list[NamedPattern]]:
+    """The patterns with a page, by the page they render to, in the order
+    they are declared. Several may share one: their matches merge into one
+    outline (or one page of tables), headed by one title."""
+    out: dict[Path, list[NamedPattern]] = {}
+    for p in patterns.values():
+        if p.output is not None:
+            out.setdefault(Path(os.path.normpath(p.output)), []).append(p)
+    return out
+
+
+def _shared_pages(patterns: dict, root: Path) -> None:
+    """Refuse patterns sharing a page that disagree about it. The layout is
+    the page's shape, so every pattern on it has one; `title`, `blurb` and
+    `facet_by` are the page's too, so at most one value is set among them,
+    which the first pattern setting it supplies."""
+    for path, group in pages(patterns).items():
+        rel = Path(os.path.relpath(path, root)).as_posix()
+        first = group[0]
+        for p in group[1:]:
+            if p.layout != first.layout:
+                raise ValueError(
+                    f"luria.yaml: patterns.{p.name}: `layout` is {p.layout}, "
+                    f"and patterns.{first.name} renders to {rel} as "
+                    f"{'an' if first.layout == 'outline' else 'a'} "
+                    f"{first.layout} — patterns sharing an output share one "
+                    f"page, so they share its layout")
+        for key in ("title", "blurb", "facet_by"):
+            setting = [p for p in group if key in p._set]
+            for p in setting[1:]:
+                mine, theirs = getattr(p, key), getattr(setting[0], key)
+                if mine != theirs:
+                    shown = (lambda v: repr(list(v)) if isinstance(v, tuple)
+                             else repr(v))
+                    raise ValueError(
+                        f"luria.yaml: patterns.{p.name}: `{key}` is "
+                        f"{shown(mine)}, and patterns.{setting[0].name} gives "
+                        f"{rel} the {key} {shown(theirs)} — set it on one of "
+                        f"them")
 
 
 def _reliance(raw, schemes: dict) -> tuple[str, ...]:
@@ -2842,7 +2955,10 @@ def _check_rendered(cfg: "Config") -> None:
                         "paths.docs"))
     claimed += [(c.output, f"chains.{c.name}", f"chains.{c.name}")
                 for c in cfg.chains.values()]
-    claimed += [(v.output, v.where, v.where) for v in cfg.views.values()]
+    # A pattern page names every pattern sharing it as its owner, and the
+    # first as the key to fix.
+    claimed += [(v.output, v.where, v.name if v.origin else v.where)
+                for v in cfg.views.values()]
     taken: dict[Path, str] = {}
     for path, owner, key in claimed:
         path = Path(os.path.normpath(path))
