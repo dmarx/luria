@@ -455,12 +455,26 @@ def reference_code(value: str) -> str | None:
     return m.group(1) if m else None
 
 
-def resolvable(prefix: str) -> set[str]:
+# prefix → (numbered, temporary, codes). The listing dicts are the scheme's
+# own cached ones, returned as the same objects until its directory changes,
+# so holding them and comparing identity is the whole invalidation: a new
+# listing is a new dict. The checks ask once per reference value, which on a
+# large record was tens of thousands of rebuilds of the same set.
+_RESOLVABLE: dict[str, tuple[dict, dict, frozenset[str]]] = {}
+
+
+def resolvable(prefix: str) -> frozenset[str]:
     """Every code a reference into `prefix` may name: the numbered documents
     and the temporary ones awaiting concretization (ADR-049)."""
     scheme = current().schemes[prefix]
-    return ({scheme.code(n) for n in scheme.documents()}
-            | {f"{prefix}-{tail}" for tail in scheme.temp_documents()})
+    numbered, temps = scheme.documents(), scheme.temp_documents()
+    held = _RESOLVABLE.get(prefix)
+    if held is not None and held[0] is numbered and held[1] is temps:
+        return held[2]
+    codes = frozenset({scheme.code(n) for n in numbered}
+                      | {f"{prefix}-{tail}" for tail in temps})
+    _RESOLVABLE[prefix] = (numbered, temps, codes)
+    return codes
 
 
 def codes_of(field: Field, raw) -> list[str]:

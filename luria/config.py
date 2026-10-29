@@ -68,7 +68,7 @@ import re
 from contextlib import contextmanager
 from dataclasses import dataclass, field as dcfield, fields as dcfields
 import yaml
-from functools import lru_cache
+from functools import cached_property, lru_cache
 from typing import ClassVar, cast
 
 from omegaconf import OmegaConf
@@ -2500,40 +2500,45 @@ class Config:
 
     def is_generated(self, path: Path) -> bool:
         """A view the generator owns. Rewriting one is pointless — the next
-        build undoes it — so the reference fixer skips them.
+        build undoes it — so the reference fixer skips them."""
+        files, dirs = self._generated
+        return path in files or path.parent in dirs
+
+    @cached_property
+    def _generated(self) -> tuple[frozenset[Path], frozenset[Path]]:
+        """What `is_generated` matches, as (files, parent directories) —
+        derived from the config once, because the scanners ask about every
+        file in the record and each ask used to compare the path against
+        every view and every vocabulary directory in turn.
 
         The status reports count too (#35): they *list* retired and dangling
         codes, so scanning them would report the report — every flagged code
         would gain a citation site inside the page that flags it, and the
         view could never converge."""
-        if path.parent == self.reports:
-            return True
+        files: set[Path] = set()
+        dirs: set[Path] = {self.reports}
         # The configuration reference (`luria index` renders it from this
         # module's own dataclasses). Generated for the usual reason — a
         # hand-written copy of a schema drifts — and flagged here for a second
         # one: the page is *made* of example codes, and `doc_refs.doc_files`
         # filters on this method, so the bare-reference lint and the fixer
         # both leave it alone.
-        if path == self.config_doc:
-            return True
+        files.add(self.config_doc)
         # The record description, generated from this config for the same two
         # reasons: a hand-written "how our record works" drifts, and the page
         # is made of example codes.
-        if path == self.record_doc:
-            return True
+        files.add(self.record_doc)
         # A chain page (#171). Generated for the usual reason, and excluded
         # here for a sharper one: its whole job is to show a line *including*
         # its retired steps, so scanning it would report every superseded
         # document in every chain as an unacknowledged citation — at a site
         # the reader must not edit, in a file the next build overwrites.
-        if any(path == c.output for c in self.chains.values()):
-            return True
+        files.update(c.output for c in self.chains.values())
         # A view's output (ADR-130), for the chain page's reason: a
         # code in it was put there by a template, so a finding sited in the
         # output names a line nobody can annotate. What a view reads is
         # checked at the template line instead (`view_reads`).
-        if any(path == v.output for v in self.views.values()):
-            return True
+        files.update(v.output for v in self.views.values())
         for s in self.schemes.values():
             # The index, and a page per value of every field it groups by —
             # the axis's among them, on the same template and in the same
@@ -2548,14 +2553,13 @@ class Config:
             # Worse, the page is written in the same pass that renders the
             # report, so the report saw the *previous* run's copy and
             # `luria index` stopped converging.
-            if s.render == "index" and (
-                    path == s.index_path
-                    or any(path.parent == s.vocab_dir(f)
-                           for f in s.grouped_fields)):
-                return True
-            if s.output == path:
-                return True
-        return any(path.parent == j.output for j in self.journals.values())
+            if s.render == "index":
+                files.add(s.index_path)
+                dirs.update(s.vocab_dir(f) for f in s.grouped_fields)
+            files.add(s.output)
+        dirs.update(j.output for j in self.journals.values())
+        # An unset output is None, which no path equals.
+        return frozenset(files - {None}), frozenset(dirs - {None})
 
     def is_template(self, path: Path) -> bool:
         """A scheme's `_template.md` — a form, not a document.
@@ -2586,10 +2590,19 @@ class Config:
         journal directory."""
         if path in self.historical:
             return True
-        if path.parent in {self.root / d for d in self.fragments}:
+        fragment_dirs, journal_dirs = self._historical_dirs
+        if path.parent in fragment_dirs:
             return True
-        return any(j.dir in path.parents or j.output in path.parents
-                   for j in self.journals.values())
+        return not journal_dirs.isdisjoint(path.parents)
+
+    @cached_property
+    def _historical_dirs(self) -> tuple[frozenset[Path], frozenset[Path]]:
+        """(fragment directories, journal directories) for `is_historical`,
+        derived once: it is asked about every scanned file on every scan."""
+        journals = self.journals.values()
+        return (frozenset(self.root / d for d in self.fragments),
+                frozenset([*(j.dir for j in journals),
+                           *(j.output for j in journals)]))
 
     def link_base(self, path: Path) -> Path:
         """The directory a link written in `path` resolves against.
@@ -2599,23 +2612,43 @@ class Config:
         breaks the moment it is collected (ADR-005). Two kinds of fragment
         qualify — a changelog/devlog fragment, and a document-rendered scheme's
         source, which is the same relationship wearing a different name."""
-        for name, fragment in self.fragments.items():
-            if path.parent == self.root / name:
-                return (self.root / fragment.target).parent
-        for scheme in self.schemes.values():
-            if scheme.render == "document" and scheme.output \
-                    and path.parent == scheme.dir:
-                return scheme.output.parent
-            # An index scheme's stub is authored beside the sources but IS the
-            # view's prose, so its links resolve from where the index renders.
-            # The documents themselves resolve from where they sit — they are
-            # read in place, arrived at by link (ADR-021).
-            if scheme.render == "index" and path == scheme.stub:
-                return scheme.view
+        fragments, sources, stubs = self._link_bases
+        if (base := fragments.get(path.parent)) is not None:
+            return base
+        # The first scheme in declaration order wins, as a walk would find it.
+        hits = [hit for hit in (sources.get(path.parent), stubs.get(path))
+                if hit is not None]
+        if hits:
+            return min(hits)[1]
         for journal in self.journals.values():
             if journal.dir in path.parents:
                 return journal.output
         return path.parent
+
+    @cached_property
+    def _link_bases(self) -> tuple[dict[Path, Path],
+                                   dict[Path, tuple[int, Path]],
+                                   dict[Path, tuple[int, Path]]]:
+        """`link_base`'s rules, indexed once rather than walked per call:
+        fragment directory → base, and a document-rendered scheme's source
+        directory or an index scheme's stub → (the scheme's position, base).
+        The first rule to match wins, so a key keeps its first entry."""
+        fragments: dict[Path, Path] = {}
+        for name, fragment in self.fragments.items():
+            fragments.setdefault(self.root / name,
+                                 (self.root / fragment.target).parent)
+        sources: dict[Path, tuple[int, Path]] = {}
+        stubs: dict[Path, tuple[int, Path]] = {}
+        for i, scheme in enumerate(self.schemes.values()):
+            if scheme.render == "document" and scheme.output:
+                sources.setdefault(scheme.dir, (i, scheme.output.parent))
+            # An index scheme's stub is authored beside the sources but IS the
+            # view's prose, so its links resolve from where the index renders.
+            # The documents themselves resolve from where they sit — they are
+            # read in place, arrived at by link (ADR-021).
+            if scheme.render == "index":
+                stubs.setdefault(scheme.stub, (i, scheme.view))
+        return fragments, sources, stubs
 
     def rel(self, path: Path) -> str:
         try:

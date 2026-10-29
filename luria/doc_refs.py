@@ -44,8 +44,10 @@ directory its links must resolve from.
 # acknowledge. Naming it in this sentence would put one back.
 from __future__ import annotations
 
+from bisect import bisect_right
 import re
 from dataclasses import dataclass
+from functools import lru_cache
 from pathlib import Path
 
 import yaml  # noqa: F401  (re-exported for callers that parse frontmatter)
@@ -225,8 +227,20 @@ def in_prose(spans: list[tuple[int, int]], pos: int) -> bool:
     return any(a <= pos < b for a, b in spans)
 
 
+# The masks every scanner builds ask for the same file's fences and code spans
+# several times over — `masked` alone asks for the fences twice — so each is
+# kept for the last few texts. Keyed on the text itself, so an edit is a miss;
+# a copy goes to each caller, so none can change another's spans.
+_SPAN_MEMO = 64
+
+
 def _fence_spans(text: str) -> list[tuple[int, int]]:
     """Spans covered by fenced code blocks, including their fence lines."""
+    return list(_fence_spans_of(text))
+
+
+@lru_cache(maxsize=_SPAN_MEMO)
+def _fence_spans_of(text: str) -> tuple[tuple[int, int], ...]:
     spans: list[tuple[int, int]] = []
     open_at: int | None = None
     marker = ""
@@ -240,10 +254,15 @@ def _fence_spans(text: str) -> list[tuple[int, int]]:
             open_at = None
     if open_at is not None:            # unclosed fence runs to EOF
         spans.append((open_at, len(text)))
-    return spans
+    return tuple(spans)
 
 
 def _code_span_spans(text: str) -> list[tuple[int, int]]:
+    return list(_code_span_spans_of(text))
+
+
+@lru_cache(maxsize=_SPAN_MEMO)
+def _code_span_spans_of(text: str) -> tuple[tuple[int, int], ...]:
     """Inline code spans, paired *within a paragraph*.
 
     Pairing backticks across the whole document is what a first pass did, and it
@@ -272,7 +291,7 @@ def _code_span_spans(text: str) -> list[tuple[int, int]]:
                 for m in CODE_SPAN_RE.finditer(part):
                     spans.append((offset + m.start(), offset + m.end()))
             offset += len(part)
-    return spans
+    return tuple(spans)
 
 
 def html_block_spans(text: str) -> list[tuple[int, int]]:
@@ -389,16 +408,19 @@ def masked(text: str, path: Path = ANY_MD) -> list[bool]:
     """One flag per character: True where a reference must be ignored."""
     mask = [False] * len(text)
 
+    # Slices rather than a loop per character: the mask is built for every
+    # file the scanners read, and a per-character loop was most of the cost.
     def cover(start: int, end: int) -> None:
-        for i in range(max(0, start), min(len(text), end)):
-            mask[i] = True
+        start, end = max(0, start), min(len(text), end)
+        if start < end:
+            mask[start:end] = [True] * (end - start)
 
     fm = _frontmatter_span(text)
     if fm:
         cover(*fm)
-        for span in prose_spans(text):    # …except the prose keys
-            for i in range(*span):
-                mask[i] = False
+        for start, end in prose_spans(text):    # …except the prose keys
+            if start < end:
+                mask[start:end] = [False] * (end - start)
     for span in _fence_spans(text):
         cover(*span)
     for span in _code_span_spans(text):
@@ -424,8 +446,9 @@ def masked(text: str, path: Path = ANY_MD) -> list[bool]:
             cover(m.start(), m.end())
     # …and last, put back whatever an `unexempt:` directive asked for.
     for start, end in unexempt_spans(text, path):
-        for i in range(max(0, start), min(len(text), end)):
-            mask[i] = False
+        start, end = max(0, start), min(len(text), end)
+        if start < end:
+            mask[start:end] = [False] * (end - start)
     return mask
 
 
@@ -438,10 +461,9 @@ def find_refs(text: str, path: Path = ANY_MD) -> list[Ref]:
 
     def take(kind: str, num: int, start: int, end: int,
              prefix: str = "") -> bool:
-        if any(mask[i] or claimed[i] for i in range(start, end)):
+        if any(mask[start:end]) or any(claimed[start:end]):
             return False
-        for i in range(start, end):
-            claimed[i] = True
+        claimed[start:end] = [True] * (end - start)
         refs.append(Ref(kind, num, start, end, text[start:end], line_of(start),
                         prefix=prefix))
         return True
@@ -450,11 +472,9 @@ def find_refs(text: str, path: Path = ANY_MD) -> list[Ref]:
     # ADR pattern reads the tail out of the middle of it and links a foreign
     # reference to a local file (ADR-016).
     for rref in remotes.references(text):
-        span = range(rref.start, rref.end)
-        if any(mask[i] or claimed[i] for i in span):
+        if any(mask[rref.start:rref.end]) or any(claimed[rref.start:rref.end]):
             continue
-        for i in span:
-            claimed[i] = True
+        claimed[rref.start:rref.end] = [True] * (rref.end - rref.start)
         # A scheme-shaped tail carries a number; a uid need not (ADR-024) —
         # `num` is display-only for remote refs, so 0 is a placeholder, not
         # a claim.
@@ -490,12 +510,19 @@ def find_refs(text: str, path: Path = ANY_MD) -> list[Ref]:
     patterns += [("issue", "", ISSUE_RE)]
 
     for kind, prefix, regex in patterns:
+        # A scheme's code and temp-code patterns both open with the literal
+        # prefix, so a text without it cannot match either. Checked before
+        # the regex because a record with many schemes runs two per scheme
+        # over every file, and most files name few of them. `DP_RE` is
+        # exempt: it matches the prose spelling, which has no prefix.
+        if (kind == "scheme" and regex is not DP_RE
+                and prefix not in text and re.escape(prefix) == prefix):
+            continue
         for m in regex.finditer(text):
             start, end = m.start(), m.end()
-            if any(mask[i] or claimed[i] for i in range(start, end)):
+            if any(mask[start:end]) or any(claimed[start:end]):
                 continue
-            for i in range(start, end):
-                claimed[i] = True
+            claimed[start:end] = [True] * (end - start)
             tail = m.groupdict().get("tail") or ""
             if kind == "remote-issue":
                 refs.append(Ref(kind, int(m.group("num")), start, end,
@@ -520,19 +547,14 @@ def find_refs(text: str, path: Path = ANY_MD) -> list[Ref]:
 
 def _line_index(text: str):
     starts = [0]
-    for i, ch in enumerate(text):
-        if ch == "\n":
-            starts.append(i + 1)
+    i = text.find("\n")
+    while i != -1:
+        starts.append(i + 1)
+        i = text.find("\n", i + 1)
 
     def line_of(pos: int) -> int:
-        lo, hi = 0, len(starts) - 1
-        while lo < hi:
-            mid = (lo + hi + 1) // 2
-            if starts[mid] <= pos:
-                lo = mid
-            else:
-                hi = mid - 1
-        return lo + 1
+        # The last line starting at or before `pos`, counted from 1.
+        return max(bisect_right(starts, pos), 1)
 
     return line_of
 
@@ -874,6 +896,10 @@ def upgrade_legacy_spellings() -> list[Path]:
                    re.finditer(r"^formerly:(?:\n- .*)*", text, re.MULTILINE)])
         edits: list[tuple[int, int, str]] = []
         for scheme in cfg.schemes.values():
+            # The temp pattern opens with the prefix and its hyphen.
+            if (f"{scheme.prefix}-" not in text
+                    and re.escape(scheme.prefix) == scheme.prefix):
+                continue
             live = None
             for m in scheme.temp_pattern.finditer(text):
                 if any(a <= m.start() < b for a, b in keep):
@@ -930,6 +956,10 @@ def legacy_spellings() -> list[str]:
         formerly = [m.span() for m in
                     re.finditer(r"^formerly:(?:\n- .*)*", text, re.MULTILINE)]
         for scheme in cfg.schemes.values():
+            # The temp pattern opens with the prefix and its hyphen.
+            if (f"{scheme.prefix}-" not in text
+                    and re.escape(scheme.prefix) == scheme.prefix):
+                continue
             live = None
             for m in scheme.temp_pattern.finditer(text):
                 if any(a <= m.start() < b for a, b in formerly):

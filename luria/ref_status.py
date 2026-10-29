@@ -62,6 +62,8 @@ itself is excluded for the same reason (every ADR's own title names it).
 
 from __future__ import annotations
 
+from bisect import bisect_right
+from itertools import accumulate
 import re
 import sys
 from dataclasses import dataclass, field
@@ -75,12 +77,15 @@ from .config import TEMP_TAIL, current, is_temp_tail
 DEFAULT_SITES = 5
 
 
+_NOT_NEWLINE = re.compile(r"[^\n]")
+
+
 def _blank(text: str, spans: list[tuple[int, int]]) -> str:
     chars = list(text)
     for start, end in spans:
-        for i in range(max(0, start), min(len(chars), end)):
-            if chars[i] != "\n":
-                chars[i] = " "
+        start, end = max(0, start), min(len(chars), end)
+        if start < end:
+            chars[start:end] = _NOT_NEWLINE.sub(" ", "".join(chars[start:end]))
     return "".join(chars)
 
 
@@ -417,17 +422,27 @@ def _scan(files: list[Path] | None = None, docs: dict[str, Doc] | None = None) -
                     sites.append((path, text.count("\n", 0, ref.start) + 1,
                                   ref.composed))
             text = _blank(text, spans)
-        for line_no, line in enumerate(text.splitlines(), 1):
-            bare = line
-            # One site per line: citing the same document twice in a sentence
-            # is one place to look, not two.
-            codes = set()
-            for scheme in schemes().values():
-                codes |= {scheme.code(m.group("num"))
-                          for m in scheme.pattern.finditer(bare)}
-                codes |= {f"{scheme.prefix}-{m.group('tail')}"
-                          for m in scheme.temp_pattern.finditer(bare)}
-            sites += [(path, line_no, code) for code in sorted(codes)
+        # One site per line: citing the same document twice in a sentence
+        # is one place to look, not two. Matched over the whole text and
+        # filed by line, rather than line by line: no code spans a line
+        # break, and a file holds far more lines than codes. Line ends are
+        # `splitlines`', so a numbered line is the one an editor shows.
+        ends = list(accumulate(map(len, text.splitlines(keepends=True))))
+        by_line: dict[int, set[str]] = {}
+        for scheme in schemes().values():
+            # Both patterns open with the prefix, so a text without it has
+            # nothing for this scheme.
+            if (scheme.prefix not in text
+                    and re.escape(scheme.prefix) == scheme.prefix):
+                continue
+            for m in scheme.pattern.finditer(text):
+                by_line.setdefault(bisect_right(ends, m.start()) + 1,
+                                   set()).add(scheme.code(m.group("num")))
+            for m in scheme.temp_pattern.finditer(text):
+                by_line.setdefault(bisect_right(ends, m.start()) + 1,
+                                   set()).add(f"{scheme.prefix}-{m.group('tail')}")
+        for line_no in sorted(by_line):
+            sites += [(path, line_no, code) for code in sorted(by_line[line_no])
                       if own.get(path) != code]
     _acknowledge(result, sites, docs)
     for pool in (result.cited, result.dangling):

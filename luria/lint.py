@@ -810,7 +810,10 @@ def status_sections(rendered: dict[Path, str] | None = None
     `rendered` is the view tree the lint already built, so a view is not
     rendered a second time to learn what it read."""
     docs = ref_status.load_docs()
-    result = ref_status.scan(docs=docs)
+    # `scan()`, not `scan(docs=docs)`, for the reason `reports.reference_status`
+    # gives: the same corpus either way, and only the bare call is served
+    # from the cache the report render has already filled.
+    result = ref_status.scan()
     sections: list[tuple[str, str, list[str]]] = []
 
     lines = ref_status.summary_lines(result, docs, sites=True)
