@@ -634,6 +634,24 @@ def dangling_acknowledged_count(result: Scan | None = None,
                for c in sites if c.excused_by is not None)
 
 
+def settled_codes(ann: Annotation, docs: dict[str, Doc]) -> list[str]:
+    """The codes an `inactive-ok` names whose documents are in force now.
+
+    Each is a claim of retirement that no longer holds, and the
+    acknowledgement logic cannot let it answer for anything: a site of an
+    Active document wants no excuse (`acknowledgements.lp`), which is also
+    why `luria ack` refuses to write one. That makes the code dead weight in
+    the directive whether or not the directive's other codes still answer for
+    something, and removing it has one correct answer — so the lint names it
+    and `luria repair` removes it, both reading this.
+
+    A malformed annotation names none: its problem is the finding, and what
+    it should have said is a judgement."""
+    if ann.kind != DIRECTIVE or ann.problem:
+        return []
+    return sorted(c for c in ann.codes if c in docs and docs[c].active)
+
+
 def stale_annotations(result: Scan | None = None,
                       docs: dict[str, Doc] | None = None) -> list[str]:
     """Annotations that no longer excuse anything — the document went Active,
@@ -662,11 +680,16 @@ def stale_annotations(result: Scan | None = None,
             if ann.kind in (DANGLING_DIRECTIVE, MENTION_DIRECTIVE):
                 why = f"nothing in scope cites {named}"
             else:
-                active = sorted(c for c in ann.codes
-                                if c in docs and docs[c].active)
+                active = settled_codes(ann, docs)
                 why = (f"{', '.join(active)} is Active now" if active
                        else f"nothing in scope cites {named}")
             out.append(f"{ann}: annotation no longer applies — {why}")
+        elif active := settled_codes(ann, docs):
+            # Still answering for its other codes, so not stale as a whole —
+            # but these ones vouch for a retirement that is over.
+            out.append(f"{ann}: annotation no longer applies to "
+                       f"{', '.join(active)} — Active now; `luria repair` "
+                       "removes it from the directive")
     return sorted(out)
 
 
