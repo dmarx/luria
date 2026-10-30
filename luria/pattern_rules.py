@@ -6,6 +6,11 @@ and the logic core can stay the engine (ADR-127):
 
 - a node is `doc(V, "LABEL")`, and a property map adds `status/2` or
   `value/4` literals;
+- a node's inline test reads the same facts: `IN` is a pool of the listed
+  values, `<>` and `NOT ... IN` are the field present and none of the values
+  among it — negation over facts, so the program stays stratified. A
+  document without the field matches no test, as Cypher's null compares
+  neither equal nor unequal;
 - a hop is `held/4` from `relations.lp` — the reading every chain and
   invariant already uses, so a hop stated only on its converse side counts —
   oriented by the arrow: `-[:f]->` is held by the node before it,
@@ -77,7 +82,19 @@ def needs_values(patterns: dict[str, Pattern]) -> bool:
     return any(key != "status"
                for p in patterns.values()
                for path in (p.path, *p.negations)
-               for node in path.nodes for key, _ in node.props)
+               for node in path.nodes for key in _fields(node))
+
+
+def _fields(node) -> list[str]:
+    """Every frontmatter field a node reads: its map's keys and its test's."""
+    return [key for key, _ in node.props] + (
+        [node.test[0]] if node.test else [])
+
+
+def _holds(var: str, key: str, value: str) -> str:
+    """The literal saying document `var`'s field `key` holds `value`."""
+    return (f"status({var}, {value})" if key == "status"
+            else f"value({var}, {_term(key)}, _, {value})")
 
 
 class _Lowering:
@@ -116,8 +133,16 @@ class _Lowering:
     def _node(self, node, var: str, first: bool) -> list[str]:
         out = [f"doc({var}, {_term(node.label)})"] if first else []
         for key, value in node.props:
-            out.append(f"status({var}, {_term(value)})" if key == "status"
-                       else f"value({var}, {_term(key)}, _, {_term(value)})")
+            out.append(_holds(var, key, _term(value)))
+        if node.test:
+            key, op, values = node.test
+            terms = [_term(v) for v in values]
+            if op == "in":
+                pool = terms[0] if len(terms) == 1 else f"({';'.join(terms)})"
+                out.append(_holds(var, key, pool))
+            else:
+                out.append(_holds(var, key, "_"))
+                out += [f"not {_holds(var, key, t)}" for t in terms]
         return out
 
     def _hop(self, tag: str, path: Path, i: int) -> str:

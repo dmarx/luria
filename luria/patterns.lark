@@ -9,9 +9,18 @@ start: path (_WHERE _NOT path)*
 
 path: node (edge node)*
 
-node: "(" [NAME] [":" NAME] [props] ")"
+node: "(" [NAME] [":" NAME] [props] [test] ")"
 props: "{" prop ("," prop)* "}"
-prop: NAME ":" (STRING | INT)
+prop: NAME ":" literal
+
+// One comparison on one field of the node itself, in Cypher's inline
+// node predicate: `(p:CLAIM WHERE p.status <> 'Active')`. Equality stays
+// the property map; this admits only what the map cannot say.
+test: _WHERE NAME "." NAME "<>" literal        -> unequal
+    | _WHERE NAME "." NAME _IN list            -> within
+    | _WHERE _NOT NAME "." NAME _IN list       -> without
+list: "[" literal ("," literal)* "]"
+literal: STRING | INT
 
 // An edge variable is accepted here only so it can be refused by name.
 edge: "-[" [NAME] types [length] "]->"     -> right
@@ -20,7 +29,8 @@ types: ":" NAME ("|" NAME)*
 length: "*" [INT] [RANGE [INT]]
 
 _WHERE: /where/i
-_NOT: /not/i
+_NOT.2: /not\b/i
+_IN.2: /in\b/i
 RANGE: ".."
 NAME: /[A-Za-z_][A-Za-z0-9_]*/
 STRING: /'[^']*'/ | /"[^"]*"/

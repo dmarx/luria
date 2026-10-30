@@ -7,7 +7,8 @@
 The notation is Cypher's, restricted to what a path question needs: node
 labels (schemes), typed directed hops (reference fields, `|` between
 several), variable length on one hop, literal equality on a node's
-frontmatter, and `WHERE NOT` over a pattern. Everything else — `MATCH`,
+frontmatter, one inline comparison on a node's own field (`<>`, `IN`, `NOT
+... IN`), and `WHERE NOT` over a pattern. Everything else — `MATCH`,
 `RETURN`, `OPTIONAL MATCH`, undirected edges, named edges, shortest path,
 any write — is refused here, by name, at load. ADR-125 asks that a reader
 see the rule in the line; a pattern is that, and a clause language around it
@@ -46,11 +47,13 @@ class PatternError(ValueError):
 class Node:
     """One position in a path. `var` is "" for an anonymous node; `bound`
     marks a bare `(c)` referring back to a node named earlier, whose label it
-    carries."""
+    carries. `test` is the node's one inline comparison, `(field, op,
+    values)` with `op` one of `<>`, `in` and `not in`, or None."""
     var: str
     label: str
     props: tuple[tuple[str, str], ...]
     bound: bool = False
+    test: tuple[str, str, tuple[str, ...]] | None = None
 
 
 @dataclass(frozen=True)
@@ -134,22 +137,53 @@ def _path(where: str, tree: lark.Tree) -> tuple[list, list[Hop]]:
     nodes, hops = [], []
     for child in tree.children:
         if child.data == "node":
-            var, label, props = child.children
-            nodes.append((str(var or ""), str(label or ""), _props(props)))
+            var, label, props, test = child.children
+            nodes.append((str(var or ""), str(label or ""), _props(props),
+                          _test(where, var, label, test)))
         else:
             hops.append(_hop(where, child))
     return nodes, hops
 
 
+def _literal(tree: lark.Tree) -> str:
+    (token,) = tree.children
+    text = str(token)
+    return text[1:-1] if token.type == "STRING" else text
+
+
 def _props(tree) -> tuple[tuple[str, str], ...]:
     if tree is None:
         return ()
-    out = []
-    for prop in tree.children:
-        key, value = prop.children
-        text = str(value)
-        out.append((str(key), text[1:-1] if value.type == "STRING" else text))
-    return tuple(out)
+    return tuple((str(prop.children[0]), _literal(prop.children[1]))
+                 for prop in tree.children)
+
+
+_OPS = {"unequal": "<>", "within": "in", "without": "not in"}
+
+
+def _test(where: str, var, label, tree):
+    """A node's inline comparison as `(field, op, values)`. It must name the
+    node it sits in: a test of another node would be a join, which the
+    subset leaves to hops."""
+    if tree is None:
+        return None
+    owner, field, rest = tree.children
+    shown = f"({var or ''}{':' + str(label) if label else ''} WHERE ...)"
+    if not var:
+        raise PatternError(
+            where + f"`{shown}` tests `{owner}.{field}`, but the node has no "
+            f"name — name the node and test its own field, as "
+            f"`({owner}:{label} WHERE {owner}.{field} ...)`")
+    if str(owner) != str(var):
+        raise PatternError(
+            where + f"`{shown}` names `{owner}` — a node's `WHERE` tests "
+            f"its own fields, so write `{var}.{field}`; a condition across "
+            f"two nodes is a hop between them")
+    if tree.data == "unequal":
+        values = (_literal(rest),)
+    else:
+        values = tuple(_literal(v) for v in rest.children)
+    return (str(field), _OPS[tree.data], values)
 
 
 def _hop(where: str, tree: lark.Tree) -> Hop:
@@ -190,7 +224,7 @@ def _bind(where: str, name: str, source: str, main, negated) -> Pattern:
     def resolve(raw_nodes, shared: bool) -> tuple[Node, ...]:
         local = dict(labels)
         out = []
-        for var, label, props in raw_nodes:
+        for var, label, props, test in raw_nodes:
             if not label:
                 if not var:
                     raise PatternError(where + "`()` needs a label — a node's "
@@ -200,7 +234,8 @@ def _bind(where: str, name: str, source: str, main, negated) -> Pattern:
                         where + f"`({var})` refers to `{var}`, which is not "
                         f"bound earlier in the pattern — a node needs a label "
                         f"(its scheme) the first time it appears")
-                out.append(Node(var, local[var], props, bound=True))
+                out.append(Node(var, local[var], props, bound=True,
+                                test=test))
                 continue
             if var and var in local:
                 raise PatternError(
@@ -208,7 +243,7 @@ def _bind(where: str, name: str, source: str, main, negated) -> Pattern:
                     f"refer back to it as `({var})`")
             if var:
                 local[var] = label
-            out.append(Node(var, label, props))
+            out.append(Node(var, label, props, test=test))
         if shared:
             labels.update(local)
         return tuple(out)
@@ -257,9 +292,22 @@ def _diagnose(text: str, exc: lark.UnexpectedInput) -> str:
     for word in _CLAUSES:
         if has(r"\b" + word.replace(" ", r"\s+") + r"\b"):
             return f"`{word}` is not in the subset — a pattern is one path"
-    if has(r"\bwhere\b(?!\s+not\b)"):
-        return ("the only condition is `WHERE NOT` followed by a pattern; "
-                "equality on a "
+    inline = r"\([^()]*\bwhere\b[^()]*"
+    if has(inline + r"\b(and|or|xor)\b"):
+        return ("a node's `WHERE` takes one comparison — `AND` beside it is "
+                "the property map, and `OR` is two patterns")
+    if has(inline + r"(?<![<>!])=(?!=)"):
+        return ("equality on a node is a property map, such as "
+                "`(c:CLAIM {status: 'Active'})`; a node's `WHERE` is for "
+                "what the map cannot say")
+    if has(inline + r"\)"):
+        return ("a node's `WHERE` is one comparison of its own field by "
+                "`<>`, `IN` or `NOT ... IN`: `p.f <> 'x'`, `p.f IN ['x', "
+                "'y']` or `NOT p.f IN ['x', 'y']`")
+    if has(r"\bwhere\b(?!\s+not\s*\()"):
+        return ("the only condition after a path is `WHERE NOT` followed by "
+                "a pattern; a test of one node goes inside the node, such as "
+                "`(c:CLAIM WHERE c.status <> 'Active')`, and equality on a "
                 "node is a property map, such as `(c:CLAIM {status: "
                 "'Active'})`")
     if has(r"<-\[[^\]]*\]->") or has(r"(?<!<)-\[[^\]]*\]-(?!>)"):
