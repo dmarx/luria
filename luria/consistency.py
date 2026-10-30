@@ -63,6 +63,8 @@ def _scheme_facts(schemes: dict, remotes=()) -> list[Fact]:
             if ref.converse:
                 out.append(Fact("ref_converse",
                                 (prefix, ref.field, ref.converse)))
+            if ref.derived:
+                out.append(Fact("ref_derived", (prefix, ref.field)))
             if ref.many:
                 out.append(Fact("ref_many", (prefix, ref.field)))
             if ref.invariant:
@@ -217,6 +219,24 @@ def check_references(schemes: dict, remotes=()) -> None:
             f"{where(prefix, field, 'converse')}: {side_field!r} needs "
             f"`many = true` — either side of a pair is written into, and "
             f"several documents can stand in one relation to the same one")))
+    for prefix, field in derived.get("derived_unpaired", ()):
+        found.append((key(prefix, 0, field, prefix, 4), (
+            f"{where(prefix, field, 'derived')}: {field!r} declares no "
+            f"`converse` — a derived side is computed from its converse, and "
+            f"without one there is nothing to compute it from or to move an "
+            f"entry to")))
+    for prefix, field in derived.get("derived_self", ()):
+        found.append((key(prefix, 0, field, prefix, 5), (
+            f"{where(prefix, field, 'derived')}: {field!r} is its own "
+            f"converse, so it is both sides of its pair and marking it "
+            f"derived marks both — a symmetric relation has no derived side")))
+    for prefix, field, target in derived.get("derived_both", ()):
+        ref = _ref(schemes, prefix, field)
+        found.append((key(prefix, 0, field, target, 6), (
+            f"{where(prefix, field, 'derived')}: {field!r} and its converse "
+            f"{target}.{ref.converse!r} are both marked derived — exactly one "
+            f"side of a directed pair is stored, so exactly one may be "
+            f"derived")))
     for prefix, field, end in derived.get("invariant_unheld", ()):
         ref = _ref(schemes, prefix, field)
         known = sorted(nameable(schemes[end]))

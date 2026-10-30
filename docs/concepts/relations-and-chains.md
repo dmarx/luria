@@ -66,7 +66,7 @@ references:
 
 A symmetric relation such as `compared_against` names itself as its converse.
 
-Because the two fields are one relation, the converse belongs to the scheme whose codes the field holds — for a relation that crosses schemes, the target scheme ([ADR-097](../../record/decisions.d/ADR-097.md)). And because either side can be derived from the other, a document holding only one side is a mechanical gap, not a judgement call: the lint reports it and `luria link --fix` fills it. The rules a pair must satisfy are in [Model and add relations](../how-to/relations.md).
+Because the two fields are one relation, the converse belongs to the scheme whose codes the field holds — for a relation that crosses schemes, the target scheme ([ADR-097](../../record/decisions.d/ADR-097.md)). And because either side can be derived from the other, a directed pair need not store both. Marking one side `derived: true` keeps the relation on the primary side alone, and every reader computes the other ([ADR-tmpwpas9](../../record/decisions.d/ADR-tmpwpas9.md)). `luria repair` moves anything written on the derived side. A symmetric relation, which has no derived side, and a pair that marks neither side, still store both. For those, a document holding one side is a mechanical gap, not a judgement call: the lint reports it and `luria link --fix` fills it. The rules a pair must satisfy are in [Model and add relations](../how-to/relations.md).
 
 ## Relation invariants
 
