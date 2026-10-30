@@ -24,7 +24,7 @@ summary: >-
 
 An `inactive-ok:` claims that a code it names is retired. When the document
 goes Active the claim is false, and the acknowledgement logic cannot let the
-code excuse anything: a citation of a document in force wants no excuse. ADR-119
+code excuse anything: a citation of a document in force wants no excuse. [ADR-119](ADR-119.md)
 already treats this state as wrong on arrival, since `luria ack` refuses to
 write a directive over a document in force.
 
@@ -39,7 +39,7 @@ deleted any line left naming nothing. That came to 47 lines in 46 files. In
 25 of those lines the directive still excused other codes, so the lint had not
 reported them.
 
-ADR-119 rejected putting `luria ack` in `luria repair`, because writing an
+[ADR-119](ADR-119.md) rejected putting `luria ack` in `luria repair`, because writing an
 acknowledgement needs a reason only a person can give. Removing a code is the
 converse. It has one correct answer and needs no sentence.
 
@@ -55,7 +55,7 @@ all handled.
 **One reading decides which codes are settled**: `ref_status.settled_codes`. A
 code is settled when it names a local document whose status is the scheme's
 `active` value, the same test the lint already used to say "is Active now".
-Both the lint row and the repair read this function (DP-004).
+Both the lint row and the repair read this function ([DP-004](../principles.d/DP-004.md)).
 
 **The lint names a settled code even when the directive is still used.** That
 case is a new `stale-directives` row, "no longer applies to X — Active now",
