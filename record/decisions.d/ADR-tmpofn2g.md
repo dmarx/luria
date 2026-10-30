@@ -7,7 +7,7 @@ tags:
 - mechanism
 date: '2026-10-30'
 summary: >-
-  The path-pattern subset of ADR-129 gains one comparison per node, written
+  The path-pattern subset of [ADR-129](ADR-129.md) gains one comparison per node, written
   inside the node in Cypher's inline node predicate:
   `(p:CLAIM WHERE p.status <> 'Active')`, `(o:CLAIM WHERE o.status IN
   ['Proposed', 'Active'])` and `(n WHERE NOT n.status IN [...])`. The
@@ -29,15 +29,15 @@ influenced_by:
 
 ## Context
 
-ADR-129 limited a pattern's node test to literal equality, through a
+[ADR-129](ADR-129.md) limited a pattern's node test to literal equality, through a
 property map (`{status: 'Active'}`). It added nothing beyond that because
 nothing needed more at the time. It did not reject predicates on the
-merits. What it set was a bar inherited from ADR-125: a reader sees the
-rule in the line. ADR-125 rejected a *general* predicate language (`and`,
+merits. What it set was a bar inherited from [ADR-125](ADR-125.md): a reader sees the
+rule in the line. [ADR-125](ADR-125.md) rejected a *general* predicate language (`and`,
 `or`, `not`, comparisons) for conditions. That same decision accepted a
 condition that is "one field, a set of literal values", which is membership.
 
-ADR-131 made a pattern with `report: true` a lint warning class. That is
+[ADR-131](ADR-131.md) made a pattern with `report: true` a lint warning class. That is
 what turned the subset into a limit. dmarx/nucleation keeps
 `record/status-review/worklist.py`, a Python script beside its record. The
 script holds checks that a reported pattern would carry if it could say
@@ -111,7 +111,7 @@ reads a field other than `status`, as before.
 
 Negation is over facts only, never over a derived predicate. So the
 lowering adds no recursion through negation, and every program stays
-stratified with one answer set (ADR-127). A comparison inside a `WHERE NOT`
+stratified with one answer set ([ADR-127](ADR-127.md)). A comparison inside a `WHERE NOT`
 lands in that negation's helper rule, like the map does.
 
 The consistency check that a map's key is a field the node's scheme can
@@ -127,7 +127,7 @@ hold covers the comparison's field too.
 - **A path-level `WHERE` clause with `AND`/`OR`/`NOT` over properties of
   any node** (`... WHERE p.status <> 'Active' AND o.status IN [...]`). This
   is Cypher's other place for the same test. It is a general predicate
-  language, the thing ADR-125 rejected: the condition leaves the node it
+  language, the thing [ADR-125](ADR-125.md) rejected: the condition leaves the node it
   is about, it can join two nodes, and the reader has to assemble the rule
   from parts. The inline form keeps one test next to the node it tests.
 - **`=` inside the node as well.** This would mirror Cypher more closely
@@ -139,13 +139,13 @@ hold covers the comparison's field too.
   and for these checks it says no more than `<>` does.
 - **Status quo: patterns for equality, a script for the rest.** The script
   is a second implementation of the record's checks. It reads the
-  frontmatter its own way and drifts from the lint (DP-004). It also reports
+  frontmatter its own way and drifts from the lint ([DP-004](../principles.d/DP-004.md)). It also reports
   nowhere that `fail_on`, `baseline` or `pattern-ok:` can reach.
 
 ## Consequences
 
-- **The grammar, the lowering and ADR-129 change together**, as the
-  grammar's header requires. ADR-129's list of what the subset admits now
+- **The grammar, the lowering and [ADR-129](ADR-129.md) change together**, as the
+  grammar's header requires. [ADR-129](ADR-129.md)'s list of what the subset admits now
   names this decision.
 - **Fired on dmarx/nucleation.** The two worklist checks were written as
   reported patterns and solved against a scratch copy of the record. The
