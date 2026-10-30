@@ -67,6 +67,7 @@ from . import (adr_pending, annotations, badges, chains, ci, contract,
                directives, doc_refs, frontmatter_shape, invariants, journal,
                referents, link_targets, narrow_titles, pins, ref_status, remotes,
                relations, sources, statuses, templates)
+from . import headings
 from . import aliases as aliases_mod
 from . import anchors as anchors_mod
 from . import config as config_mod
@@ -124,6 +125,7 @@ def check_frontmatter(errors: list[str]) -> None:
                 errors.append(f"{rel}: no YAML frontmatter (see _template.md)")
                 continue
             check_title(errors, rel, meta, body)
+            check_heading_code(errors, rel, scheme, path, body)
             status = statuses.of(meta, scheme)
             if not status.value:
                 errors.append(f"{rel}: no `status:` in frontmatter")
@@ -192,6 +194,21 @@ def check_title(errors: list[str], rel: str, meta: dict, body: str) -> None:
         errors.append(
             f"{rel}: `title:` and the body heading disagree — "
             f"{title!r} vs {heading!r}")
+
+
+def check_heading_code(errors: list[str], rel: str, scheme, path,
+                       body: str) -> None:
+    """The `# CODE:` half of the heading, which `check_title` strips off
+    before comparing the words. The filename is the code (ADR-013), so a
+    heading naming any other — a stale temporary code, a sibling's tail, a
+    neighbour's number — is always wrong, and the fix is mechanical: write
+    the document's own code there."""
+    code = headings.foreign_code(scheme, path, body)
+    if code is not None:
+        own = headings.own_code(scheme, path)
+        errors.append(
+            f"{rel}: the heading names {code}, not this document — "
+            f"the filename is its code; write `# {own}:`")
 
 
 def check_status_vocabulary(errors: list[str]) -> None:
