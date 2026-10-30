@@ -82,6 +82,23 @@ compared_against:
 
 A half-declared pair — a converse that is not a declared field of the target scheme, does not name the original back, or is not `many: true` — is refused when `luria.yaml` loads.
 
+### Mark the derived side of a directed pair
+
+A directed pair has a natural home for the fact: the document that depends on the other (`extends`, `rests_on`, `grounds`). Mark the reverse field `derived: true` and only the primary side is ever stored ([ADR-tmpwpas9](../../record/decisions.d/ADR-tmpwpas9.md)):
+
+```yaml
+      extended_by:
+        scheme: RFC
+        required: false
+        many: true
+        converse: extends
+        derived: true
+```
+
+Everything that reads the relation (chains, invariants, patterns, the site) reads the derived side from the primary one, so nothing is lost by not storing it. You can still write the derived field, for example `extended_by: RFC-009` on the document you happen to have open. `luria repair` moves it as `extends` onto RFC-009, or drops it if RFC-009 already says so. CI runs `luria repair` on every pull request. Until it runs, the lint reports the entry under `derived-relations`. To delete the relation, delete it from the primary side.
+
+Exactly one side of a pair may be `derived`, and a symmetric relation cannot be, since it is both of its own sides. A pair that marks neither keeps the older behaviour ([ADR-084](../../record/decisions.d/ADR-084.md)): both sides stored, `luria link --fix` completing them. The lint lists it under `undirected-relations` until you choose a side.
+
 ## 4. Use conditional requirements for state-dependent fields
 
 Every scheme already has a successor relation: its `successor` field defaults
@@ -141,7 +158,7 @@ $ luria relate RFC-003 compared_against RFC-002
 record/rfcs.d/RFC-003.md: compared_against += RFC-002
 ```
 
-It writes the one side you named. Until the other side exists, `luria lint` reports the pair under `one-sided-relations`; `luria link --fix` writes the converse:
+It writes the one side you named, and says where the other lives. On a directed pair the derived side is computed, and a relation written into the derived field is moved by `luria repair`. For a symmetric relation, or a pair that declares no direction, `luria lint` reports the pair under `one-sided-relations` until the other side exists, and `luria link --fix` writes it:
 
 ```console
 $ luria link --fix
@@ -184,7 +201,7 @@ fails the lint, and a `ref::` statement naming one is `bad-annotations`.
 
 **Pushing up.** A stated relation missing from frontmatter is
 `unrecorded-relations`, and `luria link --fix` writes it into this document's
-field. The converse completion in the same run writes the far side.
+field. For a symmetric or undirected pair, the converse completion in the same run writes the far side. For a statement naming a derived field, `luria repair` then moves it to the primary side.
 
 **Pushing down.** A reference declared `explain:` asks for the reverse: every
 code the field holds accounted for in the body. There are two strengths.
