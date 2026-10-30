@@ -45,6 +45,27 @@ def test_a_property_map_is_literal_equality():
     assert p.path.nodes[0].props == (("status", "Active"), ("number", "3"))
 
 
+def test_a_node_may_test_one_field_for_inequality_or_membership():
+    def test(text):
+        return parse("x", text).path.nodes[0].test
+    assert test("(p:CLAIM WHERE p.status <> 'Active')") == (
+        "status", "<>", ("Active",))
+    assert test("(p:CLAIM WHERE p.status IN ['Proposed', 'Open'])") == (
+        "status", "in", ("Proposed", "Open"))
+    assert test("(p:CLAIM where not p.status in ['Superseded', 'Rejected'])"
+                ) == ("status", "not in", ("Superseded", "Rejected"))
+    assert test("(p:CLAIM {kind: 'x'} WHERE p.number <> 3)") == (
+        "number", "<>", ("3",))
+    assert parse("x", "(p:CLAIM)").path.nodes[0].test is None
+
+
+def test_a_node_test_may_sit_inside_where_not():
+    p = parse("ready", "(c:CLAIM {status: 'Proposed'}) WHERE NOT "
+              "(c)-[:rests_on]->(p:CLAIM WHERE p.status <> 'Active')")
+    (neg,) = p.negations
+    assert neg.nodes[1].test == ("status", "<>", ("Active",))
+
+
 def test_where_not_takes_a_pattern_over_bound_nodes():
     p = parse("unchallenged", "(c:CLAIM) WHERE NOT (c)<-[:challenges]-(:OBJ)")
     (neg,) = p.negations
@@ -76,6 +97,13 @@ def test_keywords_are_case_insensitive_and_whitespace_is_free():
     ("(a:LIT)-[:extends*0..]->(b:LIT)", "at least 1"),
     ("(a:LIT)-[:extends*3..2]->(b:LIT)", "3..2"),
     ("(a:LIT) WHERE a.status = 'Active'", "`WHERE NOT`"),
+    ("(a:LIT) WHERE a.status <> 'Active'", "inside the node"),
+    ("(a:LIT WHERE a.status = 'Active')", "property map"),
+    ("(a:LIT WHERE b.status <> 'Active')", "names `b`"),
+    ("(:LIT WHERE a.status <> 'Active')", "name the node"),
+    ("(a:LIT WHERE a.status <> 'A' AND a.kind <> 'b')", "one comparison"),
+    ("(a:LIT WHERE a.status <> 'A' OR a.kind <> 'b')", "one comparison"),
+    ("(a:LIT WHERE a.status > 'A')", "`<>`"),
     ("(a:LIT) WHERE NOT (a)-[:extends*]->(:LIT)", "variable-length"),
     ("(a:LIT)-[:extends]->(b)", "not bound"),
     ("(a:LIT)-[:extends]->(a:SOTA)", "already bound"),

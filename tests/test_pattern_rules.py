@@ -135,6 +135,65 @@ def test_a_property_map_filters_on_status_and_on_any_field():
                  "<-[:premise_of]-(a:CLAIM)") == {("C2", "C1")}
 
 
+def matched(text: str, facts: list[Fact]) -> set[str]:
+    """The first node of every match, read through `pattern_node` as the
+    lint reads a reported pattern, so a one-node pattern is a row too."""
+    parsed = {"x": parse("x", text)}
+    got = logic.solve([logic.rules("relations"), program(parsed, nodes=True)],
+                      SCHEMA + facts)
+    return {code for _, _, i, code in got.get("pattern_node", ()) if i == 0}
+
+
+def test_a_node_test_is_inequality_or_membership_on_status_or_any_field():
+    facts = (docs("CLAIM", "C1", "C2", "C3", "C4")
+             + [F("status", "C1", "Active"), F("status", "C2", "Proposed"),
+                F("status", "C3", "Rejected"),
+                F("value", "C1", "tags", 0, "a"),
+                F("value", "C2", "tags", 0, "a"),
+                F("value", "C2", "tags", 1, "b"),
+                F("value", "C3", "tags", 0, "c")])
+    # C4 has neither field, and matches none of them, as Cypher's null.
+    assert matched("(c:CLAIM WHERE c.status <> 'Active')", facts) == {
+        "C2", "C3"}
+    assert matched("(c:CLAIM WHERE c.status IN ['Active', 'Rejected'])",
+                   facts) == {"C1", "C3"}
+    assert matched("(c:CLAIM WHERE NOT c.status IN ['Active', 'Rejected'])",
+                   facts) == {"C2"}
+    # A list field: membership is any value, inequality is no value.
+    assert matched("(c:CLAIM WHERE c.tags <> 'a')", facts) == {"C3"}
+    assert matched("(c:CLAIM WHERE c.tags IN ['b', 'c'])", facts) == {
+        "C2", "C3"}
+    assert matched("(c:CLAIM WHERE NOT c.tags IN ['b', 'c'])", facts) == {
+        "C1"}
+
+
+def test_a_node_test_inside_where_not_finds_what_is_ready_for_a_ruling():
+    facts = (docs("CLAIM", "C1", "C2", "C3", "C4", "P1", "P2")
+             + docs("OBJ", "O1", "O2")
+             + [F("status", c, s) for c, s in [
+                 ("C1", "Proposed"), ("C2", "Proposed"), ("C3", "Proposed"),
+                 ("C4", "Active"), ("P1", "Active"), ("P2", "Proposed"),
+                 ("O1", "Rejected"), ("O2", "Proposed")]]
+             + [F("ref_target", "CLAIM", "rests_on", "CLAIM"),
+                F("ref_value", "C1", "rests_on", "P1"),
+                F("ref_value", "C2", "rests_on", "P2"),
+                F("ref_value", "O1", "challenges", "C1"),
+                F("ref_value", "O2", "challenges", "C3")])
+    ready = ("(c:CLAIM {status: 'Proposed'})"
+             " WHERE NOT (c)-[:rests_on]->(p:CLAIM WHERE p.status <> 'Active')"
+             " WHERE NOT (c)<-[:challenges]-(o:OBJ"
+             " WHERE o.status IN ['Proposed', 'Active'])")
+    # C2 rests on a Proposed premise and C3 has a live objection; C1's
+    # premise is Active and its objection Rejected; P2 rests on nothing.
+    assert matched(ready, facts) == {"C1", "P2"}
+
+
+def test_a_node_test_on_a_field_other_than_status_needs_values():
+    from luria.pattern_rules import needs_values
+    assert not needs_values({"x": parse("x", "(c:CLAIM WHERE c.status <> 'A')")})
+    assert needs_values({"x": parse("x", "(c:CLAIM WHERE c.kind <> 'A')")})
+
+
 def test_where_not_removes_matches_with_the_negated_path():
     facts = (docs("CLAIM", "C1", "C2", "C3") + docs("INF", "I1", "I2")
              + docs("OBJ", "O1")
