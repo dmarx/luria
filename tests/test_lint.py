@@ -76,6 +76,37 @@ def test_a_body_with_no_heading_is_not_a_disagreement(project):
     assert errors_for(project) == []
 
 
+def test_a_heading_naming_another_code_is_reported(project):
+    """The title check compares only the words after the code, so a heading
+    that says `# ADR-002:` on ADR-001 passed it — Nucleation's NOTE-1341 kept
+    a temporary code in its heading through concretization that way. The
+    filename is the code (ADR-013), so a heading naming any other is always
+    wrong, and the error names both spellings and the remedy (DP-1)."""
+    path = _scheme.decision(project, 1, "Active", title="A decision")
+    path.write_text(path.read_text().replace("# ADR-001:", "# ADR-002:"))
+    errors = errors_for(project)
+    assert len(errors) == 1, errors
+    assert "ADR-001.md" in errors[0]
+    assert "ADR-002" in errors[0] and "# ADR-001:" in errors[0]
+
+
+def test_a_temporary_document_is_held_to_its_own_temporary_code(project):
+    """On the branch, where the author still has the context loaded: a temp
+    document whose heading carries some other temporary tail — the exact
+    NOTE-1341 slip, a LIT's tail under a NOTE's prefix — is caught before
+    concretize ever runs."""
+    path = _scheme.decision(project, 1, "Active", title="A decision")
+    temp = path.with_name("ADR-tmpabcde.md")
+    path.rename(temp)
+    temp.write_text(temp.read_text().replace("# ADR-001:", "# ADR-tmpab12c:"))
+    errors = errors_for(project)
+    assert any("ADR-tmpabcde.md" in e and "ADR-tmpab12c" in e
+               for e in errors), errors
+    temp.write_text(temp.read_text().replace("# ADR-tmpab12c:",
+                                             "# ADR-tmpabcde:"))
+    assert not any("heading" in e for e in errors_for(project))
+
+
 def test_the_check_covers_every_scheme(project):
     """Not just decisions — a principle's title drifts the same way, and more
     often, because principles are expected to be reworded (ADR-012)."""

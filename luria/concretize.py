@@ -51,7 +51,7 @@ import re
 import sys
 from pathlib import Path
 
-from . import doc_refs
+from . import doc_refs, headings
 from . import new as new_mod
 from .collect import _added_at
 from .config import current
@@ -134,17 +134,18 @@ def run(check: bool = False) -> None:
         print("luria concretize: nothing to do")
         return
 
-    renames: list[tuple[str, str, Path, Path, int]] = []
+    renames: list[tuple[str, str, Path, Path, int, object]] = []
     next_free = {s.prefix: max(s.documents(), default=0) + 1
                  for s, _, _ in todo}
     for scheme, tail, path in todo:
         number = next_free[scheme.prefix]
         next_free[scheme.prefix] = number + 1
         renames.append((f"{scheme.prefix}-{tail}", scheme.code(number),
-                        path, scheme.dir / scheme.filename(number), number))
+                        path, scheme.dir / scheme.filename(number), number,
+                        scheme))
 
-    _rewrite_files([(old, new) for old, new, _, _, _ in renames])
-    for old, new, src, dest, number in renames:
+    _rewrite_files([(old, new) for old, new, *_ in renames])
+    for old, new, src, dest, number, scheme in renames:
         # The tree-wide pass already rewrote this document's own heading and
         # cross-references; what remains is its identity — written into the
         # document as `number:` and projected onto the filename (#219) — and the
@@ -154,10 +155,21 @@ def run(check: bool = False) -> None:
         # all: until now it had a temporary tail and no claim on the sequence
         # (ADR-049), which is exactly why `luria new` leaves `number:` out and
         # this command puts it in.
+        #
+        # The heading is the one exception the rewrite can miss: it is
+        # derived from the identity, but the rewrite only replaces the
+        # document's own temporary code, so a heading written with any other
+        # code survived the rename (Nucleation's NOTE-1341 kept a LIT's tail
+        # under its own prefix). Write the assigned code into it, whatever
+        # it said, and say so when it said something else.
         text = _record_alias(src.read_text(encoding="utf-8"), old)
+        text, was = headings.with_code(scheme, text, new)
         writes.write_text(dest, new_mod.write_number(text, number))
         writes.unlink(src)
         print(f"{old} → {new}")
+        if was not in (None, new):
+            print(f"  its heading carried {was}, not {old}; it now reads "
+                  f"`# {new}:`")
 
     # The views re-derive from the renamed sources, so the index, tag pages
     # and any assembled document pick up the new codes in the same run.
