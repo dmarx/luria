@@ -28,10 +28,19 @@ without it. A generated reason vouches for nothing, which is the failure the
 directives exist to prevent — so there is no `--fix` that writes these in
 bulk, and `luria repair` does not do it. `repair`'s contract is that a second
 run changes nothing, which a judgement can never satisfy.
+
+**The converse is mechanical, and `luria repair` does it** (`trim_settled`).
+When a document an `inactive-ok` names goes Active, the claim of retirement is
+false and the code answers for nothing — the same state `plan` refuses to
+write over. Taking the code out has one correct answer: the reason and the
+other codes stay, and a directive left naming nothing is deleted. A retired
+code nothing cites any more is not that case; the citation may have moved, and
+where the directive belongs is a judgement.
 """
 
 from __future__ import annotations
 
+import re
 import sys
 from pathlib import Path
 
@@ -140,6 +149,102 @@ def write(code: str, reason: str, scope: str = "line",
             written.append(f"{cfg.rel(path)}:{line}")
         writes.write_text(path, "".join(rows))
     return written
+
+
+# ── The converse: a code whose document went Active ──────────────────────
+
+
+def _head(text: str, ann: "ref_status.Annotation") -> "re.Match[str] | None":
+    """The directive's `<name>[-scope]:` and its arguments, in the file.
+
+    Searched from where the comment opens, because the parser's span starts
+    at the comment and not at the name inside it. The arguments end where the
+    parser ends them: at the reason's dash, the comment's close, or the line."""
+    d = ann.directive
+    return re.compile(
+        rf"{re.escape(ann.kind)}(?:-block|-file)?:(?P<args>[^\n]*?)"
+        r"(?=\s*(?:—|-->|\*/|$))", re.IGNORECASE | re.MULTILINE,
+    ).search(text, d.span[0])
+
+
+def _comment_extent(text: str, start: int) -> tuple[int, int]:
+    """Where the comment holding the directive at `start` begins and ends.
+
+    An HTML comment runs to its `-->`; anything else to its `*/` or the end of
+    the line, opened by the last comment marker before the directive."""
+    line_start = text.rfind("\n", 0, start) + 1
+    opened = text.rfind("<!--", line_start, start)
+    if opened != -1:
+        return opened, text.index("-->", start) + 3
+    before = text[line_start:start]
+    markers = list(directives.COMMENT_MARKER_RE.finditer(before))
+    begin = line_start + markers[-1].start() if markers else start
+    end = text.find("\n", start)
+    end = len(text) if end == -1 else end
+    close = text.find("*/", start, end)
+    return begin, (close + 2 if close != -1 else end)
+
+
+def _without(text: str, begin: int, end: int) -> str:
+    """`text` less one comment, and less its line(s) if nothing else was on
+    them."""
+    line_start = text.rfind("\n", 0, begin) + 1
+    line_end = text.find("\n", end)
+    line_end = len(text) if line_end == -1 else line_end + 1
+    if not (text[line_start:begin] + text[end:line_end]).strip():
+        return text[:line_start] + text[line_end:]
+    head = text[:begin]
+    if not text[end:line_end].strip():
+        head = head.rstrip(" \t")
+    return head + text[end:]
+
+
+def _trim_one(text: str, ann: "ref_status.Annotation",
+              settled: set[str]) -> str:
+    m = _head(text, ann)
+    if m is None:
+        return text
+    raw = m.group("args")
+    tokens = [t for t in re.split(r"[,\s]+", raw) if t]
+    kept = [t for t in tokens
+            if not (codes := ref_status._codes(t)[0]) or not codes <= settled]
+    if not any(ref_status._codes(t)[0] for t in kept):
+        return _without(text, *_comment_extent(text, m.start()))
+    sep = ", " if "," in raw else " "
+    lead = raw[:len(raw) - len(raw.lstrip())] or " "
+    # An expiry is `until <date>`, two tokens that must stay one phrase.
+    body = sep.join(kept).replace(f"until{sep}", "until ")
+    return text[:m.start("args")] + lead + body + text[m.end("args"):]
+
+
+def trim_settled(docs=None, result=None) -> list[tuple[Path, list[str]]]:
+    """Remove from every `inactive-ok` the codes whose documents are in force,
+    and delete a directive left naming nothing. Returns (file, codes removed).
+
+    The converse of `write`, and unlike it mechanical: which codes are settled
+    is `ref_status.settled_codes`, the same reading the lint reports from, and
+    the reason, the other codes and any expiry stay as their author wrote
+    them. Every other acknowledgement — and an `inactive-ok` whose code is
+    retired but no longer cited, which may want moving rather than deleting —
+    is a judgement, and is left."""
+    docs = ref_status.load_docs() if docs is None else docs
+    result = ref_status.scan(docs=docs) if result is None else result
+    by_file: dict[Path, list[tuple["ref_status.Annotation", list[str]]]] = {}
+    for ann in result.annotations:
+        if settled := ref_status.settled_codes(ann, docs):
+            by_file.setdefault(ann.directive.path, []).append((ann, settled))
+    done = []
+    for path, anns in sorted(by_file.items()):
+        text = original = path.read_text(encoding="utf-8")
+        removed: list[str] = []
+        # Bottom-up, so an edit never moves an offset still to be used.
+        for ann, settled in sorted(anns, key=lambda a: -a[0].directive.span[0]):
+            text = _trim_one(text, ann, set(settled))
+            removed += settled
+        if text != original:
+            writes.write_text(path, text)
+            done.append((path, sorted(set(removed))))
+    return done
 
 
 def _survey() -> None:
