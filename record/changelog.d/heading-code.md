@@ -14,6 +14,6 @@
   document's own temporary code, so a heading written with any other code
   survived it. Nucleation's NOTE-1341 kept `NOTE-tmplu4ga` that way.
   Concretize prints a line when it corrects one.
-- Four of this record's decisions, ADR-053, ADR-082, ADR-083 and ADR-086,
+- Four of this record's decisions, [ADR-053](record/decisions.d/ADR-053.md), [ADR-082](record/decisions.d/ADR-082.md), [ADR-083](record/decisions.d/ADR-083.md) and [ADR-086](record/decisions.d/ADR-086.md),
   still had the template's `ADR-NNN` in their headings. They now carry
   their own codes.
