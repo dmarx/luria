@@ -143,3 +143,42 @@ def test_the_converse_is_written_in_the_readable_spelling(
     assert "narrower:\n- AREA-queues\n" in one
     config.reset()
     assert relations.completions() == []
+
+
+def _commit(root: Path) -> None:
+    import subprocess
+    for args in (["init", "-q", "-b", "main"], ["add", "-A"],
+                 ["-c", "user.email=t@t", "-c", "user.name=t",
+                  "commit", "-q", "-m", "state"]):
+        subprocess.run(["git", *args], cwd=root, check=False,
+                       capture_output=True)
+
+
+def test_a_withdrawn_alias_spelled_edge_prunes_its_converse(
+        tmp_path, monkeypatch):
+    """HEAD's baseline reads through aliases too. The converse fixer decides
+    by what changed since HEAD, and it compared HEAD's text as written
+    against the working tree resolved: an edge spelled `AREA-runtime` at HEAD
+    named no document, so withdrawing it read as nothing changed and the
+    fixer wrote the edge back. Nucleation's CLAIM-448 `grounds:
+    LIT-Jia-2015-1146` did exactly this to LIT-1146's `supports`."""
+    root = project(tmp_path, monkeypatch)
+    text = (root / "luria.yaml").read_text().replace(
+        "      broader: {scheme: AREA, many: true, required: false}\n",
+        "      broader: {scheme: AREA, many: true, required: false, "
+        "converse: narrower}\n"
+        "      narrower: {scheme: AREA, many: true, required: false, "
+        "converse: broader}\n")
+    (root / "luria.yaml").write_text(text)
+    config.reset()
+    relations.complete(fix=True)
+    one = root / "record/areas.d/AREA-001.md"
+    two = root / "record/areas.d/AREA-002.md"
+    assert "narrower:\n- AREA-queues\n" in one.read_text()
+    _commit(root)
+    two.write_text(two.read_text().replace("broader:\n- AREA-runtime\n", ""))
+    config.reset()
+    relations.complete(fix=True)
+    assert "AREA-runtime" not in two.read_text(), \
+        "the withdrawn edge was written back"
+    assert "narrower" not in one.read_text(), "the stale converse survived"

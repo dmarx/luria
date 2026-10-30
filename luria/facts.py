@@ -45,9 +45,11 @@ position, an integer), so a code like `LIT-001` needs no mangling:
 
     head_value(S, F, C, X).       what document C of scheme S declared in a
                                   converse-paired field F at HEAD, as the
-                                  text said it — the baseline the converse
-                                  fixer reads change against. Absent with no
-                                  repository or no commit.
+                                  text said it with a derived alias read as
+                                  the code it names (as `ref_value` reads it)
+                                  — the baseline the converse fixer reads
+                                  change against. Absent with no repository
+                                  or no commit.
 
 The facts come in families, and a logic program names the ones it reads in
 a `% facts:` line at its head, so a run builds only those: `schema` (what
@@ -289,6 +291,15 @@ def head_facts(cfg=None) -> list[Fact]:
         found += [(prefix, fields, line.partition(":")[2])
                   for line in listed_at.stdout.splitlines()]
     texts = _blobs(cfg.root, [f"HEAD:{rel}" for _, _, rel in found])
+    # Read through derived aliases as `ref_value` is, against the record as
+    # it stands: the baseline is compared to a resolved working tree, so an
+    # edge HEAD spelled `LIT-Jia-2015-1146` must be the LIT-1146 it named, or
+    # withdrawing it reads as nothing changed and the fixer writes it back.
+    derived: dict[str, str] = {}
+    if any(s.alias for s in cfg.schemes.values()):
+        from .aliases import ALSO_KNOWN_AS, alias_map
+        derived = {spelling: a.code for spelling, a in alias_map(cfg).items()
+                   if a.kind == ALSO_KNOWN_AS}
     out: list[Fact] = []
     for prefix, fields, rel in found:
         text = texts.get(f"HEAD:{rel}")
@@ -298,7 +309,8 @@ def head_facts(cfg=None) -> list[Fact]:
         for field in fields:
             for code in listed(meta.get(field)):
                 out.append(Fact("head_value",
-                                (prefix, field, Path(rel).stem, code)))
+                                (prefix, field, Path(rel).stem,
+                                 derived.get(code, code))))
     return out
 
 
