@@ -40,8 +40,8 @@ Records keep needing that search, and today a person does it by hand:
 
 - **Filling a field from the graph.** On 2026-11-01 dmarx/nucleation made
   `line:` required for CASE and inferred the nine missing values, using a
-  SQL query over `luria export` and then reading each candidate (its
-  `ADR-067`). The owner asked for that to be mechanical, "maybe even an
+  SQL query over `luria export` and then reading each candidate
+  ([NUC-ADR-067](https://github.com/dmarx/nucleation/blob/main/record/decisions.d/ADR-067.md)). The owner asked for that to be mechanical, "maybe even an
   UPDATE statement".
 - **Repairing an invariant finding.** The question there is the fewest tag
   or line additions that would bind a chain's unbound edges and lines.
@@ -54,8 +54,8 @@ optimisation") fired the first case on nucleation, with those nine values
 removed again:
 
 - seven values are cautious, and all seven match the hand assignment;
-- one document, CASE-151, is brave only: a real choice between two lines;
-- one, CASE-014, has no evidence and is reported as such.
+- one document, [NUC-CASE-151](https://github.com/dmarx/nucleation/blob/main/record/cases.d/CASE-151.md), is brave only: a real choice between two lines;
+- one, [NUC-CASE-014](https://github.com/dmarx/nucleation/blob/main/record/cases.d/CASE-014.md), has no evidence and is reported as such.
 
 The JSON was byte-identical across four seeds and under four-thread
 parallel search.
