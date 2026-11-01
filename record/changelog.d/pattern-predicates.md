@@ -1,0 +1,3 @@
+### Added
+
+- A path pattern's node may test one of its own fields inside the node, in Cypher's inline node predicate. The forms are `(p:CLAIM WHERE p.status <> 'Active')`, `(o:CLAIM WHERE o.status IN ['Proposed', 'Active'])` and `(n:NOTE WHERE NOT n.status IN ['Read', 'Skimmed'])`. A test works inside `WHERE NOT` too, so a reported pattern can now say "no premise that is not Active". A document without the field matches no comparison. A comparison on another node, `AND`/`OR`, `=` (use the property map) and other operators are refused at load, by name. [ADR-tmpofn2g](record/decisions.d/ADR-tmpofn2g.md); [ADR-129](record/decisions.d/ADR-129.md)'s subset is amended to match.

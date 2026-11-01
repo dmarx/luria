@@ -103,6 +103,8 @@ def test_a_syntax_error_is_a_config_error(tmp_path, monkeypatch):
      "a variable-length hop stays within one scheme"),
     ("(c:CLAIM {colour: 'red'})-[:premise_of]->(i:INF)",
      "`colour` is not a field CLAIM declares"),
+    ("(c:CLAIM WHERE c.colour <> 'red')-[:premise_of]->(i:INF)",
+     "`colour` is not a field CLAIM declares"),
     ("(c:CLAIM) WHERE NOT (c)<-[:challenges]-(:THEORY)",
      "THEORY is not a declared scheme"),
 ])

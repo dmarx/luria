@@ -2090,8 +2090,12 @@ class NamedPattern:
     The subset: one label per node (or a bare `(c)` naming a node bound
     earlier), directed typed hops with `|` between fields, variable length on
     one hop (`-[:extends*]->`, `*2..`, `*..3`), literal equality on a node's
-    frontmatter (`{status: 'Active'}`), and `WHERE NOT` followed by a fixed
-    path. `MATCH`, `RETURN`, `OPTIONAL MATCH`, undirected and named edges,
+    frontmatter (`{status: 'Active'}`), one comparison of a node's own field
+    inside it (`(p:CLAIM WHERE p.status <> 'Active')`, `... IN ['Proposed',
+    'Open']`, `NOT ... IN [...]`), and `WHERE NOT` followed by a fixed
+    path. A document without the field matches no comparison, as Cypher's
+    null; on a list field `IN` holds when any value is listed, and `<>` and
+    `NOT ... IN` when none is. `MATCH`, `RETURN`, `OPTIONAL MATCH`, undirected and named edges,
     shortest paths and writes are refused at load, by name. Every label,
     hop and property is checked against the schemes then too — a pattern
     over a field nothing declares matches nothing, and nothing looks exactly

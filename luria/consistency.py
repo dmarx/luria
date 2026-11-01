@@ -99,7 +99,9 @@ def _pattern_facts(patterns: dict) -> list[Fact]:
             for i, node in enumerate(path.nodes):
                 out.append(Fact("pat_node", (name, w, i, node.label)))
                 out += [Fact("pat_prop", (name, w, i, key))
-                        for key, _ in node.props]
+                        for key in dict.fromkeys(
+                            [k for k, _ in node.props]
+                            + ([node.test[0]] if node.test else []))]
             for h, hop in enumerate(path.hops):
                 near, far = (h, h + 1) if hop.right else (h + 1, h)
                 out += [Fact("pat_hop", (name, w, h, near, far, f))
