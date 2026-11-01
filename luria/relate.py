@@ -21,8 +21,10 @@ unresolvable code is refused rather than written, because a relation nobody
 can follow is exactly the finding the lint exists to raise.
 
 The edit is `field_edit`'s: one line, the form's comments untouched. A
-declared converse stays `luria repair`'s to complete, as it is for every
-other one-sided relation; the command says so when it applies.
+declared converse is never written here. On a directed pair the derived
+side is computed, and a relation written into it is `luria repair`'s to
+move; on a pair declaring no direction the other side is `luria link
+--fix`'s to complete. The command says which when it applies.
 """
 
 from __future__ import annotations
@@ -119,10 +121,19 @@ def relate(source: str, field: str, target: str) -> Related:
         notes.append(f"status is {str(meta.get('status', '')).strip()!r}, and "
                      f"{field} is what a {scheme.retires_on} document names — "
                      f"set the status, or the lint will ask")
-    converse = next((r.converse for r in scheme.references
-                     if r.field == field and getattr(r, "converse", "")), "")
-    if converse and converse != field:
-        notes.append(f"`luria repair` writes the converse ({converse}) on {target}")
+    from .relations import direction
+    ref = next((r for r in scheme.references
+                if r.field == field and getattr(r, "converse", "")), None)
+    stored = direction(scheme.prefix, field) if ref is not None else ""
+    if stored == "derived":
+        notes.append(f"{field} is the derived side: `luria repair` moves it "
+                     f"to {ref.converse} on {target}")
+    elif stored == "primary":
+        notes.append(f"{ref.converse} on {target} is derived from this, "
+                     f"never stored")
+    elif stored == "undirected":
+        notes.append(f"`luria link --fix` writes the converse "
+                     f"({ref.converse}) on {target}")
 
     # A second spelling of a target already held is the same relation. The
     # spelling written is the one given: a readable alias stays readable.

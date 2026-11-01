@@ -7,7 +7,15 @@
 % A pair is P = (S, F, B, T): field F on scheme S, whose converse B lives on
 % scheme T. An edge (A, X) runs from a document A of S to a document X of T.
 
-pair(S, F, B, T) :- ref_converse(S, F, B), ref_target(S, F, T), scheme(T).
+%
+% Only a pair with no derived side: a directed pair that marks one side
+% `derived` stores the other alone, and `luria/logic/normalize.lp` decides
+% what `luria repair` does about it. What is left here is a self-converse
+% relation, which has no derived side, and a pair declaring no direction.
+declared(S, F, B, T) :- ref_converse(S, F, B), ref_target(S, F, T), scheme(T).
+directed(S, F, B, T) :- declared(S, F, B, T), ref_derived(S, F).
+directed(S, F, B, T) :- declared(S, F, B, T), ref_derived(T, B).
+pair(S, F, B, T) :- declared(S, F, B, T), not directed(S, F, B, T).
 
 % The two sides as the working tree holds them, and as HEAD did.
 now_f(S, F, B, T, A, X) :- pair(S, F, B, T), ref_value(A, F, X),

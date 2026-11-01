@@ -4,7 +4,8 @@
 % and raises the first in the order the loader has always checked them.
 %
 % Facts: scheme/1, remote/1, ref/2, ref_target/3, ref_converse/3,
-% ref_many/2, ref_invariant/3, nameable/2 (every field a scheme can hold),
+% ref_many/2, ref_derived/2, ref_invariant/3, nameable/2 (every field a
+% scheme can hold),
 % role_successor/2, role_retires_on/2, role_influence/2, status_word/2, and
 % per raw
 % chain: chain_scheme/2, chain_facet/2, chain_walks/3 (relation or sibling),
@@ -31,6 +32,17 @@ converse_single(S, F, T, S, F) :- pair(S, F, B, T), ref(T, B),
                                   not ref_many(S, F).
 converse_single(S, F, T, T, B) :- pair(S, F, B, T), ref(T, B),
                                   not ref_many(T, B).
+
+% A derived side is computed from its converse, so it needs one; a
+% self-converse relation is both of its sides and cannot be derived; and
+% exactly one side of a directed pair may be.
+has_converse(S, F) :- ref_converse(S, F, _).
+derived_unpaired(S, F) :- ref_derived(S, F), not has_converse(S, F).
+derived_self(S, F) :- ref_derived(S, F), pair(S, F, F, S).
+derived_both(S, F, T) :- pair(S, F, B, T), ref_derived(S, F),
+                         ref_derived(T, B), S < T.
+derived_both(S, F, S) :- pair(S, F, B, S), ref_derived(S, F),
+                         ref_derived(S, B), F < B.
 
 % A relation's invariant has to be a field both of its ends can hold.
 invariant_unheld(S, F, S) :- ref_invariant(S, F, I), not nameable(S, I).
@@ -93,6 +105,9 @@ pattern_facet_unheld(P, X) :- pat_facet(P, X), not pattern_facet_held(P, X).
 #show converse_elsewhere/3.
 #show converse_unrequited/3.
 #show converse_single/5.
+#show derived_unpaired/2.
+#show derived_self/2.
+#show derived_both/3.
 #show invariant_unheld/3.
 #show successor_undeclared/2.
 #show retires_unknown/2.

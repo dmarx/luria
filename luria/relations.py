@@ -319,6 +319,224 @@ def complete(fix: bool = False) -> list[Repair]:
     return todo
 
 
+# --- a directed pair stores its primary side alone --------------------------
+#
+# A pair marking one side `derived` is one fact with one home (DP-2, DP-3):
+# the primary side is stored, and the derived side is computed for every
+# reader by `edges()`. The derived field may still be written — it is how an
+# author states the relation from the document they happen to be holding —
+# and `luria repair` moves what is written there. Unlike completion, the
+# answer is a function of the sources alone: no HEAD baseline, because
+# nothing ever writes the derived side back, so a deletion from the primary
+# inactive-ok: ADR-084 — the rule this replaces for directed pairs
+# side cannot be undone by a stale copy (the ambiguity ADR-084 resolved
+# against HEAD does not arise).
+
+
+@dataclass(frozen=True)
+class Move:
+    """One entry filed on a derived side, made right. `drop` takes `source`
+    out of `back` on the derived document, because the primary side already
+    holds the edge; `move` also writes `target` into `field` on the primary
+    document."""
+    kind: str
+    primary: Path
+    field: str
+    target: str
+    derived: Path
+    back: str
+    source: str
+
+    def edits(self) -> list[Repair]:
+        out = [Repair(self.derived, self.back, self.source, "remove")]
+        if self.kind == "move":
+            out.insert(0, Repair(self.primary, self.field, self.target, "add"))
+        return out
+
+
+def _paired_documents() -> dict[str, Adr]:
+    docs: dict[str, Adr] = {}
+    for prefix in {p[i] for p in pairs() for i in (0, 3)}:
+        if prefix in current().schemes:
+            docs.update(_documents(prefix))
+    return docs
+
+
+def _normalizing():
+    """Every move and drop the directed pairs need, the ones the contract
+    holds back (each with the breach it would cause), and the derived
+    entries left alone: contradictions and codes naming nothing.
+
+    Decided by `luria/logic/normalize.lp`. A move is judged as a unit — the
+    add and the removal together — so a move the far document's contract
+    refuses never loses the edge by removing it from the near one."""
+    from . import logic
+    from .contract import is_remote
+    derived = logic.derive("normalize")
+    docs = _paired_documents()
+    moves = [Move(kind, docs[a].path, f, x, docs[x].path, b, a)
+             for kind in ("move", "drop")
+             for s, f, b, t, a, x in sorted(derived.get(kind, ()))]
+    ok: list[Move] = []
+    held_back: list[tuple[Move, str]] = []
+    for move in moves:
+        blocked = _blocked("", {}, move.edits())[1]
+        if blocked:
+            held_back.append((move, blocked[0][1]))
+        else:
+            ok.append(move)
+    # Safe one at a time is not safe together when two land in one file, so
+    # judge the survivors as the batch they will be written as, and hold
+    # back any move one of whose edits the batch would break.
+    while ok:
+        blocked = {(r.path, r.field, r.code, r.op): why for r, why in
+                   _blocked("", {}, [e for m in ok for e in m.edits()])[1]}
+        stop = [m for m in ok if any((e.path, e.field, e.code, e.op) in blocked
+                                     for e in m.edits())]
+        if not stop:
+            break
+        for move in stop:
+            why = next(blocked[k] for k in ((e.path, e.field, e.code, e.op)
+                                            for e in move.edits())
+                       if k in blocked)
+            held_back.append((move, why))
+        ok = [m for m in ok if m not in stop]
+    clashes = [(docs[x].path, b, a, f, x) for s, f, b, t, a, x
+               in sorted(derived.get("clash", ()))]
+    dangling = [(docs[x].path, b, v) for t, b, x, v
+                in sorted(derived.get("dangling", ())) if not is_remote(v)]
+    return ok, held_back, clashes, dangling
+
+
+def normalizations() -> list[Move]:
+    """Every move and drop a directed pair needs and the contract permits,
+    ordered so a run is reproducible. Empty when nothing is filed on a
+    derived side."""
+    return sorted(_normalizing()[0], key=lambda m: (
+        str(m.derived), m.back, m.source, m.kind))
+
+
+def derived_rows() -> list[str]:
+    """An entry filed on a derived side, said in the record's own paths and
+    naming what `luria repair` does about it — or why it does nothing."""
+    cfg = current()
+    ok, held_back, clashes, dangling = _normalizing()
+    found: list[str] = []
+    for m in ok:
+        where = f"{cfg.rel(m.derived)}: `{m.back}: {m.source}` is filed on " \
+                f"the derived side of `{m.field}`"
+        if m.kind == "drop":
+            found.append(f"{where}, and {m.source} already holds "
+                         f"`{m.field}: {m.target}` — the copy is redundant "
+                         f"(`luria repair` drops it)")
+        else:
+            found.append(f"{where} — the relation is stored as "
+                         f"`{m.field}: {m.target}` on {m.source} "
+                         f"(`luria repair` moves it there)")
+    for m, breach in held_back:
+        did = "writing" if m.kind == "move" else "removing"
+        found.append(
+            f"{cfg.rel(m.derived)}: `{m.back}: {m.source}` is filed on the "
+            f"derived side of `{m.field}`, and {did} it would leave a "
+            f"document in breach of its scheme "
+            f"({breach.split(': ', 1)[-1]}), so it is left as filed — the "
+            f"relation and the contract disagree, and which gives is a "
+            f"person's call")
+    for path, back, a, field, x in clashes:
+        found.append(
+            f"{cfg.rel(path)}: `{back}: {a}` would make {a} and {x} each "
+            f"stand before the other in `{field}` — both directions are "
+            f"asserted, one of them is wrong and the data does not say "
+            f"which, so it is left as filed")
+    for path, back, code in dangling:
+        found.append(
+            f"{cfg.rel(path)}: `{back}: {code}` names no document `{back}` "
+            f"may hold, so there is no primary side to move it to — left as "
+            f"filed")
+    return sorted(set(found))
+
+
+def _drop_code(text: str, field: str, code: str) -> str:
+    """Take `code` out of `field` in whichever spelling it was written: a
+    readable alias and the code it names are one value (#219)."""
+    from .adr_index import parse_frontmatter
+    from .contract import reference_code
+    for raw in listed(parse_frontmatter(text)[0].get(field)):
+        if (reference_code(raw) or raw) == code:
+            text = drop_from_field(text, field, raw)
+    return text
+
+
+def normalize(fix: bool = False) -> list[Path]:
+    """Move every entry filed on a derived side to the primary side, or drop
+    it where the primary already holds it. Returns the files that change —
+    or would, without `fix`. Each file is written once."""
+    edits: dict[Path, list[Repair]] = {}
+    for move in normalizations():
+        for entry in move.edits():
+            edits.setdefault(entry.path, []).append(entry)
+    if fix:
+        for path, entries in edits.items():
+            text = path.read_text(encoding="utf-8")
+            for entry in entries:
+                if entry.op == "add":
+                    text = add_to_field(text, entry.field,
+                                        readable(entry.code))
+                else:
+                    text = _drop_code(text, entry.field, entry.code)
+            writes.write_text(path, text)
+    return sorted(edits, key=str)
+
+
+def direction(prefix: str, field: str) -> str:
+    """How a declared relation is stored: `derived` (computed, never
+    stored), `primary` (stored alone; its converse is derived), `symmetric`
+    (its own converse, stored on both documents) or `undirected` (a pair
+    naming no derived side, stored on both). "" for no converse."""
+    cfg = current()
+    refs = {(p, r.field): r for p, s in cfg.schemes.items()
+            for r in s.references}
+    ref = refs.get((prefix, field))
+    if ref is None or not ref.converse:
+        return ""
+    if ref.derived:
+        return "derived"
+    far = [refs.get((t, ref.converse)) for t in ref.scheme]
+    if any(f is not None and f.derived for f in far):
+        return "primary"
+    if ref.converse == field and prefix in ref.scheme:
+        return "symmetric"
+    return "undirected"
+
+
+def undirected_rows() -> list[str]:
+    """A directed pair that names no derived side, once per pair. It still
+    works — both sides stored, `luria link --fix` completing them against
+    HEAD as before — and this is the disclosure that it is the old shape."""
+    cfg = current()
+    refs = {(p, r.field): r for p, s in cfg.schemes.items()
+            for r in s.references}
+    seen: set[frozenset] = set()
+    found: list[str] = []
+    for s, f, b, t in pairs():
+        if (s, f) == (t, b):
+            continue
+        near, far = refs.get((s, f)), refs.get((t, b))
+        if near is None or far is None or near.derived or far.derived:
+            continue
+        key = frozenset({(s, f), (t, b)})
+        if key in seen:
+            continue
+        seen.add(key)
+        found.append(
+            f"luria.yaml: schemes.{s}.references.{f} and its converse "
+            f"{t}.{b} declare no direction, so both sides are stored and "
+            f"`luria link --fix` keeps them in step — mark the side to be "
+            f"computed `derived: true` and `luria repair` stores the "
+            f"relation once")
+    return found
+
+
 def relation_spans(path, text: str) -> list[tuple[int, int]]:
     """Where a document declares its place in a line, as character spans.
 

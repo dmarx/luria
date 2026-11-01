@@ -109,13 +109,16 @@ def test_the_successor_field_on_a_document_still_in_force_says_so(project):
     assert "superseded_by:\n- ADR-002\n" in current().schemes["ADR"].documents()[1].read_text()
 
 
-def test_a_declared_relation_is_written_and_its_converse_is_left_to_repair(project):
+def test_a_declared_relation_is_written_and_its_converse_is_left_to_the_fixer(project):
     _declared_project(project)
     done = relate_mod.relate("SOTA-113", "extends", "SOTA-105")
     assert done.outcome == "added"
     assert "extends:\n- SOTA-105\n" in done.path.read_text()
-    assert any("extended_by" in n and "repair" in n for n in done.notes), done.notes
-    # The other side is not written here; `luria repair` owns that.
+    # A pair declaring no direction is completed by `luria link --fix`;
+    # `luria repair` never completed a converse, though this note said so.
+    assert any("extended_by" in n and "link --fix" in n
+               for n in done.notes), done.notes
+    # The other side is not written here.
     other = current().schemes["SOTA"].documents()[105].read_text()
     assert "extended_by" not in other
 

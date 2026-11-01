@@ -81,6 +81,16 @@ def apply() -> list[Path]:
         for p in statuses.populate(s):
             print(f"brought the status fields up to date in {cfg.rel(p)}")
             changed.append(p)
+    # A directed converse pair stores its primary side alone: an entry filed
+    # on the derived side moves to the primary side of the other document,
+    # or is dropped where that side already holds it. A function of the
+    # sources with one right answer, so it is a repair (the ADR on what
+    # belongs in `repair` and what in `link --fix`).
+    from . import relations
+    for p in relations.normalize(fix=True):
+        print(f"moved a derived relation to its primary side in "
+              f"{cfg.rel(p)}")
+        changed.append(p)
     # An `inactive-ok` naming a document now in force vouches for a
     # retirement that is over. The lint reports it; the code comes out, the
     # reason stays, and a directive left naming nothing goes.

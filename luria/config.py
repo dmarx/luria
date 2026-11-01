@@ -493,6 +493,16 @@ class Reference:
     finding; a relation with no declared converse is left entirely alone,
     because its reverse edge would be a guess (#178).
 
+    `derived` marks one side of a directed pair as computed rather than
+    stored. Only the other side — the primary — is ever written down; every
+    reader gets the derived side from the converse (`relations.edges()`),
+    and `luria repair` moves an entry written on the derived side to the
+    primary side of the other document, or drops it where the primary
+    already holds it. Exactly one side of a directed pair may say so, and a
+    self-converse relation never does, since it is both of its own sides. A
+    pair that marks neither keeps storing both sides, completed by
+    `luria link --fix`, and the lint reports it as `undirected-relations`.
+
     `many` says the field holds a list of codes rather than one. Without it
     a list was stringified and its first code checked, the rest ignored —
     structured input coerced to prose and half-read, with no finding. A
@@ -530,6 +540,8 @@ class Reference:
     required: bool = True
     many: bool = False
     converse: str = ""
+    # This side of a converse pair is computed, never stored — see above.
+    derived: bool = False
     # The field both ends must hold a value in — see the class docstring.
     # Unset asserts nothing, which is the default because most relations
     # assert no shared field.
@@ -1679,6 +1691,7 @@ def _references(prefix: str, raw: dict) -> tuple[Reference, ...]:
                                required=required,
                                many=bool(spec.get("many", False)),
                                converse=str(spec.get("converse", "")),
+                               derived=_flag(where, spec, "derived"),
                                label=str(spec.get("label", "")),
                                blurb=str(spec.get("blurb", "")),
                                invariant=str(spec.get("invariant", "")).strip(),
@@ -1689,6 +1702,17 @@ def _references(prefix: str, raw: dict) -> tuple[Reference, ...]:
                                explain=_explain(where, spec),
                                group=bool(spec.get("group", False))))
     return tuple(found)
+
+
+def _flag(where: str, spec: dict, key: str) -> bool:
+    """A boolean key, refused when it is anything else: `derived: "no"`
+    read as truthy would move every entry of a field its author meant to
+    keep."""
+    value = spec.get(key, False)
+    if not isinstance(value, bool):
+        raise ValueError(f"{where}.{key} must be true or false, "
+                         f"not {value!r}")
+    return value
 
 
 def _targets(where: str, raw) -> tuple[str, ...]:

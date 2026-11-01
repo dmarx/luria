@@ -18,6 +18,7 @@ position, an integer), so a code like `LIT-001` needs no mangling:
     ref(S, F).                    a reference field S declares…
     ref_target(S, F, T).          …each scheme its codes may name ("*": any)
     ref_converse(S, F, C).        …its declared converse
+    ref_derived(S, F).            …this side of its converse pair is computed
     ref_many(S, F). ref_required(S, F).
     ref_invariant(S, F, I).       …the field both ends must share a value in
     ref_label(S, F, L).           …what a view calls it
@@ -150,6 +151,8 @@ def schema_facts(cfg=None) -> Iterator[Fact]:
                 yield Fact("ref_target", (prefix, ref.field, target))
             if ref.converse:
                 yield Fact("ref_converse", (prefix, ref.field, ref.converse))
+            if ref.derived:
+                yield Fact("ref_derived", (prefix, ref.field))
             if ref.many:
                 yield Fact("ref_many", (prefix, ref.field))
             if ref.required:

@@ -703,7 +703,8 @@ FAILABLE = ("retired-citations", "unresolved-codes", "foreign-temp-codes",
             "legacy-spellings", "narrow-titles", "stale-directives",
             "template-drift", "broken-chains", "retired-transclusions",
             "view-drift",
-            "one-sided-relations", "unbound-relations", "unbound-lines",
+            "one-sided-relations", "derived-relations",
+            "undirected-relations", "unbound-relations", "unbound-lines",
             "unrecorded-relations", "unannotated-relations",
             "unexplained-relations", "bad-annotations",
             "spent-upgrades",
@@ -1023,15 +1024,38 @@ def status_sections(rendered: dict[Path, str] | None = None
             f"{len(broken)} succession(s) loop — a step that comes before "
             "itself, so the sequence has no earliest member", broken))
 
-    # A relation and its declared converse are one fact written in two
-    # places. One place holding it is not a disagreement to adjudicate, it
-    # is a write nobody has made yet — hence the fixer in the wording.
+    # A symmetric relation, or a pair declaring no direction, is one fact
+    # written in two places. One place holding it is not a disagreement to
+    # adjudicate, it is a write nobody has made yet — hence the fixer in the
+    # wording. A directed pair is never one-sided: its derived side is
+    # computed, not stored.
     lopsided = relations.rows()
     if lopsided:
         sections.append((
             "one-sided-relations",
-            f"{len(lopsided)} declared relation(s) are held by one side "
-            "only (`luria link --fix` writes the other)", lopsided))
+            f"{len(lopsided)} symmetric or undirected relation(s) are held "
+            "by one side only (`luria link --fix` writes the other)",
+            lopsided))
+
+    # A directed pair stores its primary side alone; an entry written on the
+    # derived side is a source repair waiting for `luria repair`, or one it
+    # refuses and says why.
+    filed = relations.derived_rows()
+    if filed:
+        sections.append((
+            "derived-relations",
+            f"{len(filed)} relation(s) filed on the derived side of a "
+            "directed pair (`luria repair` moves them to the primary side)",
+            filed))
+
+    # The old shape, still honoured: a pair with no direction stores both
+    # sides. A disclosure, so a project knows the derivation is available.
+    loose_pairs = relations.undirected_rows()
+    if loose_pairs:
+        sections.append((
+            "undirected-relations",
+            f"{len(loose_pairs)} converse pair(s) declare no derived side, so "
+            "both sides are stored (mark one `derived: true`)", loose_pairs))
 
     # A relation stated in prose and one stated in frontmatter are the same
     # fact (#333). Two of the four ways they part are mechanical — the fixer
