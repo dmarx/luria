@@ -81,6 +81,14 @@ def apply() -> list[Path]:
         for p in statuses.populate(s):
             print(f"brought the status fields up to date in {cfg.rel(p)}")
             changed.append(p)
+    # An `inactive-ok` naming a document now in force vouches for a
+    # retirement that is over. The lint reports it; the code comes out, the
+    # reason stays, and a directive left naming nothing goes.
+    from . import ack
+    for p, codes in ack.trim_settled():
+        print(f"removed {', '.join(codes)} from `inactive-ok` in "
+              f"{cfg.rel(p)} — in force now")
+        changed.append(p)
     # One-time cleanup for a project upgrading past ADR-059, which stopped
     # rendering the schema reference outside Luria's own tree.
     for p in config_doc.retire():
@@ -173,7 +181,8 @@ def retire_aliases(scheme) -> list[Path]:
 def run() -> None:
     """Write every mechanical source repair: link bare references, populate
     `created:` from a journal entry's path, move a note out of `status:`
-    into `status_note:` and `superseded_by:`, retire a stale configuration
+    into `status_note:` and `superseded_by:`, remove from an `inactive-ok`
+    a code whose document is in force, retire a stale configuration
     reference. Prints what changed; a second run changes nothing. Returns
     nothing — Fire would print a return value, and a list of paths is not
     the summary a caller wants."""

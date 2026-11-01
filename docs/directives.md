@@ -114,6 +114,15 @@ again, the hand-written URL was fixed, the argument has a typo — is itself
 reported under `stale-directives`, so acknowledgements cannot quietly
 outlive what they excuse.
 
+One of those has a single correct fix, and `luria repair` writes it: a code
+in an `inactive-ok` whose document is in force now. The repair removes that
+code and keeps the reason and the other codes. It deletes the directive only
+when the directive names nothing else. The lint reports such a code even
+when the directive's other codes still excuse something. Every other stale
+directive needs a person to decide: a retired code that nothing in scope
+cites any more may mean the citation moved and the directive should move
+with it.
+
 ## The vocabulary
 
 | directive | acknowledges | argument |
