@@ -9,7 +9,7 @@ Every reference in the record is a claim — "this is why things are the way the
 
 Only an `Active` document is in force. `Proposed` and `Deferred` mean *not in force yet* — an open question, being cited as if it were settled — while `Superseded` and `Rejected` mean *no longer in force*, which is often a perfectly good thing to cite: history, or a rejection worth pointing at. Either way the citation should be deliberate, and this section lists the ones nobody has vouched for yet.
 
-**4 documents cited without acknowledgement.** Not listed: 66 citations someone has already vouched for with an `inactive-ok:` comment at the citing site.
+**5 documents cited without acknowledgement.** Not listed: 66 citations someone has already vouched for with an `inactive-ok:` comment at the citing site.
 
 To vouch for one, put the reason where the citation is — `inactive-ok:` covers its own line and the line below it, `inactive-ok-block:` its paragraph, `inactive-ok-file:` the whole page:
 
@@ -17,27 +17,11 @@ To vouch for one, put the reason where the citation is — `inactive-ok:` covers
 <!-- inactive-ok: ADR-012 — why this citation is right -->
 ```
 
-### [ADR-127](../../record/decisions.d/ADR-127.md) — Proposed
-
-A logic core in clingo, behind a procedural shell
-
-9 citations in 3 files await a look; 2 other citations of it are acknowledged.
-
-- [`luria/pattern_rules.py:5`](../../luria/pattern_rules.py)
-- [`record/decisions.d/ADR-128.md:70`](../../record/decisions.d/ADR-128.md)
-- [`record/decisions.d/ADR-128.md:77`](../../record/decisions.d/ADR-128.md)
-- [`record/decisions.d/ADR-129.md:31`](../../record/decisions.d/ADR-129.md)
-- [`record/decisions.d/ADR-129.md:44`](../../record/decisions.d/ADR-129.md)
-- [`record/decisions.d/ADR-129.md:52`](../../record/decisions.d/ADR-129.md)
-- [`record/decisions.d/ADR-129.md:145`](../../record/decisions.d/ADR-129.md)
-- [`record/decisions.d/ADR-129.md:175`](../../record/decisions.d/ADR-129.md)
-- [`record/decisions.d/ADR-129.md:216`](../../record/decisions.d/ADR-129.md)
-
 ### [ADR-129](../../record/decisions.d/ADR-129.md) — Proposed
 
 A chain may walk a named path pattern
 
-8 citations in 4 files await a look; 2 other citations of it are acknowledged.
+13 citations in 5 files await a look; 2 other citations of it are acknowledged.
 
 - [`docs/project-memory.md:355`](../project-memory.md)
 - [`record/decisions.d/ADR-130.md:17`](../../record/decisions.d/ADR-130.md)
@@ -47,6 +31,28 @@ A chain may walk a named path pattern
 - [`record/decisions.d/ADR-132.md:22`](../../record/decisions.d/ADR-132.md)
 - [`record/decisions.d/ADR-132.md:32`](../../record/decisions.d/ADR-132.md)
 - [`record/decisions.d/ADR-133.md:24`](../../record/decisions.d/ADR-133.md)
+- [`record/decisions.d/ADR-135.md:13`](../../record/decisions.d/ADR-135.md)
+- [`record/decisions.d/ADR-135.md:26`](../../record/decisions.d/ADR-135.md)
+- [`record/decisions.d/ADR-135.md:35`](../../record/decisions.d/ADR-135.md)
+- [`record/decisions.d/ADR-135.md:150`](../../record/decisions.d/ADR-135.md)
+- [`record/decisions.d/ADR-135.md:151`](../../record/decisions.d/ADR-135.md)
+
+### [ADR-127](../../record/decisions.d/ADR-127.md) — Proposed
+
+A logic core in clingo, behind a procedural shell
+
+10 citations in 4 files await a look; 2 other citations of it are acknowledged.
+
+- [`luria/pattern_rules.py:5`](../../luria/pattern_rules.py)
+- [`record/decisions.d/ADR-128.md:70`](../../record/decisions.d/ADR-128.md)
+- [`record/decisions.d/ADR-128.md:77`](../../record/decisions.d/ADR-128.md)
+- [`record/decisions.d/ADR-129.md:37`](../../record/decisions.d/ADR-129.md)
+- [`record/decisions.d/ADR-129.md:50`](../../record/decisions.d/ADR-129.md)
+- [`record/decisions.d/ADR-129.md:58`](../../record/decisions.d/ADR-129.md)
+- [`record/decisions.d/ADR-129.md:154`](../../record/decisions.d/ADR-129.md)
+- [`record/decisions.d/ADR-129.md:184`](../../record/decisions.d/ADR-129.md)
+- [`record/decisions.d/ADR-129.md:225`](../../record/decisions.d/ADR-129.md)
+- [`record/decisions.d/ADR-135.md:117`](../../record/decisions.d/ADR-135.md)
 
 ### [ADR-132](../../record/decisions.d/ADR-132.md) — Proposed
 
@@ -55,7 +61,7 @@ A named path pattern may render a page of its matches
 8 citations in 3 files await a look.
 
 - [`docs/project-memory.md:359`](../project-memory.md)
-- [`record/decisions.d/ADR-129.md:195`](../../record/decisions.d/ADR-129.md)
+- [`record/decisions.d/ADR-129.md:204`](../../record/decisions.d/ADR-129.md)
 - [`record/decisions.d/ADR-133.md:16`](../../record/decisions.d/ADR-133.md)
 - [`record/decisions.d/ADR-133.md:18`](../../record/decisions.d/ADR-133.md)
 - [`record/decisions.d/ADR-133.md:23`](../../record/decisions.d/ADR-133.md)
@@ -71,10 +77,19 @@ A reference may name several schemes
 
 - [`record/decisions.d/ADR-127.md:28`](../../record/decisions.d/ADR-127.md)
 - [`record/decisions.d/ADR-127.md:35`](../../record/decisions.d/ADR-127.md)
-- [`record/decisions.d/ADR-129.md:30`](../../record/decisions.d/ADR-129.md)
-- [`record/decisions.d/ADR-129.md:40`](../../record/decisions.d/ADR-129.md)
-- [`record/decisions.d/ADR-129.md:104`](../../record/decisions.d/ADR-129.md)
-- [`record/decisions.d/ADR-129.md:106`](../../record/decisions.d/ADR-129.md)
+- [`record/decisions.d/ADR-129.md:36`](../../record/decisions.d/ADR-129.md)
+- [`record/decisions.d/ADR-129.md:46`](../../record/decisions.d/ADR-129.md)
+- [`record/decisions.d/ADR-129.md:110`](../../record/decisions.d/ADR-129.md)
+- [`record/decisions.d/ADR-129.md:112`](../../record/decisions.d/ADR-129.md)
+
+### [ADR-135](../../record/decisions.d/ADR-135.md) — Proposed
+
+A pattern node may test its own field for inequality or membership
+
+2 citations in 1 file await a look.
+
+- [`record/decisions.d/ADR-129.md:12`](../../record/decisions.d/ADR-129.md)
+- [`record/decisions.d/ADR-129.md:126`](../../record/decisions.d/ADR-129.md)
 
 ## Codes that resolve to no document
 
