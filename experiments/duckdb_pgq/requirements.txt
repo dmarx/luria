@@ -1,0 +1,4 @@
+# experiments/duckdb_pgq/requirements.txt
+# DuckPGQ parses on 1.5.x, not on 2.0.0 (see README).
+duckdb>=1.5,<2
+pandas
