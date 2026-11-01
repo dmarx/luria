@@ -3,7 +3,7 @@
 ### Added
 
 - **A converse pair can mark its derived side** with `derived: true` on that
-  side's reference ([ADR-tmpwpas9](record/decisions.d/ADR-tmpwpas9.md)). Only the primary side is stored, and every
+  side's reference ([ADR-137](record/decisions.d/ADR-137.md)). Only the primary side is stored, and every
   reader gets the derived side from the converse, as `relations.edges()`
   already did. `luria repair` moves an entry written on the derived side to
   the primary side of the other document, or drops it where that side
@@ -30,7 +30,7 @@
 
 ### Documentation
 
-- **[ADR-tmpu2wwj](record/decisions.d/ADR-tmpu2wwj.md) states what belongs in `luria repair` and what in
+- **[ADR-136](record/decisions.d/ADR-136.md) states what belongs in `luria repair` and what in
   `luria link --fix`.** A write whose answer is a function of the committed
   sources goes in `repair`. Only a write that reads the author's change
   against HEAD stays in `link --fix` alone.

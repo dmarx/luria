@@ -9,7 +9,7 @@ Every reference in the record is a claim — "this is why things are the way the
 
 Only an `Active` document is in force. `Proposed` and `Deferred` mean *not in force yet* — an open question, being cited as if it were settled — while `Superseded` and `Rejected` mean *no longer in force*, which is often a perfectly good thing to cite: history, or a rejection worth pointing at. Either way the citation should be deliberate, and this section lists the ones nobody has vouched for yet.
 
-**5 documents cited without acknowledgement.** Not listed: 66 citations someone has already vouched for with an `inactive-ok:` comment at the citing site.
+**8 documents cited without acknowledgement.** Not listed: 84 citations someone has already vouched for with an `inactive-ok:` comment at the citing site.
 
 To vouch for one, put the reason where the citation is — `inactive-ok:` covers its own line and the line below it, `inactive-ok-block:` its paragraph, `inactive-ok-file:` the whole page:
 
@@ -69,6 +69,20 @@ A named path pattern may render a page of its matches
 - [`record/decisions.d/ADR-133.md:53`](../../record/decisions.d/ADR-133.md)
 - [`record/decisions.d/ADR-133.md:64`](../../record/decisions.d/ADR-133.md)
 
+### [ADR-137](../../record/decisions.d/ADR-137.md) — Proposed
+
+A directed converse pair stores its primary side; the derived side is computed
+
+7 citations in 4 files await a look.
+
+- [`docs/concepts/relations-and-chains.md:69`](../concepts/relations-and-chains.md)
+- [`docs/how-to/relations.md:87`](../how-to/relations.md)
+- [`record/decisions.d/ADR-084.md:30`](../../record/decisions.d/ADR-084.md)
+- [`record/decisions.d/ADR-084.md:34`](../../record/decisions.d/ADR-084.md)
+- [`record/decisions.d/ADR-136.md:27`](../../record/decisions.d/ADR-136.md)
+- [`record/decisions.d/ADR-136.md:103`](../../record/decisions.d/ADR-136.md)
+- [`record/decisions.d/ADR-136.md:141`](../../record/decisions.d/ADR-136.md)
+
 ### [ADR-126](../../record/decisions.d/ADR-126.md) — Proposed
 
 A reference may name several schemes
@@ -81,6 +95,27 @@ A reference may name several schemes
 - [`record/decisions.d/ADR-129.md:46`](../../record/decisions.d/ADR-129.md)
 - [`record/decisions.d/ADR-129.md:110`](../../record/decisions.d/ADR-129.md)
 - [`record/decisions.d/ADR-129.md:112`](../../record/decisions.d/ADR-129.md)
+
+### [ADR-084](../../record/decisions.d/ADR-084.md) — Superseded
+
+A relation declares its converse; symmetry is the self-converse case
+
+4 citations in 3 files await a look; 18 other citations of it are acknowledged.
+
+- [`docs/concepts/relations-and-chains.md:58`](../concepts/relations-and-chains.md)
+- [`docs/how-to/relations.md:51`](../how-to/relations.md)
+- [`docs/how-to/relations.md:100`](../how-to/relations.md)
+- [`record/decisions.d/ADR-122.md:144`](../../record/decisions.d/ADR-122.md)
+
+### [ADR-136](../../record/decisions.d/ADR-136.md) — Proposed
+
+luria repair writes what the committed sources imply; link --fix writes what the working tree's change implies
+
+3 citations in 1 file await a look.
+
+- [`record/decisions.d/ADR-137.md:58`](../../record/decisions.d/ADR-137.md)
+- [`record/decisions.d/ADR-137.md:84`](../../record/decisions.d/ADR-137.md)
+- [`record/decisions.d/ADR-137.md:161`](../../record/decisions.d/ADR-137.md)
 
 ### [ADR-135](../../record/decisions.d/ADR-135.md) — Proposed
 
@@ -107,7 +142,7 @@ A reference the reader cannot follow: the code names no document in this record.
 ### ADR-000 — resolves to nothing (2 unmarked sites · 4 other mentions marked deliberate)
 
 - [`tests/test_lint.py:491`](../../tests/test_lint.py)
-- [`tests/test_relate.py:155`](../../tests/test_relate.py)
+- [`tests/test_relate.py:158`](../../tests/test_relate.py)
 
 ### ADR-231 — resolves to nothing (1 unmarked site)
 

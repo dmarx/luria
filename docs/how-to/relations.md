@@ -84,7 +84,7 @@ A half-declared pair — a converse that is not a declared field of the target s
 
 ### Mark the derived side of a directed pair
 
-A directed pair has a natural home for the fact: the document that depends on the other (`extends`, `rests_on`, `grounds`). Mark the reverse field `derived: true` and only the primary side is ever stored ([ADR-tmpwpas9](../../record/decisions.d/ADR-tmpwpas9.md)):
+A directed pair has a natural home for the fact: the document that depends on the other (`extends`, `rests_on`, `grounds`). Mark the reverse field `derived: true` and only the primary side is ever stored ([ADR-137](../../record/decisions.d/ADR-137.md)):
 
 ```yaml
       extended_by:

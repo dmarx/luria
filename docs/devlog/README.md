@@ -6,6 +6,7 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 
 ## Currently — [October 2026](2026-10.md)
 
+- [30 Oct 22:13 — Primary and derived sides of a converse pair, fired on Nucleation](2026-10.md#primary-and-derived-sides-of-a-converse-pair-fired-on-nucleation)
 - [30 Oct 18:23 — luria repair trims inactive-ok codes whose documents went Active](2026-10.md#luria-repair-trims-inactive-ok-codes-whose-documents-went-active)
 - [30 Oct 18:19 — Pattern predicates fired on Nucleation's worklist](2026-10.md#pattern-predicates-fired-on-nucleations-worklist)
 - [28 Oct 08:27 — Lint on a 5,500-file record spent four minutes on one regex, and the thread pool hid where the rest went](2026-10.md#lint-on-a-5500-file-record-spent-four-minutes-on-one-regex-and-the-thread-pool-hid-where-the-rest-went)
@@ -37,10 +38,10 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 
 ## All books
 
-156 entries across 3 books, newest first.
+157 entries across 3 books, newest first.
 
 | Book | Entries | First | Last |
 |---|--:|---|---|
-| [2026-10](2026-10.md) | 28 | 2026-10-01 | 2026-10-30 |
+| [2026-10](2026-10.md) | 29 | 2026-10-01 | 2026-10-30 |
 | [2026-09](2026-09.md) | 82 | 2026-09-03 | 2026-09-30 |
 | [2026-08](2026-08.md) | 46 | 2026-08-03 | 2026-08-28 |

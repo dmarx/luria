@@ -5,11 +5,11 @@
 
 `Proposed` and `Deferred` both describe an open question. Neither says *since when*, and that is the signal: a decision proposed last week is pending; the same one a year later was either overdue or settled in code and never written back.
 
-**8 document(s) awaiting a decision.**
+**10 document(s) awaiting a decision.**
 
 ## ADRs
 
-7 of the 8.
+9 of the 10.
 
 | Open since | Status | Code | Cited | Unack. | Title |
 |---|---|---|--:|--:|---|
@@ -19,11 +19,13 @@
 | 2026-10-13 | Proposed | [ADR-129](../../record/decisions.d/ADR-129.md) | 15 | 13 | A chain may walk a named path pattern |
 | 2026-10-13 | Proposed | [ADR-132](../../record/decisions.d/ADR-132.md) | 8 | 8 | A named path pattern may render a page of its matches |
 | 2026-10-28 | Proposed | [ADR-133](../../record/decisions.d/ADR-133.md) | 0 | 0 | A pattern page nests its matches as an outline, and patterns may share one |
+| 2026-10-30 | Proposed | [ADR-137](../../record/decisions.d/ADR-137.md) | 7 | 7 | A directed converse pair stores its primary side; the derived side is computed |
+| 2026-10-30 | Proposed | [ADR-136](../../record/decisions.d/ADR-136.md) | 3 | 3 | luria repair writes what the committed sources imply; link --fix writes what the working tree's change implies |
 | 2026-10-30 | Proposed | [ADR-135](../../record/decisions.d/ADR-135.md) | 2 | 2 | A pattern node may test its own field for inequality or membership |
 
 ## DPs
 
-1 of the 8.
+1 of the 10.
 
 | Open since | Status | Code | Cited | Unack. | Title |
 |---|---|---|--:|--:|---|

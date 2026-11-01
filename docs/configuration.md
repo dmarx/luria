@@ -280,6 +280,16 @@ to write one side from the other, and what makes a one-sided pair a
 finding; a relation with no declared converse is left entirely alone,
 because its reverse edge would be a guess (#178).
 
+`derived` marks one side of a directed pair as computed rather than
+stored. Only the other side — the primary — is ever written down; every
+reader gets the derived side from the converse (`relations.edges()`),
+and `luria repair` moves an entry written on the derived side to the
+primary side of the other document, or drops it where the primary
+already holds it. Exactly one side of a directed pair may say so, and a
+self-converse relation never does, since it is both of its own sides. A
+pair that marks neither keeps storing both sides, completed by
+`luria link --fix`, and the lint reports it as `undirected-relations`.
+
 `many` says the field holds a list of codes rather than one. Without it
 a list was stringified and its first code checked, the rest ignored —
 structured input coerced to prose and half-read, with no finding. A
@@ -318,6 +328,7 @@ target is the chain's own scheme.
 | `required` | `bool` | `True` |
 | `many` | `bool` | `False` |
 | `converse` | `str` | *unset* |
+| `derived` | `bool` | `False` |
 | `invariant` | `str` | *unset* |
 | `label` | `str` | *unset* |
 | `blurb` | `str` | *unset* |
