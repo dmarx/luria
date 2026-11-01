@@ -80,7 +80,7 @@ A reference may name several schemes
 
 A reference the reader cannot follow: the code names no document in this record. A typo, a number carried in from another project, and an illustrative code in an example all look identical from here — telling them apart takes a human, so this is a report, not an error.
 
-**6 codes unaccounted for.** Not listed: 76 mentions marked deliberate with an `unresolved-ok:` comment (same syntax and scopes as `inactive-ok:` above).
+**6 codes unaccounted for.** Not listed: 77 mentions marked deliberate with an `unresolved-ok:` comment (same syntax and scopes as `inactive-ok:` above).
 
 
 ### ADR-404 — resolves to nothing (3 unmarked sites · 14 other mentions marked deliberate)
