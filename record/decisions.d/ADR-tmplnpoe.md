@@ -48,7 +48,7 @@ Records keep needing that search, and today a person does it by hand:
 - **Clearing a credence check** ([ADR-131](ADR-131.md)'s reported patterns): the fewest
   status changes that would clear it.
 
-The experiment in PR 391 (`experiments/asp_propose/`, and its devlog entry
+The experiment filed with this decision (`experiments/asp_propose/`, and its devlog entry
 "Proposals from clingo: the line inference as choice, constraints and
 optimisation") fired the first case on nucleation, with those nine values
 removed again:
@@ -132,7 +132,7 @@ parallel mode, and asserts identical output.
   rejected.
 - **Make proposals lint findings with fixes attached.** Lint must stay one
   answer set and must fail on what is always wrong. A proposal is neither.
-- **A separate engine.** The DuckDB experiment in the same PR found no
+- **A separate engine.** The DuckDB experiment in PR 391 found no
   advantage for this. Its value is a query surface, not search.
 
 ## Consequences
