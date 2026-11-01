@@ -6,6 +6,7 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 
 ## Currently — [October 2026](2026-10.md)
 
+- [30 Oct 18:23 — luria repair trims inactive-ok codes whose documents went Active](2026-10.md#luria-repair-trims-inactive-ok-codes-whose-documents-went-active)
 - [28 Oct 08:27 — Lint on a 5,500-file record spent four minutes on one regex, and the thread pool hid where the rest went](2026-10.md#lint-on-a-5500-file-record-spent-four-minutes-on-one-regex-and-the-thread-pool-hid-where-the-rest-went)
 - [28 Oct 02:20 — Pattern pages as outlines, and the dialectic at fixed depth](2026-10.md#pattern-pages-as-outlines-and-the-dialectic-at-fixed-depth)
 - [27 Oct 20:01 — Pattern-backed warning classes, reliance and bounded acknowledgements](2026-10.md#pattern-backed-warning-classes-reliance-and-bounded-acknowledgements)
@@ -35,10 +36,10 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 
 ## All books
 
-154 entries across 3 books, newest first.
+155 entries across 3 books, newest first.
 
 | Book | Entries | First | Last |
 |---|--:|---|---|
-| [2026-10](2026-10.md) | 26 | 2026-10-01 | 2026-10-28 |
+| [2026-10](2026-10.md) | 27 | 2026-10-01 | 2026-10-30 |
 | [2026-09](2026-09.md) | 82 | 2026-09-03 | 2026-09-30 |
 | [2026-08](2026-08.md) | 46 | 2026-08-03 | 2026-08-28 |
