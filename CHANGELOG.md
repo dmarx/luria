@@ -5,6 +5,137 @@ Assembled from `changelog.d/` fragments on a cadence — never hand-edited
 
 <!-- luria-insert-here -->
 
+## 2026-11-02
+
+### Added
+
+- **`luria repair` removes, from an `inactive-ok`, a code whose document is
+  now in force** ([ADR-134](record/decisions.d/ADR-134.md)). It keeps the reason and the other codes, and
+  deletes the directive only when it names nothing else. It never touches
+  `unresolved-ok`, `mention-ok`, `target-ok` or `url-ok`, or a retired code
+  that nothing cites any more.
+
+### Changed
+
+- `stale-directives` now reports an Active code in an `inactive-ok` even when
+  the directive's other codes still excuse something, and names
+  `luria repair` as the fix.
+
+<!-- inactive-ok-file: ADR-084 — the decision this change supersedes -->
+
+### Added
+
+- **A converse pair can mark its derived side** with `derived: true` on that
+  side's reference ([ADR-137](record/decisions.d/ADR-137.md)). Only the primary side is stored, and every
+  reader gets the derived side from the converse, as `relations.edges()`
+  already did. `luria repair` moves an entry written on the derived side to
+  the primary side of the other document, or drops it where that side
+  already holds it. CI therefore applies it on every pull request. A move
+  that would make a relation run both ways, break a document's contract, or
+  name no document is left as filed and reported. A pair marking both sides,
+  `derived` on a field with no `converse`, and `derived` on a self-converse
+  relation are refused when the configuration loads.
+- **Lint class `derived-relations`**: an entry filed on a derived side, naming
+  `luria repair` as the remedy, or saying why repair leaves it.
+- **Lint class `undirected-relations`**: a converse pair that marks neither
+  side, once per pair. Such a pair keeps working as before.
+
+### Changed
+
+- **`one-sided-relations` covers only symmetric relations and pairs that
+  declare no direction.** A directed pair is never one-sided, because its
+  derived side is computed. These two kinds keep [ADR-084](record/decisions.d/ADR-084.md)'s completion in
+  `luria link --fix`. [ADR-084](record/decisions.d/ADR-084.md) is superseded for directed pairs.
+- **`luria relate` says where the other side of a relation lives**: derived
+  and never stored, moved by `luria repair`, or completed by
+  `luria link --fix`. It used to claim `luria repair` wrote the converse,
+  which it never did.
+
+### Documentation
+
+- **[ADR-136](record/decisions.d/ADR-136.md) states what belongs in `luria repair` and what in
+  `luria link --fix`.** A write whose answer is a function of the committed
+  sources goes in `repair`. Only a write that reads the author's change
+  against HEAD stays in `link --fix` alone.
+
+### Added
+
+- A path pattern's node may test one of its own fields inside the node, in Cypher's inline node predicate. The forms are `(p:CLAIM WHERE p.status <> 'Active')`, `(o:CLAIM WHERE o.status IN ['Proposed', 'Active'])` and `(n:NOTE WHERE NOT n.status IN ['Read', 'Skimmed'])`. A test works inside `WHERE NOT` too, so a reported pattern can now say "no premise that is not Active". A document without the field matches no comparison. A comparison on another node, `AND`/`OR`, `=` (use the property map) and other operators are refused at load, by name. [ADR-135](record/decisions.d/ADR-135.md); [ADR-129](record/decisions.d/ADR-129.md)'s subset is amended to match.
+
+### Added
+
+- **A path pattern can render a page of its matches** ([#373](https://github.com/dmarx/luria/issues/373)). Give it an
+  `output:`, and optionally a `title:`, and `luria index` writes one row per
+  match there, one column per named node, including patterns no chain can
+  walk. The page is a view luria supplies and a list, never a lint finding;
+  `report: true` still makes a lint class, and a pattern may have both.
+- `examples/argument-map` lists its unfinished steps on such a page.
+
+### Changed
+
+- Two renderers writing one path are refused at load, naming both.
+- A view's `match` lists matches differing only in an anonymous node once.
+
+### Added
+
+- **Patterns can share a page.** Patterns naming the same `output:` render
+  one outline of all their matches, merged by position. A claim, its
+  arguments and their undercutters can be drawn at fixed depth from two
+  patterns, `(c)<-[:concludes]-(g)` and `(c)<-[:concludes]-(g)<-[:undercuts]-(u)`,
+  and an argument nothing undercuts is still listed.
+- `facet_by` on a pattern with a page, as on a chain (default `[status]`).
+- `layout: table` keeps the flat table, one row per match.
+
+### Changed
+
+- **A pattern page is an outline by default.** Matches nest by shared
+  prefix, and each node is written as a chain step,
+  `- [CODE](link) — title *(facets)*`, by the same renderer chain pages use.
+  Chain pages are unchanged.
+- `examples/argument-map` outlines its unfinished steps and adds a page of
+  steps and the objections to them.
+
+### Fixed
+
+- **`luria lint` no longer stalls on a long author list.** The reference-entry
+  detector's author-lead pattern backtracked exponentially on an entry with
+  more names than it allows. One 26-author entry in dmarx/nucleation took four
+  minutes, holding the interpreter lock, so every other thread stalled with
+  it. The run of names is now possessive and fails in linear time.
+
+### Changed
+
+- **`luria lint` is about four times faster on a large record**, with
+  byte-identical output: dmarx/nucleation (5,519 scanned files, network off)
+  went from 614s to 145s on one machine. Besides the fix above: the reference
+  scanners skip a scheme's or remote's patterns when its prefix is absent
+  from the text, build their masks and line indexes with slices and `bisect`
+  instead of a loop per character, and match the reference report's codes
+  over a whole file rather than line by line. `is_generated`,
+  `is_historical` and `link_base` index the config once instead of comparing
+  paths on every call. A scheme's set of resolvable codes is kept until its
+  directory changes. The lint's reference report reuses the corpus scan the
+  report render already made, as `reports.reference_status` already did.
+
+### Fixed
+
+- The generate action's pull-request shape no longer lints a newer push's unrepaired commits. The action rebases its repair commit onto the branch before pushing, so a run that a newer push overtook pulled that push's commits into its tree, and the lint in the same job read their bare codes and failed. That run's red was stale, since the newer run repairs them, but it read as a failure. The action now repairs again when the rebase brought in commits, and pushes that repair with its own.
+
+### Changed
+
+- The template workflow `luria init` scaffolds, and this repository's own CI, cancel a pull request's run when a newer push overtakes it. The newer run repeats the older run's work, so the older run was wasted, and before the fix above it also went red. Runs outside a pull request each get a concurrency group of their own, so nothing on the default branch is cancelled or queued.
+
+### Added
+
+- A pattern declared `report: true` is a warning class named after the pattern. Each match is a row naming its first node's document; `lint.fail_on`, `lint.baseline` and `lint.mute` take the class like a built-in one, and a `pattern-ok: <name>` directive in that document acknowledges its rows. A reported pattern may not take a built-in class's name. [ADR-131](record/decisions.d/ADR-131.md).
+- A top-level `reliance:` list names the reference fields that carry dependence. When set, the pending-documents table (console, `luria reports` and the committed report) gains a column of each undecided document's transitive dependents and ranks by it, age breaking ties. Unset, the report is unchanged.
+- `load_bearing: N` adds the `load-bearing` warning class: every undecided document with at least N transitive dependents.
+- `unbounded-acknowledgements`, with `reliance` set: an `inactive-ok` directive that excuses a retired document its own document depends on through a reliance field, and carries no `until <date>`.
+
+### Documentation
+
+- `docs/directives.md` lists `pattern-ok:`. The configuration reference describes `report`, `reliance` and `load_bearing`, and quotes a `match:` that holds a property map, since `: ` is not allowed in a plain YAML scalar.
+
 ## 2026-10-19
 
 ### Added
