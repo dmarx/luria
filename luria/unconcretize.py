@@ -2,14 +2,18 @@
 # luria/unconcretize.py
 """`luria unconcretize CODE...` — give a document's number back.
 
-    luria unconcretize ADR-068            # ADR-068.md → a fresh ADR-tmp… file
-    luria unconcretize ADR-005 ADR-006    # several at once
+    luria unconcretize ADR-068               # ADR-068.md → a fresh ADR-tmp… file
+    luria unconcretize ADR-005 ADR-006       # several at once
+    luria unconcretize ADR-068 --noformerly  # and record no alias
 
 The inverse of `luria concretize`. Each named document is renamed to a
 fresh temporary code (ADR-049), loses its `number:`, and every occurrence of
 its code is rewritten to the temporary one, in the files `concretize`
-rewrites (`concretize.rewritable_files`). The next `concretize`, where
-merges serialize, numbers it again, in commit order.
+rewrites (`concretize.rewritable_files`). The old code is recorded under
+the document's `formerly:`, as `concretize` records the temporary one, so a
+citation the rewrite cannot reach (a PR thread, a commit message, another
+repository) still finds the document once it is numbered again. The next
+`concretize`, where merges serialize, numbers it in commit order.
 
 It does not ask why. Two uses asked for it:
 
@@ -18,12 +22,16 @@ It does not ask why. Two uses asked for it:
   collide at merge: an add/add conflict on the file, and every citation the
   branch wrote now names the trunk's document (nucleation#387, ADR-068).
   Run this on the branch before merging the trunk, while every occurrence
-  in the tree still means the branch's document.
+  in the tree still means the branch's document, and pass `--noformerly`:
+  the trunk holds the old code, so the branch's document should not
+  remember it. A live document outranks an alias of its own code, so the
+  default would not misresolve, but it would record a history that is the
+  trunk's.
 - **Renumbering.** Giving back a run of numbers and concretizing assigns
   them in commit order.
 
-No `formerly:` is recorded. The number is being given back, and an alias
-would claim a code that another document holds, or soon will.
+Another document's `formerly:` block is left alone: it is that document's
+memory of its own past addresses, and the code in it was never this one's.
 
 Codes are matched whole. `LIT-156` does not match inside `LIT-1563`, and
 `ADR-068` does not match inside a composed remote code such as `LU-ADR-068`. Its lower-case spelling
@@ -36,7 +44,7 @@ import re
 import sys
 from pathlib import Path
 
-from . import concretize
+from . import concretize, doc_refs
 from . import new as new_mod
 from .config import current
 from . import writes
@@ -77,19 +85,30 @@ def rewrite(renames: list[tuple[str, str]]) -> list[Path]:
     changed = []
     for path in concretize.rewritable_files():
         text = path.read_text(encoding="utf-8")
-        out = text
-        for pattern, new in patterns:
-            out = pattern.sub(new, out)
+        # A `formerly:` block keeps its spellings: they are the document's
+        # own past, and rewriting one hands it a history it never had.
+        pieces, last = [], 0
+        for m in doc_refs.FORMERLY_RE.finditer(text):
+            pieces += [(text[last:m.start()], True), (m.group(0), False)]
+            last = m.end()
+        pieces.append((text[last:], True))
+        out = ""
+        for piece, rewritable in pieces:
+            if rewritable:
+                for pattern, new in patterns:
+                    piece = pattern.sub(new, piece)
+            out += piece
         if out != text:
             writes.write_text(path, out)
             changed.append(path)
     return changed
 
 
-def run(*codes: str) -> None:
+def run(*codes: str, formerly: bool = True) -> None:
     """Rename each named document to a fresh temporary code, drop its
-    `number:`, and rewrite its code everywhere `concretize` would. Prints
-    each rename and how many files changed."""
+    `number:`, record the old code under `formerly:` (unless
+    `--noformerly`), and rewrite its code everywhere `concretize` would.
+    Prints each rename and how many files changed."""
     if not codes:
         raise SystemExit("luria unconcretize: name at least one code, "
                          "e.g. `luria unconcretize ADR-068`")
@@ -110,6 +129,8 @@ def run(*codes: str) -> None:
         # citations; what is left is its identity, the filename and the
         # `number:` a temporary document must not carry (#355).
         text = new_mod.drop_number(src.read_text(encoding="utf-8"))
+        if formerly:
+            text = concretize._record_alias(text, old)
         writes.write_text(dest, text)
         writes.unlink(src)
         print(f"{old} → {new}")
