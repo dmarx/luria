@@ -1,3 +1,4 @@
+<!-- inactive-ok-file: ADR-tmp7ae7n — the decision this flag implements, Proposed with it -->
 # CLI reference
 
 One binary, `luria`, dispatching to plain functions. Every command takes

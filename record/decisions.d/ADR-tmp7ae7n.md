@@ -24,6 +24,7 @@ summary: >-
   already reported); and leaving it to hand-written scripts, which on
   Nucleation misread the report and had to be run twice.
 ---
+<!-- inactive-ok-file: ADR-136 — the rule this decision applies, Proposed -->
 
 # ADR-tmp7ae7n: luria repair prunes acknowledgements that excuse nothing only when asked, and checks the findings did not move
 

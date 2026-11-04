@@ -1,3 +1,4 @@
+<!-- inactive-ok-file: ADR-tmp7ae7n — the decision this flag implements, Proposed with it -->
 # Comment directives
 
 The lint's warning classes are judgement calls: a citation of a superseded
