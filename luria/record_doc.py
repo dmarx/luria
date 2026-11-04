@@ -115,15 +115,13 @@ def families_section(cfg) -> str:
     Separate from the table above, which says where a family's files live and
     how a code looks. That answers *where*; this answers *what*, and a reader
     who does not already know what a `LIT` is needs the second one first.
-    Rendered only for schemes that say. A project that declares none gets a
-    line saying so and how to supply them, not a table of blanks. An empty
-    string would leave the heading and its introduction, which promise an
-    account, standing over nothing (DP-15)."""
+    Rendered only for schemes that say. A project that declares none gets no
+    section, not a table of blanks, and `render` leaves out its heading too.
+    That a scheme says nothing is a finding, not part of the description:
+    the lint reports it as `undescribed-schemes`, with the remedy."""
     said = [(p, s) for p, s in cfg.schemes.items() if s.title or s.blurb]
     if not said:
-        return ("*No scheme here declares a `title` or `blurb`, so this page "
-                "cannot say what each family is for. Add them under "
-                "`schemes.X` in `luria.yaml`.*\n")
+        return ""
     out = []
     for prefix, s in said:
         head = f"**`{prefix}`**" + (f" — {s.title}" if s.title else "")
@@ -316,8 +314,13 @@ def render() -> str:
     cfg = current()
     parts = [HEADER.format(stamp=STAMP, schema=SCHEMA_URL)]
     for title, blurb, section in SECTIONS:
+        # A section with nothing to show is left out, heading and all: a
+        # heading over nothing reads as content gone missing (DP-15). What
+        # is missing, the lint says.
+        if not (body := section(cfg)).strip():
+            continue
         parts.append(f"\n## {title}\n\n{blurb}\n\n")
-        parts.append(section(cfg))
+        parts.append(body)
     return "".join(parts)
 
 

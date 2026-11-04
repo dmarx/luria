@@ -72,25 +72,42 @@ def test_a_scheme_says_what_the_family_is(tmp_path, monkeypatch):
     assert "One note per paper, recording its standing here." in page
 
 
-def test_a_scheme_that_says_nothing_gets_a_remedy_not_a_blank(tmp_path, monkeypatch):
-    """No table of blanks, and no empty section either. The heading and its
-    introduction render whatever the body is, so an empty body read as a
-    section with its content missing (DP-15). It says what is absent and
-    how to supply it, as the contract section does when it has nothing."""
+def test_a_scheme_that_says_nothing_gets_no_section(tmp_path, monkeypatch):
+    """No table of blanks, and no heading over nothing. The document says
+    what the record is; that something is missing from it is a finding, and
+    findings go where the lint reports them (`undescribed-schemes`)."""
     project(tmp_path, monkeypatch)
-    body = record_doc.families_section(config.current())
-    assert "No scheme here declares a `title` or `blurb`" in body
-    assert "schemes.X" in body
-    assert "**`" not in body
+    assert record_doc.families_section(config.current()) == ""
+    assert "## What each family is" not in record_doc.render()
 
 
-def test_no_section_renders_an_empty_body(tmp_path, monkeypatch):
+def test_an_empty_section_is_left_out_of_the_page(tmp_path, monkeypatch):
     """The guard for the next section: a heading is never followed straight
-    by the next heading."""
+    by the next heading, whichever section comes back empty."""
     project(tmp_path, monkeypatch)
-    cfg = config.current()
-    for title, _, section in record_doc.SECTIONS:
-        assert section(cfg).strip(), f"'{title}' renders an empty body"
+    page = record_doc.render()
+    lines = [ln for ln in page.splitlines() if ln.strip()]
+    for here, after in zip(lines, lines[1:]):
+        assert not (here.startswith("## ") and after.startswith("## ")), here
+    for title, intro, section in record_doc.SECTIONS:
+        if not section(config.current()).strip():
+            assert intro not in page, title
+
+
+def test_the_lint_names_each_scheme_that_says_nothing(tmp_path, monkeypatch):
+    from luria import lint
+    project(tmp_path, monkeypatch)
+    rows = lint.undescribed_schemes()
+    assert len(rows) == 1
+    assert "LIT" in rows[0] and "schemes.X" in rows[0]
+
+
+def test_a_scheme_that_describes_itself_is_not_reported(tmp_path, monkeypatch):
+    from luria import lint
+    project(tmp_path, monkeypatch, BASE.replace(
+        "    dir: record/literature.d",
+        "    dir: record/literature.d\n    title: The reading list"))
+    assert lint.undescribed_schemes() == []
 
 
 def test_a_title_without_a_blurb_is_enough(tmp_path, monkeypatch):
