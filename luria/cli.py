@@ -15,6 +15,8 @@
                         frontmatter: SOURCE FIELD TARGET, or a drafts file
     luria concretize    assign real numbers to temporary codes (ADR-049);
                         --check is the trunk's guard
+    luria unconcretize  give a document's number back: CODE... become
+                        temporary codes, rewritten wherever they are cited
     luria migrate       execute a migration spec: rename a scheme, move
                         documents between schemes (ADR-040)
     luria remotes       other projects' records cited from this one
@@ -52,7 +54,7 @@ import fire
 
 from . import (ack, adr_index, collect, concretize, export, facts, init,
                link_refs, lint, migrate, new, relate, remotes,
-               repair, reports, site, upgrade, view_pins)
+               repair, reports, site, unconcretize, upgrade, view_pins)
 
 COMMANDS = {
     "lint": lint.run,
@@ -63,6 +65,7 @@ COMMANDS = {
     "new": new.run,
     "relate": relate.run,
     "concretize": concretize.run,
+    "unconcretize": unconcretize.run,
     "migrate": migrate.run,
     "remotes": remotes.run,
     "views": view_pins.run,

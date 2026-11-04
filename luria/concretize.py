@@ -54,7 +54,7 @@ from pathlib import Path
 from . import doc_refs
 from . import new as new_mod
 from .collect import _added_at
-from .config import current
+from .config import CONFIG_NAME, current
 from . import writes
 
 
@@ -81,23 +81,30 @@ def _record_alias(text: str, old_code: str) -> str:
                   count=1, flags=re.MULTILINE)
 
 
-def _rewrite_files(renames: list[tuple[str, str]]) -> int:
-    """Every occurrence of each old code, in every file the record scans —
-    history included, per ADR-040's second commitment: a spelling left behind
-    in a journal is not preserved, it is a second name for the same document
-    that grep and readers must both know. The collected changelog and the
-    journal entries ride in `doc_files`; generated views are absent from it
-    and the caller regenerates them."""
+def rewritable_files() -> list[Path]:
+    """Every file a code is rewritten in when its document is renamed:
+    every file the record scans, history included, per ADR-040's second
+    commitment (a spelling left behind in a journal is not preserved, it is a
+    second name for the same document that grep and readers must both
+    know), and `luria.yaml`, whose comments and blurbs cite decisions too.
+    The collected changelog and the journal entries ride in `doc_files`;
+    generated views are absent from it and are regenerated. One list, read
+    by `concretize` and `unconcretize` alike, so the two directions of a
+    rename reach the same files (DP-4)."""
     cfg = current()
     files = list(doc_refs.doc_files())
     for pattern in cfg.code_globs:
         files += [p for p in cfg.root.glob(pattern) if p.is_file()]
+    if (config_file := cfg.root / CONFIG_NAME).is_file():
+        files.append(config_file)
+    seen: set[Path] = set()
+    return [p for p in files if not (p in seen or seen.add(p))]
+
+
+def _rewrite_files(renames: list[tuple[str, str]]) -> int:
+    """Every occurrence of each old code, in `rewritable_files`."""
     touched = 0
-    seen = set()
-    for path in files:
-        if path in seen:
-            continue
-        seen.add(path)
+    for path in rewritable_files():
         text = new = path.read_text(encoding="utf-8")
         for old, target in renames:
             new = new.replace(old, target)
