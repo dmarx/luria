@@ -77,7 +77,7 @@ def test_a_scheme_that_says_nothing_gets_no_section(tmp_path, monkeypatch):
     what the record is; that something is missing from it is a finding, and
     findings go where the lint reports them (`undescribed-schemes`)."""
     project(tmp_path, monkeypatch)
-    assert record_doc.families_section(config.current()) == ""
+    assert record_doc.families(config.current()) == []
     assert "## What each family is" not in record_doc.render()
 
 
@@ -89,9 +89,22 @@ def test_an_empty_section_is_left_out_of_the_page(tmp_path, monkeypatch):
     lines = [ln for ln in page.splitlines() if ln.strip()]
     for here, after in zip(lines, lines[1:]):
         assert not (here.startswith("## ") and after.startswith("## ")), here
-    for title, intro, section in record_doc.SECTIONS:
-        if not section(config.current()).strip():
-            assert intro not in page, title
+    assert "A scheme's own account of itself" not in page
+
+
+def test_the_prose_lives_in_the_template_and_the_facts_in_the_module():
+    """The page is a templated view: its headings, prose and layout are in
+    `luria:record.md.j2`, and `record_doc.context` hands it data only. A
+    heading or a table written back into the module is the drift this
+    split exists to stop."""
+    from pathlib import Path
+    module = Path(record_doc.__file__).read_text(encoding="utf-8")
+    template = (Path(record_doc.__file__).parent / "view_templates"
+                / "record.md.j2").read_text(encoding="utf-8")
+    for heading in ("## Referable documents", "## What each family is",
+                    "## What an entry must carry", "## Journals",
+                    "## Settings this project changed", "*None configured.*"):
+        assert heading in template and heading not in module, heading
 
 
 def test_the_lint_names_each_scheme_that_says_nothing(tmp_path, monkeypatch):
