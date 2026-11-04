@@ -115,11 +115,15 @@ def families_section(cfg) -> str:
     Separate from the table above, which says where a family's files live and
     how a code looks. That answers *where*; this answers *what*, and a reader
     who does not already know what a `LIT` is needs the second one first.
-    Rendered only for schemes that say — a project that declares none gets no
-    section rather than a table of blanks."""
+    Rendered only for schemes that say. A project that declares none gets a
+    line saying so and how to supply them, not a table of blanks. An empty
+    string would leave the heading and its introduction, which promise an
+    account, standing over nothing (DP-15)."""
     said = [(p, s) for p, s in cfg.schemes.items() if s.title or s.blurb]
     if not said:
-        return ""
+        return ("*No scheme here declares a `title` or `blurb`, so this page "
+                "cannot say what each family is for. Add them under "
+                "`schemes.X` in `luria.yaml`.*\n")
     out = []
     for prefix, s in said:
         head = f"**`{prefix}`**" + (f" — {s.title}" if s.title else "")

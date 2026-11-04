@@ -72,11 +72,25 @@ def test_a_scheme_says_what_the_family_is(tmp_path, monkeypatch):
     assert "One note per paper, recording its standing here." in page
 
 
-def test_a_scheme_that_says_nothing_gets_no_section(tmp_path, monkeypatch):
-    """No table of blanks. A project that declares none should read exactly
-    as it did before the key existed."""
+def test_a_scheme_that_says_nothing_gets_a_remedy_not_a_blank(tmp_path, monkeypatch):
+    """No table of blanks, and no empty section either. The heading and its
+    introduction render whatever the body is, so an empty body read as a
+    section with its content missing (DP-15). It says what is absent and
+    how to supply it, as the contract section does when it has nothing."""
     project(tmp_path, monkeypatch)
-    assert record_doc.families_section(config.current()) == ""
+    body = record_doc.families_section(config.current())
+    assert "No scheme here declares a `title` or `blurb`" in body
+    assert "schemes.X" in body
+    assert "**`" not in body
+
+
+def test_no_section_renders_an_empty_body(tmp_path, monkeypatch):
+    """The guard for the next section: a heading is never followed straight
+    by the next heading."""
+    project(tmp_path, monkeypatch)
+    cfg = config.current()
+    for title, _, section in record_doc.SECTIONS:
+        assert section(cfg).strip(), f"'{title}' renders an empty body"
 
 
 def test_a_title_without_a_blurb_is_enough(tmp_path, monkeypatch):
