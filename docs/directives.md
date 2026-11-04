@@ -123,6 +123,14 @@ directive needs a person to decide: a retired code that nothing in scope
 cites any more may mean the citation moved and the directive should move
 with it.
 
+When you would rather delete them all than look at each, `luria repair
+--prune_stale` does it (ADR-tmp7ae7n). It removes every code that answers
+for no site, from `inactive-ok`, `unresolved-ok` and `mention-ok` alike, and
+every directive left naming nothing. A `mention-ok` counts as answering
+while its code is cited in scope at all, even if another directive excuses
+that site today. The repair re-scans afterwards and restores every file if
+any finding changed.
+
 ## The vocabulary
 
 | directive | acknowledges | argument |

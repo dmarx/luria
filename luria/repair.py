@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """`luria repair` — the source repairs, apart from the views (ADR-068).
 
-    luria repair          # write every mechanical repair to the sources
+    luria repair                 # write every mechanical repair to the sources
+    luria repair --prune_stale   # and remove acknowledgements that excuse nothing
 
 A repair is a write to a *source* that the record already implies: a bare
 code in prose becomes the link the lint would otherwise demand (ADR-005), a
@@ -29,8 +30,12 @@ from .config import current
 from . import writes
 
 
-def apply() -> list[Path]:
-    """Every mechanical source repair, written: the files that changed."""
+def apply(prune_stale: bool = False) -> list[Path]:
+    """Every mechanical source repair, written: the files that changed.
+
+    `prune_stale` adds the one repair that is opt-in (`luria.prune`, #385):
+    removing acknowledgement codes that answer for no site, including those
+    the default leaves because the citation may have moved."""
     cfg = current()
     changed: list[Path] = []
     _, linked = link_refs.linkify_files(doc_refs.doc_files(), fix=True)
@@ -99,6 +104,14 @@ def apply() -> list[Path]:
         print(f"removed {', '.join(codes)} from `inactive-ok` in "
               f"{cfg.rel(p)} — in force now")
         changed.append(p)
+    if prune_stale:
+        from . import prune
+        for p, codes, whole in prune.prune_stale():
+            what = "a directive" if whole else "from a directive"
+            print(f"removed {', '.join(codes)} {what} in {cfg.rel(p)} — "
+                  "it excuses nothing")
+            if p not in changed:
+                changed.append(p)
     # One-time cleanup for a project upgrading past ADR-059, which stopped
     # rendering the schema reference outside Luria's own tree.
     for p in config_doc.retire():
@@ -188,15 +201,18 @@ def retire_aliases(scheme) -> list[Path]:
     return done
 
 
-def run() -> None:
+def run(prune_stale: bool = False) -> None:
     """Write every mechanical source repair: link bare references, populate
     `created:` from a journal entry's path, move a note out of `status:`
     into `status_note:` and `superseded_by:`, remove from an `inactive-ok`
     a code whose document is in force, retire a stale configuration
-    reference. Prints what changed; a second run changes nothing. Returns
+    reference. `--prune_stale` also removes acknowledgement codes that
+    answer for no site, and directives left naming nothing; it re-scans
+    and restores every file if that changed a finding. Prints what changed;
+    a second run changes nothing. Returns
     nothing — Fire would print a return value, and a list of paths is not
     the summary a caller wants."""
-    changed = apply()
+    changed = apply(prune_stale=prune_stale)
     print(f"repaired {len(changed)} file(s)")
 
 

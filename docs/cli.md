@@ -182,7 +182,7 @@ entry in turn.
 ## luria repair
 
 ```
-luria repair
+luria repair [--prune_stale]
 ```
 
 Writes every mechanical repair to the sources — each one a state the lint
@@ -197,6 +197,15 @@ different place. A repair touches only the files a branch itself authored,
 so the generate action commits it onto the branch, where the review reads
 it; a view is a shared file every branch would rewrite, so it is committed
 on the default branch only.
+
+`--prune_stale` adds the one repair that only runs when asked
+(ADR-tmp7ae7n). It removes the codes in `inactive-ok`, `unresolved-ok` and
+`mention-ok` directives that answer for no site, and deletes a directive
+left naming nothing. That includes the directives the default leaves, whose
+citation may have moved. Removing them changes no finding, and the repair
+checks this. It re-scans after writing, and if any citation's standing
+changed it restores every file and fails. A malformed or expired directive
+is never touched.
 
 ## luria index
 
