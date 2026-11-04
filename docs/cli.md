@@ -199,7 +199,7 @@ it; a view is a shared file every branch would rewrite, so it is committed
 on the default branch only.
 
 `--prune_stale` adds the one repair that only runs when asked
-(ADR-tmp7ae7n). It removes the codes in `inactive-ok`, `unresolved-ok` and
+([ADR-tmp7ae7n](../record/decisions.d/ADR-tmp7ae7n.md)). It removes the codes in `inactive-ok`, `unresolved-ok` and
 `mention-ok` directives that answer for no site, and deletes a directive
 left naming nothing. That includes the directives the default leaves, whose
 citation may have moved. Removing them changes no finding, and the repair

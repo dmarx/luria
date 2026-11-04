@@ -16,10 +16,10 @@ summary: >-
   deletes a directive left naming nothing. Removing them provably changes no
   finding, and the repair checks it: it re-scans after writing and restores
   every file if any citation's standing moved. It is opt-in, because
-  ADR-119's line still holds: an uncited directive may mean its citation
+  [ADR-119](ADR-119.md)'s line still holds: an uncited directive may mean its citation
   moved, and whether to move or delete the directive is a judgement. The flag
   is a person making that judgement for the whole tree. Rejected: pruning in
-  the default repair, as #385 first proposed; a lint check that relation-field
+  the default repair, as [#385](https://github.com/dmarx/luria/issues/385) first proposed; a lint check that relation-field
   citations need no excuse (they are already blanked, so such a directive is
   already reported); and leaving it to hand-written scripts, which on
   Nucleation misread the report and had to be run twice.
@@ -30,11 +30,11 @@ summary: >-
 ## Context
 
 `stale-directives` reports an acknowledgement that answers for no site.
-Since ADR-119 and `ack.trim_settled`, `luria repair` removes one class of
+Since [ADR-119](ADR-119.md) and `ack.trim_settled`, `luria repair` removes one class of
 these, a code in an `inactive-ok` whose document is in force. It leaves the
 rest. Its stated reason is that a retired code nothing cites any more may
 mean the citation moved, and whether the directive should move with it is
-a judgement. ADR-136 keeps judgements out of `repair`.
+a judgement. [ADR-136](ADR-136.md) keeps judgements out of `repair`.
 
 On a large record the rest is most of them. Nucleation's lint listed 282
 such directives in 267 files ([dmarx/nucleation#357](https://github.com/dmarx/nucleation/pull/357)), cleared by a script that
@@ -56,24 +56,24 @@ for no site, and deletes a directive left naming nothing. The default
   this scan has the directive as its `excused_by`. That covers `trim_settled`'s
   case, and also a code made redundant by an earlier directive that answers
   first. `mention-ok` claims nothing about state and must survive a status
-  change that hands its site to another directive (ADR-105). So a
+  change that hands its site to another directive ([ADR-105](ADR-105.md)). So a
   `mention-ok` code is idle only when no site in its scope cites it at all.
 - **The guard is a re-scan, not an argument.** Before writing, the repair
   counts the citations no directive answers for, by file and code. It counts
   by file and not by line, because deleting a directive's line moves the
   lines below it. After writing it counts again. If the counts differ, every
   file is restored and the repair raises `PruneChangedFindings`, naming the
-  citations that moved (DP-001).
+  citations that moved ([DP-001](../principles.d/DP-001.md)).
 - **Out of reach**: a malformed directive, whose problem is already the
   finding; an expired one, which the scan does not see; and every other
   directive kind.
 
 ## Alternatives considered
 
-- **Prune in the default repair**, as #385 proposed. The guard makes it safe
+- **Prune in the default repair**, as [#385](https://github.com/dmarx/luria/issues/385) proposed. The guard makes it safe
   for the findings, but not for intent. A directive whose citation moved a
   line is best moved, not deleted, and the default repair runs in CI on
-  every pull request, where nobody chose that. DP-010: this is a write a
+  every pull request, where nobody chose that. [DP-010](../principles.d/DP-010.md): this is a write a
   person turns on, not a guard they turn off.
 - **A lint check that relation-field citations need no excuse.** `relations.
   relation_spans` already blanks `uses:`, `rests_on:` and the other relation
@@ -88,7 +88,7 @@ for no site, and deletes a directive left naming nothing. The default
 ## Consequences
 
 - A record can clear its stale acknowledgements in one command. Fired on a
-  copy of Nucleation after #391: 336 codes in 262 files, the guard passed,
+  copy of Nucleation after [#391](https://github.com/dmarx/luria/issues/391): 336 codes in 262 files, the guard passed,
   `stale_annotations()` stayed at 0, and a second run changed nothing. It
   took about 100 seconds, two full scans.
 - A directive's reason may still name a code the prune removed. The reason
