@@ -6,15 +6,16 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 
 ## Currently — [November 2026](2026-11.md)
 
+- [4 Nov 04:47 — unconcretize, fired on nucleation#387](2026-11.md#unconcretize-fired-on-nucleation387)
 - [4 Nov 00:25 — Prune acknowledgements that excuse nothing, fired on Nucleation](2026-11.md#prune-acknowledgements-that-excuse-nothing-fired-on-nucleation)
 
 ## All books
 
-158 entries across 4 books, newest first.
+159 entries across 4 books, newest first.
 
 | Book | Entries | First | Last |
 |---|--:|---|---|
-| [2026-11](2026-11.md) | 1 | 2026-11-04 | 2026-11-04 |
+| [2026-11](2026-11.md) | 2 | 2026-11-04 | 2026-11-04 |
 | [2026-10](2026-10.md) | 29 | 2026-10-01 | 2026-10-30 |
 | [2026-09](2026-09.md) | 82 | 2026-09-03 | 2026-09-30 |
 | [2026-08](2026-08.md) | 46 | 2026-08-03 | 2026-08-28 |

@@ -5,11 +5,11 @@
 
 `Proposed` and `Deferred` both describe an open question. Neither says *since when*, and that is the signal: a decision proposed last week is pending; the same one a year later was either overdue or settled in code and never written back.
 
-**12 document(s) awaiting a decision.**
+**13 document(s) awaiting a decision.**
 
 ## ADRs
 
-11 of the 12.
+12 of the 13.
 
 | Open since | Status | Code | Cited | Unack. | Title |
 |---|---|---|--:|--:|---|
@@ -24,10 +24,11 @@
 | 2026-10-30 | Proposed | [ADR-135](../../record/decisions.d/ADR-135.md) | 2 | 2 | A pattern node may test its own field for inequality or membership |
 | 2026-11-04 | Proposed | [ADR-138](../../record/decisions.d/ADR-138.md) | 3 | 0 | luria repair prunes acknowledgements that excuse nothing only when asked, and checks the findings did not move |
 | 2026-11-04 | Proposed | [ADR-139](../../record/decisions.d/ADR-139.md) | 0 | 0 | The record description is rendered from a template luria ships, with its prose in the template and its facts from the config |
+| 2026-11-04 | Proposed | [ADR-140](../../record/decisions.d/ADR-140.md) | 0 | 0 | luria unconcretize gives the named documents their numbers back as temporary codes, rewriting the codes wherever concretize would and recording no alias |
 
 ## DPs
 
-1 of the 12.
+1 of the 13.
 
 | Open since | Status | Code | Cited | Unack. | Title |
 |---|---|---|--:|--:|---|
@@ -37,4 +38,4 @@ The citation count is the second axis, and it flips the priority: an old proposa
 
 This count and the reference-status report's will differ, and that is not an off-by-one. That report covers documents something actually **cites** and hasn't acknowledged; this one covers every **undecided** document. One here is missing from there for exactly one of two reasons: nothing cites it, or every citation carries an `inactive-ok` annotation.
 
-**Cited nowhere at all** (3): [ADR-128](../../record/decisions.d/ADR-128.md), [ADR-133](../../record/decisions.d/ADR-133.md), [ADR-139](../../record/decisions.d/ADR-139.md) — these are the cheapest to close, since nothing depends on the answer.
+**Cited nowhere at all** (4): [ADR-128](../../record/decisions.d/ADR-128.md), [ADR-133](../../record/decisions.d/ADR-133.md), [ADR-139](../../record/decisions.d/ADR-139.md), [ADR-140](../../record/decisions.d/ADR-140.md) — these are the cheapest to close, since nothing depends on the answer.
