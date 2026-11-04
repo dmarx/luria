@@ -9,7 +9,7 @@ Every reference in the record is a claim — "this is why things are the way the
 
 Only an `Active` document is in force. `Proposed` and `Deferred` mean *not in force yet* — an open question, being cited as if it were settled — while `Superseded` and `Rejected` mean *no longer in force*, which is often a perfectly good thing to cite: history, or a rejection worth pointing at. Either way the citation should be deliberate, and this section lists the ones nobody has vouched for yet.
 
-**8 documents cited without acknowledgement.** Not listed: 84 citations someone has already vouched for with an `inactive-ok:` comment at the citing site.
+**8 documents cited without acknowledgement.** Not listed: 88 citations someone has already vouched for with an `inactive-ok:` comment at the citing site.
 
 To vouch for one, put the reason where the citation is — `inactive-ok:` covers its own line and the line below it, `inactive-ok-block:` its paragraph, `inactive-ok-file:` the whole page:
 
@@ -111,7 +111,7 @@ A relation declares its converse; symmetry is the self-converse case
 
 luria repair writes what the committed sources imply; link --fix writes what the working tree's change implies
 
-3 citations in 1 file await a look.
+3 citations in 1 file await a look; 1 other citation of it is acknowledged.
 
 - [`record/decisions.d/ADR-137.md:58`](../../record/decisions.d/ADR-137.md)
 - [`record/decisions.d/ADR-137.md:84`](../../record/decisions.d/ADR-137.md)
@@ -130,7 +130,7 @@ A pattern node may test its own field for inequality or membership
 
 A reference the reader cannot follow: the code names no document in this record. A typo, a number carried in from another project, and an illustrative code in an example all look identical from here — telling them apart takes a human, so this is a report, not an error.
 
-**6 codes unaccounted for.** Not listed: 77 mentions marked deliberate with an `unresolved-ok:` comment (same syntax and scopes as `inactive-ok:` above).
+**6 codes unaccounted for.** Not listed: 78 mentions marked deliberate with an `unresolved-ok:` comment (same syntax and scopes as `inactive-ok:` above).
 
 
 ### ADR-404 — resolves to nothing (3 unmarked sites · 14 other mentions marked deliberate)

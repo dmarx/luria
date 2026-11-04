@@ -4,7 +4,7 @@
 </p>
 
 <!-- luria:badges -->
-[![needs decision: 10](https://img.shields.io/badge/needs%20decision-10-orange)](docs/reports/pending-decisions.md)
+[![needs decision: 11](https://img.shields.io/badge/needs%20decision-11-orange)](docs/reports/pending-decisions.md)
 [![cited, not in force: 8](https://img.shields.io/badge/cited,%20not%20in%20force-8-orange)](docs/reports/reference-status.md)
 <!-- /luria:badges -->
 

@@ -216,8 +216,8 @@ DEFAULTS: dict = {
         # verified rather than merely remembered.
         "network": "auto",
     },
-    # inactive-ok: ADR-tmp7ae7n — the decision this table implements, Proposed with it
-    # The standing values of `luria repair`'s flags (ADR-tmp7ae7n). A flag
+    # inactive-ok: ADR-138 — the decision this table implements, Proposed with it
+    # The standing values of `luria repair`'s flags (ADR-138). A flag
     # only on the command line is one the CI repair never passes, so a record
     # that wants it everywhere would have to edit a workflow. Every flag of
     # `repair.run` has a key here, and the command line overrides it for one

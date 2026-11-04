@@ -4,44 +4,17 @@
 
 The narrative that doesn't fit a changelog entry: root-cause archaeology, failed approaches, verification details, and the traps the next person would otherwise rediscover. Generated from the entries in `record/devlog.d/` — file one with `luria new`.
 
-## Currently — [October 2026](2026-10.md)
+## Currently — [November 2026](2026-11.md)
 
-- [30 Oct 22:13 — Primary and derived sides of a converse pair, fired on Nucleation](2026-10.md#primary-and-derived-sides-of-a-converse-pair-fired-on-nucleation)
-- [30 Oct 18:23 — luria repair trims inactive-ok codes whose documents went Active](2026-10.md#luria-repair-trims-inactive-ok-codes-whose-documents-went-active)
-- [30 Oct 18:19 — Pattern predicates fired on Nucleation's worklist](2026-10.md#pattern-predicates-fired-on-nucleations-worklist)
-- [28 Oct 08:27 — Lint on a 5,500-file record spent four minutes on one regex, and the thread pool hid where the rest went](2026-10.md#lint-on-a-5500-file-record-spent-four-minutes-on-one-regex-and-the-thread-pool-hid-where-the-rest-went)
-- [28 Oct 02:20 — Pattern pages as outlines, and the dialectic at fixed depth](2026-10.md#pattern-pages-as-outlines-and-the-dialectic-at-fixed-depth)
-- [27 Oct 20:01 — Pattern-backed warning classes, reliance and bounded acknowledgements](2026-10.md#pattern-backed-warning-classes-reliance-and-bounded-acknowledgements)
-- [27 Oct 03:40 — A pull request's repair rebased in a newer push's unrepaired commits, and the lint read them](2026-10.md#a-pull-requests-repair-rebased-in-a-newer-pushs-unrepaired-commits-and-the-lint-read-them)
-- [16 Oct 04:56 — CLAUDE.md derives its list of generated files](2026-10.md#claudemd-derives-its-list-of-generated-files)
-- [15 Oct 22:55 — Views as templates: fired on nucleation's CLAUDE.md](2026-10.md#views-as-templates-fired-on-nucleations-claudemd)
-- [13 Oct 07:51 — Pattern pages, and what nucleation said about them](2026-10.md#pattern-pages-and-what-nucleation-said-about-them)
-- [13 Oct 02:56 — Chains over path patterns: how the design got there, and what parses Cypher](2026-10.md#chains-over-path-patterns-how-the-design-got-there-and-what-parses-cypher)
-- [8 Oct 04:48 — Explicit relations: what the migration found, and the remote target it needed](2026-10.md#explicit-relations-what-the-migration-found-and-the-remote-target-it-needed)
-- [7 Oct 18:06 — Review fixes: one door for writes, a wheel smoke test, and git as optional](2026-10.md#review-fixes-one-door-for-writes-a-wheel-smoke-test-and-git-as-optional)
-- [7 Oct 15:09 — The two timing follow-ups: a fixed cost, and wall time that was waiting](2026-10.md#the-two-timing-follow-ups-a-fixed-cost-and-wall-time-that-was-waiting)
-- [7 Oct 14:17 — Logic core step 5: acknowledgements, and why contract stays in Python](2026-10.md#logic-core-step-5-acknowledgements-and-why-contract-stays-in-python)
-- [7 Oct 07:34 — Why index and reports got slower, and the fix](2026-10.md#why-index-and-reports-got-slower-and-the-fix)
-- [7 Oct 06:24 — Logic core step 4: config consistency, and timing markers](2026-10.md#logic-core-step-4-config-consistency-and-timing-markers)
-- [7 Oct 05:44 — Logic core step 3: the converse fixer, and a harness that gives it work](2026-10.md#logic-core-step-3-the-converse-fixer-and-a-harness-that-gives-it-work)
-- [7 Oct 04:56 — Logic core step 2: invariants, and what parity had to cover](2026-10.md#logic-core-step-2-invariants-and-what-parity-had-to-cover)
-- [7 Oct 04:29 — The facts layer, and three assumptions it corrected](2026-10.md#the-facts-layer-and-three-assumptions-it-corrected)
-- [7 Oct 00:37 — Multi-scheme references: fired on the constitution example](2026-10.md#multi-scheme-references-fired-on-the-constitution-example)
-- [3 Oct 20:51 — A typed number: on a temporary document became a duplicate key on the trunk](2026-10.md#a-typed-number-on-a-temporary-document-became-a-duplicate-key-on-the-trunk)
-- [2 Oct 19:38 — Title comparison folds spelling, not meaning](2026-10.md#title-comparison-folds-spelling-not-meaning)
-- [2 Oct 16:25 — Forbidding a field: the mirror of required_when](2026-10.md#forbidding-a-field-the-mirror-of-required_when)
-- [2 Oct 15:26 — Duplicate keys: ask the parser](2026-10.md#duplicate-keys-ask-the-parser)
-- [2 Oct 12:48 — A catch-all keyword swallows --help](2026-10.md#a-catch-all-keyword-swallows---help)
-- [2 Oct 05:52 — A fresh record should have nothing to say](2026-10.md#a-fresh-record-should-have-nothing-to-say)
-- [1 Oct 18:30 — A vocabulary is a scheme in shorthand](2026-10.md#a-vocabulary-is-a-scheme-in-shorthand)
-- [1 Oct 02:00 — Reference-entry detection, fired on the anthology](2026-10.md#reference-entry-detection-fired-on-the-anthology)
+- [4 Nov 00:25 — Prune acknowledgements that excuse nothing, fired on Nucleation](2026-11.md#prune-acknowledgements-that-excuse-nothing-fired-on-nucleation)
 
 ## All books
 
-157 entries across 3 books, newest first.
+158 entries across 4 books, newest first.
 
 | Book | Entries | First | Last |
 |---|--:|---|---|
+| [2026-11](2026-11.md) | 1 | 2026-11-04 | 2026-11-04 |
 | [2026-10](2026-10.md) | 29 | 2026-10-01 | 2026-10-30 |
 | [2026-09](2026-09.md) | 82 | 2026-09-03 | 2026-09-30 |
 | [2026-08](2026-08.md) | 46 | 2026-08-03 | 2026-08-28 |

@@ -94,6 +94,14 @@ The dial between reported and enforced. Status findings are warnings by default;
 | `narrow_terms` | *unset* | This project's own concrete nouns. A title in a scheme marked `titles_generalize` that names one is reported as `narrow-titles`. Luria ships none — the words are yours, and empty means the class never fires. |
 | `network` | `"auto"` | How far `luria lint` may reach to check what a cited identifier actually is. `auto` asks only about identifiers the lockfile has no answer for and falls back to reporting them unchecked; `never` answers from the lockfile alone, for the hermetic build; `require` makes an unreachable remote a failure, so a green run means the references were verified rather than remembered. |
 
+## Source repairs — `repair`
+
+The standing values of `luria repair`'s flags, so the repair CI runs uses them without the workflow passing them. Every flag has a key here, all off by default, and a flag on the command line overrides its key for that run. An unknown key or a value other than true or false is refused when the config loads.
+
+| key | default | what it does |
+|---|---|---|
+| `prune_stale` | `False` | Also remove the codes in `inactive-ok`, `unresolved-ok` and `mention-ok` directives that answer for no site, and delete a directive left naming nothing. The repair re-scans afterwards and restores every file if any finding changed. Off by default because a directive whose citation moved may want moving, not deleting. |
+
 ## Schemes — `schemes.X`
 
 One entry per referable document family. The key is the prefix codes carry, so `schemes.RFC` makes `RFC-7` a first-class reference: `luria link --fix` writes its link, `luria lint` demands one, and `luria new rfc` scaffolds the next free number — none of which needs anything beyond the table.

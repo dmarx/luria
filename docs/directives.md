@@ -1,4 +1,4 @@
-<!-- inactive-ok-file: ADR-tmp7ae7n — the decision this flag implements, Proposed with it -->
+<!-- inactive-ok-file: ADR-138 — the decision this flag implements, Proposed with it -->
 # Comment directives
 
 The lint's warning classes are judgement calls: a citation of a superseded
@@ -125,7 +125,7 @@ cites any more may mean the citation moved and the directive should move
 with it.
 
 When you would rather delete them all than look at each, `luria repair
---prune_stale` does it ([ADR-tmp7ae7n](../record/decisions.d/ADR-tmp7ae7n.md)). It removes every code that answers
+--prune_stale` does it ([ADR-138](../record/decisions.d/ADR-138.md)). It removes every code that answers
 for no site, from `inactive-ok`, `unresolved-ok` and `mention-ok` alike, and
 every directive left naming nothing. A `mention-ok` counts as answering
 while its code is cited in scope at all, even if another directive excuses
