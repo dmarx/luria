@@ -93,7 +93,55 @@ def test_the_document_becomes_temporary(branch):
     text = doc.read_text()
     assert "number:" not in text
     assert f"# {code}: Branch decision" in text
-    assert "formerly:" not in text, "the number goes back; it is not an alias"
+    assert "\nformerly:\n- ADR-002\n" in text, "the old code stays an alias"
+
+
+def test_noformerly_records_no_alias(branch):
+    """The collision case: the trunk holds the number, and the branch's
+    document should not remember it."""
+    unconcretize.run("ADR-002", formerly=False)
+    assert "formerly:" not in temp_doc(branch).read_text()
+
+
+def test_concretize_keeps_both_old_spellings(branch):
+    unconcretize.run("ADR-002")
+    git(branch, "add", "-A")
+    git(branch, "commit", "-qm", "give the number back")
+    tail = temp_doc(branch).stem
+    config.reset()
+    concretize.run()
+    text = config.current().schemes["ADR"].documents()[2].read_text()
+    assert f"formerly:\n- ADR-002\n- {tail}\n" in text
+
+
+def test_a_live_document_outranks_the_alias(branch):
+    """After the collision fix with the default alias, the trunk's ADR-002
+    is still what ADR-002 resolves to: a code resolves by number first."""
+    from luria import doc_refs
+    unconcretize.run("ADR-002")
+    git(branch, "add", "-A")
+    git(branch, "commit", "-qm", "give the number back")
+    git(branch, "merge", "-q", "--no-edit", "main")
+    config.reset()
+    concretize.run()
+    docs = config.current().schemes["ADR"].documents()
+    source = branch / "docs" / "notes.md"
+    ref = next(r for r in doc_refs.find_refs("see ADR-002", source)
+               if r.prefix == "ADR")
+    target = doc_refs.resolve(ref, source, docs, {})
+    assert target and target.endswith("ADR-002.md")
+    assert "Trunk's own second decision" in docs[2].read_text()
+
+
+def test_another_documents_formerly_entry_is_left_alone(branch):
+    """A `formerly:` block is a document's memory of its own past
+    addresses. Rewriting another document's entry would hand it a history
+    it never had."""
+    other = branch / "record" / "decisions.d" / "ADR-001.md"
+    other.write_text(other.read_text().replace(
+        "status: Proposed\n", "status: Proposed\nformerly:\n- ADR-002\n"))
+    unconcretize.run("ADR-002")
+    assert "formerly:\n- ADR-002\n" in other.read_text()
 
 
 def test_by_default_every_occurrence_is_rewritten(branch):

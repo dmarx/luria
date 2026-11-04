@@ -499,21 +499,34 @@ decisions too.
 ## luria unconcretize
 
 ```
-luria unconcretize CODE [CODE ...]
+luria unconcretize CODE [CODE ...] [--noformerly]
 ```
 
 The inverse of `luria concretize`. Each named document is renamed to a
-fresh temporary code, loses its `number:`, and every whole occurrence of
-its code is rewritten to the temporary one, in the files `concretize`
-rewrites, `luria.yaml` included. `LIT-156` is not matched inside `LIT-1563`,
-nor `ADR-068` inside `LU-ADR-068`. No `formerly:` is recorded, because the number is being
-given back. The next `concretize` numbers the documents again, in commit
-order.
+fresh temporary code and loses its `number:`. Every whole occurrence of its
+code is rewritten to the temporary one, in the files `concretize` rewrites,
+`luria.yaml` included. `LIT-156` is not matched inside `LIT-1563`, nor
+`ADR-068` inside `LU-ADR-068`, and another document's `formerly:` block is
+left alone.
 
-Use it when a branch's numbered document collides with the trunk's: run it
-on the branch *before* merging the trunk, while every occurrence in the
-tree still means the branch's document. Or use it to renumber: give back a
-run of numbers and concretize.
+The old code is recorded under the document's `formerly:`, as `concretize`
+records a temporary one. A citation the rewrite cannot reach (a PR thread,
+a commit message, another repository) then still finds the document once it
+is numbered again. `--noformerly` records no alias. The next `concretize`
+numbers the documents again, in commit order.
+
+Two uses:
+
+- **A collision.** A branch's numbered document collides with the trunk's
+  when the trunk takes the same number first. Run this on the branch
+  *before* merging the trunk, while every occurrence in the tree still
+  means the branch's document, and pass `--noformerly`, since the old code
+  is the trunk's. With the alias, [ADR-068](../record/decisions.d/ADR-068.md) would still resolve to the
+  trunk's document, because a live document outranks an alias of its own
+  code. But the branch's document would carry a history that is the
+  trunk's.
+- **Renumbering.** Give back a run of numbers and concretize. The default
+  alias keeps the old numbers resolving where nothing else claims them.
 
 ## luria remotes
 
