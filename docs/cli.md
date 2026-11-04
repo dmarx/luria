@@ -19,6 +19,7 @@ One binary, `luria`, dispatching to plain functions. Every command takes
 | [`luria reports`](#luria-reports) | write the status reports |
 | [`luria collect`](#luria-collect) | assemble fragments into their target |
 | [`luria concretize`](#luria-concretize) | give temporary codes real numbers |
+| [`luria unconcretize`](#luria-unconcretize) | give a document's number back, as a temporary code |
 | [`luria remotes`](#luria-remotes) | inspect and verify foreign references |
 | [`luria migrate`](#luria-migrate) | execute a rename/move spec |
 | [`luria site`](#luria-site) | stage the record as a publishable site |
@@ -491,6 +492,28 @@ reference in docs and scanned code, and record the old spelling under
 serialize — the push-to-main CI job — and never on a PR branch, which
 would re-create the collision the temporary codes exist to avoid.
 `--check` exits non-zero while any temporary code is pending.
+
+The rewrite also reaches `luria.yaml`, whose comments and blurbs cite
+decisions too.
+
+## luria unconcretize
+
+```
+luria unconcretize CODE [CODE ...]
+```
+
+The inverse of `luria concretize`. Each named document is renamed to a
+fresh temporary code, loses its `number:`, and every whole occurrence of
+its code is rewritten to the temporary one, in the files `concretize`
+rewrites, `luria.yaml` included. `LIT-156` is not matched inside `LIT-1563`,
+nor `ADR-068` inside `LU-ADR-068`. No `formerly:` is recorded, because the number is being
+given back. The next `concretize` numbers the documents again, in commit
+order.
+
+Use it when a branch's numbered document collides with the trunk's: run it
+on the branch *before* merging the trunk, while every occurrence in the
+tree still means the branch's document. Or use it to renumber: give back a
+run of numbers and concretize.
 
 ## luria remotes
 

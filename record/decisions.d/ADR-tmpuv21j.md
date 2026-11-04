@@ -1,0 +1,109 @@
+---
+status: Proposed
+title: 'luria unconcretize gives the named documents their numbers back as temporary codes, rewriting the codes wherever concretize would and recording no alias'
+version: 1
+tags:
+- mechanism
+date: '2026-11-04'
+influenced_by:
+- DP-004
+summary: >-
+  `luria unconcretize CODE...` is the inverse of `luria concretize`. Each
+  named document is renamed to a fresh temporary code ([ADR-049](ADR-049.md)) and loses
+  its `number:`, and every whole occurrence of its code is rewritten, in the
+  files concretize rewrites. That file list is now one function both
+  commands read, and it gains `luria.yaml`. The command does not ask why it
+  is run: the user names the documents, and it flips them. It serves a
+  branch whose filing-allocated number the trunk took first (run it before
+  merging the trunk), and a renumbering. No `formerly:` is recorded, since
+  the number goes back to the pool. Rejected: scoping the rewrite to lines
+  added since a commit; refusing mid-merge or for a document that predates
+  the branch; recording the old code as an alias; plain substring
+  replacement.
+---
+
+# ADR-tmpuv21j: luria unconcretize gives the named documents their numbers back as temporary codes, rewriting the codes wherever concretize would and recording no alias
+
+## Context
+
+A filing-allocated scheme takes the next free number when an entry is
+filed, on whatever branch it is filed on. When two branches take the same
+number, the second to merge collides with the first:
+
+- an add/add conflict on the file;
+- every citation the second branch wrote now names the first branch's
+  document.
+
+On nucleation#387 a branch filed `ADR-068` while the trunk merged a different
+`ADR-068`. The fix was to rename the branch's document to a temporary code,
+rewrite its citations, and let `concretize` number it at merge. That was
+mechanical, but there was no command for it. The citations sat in
+`luria.yaml` comments and blurbs, a changelog fragment and the document's
+own heading.
+
+`concretize` had the opposite rename. Its rewrite did not cover
+`luria.yaml`, so a temporary code cited in the config survived
+concretization.
+
+## Decision
+
+`luria unconcretize CODE [CODE ...]`, for each named numbered document:
+
+- renames the file to a fresh temporary code;
+- drops `number:`, which a temporary document must not carry ([#355](https://github.com/dmarx/luria/issues/355));
+- rewrites every whole occurrence of the code, and of its lower-case
+  anchor spelling, to the temporary code.
+
+**The user names the documents; the command does not judge why.** It does
+not look at branches, merge bases or merge state. For a collision, the
+user runs it on the branch before merging the trunk, while every
+occurrence in the tree still means the branch's document. For a
+renumbering, the user gives back a run of numbers and concretizes.
+
+**One file list for both directions of a rename.** `concretize.rewritable_files`
+holds every file the record scans, the scanned code globs, and now
+`luria.yaml`. `concretize` and `unconcretize` both read it, so a rename and
+its inverse reach the same files ([DP-4](../principles.d/DP-004.md)).
+
+**Codes are matched whole.** The old code is matched only when not preceded
+by a letter, digit, `_` or `-`, and not followed by a letter, digit or `_`.
+So `LIT-156` does not match inside `LIT-1563`, and `ADR-068` does not match
+inside the composed remote code `LU-ADR-068`. `concretize` can use plain replacement because a
+temporary tail is unique. A number cannot: `LIT-156` is a prefix of
+`LIT-1563`.
+
+**No alias.** `concretize` records the temporary code under `formerly:` so
+that citations outside the tree keep resolving. Here the number is being
+given back, and an alias would claim a code another document holds or
+soon will.
+
+## Alternatives considered
+
+- **Scope the rewrite to lines added since a commit** (`--since REF`). That
+  would handle the collision even after merging the trunk, by leaving the
+  trunk's lines alone. The owner rejected it: the user should name the
+  document, and the operation should not be relative to a commit. Running
+  before the merge gives the same result without it.
+- **Refuse mid-merge, or for a document that already existed at the branch
+  point.** That guesses the use. Renumbering an old scheme is exactly a
+  document that predates every branch.
+- **Record `formerly:`.** It would break the collision case: the alias
+  would resolve the trunk's code to the branch's document.
+- **Plain substring replacement, as `concretize` does.** That is wrong for
+  numbers, as above.
+
+## Consequences
+
+- A collision is fixed with one command before the merge, and the branch
+  then merges cleanly. Fired on nucleation#387 in a scratch worktree:
+  renaming `ADR-068` to a temporary code rewrote three files (the document,
+  `luria.yaml`, a changelog fragment). The merge with the trunk had no
+  conflict. `concretize` then numbered it `ADR-069` and rewrote all five
+  `luria.yaml` citations, which it would previously have missed.
+- `concretize` now rewrites `luria.yaml` too.
+- Renumbering follows concretize's order, the commit time of each
+  temporary file. Files given back in one commit tie. A renumbering by
+  another key, such as a `date:` field, is a separate ordering decision for
+  `concretize`.
+- Views are not regenerated. On a branch they are not committed, and on the
+  trunk the next `luria index` regenerates them.
