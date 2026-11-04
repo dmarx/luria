@@ -120,6 +120,12 @@ DEFAULTS: dict = {
         # reader of the configuration reference can see it — none is
         # supplied by the code (the ADR on explicit relations).
         "ADR": {"dir": "record/decisions.d", "output": "docs/decisions",
+                "title": "Decisions",
+                "blurb": ("A decision about how the project works, with the "
+                          "alternatives it rejected. It is superseded when "
+                          "the choice changes, and corrected in place, with "
+                          "its version bumped, when only a reason was "
+                          "wrong."),
                 "active": "Active", "render": "index",
                 "retires_on": "Superseded", "successor": "superseded_by",
                 "influence": "influenced_by",

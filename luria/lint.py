@@ -709,7 +709,8 @@ FAILABLE = ("retired-citations", "unresolved-codes", "foreign-temp-codes",
             "unexplained-relations", "bad-annotations",
             "spent-upgrades",
             "pending-documents", "unlinted-files", "workflow-temp-codes",
-            "unlinked-site", "load-bearing", "unbounded-acknowledgements")
+            "unlinked-site", "undescribed-schemes", "load-bearing",
+            "unbounded-acknowledgements")
 
 # Classes `lint.mute` may suppress: every failable class, plus
 # `acknowledged-uniformity` — which is not failable (a project cannot promote
@@ -776,6 +777,26 @@ def unlinked_site() -> list[str]:
             f"publishes this record — add a `{readme.markers('site')[0]}` / "
             f"`{readme.markers('site')[1]}` region for `luria index` to fill, "
             f"or write the link yourself"]
+
+
+def undescribed_schemes() -> list[str]:
+    """Schemes that declare neither `title` nor `blurb`.
+
+    `docs/record.md` says what each family is for only where the config
+    says it (#279), and leaves a scheme that says nothing out of that
+    section. Leaving it out is right for the document, which describes the
+    record and does not lecture it. But the absence then reads exactly like
+    a record with nothing to say (DP-15), so the signal comes here, where
+    every other missing piece is reported. Warn-first like every class:
+    `lint.mute` hears no more of it, and `fail_on` makes it a gate."""
+    cfg = current()
+    bare = [p for p, s in cfg.schemes.items() if not (s.title or s.blurb)]
+    if not bare:
+        return []
+    return [f"{', '.join(bare)} declare{'s' if len(bare) == 1 else ''} no "
+            f"`title` or `blurb`, so {cfg.rel(cfg.record_doc)} cannot say "
+            "what the family is for — add them under `schemes.X` in "
+            "luria.yaml"]
 
 
 def spent_upgrades() -> list[str]:
@@ -879,6 +900,15 @@ def status_sections(rendered: dict[Path, str] | None = None
             "unlinked-site",
             "the published site is not linked from the README",
             unlinked))
+
+    # A scheme that never says what its family is for. The record document
+    # leaves it out rather than print a heading over nothing, so the absence
+    # is reported here instead (DP-15).
+    if undescribed := undescribed_schemes():
+        sections.append((
+            "undescribed-schemes",
+            "a scheme does not say what its family is for",
+            undescribed))
 
     if result.unlinted:
         sections.append((

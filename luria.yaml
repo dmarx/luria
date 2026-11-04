@@ -98,6 +98,11 @@ code:
   - CHANGELOG.md
 schemes:
   ADR:
+    title: Decisions
+    blurb: >-
+      A decision about how the project works, with the alternatives it
+      rejected. It is superseded when the choice changes, and corrected in
+      place, with its version bumped, when only a reason was wrong.
     dir: record/decisions.d
     output: docs/decisions
     active: Active
@@ -133,6 +138,10 @@ schemes:
         required: false
     influence: influenced_by
   DP:
+    title: Design principles
+    blurb: >-
+      A standing value that decisions cite by number, stated as a claim
+      someone could disagree with. Read as one page.
     cite: page
     dir: record/principles.d
     active: Active

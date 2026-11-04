@@ -46,6 +46,7 @@ vocabularies:
     Accepted: {}
 schemes:
   RFC:
+    title: Requests for comment
     dir: record/rfcs.d
     output: docs/rfcs
     active: Accepted

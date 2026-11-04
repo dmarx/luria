@@ -397,7 +397,7 @@ add the narrative and say how many sites are already acknowledged:
 `unrecorded-relations` · `unannotated-relations` ·
 `unexplained-relations` · `bad-annotations` ·
 `spent-upgrades` · `pending-documents` · `unlinted-files` ·
-`workflow-temp-codes` · `unlinked-site`
+`workflow-temp-codes` · `unlinked-site` · `undescribed-schemes`
 
 Any of those class names listed in `lint.fail_on` fails the build
 instead. Only unacknowledged findings ever reach a class, so

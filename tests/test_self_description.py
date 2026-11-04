@@ -73,10 +73,54 @@ def test_a_scheme_says_what_the_family_is(tmp_path, monkeypatch):
 
 
 def test_a_scheme_that_says_nothing_gets_no_section(tmp_path, monkeypatch):
-    """No table of blanks. A project that declares none should read exactly
-    as it did before the key existed."""
+    """No table of blanks, and no heading over nothing. The document says
+    what the record is; that something is missing from it is a finding, and
+    findings go where the lint reports them (`undescribed-schemes`)."""
     project(tmp_path, monkeypatch)
-    assert record_doc.families_section(config.current()) == ""
+    assert record_doc.families(config.current()) == []
+    assert "## What each family is" not in record_doc.render()
+
+
+def test_an_empty_section_is_left_out_of_the_page(tmp_path, monkeypatch):
+    """The guard for the next section: a heading is never followed straight
+    by the next heading, whichever section comes back empty."""
+    project(tmp_path, monkeypatch)
+    page = record_doc.render()
+    lines = [ln for ln in page.splitlines() if ln.strip()]
+    for here, after in zip(lines, lines[1:]):
+        assert not (here.startswith("## ") and after.startswith("## ")), here
+    assert "A scheme's own account of itself" not in page
+
+
+def test_the_prose_lives_in_the_template_and_the_facts_in_the_module():
+    """The page is a templated view: its headings, prose and layout are in
+    `luria:record.md.j2`, and `record_doc.context` hands it data only. A
+    heading or a table written back into the module is the drift this
+    split exists to stop."""
+    from pathlib import Path
+    module = Path(record_doc.__file__).read_text(encoding="utf-8")
+    template = (Path(record_doc.__file__).parent / "view_templates"
+                / "record.md.j2").read_text(encoding="utf-8")
+    for heading in ("## Referable documents", "## What each family is",
+                    "## What an entry must carry", "## Journals",
+                    "## Settings this project changed", "*None configured.*"):
+        assert heading in template and heading not in module, heading
+
+
+def test_the_lint_names_each_scheme_that_says_nothing(tmp_path, monkeypatch):
+    from luria import lint
+    project(tmp_path, monkeypatch)
+    rows = lint.undescribed_schemes()
+    assert len(rows) == 1
+    assert "LIT" in rows[0] and "schemes.X" in rows[0]
+
+
+def test_a_scheme_that_describes_itself_is_not_reported(tmp_path, monkeypatch):
+    from luria import lint
+    project(tmp_path, monkeypatch, BASE.replace(
+        "    dir: record/literature.d",
+        "    dir: record/literature.d\n    title: The reading list"))
+    assert lint.undescribed_schemes() == []
 
 
 def test_a_title_without_a_blurb_is_enough(tmp_path, monkeypatch):
