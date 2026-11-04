@@ -3,7 +3,8 @@
     luria lint          check the record; the only command that can fail
     luria link [--fix]  rewrite bare references as hyperlinks
     luria repair        write every mechanical source repair: links, a
-                        journal entry's missing `created:`
+                        journal entry's missing `created:`; --prune_stale
+                        also removes acknowledgements that excuse nothing
     luria ack           write an acknowledgement directive from the scan,
                         with a reason you supply; no code, no reason, and it
                         prints what could be acknowledged instead

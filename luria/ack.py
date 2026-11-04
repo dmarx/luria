@@ -35,7 +35,8 @@ false and the code answers for nothing — the same state `plan` refuses to
 write over. Taking the code out has one correct answer: the reason and the
 other codes stay, and a directive left naming nothing is deleted. A retired
 code nothing cites any more is not that case; the citation may have moved, and
-where the directive belongs is a judgement.
+where the directive belongs is a judgement. `luria repair --prune_stale`
+(`luria.prune`) is a person making that judgement for the whole tree at once.
 """
 
 from __future__ import annotations

@@ -1,0 +1,115 @@
+---
+status: Proposed
+title: 'luria repair prunes acknowledgements that excuse nothing only when asked, and checks the findings did not move'
+version: 1
+tags:
+- process
+- mechanism
+date: '2026-11-04'
+issue: '#385'
+influenced_by:
+- DP-006
+- DP-010
+summary: >-
+  `luria repair --prune_stale` removes the codes in `inactive-ok`,
+  `unresolved-ok` and `mention-ok` directives that answer for no site, and
+  deletes a directive left naming nothing. Removing them provably changes no
+  finding, and the repair checks it: it re-scans after writing and restores
+  every file if any citation's standing moved. It is opt-in, because
+  [ADR-119](ADR-119.md)'s line still holds: an uncited directive may mean its citation
+  moved, and whether to move or delete the directive is a judgement. The flag
+  is a person making that judgement for the whole tree. A record can make it
+  once for good with `repair.prune_stale: true` in luria.yaml, as it can
+  every `repair` flag, so CI prunes without the workflow passing it.
+  Rejected: pruning in
+  the default repair, as [#385](https://github.com/dmarx/luria/issues/385) first proposed; a lint check that relation-field
+  citations need no excuse (they are already blanked, so such a directive is
+  already reported); and leaving it to hand-written scripts, which on
+  Nucleation misread the report and had to be run twice.
+---
+<!-- inactive-ok-file: ADR-136 — the rule this decision applies, Proposed -->
+
+# ADR-tmp7ae7n: luria repair prunes acknowledgements that excuse nothing only when asked, and checks the findings did not move
+
+## Context
+
+`stale-directives` reports an acknowledgement that answers for no site.
+Since [ADR-119](ADR-119.md) and `ack.trim_settled`, `luria repair` removes one class of
+these, a code in an `inactive-ok` whose document is in force. It leaves the
+rest. Its stated reason is that a retired code nothing cites any more may
+mean the citation moved, and whether the directive should move with it is
+a judgement. [ADR-136](ADR-136.md) keeps judgements out of `repair`.
+
+On a large record the rest is most of them. Nucleation's lint listed 282
+such directives in 267 files ([dmarx/nucleation#357](https://github.com/dmarx/nucleation/pull/357)), cleared by a script that
+parsed the report's text and misread a whole-directive finding as a per-code
+one, so it had to be run twice. After luria 1.7.0's trim, 69 more remained
+([dmarx/nucleation#391](https://github.com/dmarx/nucleation/pull/391)). A further 275 directives that were still in use
+named 336 codes that answered for nothing. The lint did not report those,
+because `Scan.used` asks whether a directive answers for anything, not
+whether each of its codes does.
+
+## Decision
+
+`luria repair --prune_stale` removes every acknowledgement code that answers
+for no site, and deletes a directive left naming nothing. The default
+`luria repair`, and so the generate action, are unchanged.
+
+- **The config can set it, like every repair flag.** `luria.yaml`'s
+  `repair:` table holds the standing value of each flag of `repair.run`, all
+  off by default. The command line overrides a key for one run
+  (`--noprune_stale`). A record that sets `prune_stale: true` has made the
+  judgement once, where everyone reading its config can see it, and the CI
+  repair then prunes on every pull request. A test holds the rule that
+  every flag has a key, so a flag added later is configurable too. An
+  unknown key or a value that is not true or false is refused at load.
+
+- **What "answers for no site" means depends on the kind.** `inactive-ok`
+  and `unresolved-ok` claim a state, so a code is idle when no citation in
+  this scan has the directive as its `excused_by`. That covers `trim_settled`'s
+  case, and also a code made redundant by an earlier directive that answers
+  first. `mention-ok` claims nothing about state and must survive a status
+  change that hands its site to another directive ([ADR-105](ADR-105.md)). So a
+  `mention-ok` code is idle only when no site in its scope cites it at all.
+- **The guard is a re-scan, not an argument.** Before writing, the repair
+  counts the citations no directive answers for, by file and code. It counts
+  by file and not by line, because deleting a directive's line moves the
+  lines below it. After writing it counts again. If the counts differ, every
+  file is restored and the repair raises `PruneChangedFindings`, naming the
+  citations that moved ([DP-001](../principles.d/DP-001.md)).
+- **Out of reach**: a malformed directive, whose problem is already the
+  finding; an expired one, which the scan does not see; and every other
+  directive kind.
+
+## Alternatives considered
+
+- **Prune in the default repair**, as [#385](https://github.com/dmarx/luria/issues/385) proposed. The guard makes it safe
+  for the findings, but not for intent. A directive whose citation moved a
+  line is best moved, not deleted, and the default repair runs in CI on
+  every pull request, where nobody chose that. [DP-010](../principles.d/DP-010.md): this is a write a
+  person turns on, not a guard they turn off.
+- **A lint check that relation-field citations need no excuse.** `relations.
+  relation_spans` already blanks `uses:`, `rests_on:` and the other relation
+  fields before citations are read. So a directive excusing only those
+  already answers for nothing and is already reported.
+- **Report idle codes in the lint and leave removal to people.** That was
+  the status quo for whole directives, and it produced the hand-written
+  scripts.
+- **Flags on the command line only.** The CI repair is a shared action, and
+  a record would have to fork its workflow to pass a flag. The config is
+  where a record already states its standing choices, such as `lint.fail_on`.
+- **Compare the findings by line.** Every deleted line would then register
+  as a change.
+
+## Consequences
+
+- A record can clear its stale acknowledgements in one command. Fired on a
+  copy of Nucleation after dmarx/nucleation#391: 336 codes in 262 files, the guard passed,
+  `stale_annotations()` stayed at 0, and a second run changed nothing. It
+  took about 100 seconds, two full scans.
+- A directive's reason may still name a code the prune removed. The reason
+  is the person's prose, and the repair does not edit it, as `trim_settled`
+  does not.
+- The lint still does not report a single idle code in a directive that is
+  in use, apart from a settled one. Reporting them would make this flag the
+  remedy for a finding on every large record, which is a separate decision.

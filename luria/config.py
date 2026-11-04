@@ -216,6 +216,17 @@ DEFAULTS: dict = {
         # verified rather than merely remembered.
         "network": "auto",
     },
+    # inactive-ok: ADR-tmp7ae7n — the decision this table implements, Proposed with it
+    # The standing values of `luria repair`'s flags (ADR-tmp7ae7n). A flag
+    # only on the command line is one the CI repair never passes, so a record
+    # that wants it everywhere would have to edit a workflow. Every flag of
+    # `repair.run` has a key here, and the command line overrides it for one
+    # run. All off: a repair a person did not ask for is not mechanical.
+    "repair": {
+        # Also remove acknowledgement codes that answer for no site
+        # (`luria.prune`, #385).
+        "prune_stale": False,
+    },
     # Whole records nested inside this one (ADR-077, ADR-078). Empty for the
     # ordinary project, which contains no others.
     "include_records": [],
@@ -2038,6 +2049,25 @@ class View:
         return self.origin or f"views.{self.name}"
 
 
+def _repair(raw: dict) -> dict[str, bool]:
+    """The `repair:` table, every flag present and each one true or false.
+
+    Refused rather than ignored, either way: a misspelt flag reads exactly
+    like a flag left off (DP-15), and `"yes"` is not a value YAML or Fire
+    agrees on."""
+    known = DEFAULTS["repair"]
+    if unknown := sorted(set(raw) - set(known)):
+        raise ValueError(f"luria.yaml: repair: unknown key(s) "
+                         f"{', '.join(unknown)} (the flags of `luria repair` "
+                         f"are {', '.join(sorted(known))})")
+    out = {**known, **raw}
+    for key, value in out.items():
+        if not isinstance(value, bool):
+            raise ValueError(f"luria.yaml: repair.{key} is true or false, "
+                             f"not {value!r}")
+    return out
+
+
 def _views(raw: dict, root: Path,
            patterns: dict | None = None) -> dict[str, View]:
     """Every declared view. Both paths are required: a view without a
@@ -2414,6 +2444,9 @@ class Config:
     mute: tuple[str, ...]               # warning classes suppressed entirely
     narrow_terms: tuple[str, ...]       # this project's nouns (narrow-titles)
     network: str                        # "auto" | "never" | "require"
+    # `luria repair`'s flags as this record sets them (`repair:`): flag name →
+    # value, every flag present. The command line overrides one for one run.
+    repair: dict[str, bool]
     # Whole records nested inside this one — directory globs, each match
     # holding its own `luria.yaml` (ADR-077, relocated by ADR-078).
     #
@@ -2791,6 +2824,7 @@ def load(root: Path | None = None, text: str | None = None,
         mute=tuple(raw["lint"]["mute"]),
         narrow_terms=tuple(raw["lint"].get("narrow_terms", [])),
         network=str(raw["lint"].get("network", "auto")),
+        repair=_repair(raw.get("repair") or {}),
         include_records=tuple(raw.get("include_records", ())),
         reliance=(reliance := _reliance(raw.get("reliance") or [], schemes)),
         load_bearing=_load_bearing(raw.get("load_bearing"), reliance),
