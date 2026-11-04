@@ -165,3 +165,33 @@ def test_the_guard_restores_the_files_when_a_finding_changes(project,
     with pytest.raises(prune.PruneChangedFindings, match="ADR-001"):
         prune.prune_stale()
     assert path.read_text() == body
+
+
+# ── From the config ──────────────────────────────────────────────────────
+
+
+def configure(project, repair_table: dict) -> None:
+    from _config import merged
+    from luria import config
+    (project / "luria.yaml").write_text(
+        merged((project / "luria.yaml").read_text(), {"repair": repair_table}))
+    config.reset()
+
+
+def test_the_config_turns_it_on(project):
+    """`repair.prune_stale: true` is the flag written down once, so the CI
+    repair prunes too, the record having opted in where everyone can see."""
+    decision(project, 1, "Superseded")
+    configure(project, {"prune_stale": True})
+    path = page(project, "<!-- inactive-ok-file: ADR-001 — old -->\nNo.\n")
+    repair.apply()
+    assert path.read_text() == "No.\n"
+
+
+def test_the_command_line_overrides_the_config(project):
+    decision(project, 1, "Superseded")
+    configure(project, {"prune_stale": True})
+    body = "<!-- inactive-ok-file: ADR-001 — old -->\nNo.\n"
+    path = page(project, body)
+    repair.apply(prune_stale=False)
+    assert path.read_text() == body

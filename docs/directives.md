@@ -130,7 +130,9 @@ for no site, from `inactive-ok`, `unresolved-ok` and `mention-ok` alike, and
 every directive left naming nothing. A `mention-ok` counts as answering
 while its code is cited in scope at all, even if another directive excuses
 that site today. The repair re-scans afterwards and restores every file if
-any finding changed.
+any finding changed. To make it the record's standing choice, so that the CI
+repair prunes on every pull request, set `repair.prune_stale: true` in
+`luria.yaml`.
 
 ## The vocabulary
 

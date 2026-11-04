@@ -30,13 +30,17 @@ from .config import current
 from . import writes
 
 
-def apply(prune_stale: bool = False) -> list[Path]:
+def apply(prune_stale: bool | None = None) -> list[Path]:
     """Every mechanical source repair, written: the files that changed.
 
     `prune_stale` adds the one repair that is opt-in (`luria.prune`, #385):
     removing acknowledgement codes that answer for no site, including those
-    the default leaves because the citation may have moved."""
+    the default leaves because the citation may have moved. A flag left as
+    None takes its value from the config's `repair:` table, which is how CI
+    gets it without the workflow passing it."""
     cfg = current()
+    if prune_stale is None:
+        prune_stale = cfg.repair["prune_stale"]
     changed: list[Path] = []
     _, linked = link_refs.linkify_files(doc_refs.doc_files(), fix=True)
     changed += linked
@@ -201,14 +205,16 @@ def retire_aliases(scheme) -> list[Path]:
     return done
 
 
-def run(prune_stale: bool = False) -> None:
+def run(prune_stale: bool | None = None) -> None:
     """Write every mechanical source repair: link bare references, populate
     `created:` from a journal entry's path, move a note out of `status:`
     into `status_note:` and `superseded_by:`, remove from an `inactive-ok`
     a code whose document is in force, retire a stale configuration
     reference. `--prune_stale` also removes acknowledgement codes that
     answer for no site, and directives left naming nothing; it re-scans
-    and restores every file if that changed a finding. Prints what changed;
+    and restores every file if that changed a finding. Each flag left unset
+    takes its value from `repair:` in luria.yaml; `--noprune_stale` turns
+    it off for one run. Prints what changed;
     a second run changes nothing. Returns
     nothing — Fire would print a return value, and a list of paths is not
     the summary a caller wants."""

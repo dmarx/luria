@@ -208,6 +208,17 @@ checks this. It re-scans after writing, and if any citation's standing
 changed it restores every file and fails. A malformed or expired directive
 is never touched.
 
+Every flag can also be set in `luria.yaml`, so the repair CI runs uses it
+without the workflow passing it:
+
+```yaml
+repair:
+  prune_stale: true
+```
+
+All flags are off by default. One given on the command line overrides its
+key for that run: `--noprune_stale` turns it off.
+
 ## luria index
 
 ```

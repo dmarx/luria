@@ -18,7 +18,10 @@ summary: >-
   every file if any citation's standing moved. It is opt-in, because
   [ADR-119](ADR-119.md)'s line still holds: an uncited directive may mean its citation
   moved, and whether to move or delete the directive is a judgement. The flag
-  is a person making that judgement for the whole tree. Rejected: pruning in
+  is a person making that judgement for the whole tree. A record can make it
+  once for good with `repair.prune_stale: true` in luria.yaml, as it can
+  every `repair` flag, so CI prunes without the workflow passing it.
+  Rejected: pruning in
   the default repair, as [#385](https://github.com/dmarx/luria/issues/385) first proposed; a lint check that relation-field
   citations need no excuse (they are already blanked, so such a directive is
   already reported); and leaving it to hand-written scripts, which on
@@ -52,6 +55,15 @@ whether each of its codes does.
 for no site, and deletes a directive left naming nothing. The default
 `luria repair`, and so the generate action, are unchanged.
 
+- **The config can set it, like every repair flag.** `luria.yaml`'s
+  `repair:` table holds the standing value of each flag of `repair.run`, all
+  off by default. The command line overrides a key for one run
+  (`--noprune_stale`). A record that sets `prune_stale: true` has made the
+  judgement once, where everyone reading its config can see it, and the CI
+  repair then prunes on every pull request. A test holds the rule that
+  every flag has a key, so a flag added later is configurable too. An
+  unknown key or a value that is not true or false is refused at load.
+
 - **What "answers for no site" means depends on the kind.** `inactive-ok`
   and `unresolved-ok` claim a state, so a code is idle when no citation in
   this scan has the directive as its `excused_by`. That covers `trim_settled`'s
@@ -83,13 +95,16 @@ for no site, and deletes a directive left naming nothing. The default
 - **Report idle codes in the lint and leave removal to people.** That was
   the status quo for whole directives, and it produced the hand-written
   scripts.
+- **Flags on the command line only.** The CI repair is a shared action, and
+  a record would have to fork its workflow to pass a flag. The config is
+  where a record already states its standing choices, such as `lint.fail_on`.
 - **Compare the findings by line.** Every deleted line would then register
   as a change.
 
 ## Consequences
 
 - A record can clear its stale acknowledgements in one command. Fired on a
-  copy of Nucleation after [#391](https://github.com/dmarx/luria/issues/391): 336 codes in 262 files, the guard passed,
+  copy of Nucleation after dmarx/nucleation#391: 336 codes in 262 files, the guard passed,
   `stale_annotations()` stayed at 0, and a second run changed nothing. It
   took about 100 seconds, two full scans.
 - A directive's reason may still name a code the prune removed. The reason

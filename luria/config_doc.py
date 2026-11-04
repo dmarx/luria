@@ -333,7 +333,8 @@ SECTIONS: list[tuple[str, type, str]] = sections()
 # whose default is a dict is a free-form mapping and belongs in the table above
 # it, as a row like any other key.
 SECTION_SUBTREES: frozenset[str] = frozenset(
-    {"paths", "lint", "site", "code", "schemes", "chains", "patterns",
+    {"paths", "lint", "repair", "site", "code", "schemes", "chains",
+     "patterns",
      "views", "remotes",
      "journals", "fragments", "vocabularies"})
 
@@ -442,6 +443,20 @@ PLAIN: list[tuple[str, str, str, dict[str, str]]] = [
                    "lockfile alone, for the hermetic build; `require` makes "
                    "an unreachable remote a failure, so a green run means the "
                    "references were verified rather than remembered.",
+    }),
+    ("Source repairs — `repair`", "repair", "The standing values of `luria "
+     "repair`'s flags, so the repair CI runs uses them without the workflow "
+     "passing them. Every flag has a key here, all off by default, and a "
+     "flag on the command line overrides its key for that run. An unknown "
+     "key or a value other than true or false is refused when the config "
+     "loads.", {
+        "prune_stale": "Also remove the codes in `inactive-ok`, "
+                       "`unresolved-ok` and `mention-ok` directives that "
+                       "answer for no site, and delete a directive left "
+                       "naming nothing. The repair re-scans afterwards and "
+                       "restores every file if any finding changed. Off by "
+                       "default because a directive whose citation moved "
+                       "may want moving, not deleting.",
     }),
 ]
 
