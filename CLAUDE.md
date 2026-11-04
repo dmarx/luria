@@ -35,8 +35,8 @@ Orient first:
   by `luria index`; edit the sources and rerun it. The README's generated
   regions are rebuilt too, and so is everything below, derived from this
   record's configuration:
-  - the ADR index and its per-value pages: `docs/decisions`
-  - the DP document: `docs/design-principles.md`
+  - the Decisions index and its per-value pages: `docs/decisions`
+  - the Design principles document: `docs/design-principles.md`
   - the Development log books: `docs/devlog`
   - the `bootloader` view: `CLAUDE.md`
   - the status reports: `docs/reports`

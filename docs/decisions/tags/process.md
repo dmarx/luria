@@ -4,7 +4,7 @@
 
 **Process** — how the machinery is adopted, run, and reported on.
 
-30 of 138 decisions. Back to the [full index](../README.md).
+30 of 139 decisions. Back to the [full index](../README.md).
 
 | # | Title | Summary | Status |
 |---|---|---|---|

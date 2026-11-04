@@ -23,6 +23,13 @@ A code — `ADR-012` — resolves to a document, and every reference to it in th
 
 A scheme's own account of itself, where it gives one — `title` and `blurb` on `schemes.X`. The table above says where a family's files live and how its codes are spelled; this says what the family is for, which is the part a reader needs first and the part a config could not previously state (#279).
 
+**`ADR`** — Decisions
+
+A decision about how the project works, with the alternatives it rejected. It is superseded when the choice changes, and corrected in place, with its version bumped, when only a reason was wrong.
+
+**`DP`** — Design principles
+
+A standing value that decisions cite by number, stated as a claim someone could disagree with. Read as one page.
 
 ## What an entry must carry
 

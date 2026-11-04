@@ -20,11 +20,6 @@ A code — `ADR-012` — resolves to a document, and every reference to it in th
 | `PRACTICE-001` | `record/practices.d/` | `docs/practices/README.md` + tag pages | `Active` |
 | `BOUNDARY-001` | `record/boundaries.d/` | `docs/boundaries/README.md` + tag pages | `Active` |
 
-## What each family is
-
-A scheme's own account of itself, where it gives one — `title` and `blurb` on `schemes.X`. The table above says where a family's files live and how its codes are spelled; this says what the family is for, which is the part a reader needs first and the part a config could not previously state (#279).
-
-
 ## What an entry must carry
 
 Every entry carries `title` and `date`. Everything else is listed below rather than assumed: `status` and the axis are controlled fields the scheme declares, and every relation — the successor a retiring document names included — is a reference the scheme declares, with the conditions it states (ADR-071, ADR-125). What each scheme's entries must carry, compiled from `luria.yaml` into the contract `luria lint` checks, with where each obligation was declared. A finding cites the same line.

@@ -8,4 +8,4 @@
 
 ### Changed
 
-- `docs/record.md` is rendered from a template luria ships, `luria:record.md.j2`, in the sandbox views use ([ADR-tmp1m1lj](record/decisions.d/ADR-tmp1m1lj.md)). Its prose and layout are in the template, and `record_doc.context` supplies only facts from the config. The output is unchanged: it was byte-identical on luria's record, nucleation's, a fresh init and three fixtures.
+- `docs/record.md` is rendered from a template luria ships, `luria:record.md.j2`, in the sandbox views use ([ADR-139](record/decisions.d/ADR-139.md)). Its prose and layout are in the template, and `record_doc.context` supplies only facts from the config. The output is unchanged: it was byte-identical on luria's record, nucleation's, a fresh init and three fixtures.
