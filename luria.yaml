@@ -199,6 +199,16 @@ remotes:
         document: docs/design-principles.md
       ADR:
         pin: true
+  NUC:
+    name: nucleation
+    repo: dmarx/nucleation
+    ref: main
+    dir: record/decisions.d
+    schemes:
+      ADR:
+        dir: record/decisions.d
+      CASE:
+        dir: record/cases.d
   FX:
     name: fixtures
     url: https://github.com/dmarx/luria/blob/main/docs/directives.md#fixture-codes
