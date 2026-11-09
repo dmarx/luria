@@ -5,6 +5,45 @@ Assembled from `changelog.d/` fragments on a cadence — never hand-edited
 
 <!-- luria-insert-here -->
 
+## 2026-11-09
+
+### Added
+
+- `luria unconcretize CODE [CODE ...]` gives each named document its number back as a fresh temporary code, drops its `number:`, and rewrites every whole occurrence of the code, its lower-case anchor spelling included, wherever `concretize` would. Run it on a branch whose number the trunk took first, before merging the trunk. It also renumbers a run of documents. No `formerly:` is recorded ([ADR-140](record/decisions.d/ADR-140.md)).
+
+### Fixed
+
+- `luria concretize` now rewrites `luria.yaml` too. A temporary code cited in a config comment or blurb used to survive concretization.
+
+### Changed
+
+- `luria unconcretize` now records the given-back code under the document's `formerly:` by default, so a citation the rewrite cannot reach still finds the document once it is numbered again. `--noformerly` records none, which is the choice for a branch whose number the trunk took. The rewrite also leaves other documents' `formerly:` blocks alone ([ADR-141](record/decisions.d/ADR-141.md), superseding [ADR-140](record/decisions.d/ADR-140.md)).
+
+### Added
+
+- An `undescribed-schemes` lint class names each scheme that declares neither `title` nor `blurb`, so that `docs/record.md` cannot say what its family is for. It is warn-first like every class, so `lint.mute` silences it and `lint.fail_on` makes it a gate. The default ADR scheme, the scaffolded ADR and DP schemes, and luria's own schemes now describe themselves, so a fresh `luria init` still prints no findings.
+
+### Fixed
+
+- `docs/record.md` leaves out a section that has nothing to show, heading and all. "What each family is" used to render its heading and introduction over nothing when no scheme described itself. That something is missing is reported by the lint, not written into the document.
+
+### Changed
+
+- `docs/record.md` is rendered from a template luria ships, `luria:record.md.j2`, in the sandbox views use ([ADR-139](record/decisions.d/ADR-139.md)). Its prose and layout are in the template, and `record_doc.context` supplies only facts from the config. The output is unchanged: it was byte-identical on luria's record, nucleation's, a fresh init and three fixtures.
+
+### Added
+
+- `luria repair --prune_stale` removes the codes in `inactive-ok`,
+  `unresolved-ok` and `mention-ok` directives that answer for no site, and
+  deletes a directive left naming nothing. That includes the directives the
+  default repair leaves because their citation may have moved. It re-scans
+  after writing and restores every file if any finding changed. Opt-in; the
+  default repair is unchanged ([ADR-138](record/decisions.d/ADR-138.md), [#385](https://github.com/dmarx/luria/issues/385)).
+- A `repair:` table in `luria.yaml` sets the standing value of every `luria
+  repair` flag, so the CI repair uses it without the workflow passing it.
+  All off by default; the command line overrides a key for one run. An
+  unknown key or a non-boolean value is refused when the config loads.
+
 ## 2026-11-02
 
 ### Added
