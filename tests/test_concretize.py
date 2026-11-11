@@ -330,3 +330,62 @@ def test_repair_is_where_the_upgrade_runs(merge_project, capsys):
     assert straggler in repair.apply()
     assert "old spelling" in capsys.readouterr().out
     assert doc_refs.legacy_spellings() == []
+
+
+# --- the heading carries the identity concretize assigns -----------------
+
+TWO_SCHEMES = """
+schemes:
+  LIT:
+    dir: record/literature.d
+    allocate: merge
+  NOTE:
+    dir: record/notes.d
+    allocate: merge
+"""
+
+
+def test_a_heading_carrying_another_code_is_given_the_new_one(tmp_path,
+                                                               monkeypatch,
+                                                               capsys):
+    """Nucleation's NOTE-1341, reproduced. Its author filed a LIT and a NOTE
+    on one branch and wrote the NOTE's heading with the LIT's temporary tail
+    — `# NOTE-<lit tail>: …`, a code that names no document. The tree-wide
+    rewrite only replaces the document's *own* temporary code, so the
+    heading came through the rename still saying `NOTE-tmp…`, the one file
+    in the record that did. The heading is derived from the identity, so
+    concretize writes the identity into it, whatever it said before — and
+    says so, because a correction nobody hears about is a silent one (DP-1)."""
+    (tmp_path / "luria.yaml").write_text(TWO_SCHEMES)
+    monkeypatch.setenv("LURIA_ROOT", str(tmp_path))
+    config.reset()
+    lit = new.new_entry("lit", {"title": "xCOMET"}, None)
+    note = new.new_entry("note", {"title": "Guerreiro et al. — xCOMET"}, None)
+    lit_tail = config.current().schemes["LIT"].temp_of(lit)
+    wrong = f"NOTE-{lit_tail}"
+    note.write_text(note.read_text().replace(f"# {note.stem}:", f"# {wrong}:"))
+    subprocess.run(["git", "init", "-q", "."], cwd=tmp_path, check=True)
+    subprocess.run(["git", "-c", "user.email=t@t", "-c", "user.name=t",
+                    "add", "-A"], cwd=tmp_path, check=True)
+    subprocess.run(["git", "-c", "user.email=t@t", "-c", "user.name=t",
+                    "commit", "-qm", "seed"], cwd=tmp_path, check=True)
+
+    concretize.run()
+
+    done = config.current().schemes["NOTE"].documents()[1].read_text()
+    assert "# NOTE-001: Guerreiro et al. — xCOMET" in done
+    assert wrong not in done
+    out = capsys.readouterr().out
+    assert wrong in out and "NOTE-001" in out, \
+        "the correction is announced, naming what the heading said"
+
+
+def test_a_heading_without_a_code_is_left_alone(merge_project):
+    """A document whose heading is its title alone has no code to correct;
+    concretize gives it none rather than inventing a shape it never had."""
+    _, first, _ = merge_project
+    first.write_text(first.read_text().replace(f"# {first.stem}: ", "# "))
+    concretize.run()
+    texts = [p.read_text()
+             for p in config.current().schemes["ADR"].documents().values()]
+    assert any("\n# First decision\n" in t for t in texts)
