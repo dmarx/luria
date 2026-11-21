@@ -51,3 +51,17 @@ Four ground rules, terse enough to restate:
   the fix is to remove what *generates* the mistake, not to keep thanking
   the net. Quiet guards are the goal; a busy one is compensating for
   something.
+
+<!-- Optional: a hands-free regime (luria's decision on it, in its record). Uncomment once the project
+     has an integration branch that only a promotion carries to the default
+     branch, and a decision of its own adopting this.
+
+- **The hands-free regime, when the owner switches it on.** It is on until
+  switched off; a new session starts off. While it is on: file what the
+  work develops as it goes, one commit per turn; when a turn has several
+  readings, file each as an alternative; answer first, then report what was
+  filed; merge into the integration branch when checks pass; revert when
+  the owner interjects. Status changes, new decisions, configuration, CI,
+  anything sent outside and the promotion to the default branch still wait
+  for the owner. Suggest switching off when going on would be awkward.
+-->
