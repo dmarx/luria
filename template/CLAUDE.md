@@ -52,7 +52,7 @@ Four ground rules, terse enough to restate:
   the net. Quiet guards are the goal; a busy one is compensating for
   something.
 
-<!-- Optional: a hands-free regime (ADR-tmpwcl6h). Uncomment once the project
+<!-- Optional: a hands-free regime (luria's decision on it, in its record). Uncomment once the project
      has an integration branch that only a promotion carries to the default
      branch, and a decision of its own adopting this.
 
