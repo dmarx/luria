@@ -523,3 +523,42 @@ def test_the_flags_a_kind_takes_still_work(project, capsys):
     assert "mine" in capsys.readouterr().out
     new_mod.run(title="A devlog entry", body="Prose.")
     assert "devlog" in capsys.readouterr().out
+
+
+# ── A code in a title (#402's follow-up) ──────────────────────────────────
+# The repair links a code in the body heading and leaves the `title:` bare,
+# so a title that cites a code scaffolds a document the title-matches-heading
+# lint rejects after the first repair. Refused at the door instead.
+
+def _adr_template(project):
+    scheme = current().schemes["ADR"]
+    scheme.dir.mkdir(parents=True, exist_ok=True)
+    (scheme.dir / "_template.md").write_text(
+        "---\nstatus: Proposed\ntitle: 'A placeholder'\ntags:\n- record\n"
+        "date: '2026-01-01'\n---\n\n# ADR-NNN: A placeholder\n\nBody.\n")
+
+
+def test_a_title_citing_a_code_is_refused(project):
+    from tests._scheme import decision
+    decision(project, 1, "Active")
+    _adr_template(project)
+    with pytest.raises(SystemExit) as caught:
+        new_mod.new_entry("adr", {"title": "Revisits ADR-001 on naming"}, None)
+    message = str(caught.value)
+    assert "ADR-001" in message and "title" in message
+    assert not (current().schemes["ADR"].dir / "ADR-002.md").exists(), \
+        "nothing is written when the title is refused"
+
+
+def test_a_code_in_backticks_is_a_mention_and_allowed(project):
+    _adr_template(project)
+    path = new_mod.new_entry("adr", {"title": "Revisits `ADR-001` on naming"},
+                             None)
+    assert "title: 'Revisits `ADR-001` on naming'" in path.read_text()
+
+
+def test_a_word_shaped_like_a_code_from_no_scheme_is_allowed(project):
+    _adr_template(project)
+    path = new_mod.new_entry("adr", {"title": "Scores on GPT-4 and EN-1"},
+                             None)
+    assert "GPT-4" in path.read_text()

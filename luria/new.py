@@ -181,7 +181,27 @@ def _mint_tail(scheme) -> str:
             return tail
 
 
+
+def _refuse_code_in_title(title: str | None) -> None:
+    """A title may not cite a code. The repair links the code where the
+    title is repeated as the body heading and leaves `title:` itself bare,
+    so the two stop agreeing and the lint fails on the first repair — a
+    trap that caught the same filer twice in one night. A code in backticks
+    is a mention and passes; so does a word that only looks like a code,
+    since only this project's schemes and remotes count."""
+    if not title:
+        return
+    from .doc_refs import find_refs
+    cited = [r.describe() for r in find_refs(title)]
+    if cited:
+        raise SystemExit(
+            f"luria new: the title cites {', '.join(cited)} — a title may not "
+            "cite a code, because the repair links it in the heading and not "
+            "in `title:`, and the lint then finds them disagreeing. Name it "
+            "in words, or put it in backticks as a mention.")
+
 def new_scheme_doc(scheme, fields: dict[str, str]) -> Path:
+    _refuse_code_in_title(fields.get("title"))
     if scheme.allocate == "merge":
         # Merge-allocated schemes don't claim a number from a branch — that
         # claim is what collides (ADR-049). The code is temporary, and
