@@ -5,6 +5,21 @@ Assembled from `changelog.d/` fragments on a cadence — never hand-edited
 
 <!-- luria-insert-here -->
 
+## 2026-11-23
+
+### Changed
+
+- `luria new` refuses a `--title` that cites a code, which the repair would
+  link in the heading and not in `title:`, so the lint would fail after the
+  first repair ([ADR-143](record/decisions.d/ADR-143.md)). A code in backticks is a mention and passes.
+
+### Added
+
+- [ADR-142](record/decisions.d/ADR-142.md): a hands-free regime for an assistant working on a record,
+  documented as an opt-in working agreement for projects with an
+  integration branch; the template's `CLAUDE.md` carries it commented out.
+  Upstreamed from Nucleation.
+
 ## 2026-11-09
 
 ### Added
