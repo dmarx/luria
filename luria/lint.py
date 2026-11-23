@@ -124,6 +124,7 @@ def check_frontmatter(errors: list[str]) -> None:
                 errors.append(f"{rel}: no YAML frontmatter (see _template.md)")
                 continue
             check_title(errors, rel, meta, body)
+            check_formerly(errors, rel, meta, path.stem)
             status = statuses.of(meta, scheme)
             if not status.value:
                 errors.append(f"{rel}: no `status:` in frontmatter")
@@ -192,6 +193,27 @@ def check_title(errors: list[str], rel: str, meta: dict, body: str) -> None:
         errors.append(
             f"{rel}: `title:` and the body heading disagree — "
             f"{title!r} vs {heading!r}")
+
+
+def check_formerly(errors: list[str], rel: str, meta: dict, code: str) -> None:
+    """A `formerly:` list naming the document's own code.
+
+    `formerly:` holds the addresses a document used to have, so its own
+    address can never be one of them. The way one gets there is a rewrite of
+    temporary codes to concrete ones that runs over the whole file, the
+    `formerly:` block included: the entry that recorded the temporary code
+    becomes the document's own code, and the old address is lost. Nothing
+    else notices, since the entry still parses and an alias to oneself
+    resolves. Always wrong, and the mechanical fix is to delete the line; the
+    lost code, if it matters, is in git history."""
+    held = meta.get("formerly") or []
+    items = held if isinstance(held, (list, tuple)) else [held]
+    if any(str(item).strip() == code for item in items):
+        errors.append(
+            f"{rel}: `formerly:` lists {code}, this document's own code — "
+            f"a past address cannot be the present one; a rewrite of "
+            f"temporary codes probably reached the `formerly:` block, so "
+            f"restore the temporary code from history or delete the line")
 
 
 def check_status_vocabulary(errors: list[str]) -> None:
