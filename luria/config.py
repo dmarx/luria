@@ -868,6 +868,13 @@ class Scheme:
     # scheme whose documents claim to transfer — principles, values — is where
     # this earns its keep.
     titles_generalize: bool = False
+    # How this scheme's documents write their H1, as a template over
+    # `{code}` and `{title}` (#405). The default keeps the code, as every
+    # record has; `"{title}"` drops it, which the lint accepts because the
+    # property it guards is the H1's agreement with `title:`, not the prefix.
+    # `luria new` derives the heading from this, so a scaffold matches the
+    # record's own form.
+    heading: str = "{code}: {title}"
     # Frontmatter fields this scheme demands beyond the standard set. What
     # makes a CROSS-SCHEME move safe to automate (ADR-040): `luria migrate`
     # moves the file, and the document then fails lint until a human supplies
@@ -1152,6 +1159,25 @@ def _fold_uris(spec: dict, where: str) -> dict[str, str]:
                 f"`uris.{uri_name}` — they are one setting; keep either")
         declared[uri_name] = value
     return declared
+
+
+def _heading_template(prefix: str, raw) -> str:
+    """A scheme's `heading:` template, checked: it must place `{title}`, and
+    may use `{code}` and nothing else, since those are the only values a
+    heading is written from (#405)."""
+    if raw is None:
+        return "{code}: {title}"
+    template = str(raw)
+    where = f"luria.yaml: schemes.{prefix}.heading"
+    names = set(re.findall(r"{([^{}]*)}", template))
+    if "title" not in names:
+        raise ValueError(f"{where}: {template!r} has no `{{title}}` — the "
+                         "heading repeats the title, so it has to place it")
+    if strangers := sorted(names - {"code", "title"}):
+        raise ValueError(f"{where}: {template!r} uses "
+                         f"{', '.join('{' + s + '}' for s in strangers)} — a "
+                         "heading is written from `{code}` and `{title}` only")
+    return template
 
 
 @dataclass(frozen=True)
@@ -3393,6 +3419,7 @@ def _schemes(raw: dict, root: Path, scaffolding: bool = False,
             cite=_cite(prefix, spec),
             alias=_alias_template(prefix, spec.get("alias", "")),
             titles_generalize=bool(spec.get("titles_generalize", False)),
+            heading=_heading_template(prefix, spec.get("heading")),
             requires=tuple(spec.get("requires", ())),
             statuses_vocab=statuses_vocab,
             vocab_values=vocabularies,
