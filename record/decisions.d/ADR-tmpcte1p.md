@@ -1,0 +1,55 @@
+---
+status: Proposed
+title: "A scheme sets its H1's form with a heading template"
+version: 1
+tags:
+- record
+date: '2026-11-26'
+issue: '#405'
+summary: >-
+  A scheme's `heading:` template, over `{code}` and `{title}` and defaulting
+  to `{code}: {title}`, says how its documents write their H1; `luria new`
+  derives the heading from it. Rejected: a record-wide switch, and a boolean
+  `heading_code: false`.
+---
+
+# ADR-tmpcte1p: A scheme sets its H1's form with a heading template
+
+## Context
+
+The H1 repeats `title:`, and every scheme wrote it as `# CODE: Title`. Since
+[#405](https://github.com/dmarx/luria/issues/405)'s first part the lint accepts `# Title` as well, because what it guards
+is the agreement, not the prefix. A downstream record (dmarx/nucleation) asked
+to drop the code: on GitHub the file is already named for it, and a graph or
+index label spends characters repeating it. But `luria new` still scaffolded
+`# CODE: Title`, so a record that wanted the bare form had to edit every new
+document by hand.
+
+## Decision
+
+A scheme declares `heading:`, a template over `{code}` and `{title}`. The
+default, `{code}: {title}`, is today's form, so no record changes unless it
+asks to. `luria new` derives the H1 from the template once the title is final,
+whether it came from `--title` or from the template's placeholder, and finds
+the H1 in either form when it replaces a body. A template that does not place
+`{title}`, or that names anything but `{code}` and `{title}`, is refused at
+load, since those are the only values a heading is written from.
+
+## Alternatives considered
+
+- **A record-wide switch.** One setting for every scheme. Rejected: the form
+  is a property of a kind of document, and a record may well want decisions
+  cited by code in their headings and readings not.
+- **A boolean, `heading_code: false`.** Simpler to read, but it names one
+  variation; a template covers that and the separators records already use
+  (`—`, `-`), which the lint's own prefix pattern accepts.
+- **Status quo.** Records that want the bare form hand-edit each scaffold, and
+  the lint lets them, so the scaffold and the record drift.
+
+## Consequences
+
+- Existing documents are not rewritten. Changing `heading:` changes what
+  `luria new` scaffolds; documents already filed keep their headings until
+  someone edits them, and the lint accepts both forms meanwhile.
+- The site's page title still prepends the code. That is [#405](https://github.com/dmarx/luria/issues/405)'s third part,
+  a template of its own on the site.

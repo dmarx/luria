@@ -232,13 +232,6 @@ def new_scheme_doc(scheme, fields: dict[str, str]) -> Path:
     body = fields.pop("body", None)
     if title is not None:
         text = _sub_line(text, "title", title)
-        # The heading is DERIVED from the title — the lint holds the two
-        # equal — so it is rewritten by rule, whatever the form said there.
-        # This used to replace `# CODE: <the form's title:>` and nothing
-        # else, so a template whose title: and heading disagreed (strata-g's
-        # did) scaffolded a document the lint rejected on first read (#301).
-        text = re.sub(rf"^# {re.escape(code)}: .*$", f"# {code}: {title}",
-                      text, count=1, flags=re.MULTILINE)
     if body is not None:
         text = replace_body(text, code, body)
     for field, value in fields.items():
@@ -258,6 +251,13 @@ def new_scheme_doc(scheme, fields: dict[str, str]) -> Path:
     # no number to write yet, and `luria concretize` puts it there when it
     # assigns one, which is the same moment it stops being a claim a branch
     # could collide on (ADR-049).
+    # The heading is DERIVED from the title, in the scheme's `heading:` form
+    # (#405): the lint holds the two equal, so it is rewritten by rule,
+    # whatever the form said there. Once the title is final, from whichever
+    # source it came — the flag, or the template's own placeholder — so a
+    # template whose title: and heading disagreed (strata-g's did) still
+    # scaffolds a document the lint accepts (#301).
+    text = _derive_heading(text, scheme, code)
     if number is not None:
         text = write_number(text, number)
 
@@ -267,9 +267,32 @@ def new_scheme_doc(scheme, fields: dict[str, str]) -> Path:
     return path
 
 
+def _first_heading(text: str) -> re.Match | None:
+    """The first level-one heading below the frontmatter, in either form a
+    heading takes (`# CODE: Title` or `# Title`, #405)."""
+    start = 0
+    if text.startswith("---\n") and (end := text.find("\n---\n", 3)) != -1:
+        start = end + 4
+    return re.compile(r"^# .*$", re.MULTILINE).search(text, start)
+
+
+def _derive_heading(text: str, scheme, code: str) -> str:
+    """The H1 rewritten from the document's `title:` in `scheme.heading`'s
+    form. A scaffold without a heading or without a title is left alone."""
+    import yaml
+    if not (text.startswith("---\n") and (end := text.find("\n---\n", 3)) != -1):
+        return text
+    title = str((yaml.safe_load(text[4:end]) or {}).get("title") or "").strip()
+    heading = _first_heading(text)
+    if not title or heading is None:
+        return text
+    line = "# " + scheme.heading.format(code=code, title=title)
+    return text[:heading.start()] + line + text[heading.end():]
+
+
 def replace_body(text: str, code: str, body: str) -> str:
     """Put `body` where the template's prose was: everything below the
-    `# CODE: title` heading, which stays — it is derived from the title and
+    H1 (`# CODE: title` or `# title`, #405), which stays — it is derived from the title and
     the lint holds the two equal, so it is never the author's to write.
 
     A body that opens with its own level-one heading has it dropped for the
@@ -280,7 +303,7 @@ def replace_body(text: str, code: str, body: str) -> str:
     if lines and lines[0].startswith("# "):
         lines = lines[1:]
     prose = "\n".join(lines).strip("\n")
-    heading = re.search(rf"^# {re.escape(code)}: .*$", text, flags=re.MULTILINE)
+    heading = _first_heading(text)
     if heading:
         head = text[:heading.end()]
     elif text.startswith("---\n") and (end := text.find("\n---\n", 3)) != -1:
