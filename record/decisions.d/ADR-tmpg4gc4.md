@@ -1,0 +1,102 @@
+---
+status: Proposed
+title: 'Every generated view is a template luria ships, rendered by one view engine'
+version: 1
+tags:
+- architecture
+date: '2026-11-26'
+influenced_by:
+- ADR-130
+- ADR-139
+summary: >-
+  Proposed. The pages `luria index` derives (a scheme's index, its per-value
+  pages, a document-rendered scheme like the principles, a journal's books and
+  their index, the status reports) move from Python generators to templates
+  luria ships, `luria:<name>.md.j2`. They are rendered by the one view engine
+  of ADR-130 from a context the generator's data half builds. A project overrides
+  one by naming its own template. This is the path ADR-139 took for the record
+  description, extended to every derived page, and it is what makes the
+  [browser-rendered views](ADR-tmpnqetk.md) possible: the same template, in
+  a browser. Rejected: keeping the generators (two rendering paths, neither
+  portable), and porting straight to the browser (no Python reference to test
+  it against).
+---
+
+# ADR-tmpg4gc4: Every generated view is a template luria ships, rendered by one view engine
+
+## Context
+
+luria renders derived pages in two ways:
+
+- **Templates.** [ADR-130](ADR-130.md) made a view a Jinja template over the record, rendered in
+  a sandbox, with codes linked by the one resolver. [ADR-139](ADR-139.md) moved the record
+  description (`luria:record.md.j2`) onto that engine, and a pattern's page
+  is one too (`luria:pattern.md.j2`).
+- **Python generators.** Everything else is still a generator with its
+  markup in code: the decisions index (`adr_index.render_index`), the
+  per-value and per-status pages, a document-rendered scheme
+  (`render_document`), the journal books and their index
+  (`journal.render_book`, `render_index`), and the status reports
+  (`reports.py`).
+
+Two rendering paths cost twice over:
+
+- **For a project.** A project that wants a different index layout can't
+  have one without forking luria. A template could be overridden.
+- **For the publishing overhaul.** The [views ADR](ADR-tmpnqetk.md) plans for
+  the site to compute views in the browser by rendering the view's template
+  there. A view that exists only as Python string-building has no template
+  to port.
+
+## Decision
+
+*Proposed.* Each derived page becomes a **template luria ships** in
+`luria/view_templates/`, rendered by the view engine in `luria/views.py`:
+
+- `luria:scheme-index.md.j2`, `luria:scheme-value.md.j2`;
+- `luria:scheme-document.md.j2`;
+- `luria:journal-book.md.j2`, `luria:journal-index.md.j2`;
+- one template per report.
+
+**The generator keeps its data half.** It selects the documents, groups them
+and computes the facts, and hands them to its template as `context`, as
+`record_doc.py` already does. The template holds the markup and prose. Every
+rule of [ADR-130](ADR-130.md) holds:
+
+- codes are written bare and linked in the output's frame;
+- undefined is an error;
+- a view is a pure function of the tree.
+
+**A project may override** a shipped template by naming its own in the
+scheme's or journal's config, and gets the same context. The context is
+documented as an interface, because a project's override and the browser
+port both depend on it.
+
+**Migration is by sample first** ([DP-006](../principles.d/DP-006.md)):
+
+1. **The journal book first.** It is the smallest generator, and the one the
+   [journal consumption ADR](ADR-tmpbyqjw.md) changes. Its output is held
+   byte-identical to today's on this record and on nucleation before the
+   generator's markup is deleted.
+2. **Then the scheme index and per-value pages, then the reports.** Each is
+   held byte-identical in the same way.
+
+## Alternatives considered
+
+- **Keep the generators.** They work, but every layout change is a code
+  change, no project can override one, and the browser has nothing to
+  render.
+- **Port straight to the browser.** It skips a step, but leaves no reference
+  implementation to check the browser's output against. The Python rendering
+  of a shipped template is that reference: the same template, the same
+  context, and the output compared.
+- **One template per scheme instead of per shape.** That multiplies files
+  for no gain; a scheme's differences are already data in its config.
+
+## Consequences
+
+- Rendering a view no longer needs `luria`'s Python for the markup, only for
+  the context. That is the seam the site shell uses.
+- Byte-identical output during migration means the bot's regeneration commit
+  on the default branch is empty for each ported view, which is itself the
+  check.

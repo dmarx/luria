@@ -17,3 +17,9 @@
   requirements drawn from CI history: a bespoke shell that renders the record
   in the browser ([ADR-tmpj6kwd](record/decisions.d/ADR-tmpj6kwd.md)), a LadybugDB export ([ADR-tmpc1dme](record/decisions.d/ADR-tmpc1dme.md)), and views
   computed in the browser instead of committed as markdown ([ADR-tmpnqetk](record/decisions.d/ADR-tmpnqetk.md)).
+- Two more proposed decisions and a principle for the publishing overhaul:
+  every generated view becomes a template luria ships ([ADR-tmpg4gc4](record/decisions.d/ADR-tmpg4gc4.md)); a
+  journal may be consumed into its period books on the project's schedule,
+  holding back entries a review hasn't read ([ADR-tmpbyqjw](record/decisions.d/ADR-tmpbyqjw.md)); and
+  configuration says what the record is while CI says when the work runs
+  ([DP-tmpl4h6h](record/principles.d/DP-tmpl4h6h.md)).
