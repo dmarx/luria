@@ -51,6 +51,15 @@ inputs:
   node-version:
     description: Node version. Quartz 5 requires 22 or newer (npm >= 10.9.2).
     default: "22"
+  timings:
+    description: >-
+      "true" times the build and inventories its output: `LURIA_TIMINGS=1`
+      on `luria site`, `--verbose` on `quartz build` with every line stamped
+      by `luria.site_perf`, and a `site-perf` artifact (JSON + markdown) that
+      is also written to the job summary. Off by default because verbose
+      Quartz prints a line per emitted file — a large record's log becomes
+      the size of the site. luria's own Pages workflow turns it on weekly.
+    default: "false"
 outputs:
   path:
     description: Directory of built HTML, for actions/upload-pages-artifact.
@@ -62,7 +71,15 @@ runs:
       shell: bash
       run: pip install ${{ inputs.pip-spec }}
     - shell: bash
-      run: luria site --out "$RUNNER_TEMP/luria-site"
+      env:
+        LURIA_TIMINGS: ${{ inputs.timings == 'true' && '1' || '' }}
+      run: |
+        set -euo pipefail
+        mkdir -p "$RUNNER_TEMP/luria-site-perf"
+        started=$(date +%s.%N)
+        luria site --out "$RUNNER_TEMP/luria-site"
+        echo -e "luria site\t$(awk -v a="$started" -v b="$(date +%s.%N)" 'BEGIN{printf "%.3f", b-a}')" \
+          >> "$RUNNER_TEMP/luria-site-perf/steps.tsv"
     - uses: actions/checkout@v4
       with:
         repository: ${{ inputs.quartz-repo }}
@@ -75,8 +92,15 @@ runs:
         cache-dependency-path: .quartz-build/package-lock.json
     - id: build
       shell: bash
+      env:
+        TIMINGS: ${{ inputs.timings }}
       run: |
         set -euo pipefail
+        PERF="$RUNNER_TEMP/luria-site-perf"
+        # `lap <label>` records seconds since the previous lap, so each
+        # sub-step of this one step gets its own row in the report.
+        last=$(date +%s.%N)
+        lap() { now=$(date +%s.%N); echo -e "$1\t$(awk -v a="$last" -v b="$now" 'BEGIN{printf "%.3f", b-a}')" >> "$PERF/steps.tsv"; last=$now; }
         # The vault replaces Quartz's own sample content wholesale; leaving it
         # would publish the generator's documentation alongside the record.
         rm -rf .quartz-build/content
@@ -89,7 +113,9 @@ runs:
         # in here that the record has no opinion about.
         cp -r "$RUNNER_TEMP/luria-site/static/." .quartz-build/quartz/static/
         cd .quartz-build
+        lap "stage into quartz"
         npm ci
+        lap "npm ci"
         # The favicon is rasterized here rather than committed, so a project
         # points at the vector master it maintains and nothing derived from it
         # can drift. `sharp` is Quartz's own dependency — reading an SVG and
@@ -121,5 +147,31 @@ runs:
           "
           mv quartz/static/icon.generated.png quartz/static/icon.png
         fi
-        npx quartz build --output "$RUNNER_TEMP/luria-site/public"
+        lap "icon"
+        if [ "$TIMINGS" = "true" ]; then
+          npx quartz build --verbose --output "$RUNNER_TEMP/luria-site/public" 2>&1 \
+            | python -m luria.site_perf stamp > "$PERF/quartz.log"
+          # The log is kept whole in the artifact; the job log gets the
+          # phase lines, not one line per emitted file.
+          grep -v -E '^\[\+[0-9.]+\] \[(emit:|markdown\]|html\])' "$PERF/quartz.log" || true
+        else
+          npx quartz build --output "$RUNNER_TEMP/luria-site/public"
+        fi
+        lap "quartz build"
         echo "path=$RUNNER_TEMP/luria-site/public" >> "$GITHUB_OUTPUT"
+    - if: ${{ inputs.timings == 'true' }}
+      shell: bash
+      run: |
+        set -euo pipefail
+        PERF="$RUNNER_TEMP/luria-site-perf"
+        python -m luria.site_perf report --log "$PERF/quartz.log" \
+          --public "$RUNNER_TEMP/luria-site/public" \
+          --staged "$RUNNER_TEMP/luria-site/content" \
+          --steps "$PERF/steps.tsv" --out "$PERF"
+        cat "$PERF/site-perf.md" >> "$GITHUB_STEP_SUMMARY"
+    - if: ${{ inputs.timings == 'true' }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: site-perf
+        path: ${{ runner.temp }}/luria-site-perf
+        retention-days: 90

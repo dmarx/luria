@@ -15,6 +15,13 @@
 # can publish is the right one (the same reasoning as the PyPI split in
 # publish.yml).
 #
+# Once a week the same build runs timed (`timings` on actions/site): luria's
+# phase timings, a stamped verbose Quartz log, and an inventory of what was
+# built, uploaded as the `site-perf` artifact and written to the job summary.
+# The record grows every week, so a build's cost is a series, not a fact; the
+# schedule keeps one sample a week without making every publish carry a log
+# the size of the site. `workflow_dispatch` takes the same switch on demand.
+#
 # One repository setting is required and cannot live here: Settings → Pages →
 # Source must be "GitHub Actions". Until it is, `deploy` fails with "Pages is
 # not enabled" while `build` stays green.
@@ -25,7 +32,14 @@ on:
     workflows: [CI]
     types: [completed]
     branches: [main]
+  schedule:
+    - cron: "23 4 * * 3"
   workflow_dispatch:
+    inputs:
+      timings:
+        description: Time the build and upload the site-perf report
+        type: boolean
+        default: false
 
 # A published page is the whole repository's markdown rendered; nothing in the
 # build needs to write anything back.
@@ -50,6 +64,7 @@ jobs:
         uses: ./actions/site
         with:
           pip-spec: -e .
+          timings: ${{ (github.event_name == 'schedule' || inputs.timings) && 'true' || 'false' }}
       - uses: actions/upload-pages-artifact@v3
         with:
           path: ${{ steps.site.outputs.path }}
