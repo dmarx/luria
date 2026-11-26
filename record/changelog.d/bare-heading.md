@@ -8,7 +8,7 @@
 
 ### Fixed
 
-- Four decisions (ADR-053, ADR-082, ADR-083, ADR-086) kept the scaffold's
+- Four decisions ([ADR-053](record/decisions.d/ADR-053.md), [ADR-082](record/decisions.d/ADR-082.md), [ADR-083](record/decisions.d/ADR-083.md), [ADR-086](record/decisions.d/ADR-086.md)) kept the scaffold's
   `# ADR-NNN:` placeholder in their heading. The old check stripped any
   code-shaped prefix and passed them; stripping only the document's own code
   found them, and the headings now carry their codes.
