@@ -51,5 +51,6 @@ load, since those are the only values a heading is written from.
 - Existing documents are not rewritten. Changing `heading:` changes what
   `luria new` scaffolds; documents already filed keep their headings until
   someone edits them, and the lint accepts both forms meanwhile.
-- The site's page title still prepends the code. That is [#405](https://github.com/dmarx/luria/issues/405)'s third part,
-  a template of its own on the site.
+- The site's page title takes the same form of template, `site.page_title`
+  ([#405](https://github.com/dmarx/luria/issues/405), part 3), validated by the same rule: a record can drop the
+  code from its headings, its page titles, or both.

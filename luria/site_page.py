@@ -257,16 +257,21 @@ def properties(meta: dict, source: Path, outbound=(), inbound=(),
     return props, links.unresolved
 
 
-def title_of(meta: dict, body: str, code: str | None) -> str | None:
-    """What the page is called: `CODE: title` for a scheme document, else
-    its first heading, else nothing — and Quartz falls back to the filename.
+def title_of(meta: dict, body: str, code: str | None,
+             template: str = "{code}: {title}") -> str | None:
+    """What the page is called: a scheme document's title in the site's
+    `page_title` form, else its first heading, else nothing — and Quartz falls
+    back to the filename.
 
-    The code is kept because the record is cited by code: a graph node or a
-    search card that says only the title cannot be matched to the `LIT-001`
-    in the sentence that sent the reader there."""
+    The default form, `CODE: title`, keeps the code because the record is cited
+    by code: a graph node or a search card that says only the title cannot be
+    matched to the `LIT-001` in the sentence that sent the reader there. A
+    record that labels by title sets `"{title}"` instead (#405)."""
     if title := str(meta.get("title") or "").strip():
-        if code and not title.startswith(f"{code}:"):
-            title = f"{code}: {title}"
+        if code:
+            # A title that already carries its own code is not given it twice.
+            title = title.removeprefix(f"{code}:").strip()
+            title = template.format(code=code, title=title)
         return plain(title)
     if heading := first_heading(body):
         return plain(heading.group(1))
@@ -283,16 +288,21 @@ def first_heading(body: str) -> re.Match | None:
     return None
 
 
-def without_title(body: str, title: str | None) -> str:
+def without_title(body: str, title: str | None,
+                  code: str | None = None) -> str:
     """The body minus the heading that says what the title already says.
     Quartz draws the title above the page, so a heading repeating it prints
-    it twice."""
+    it twice.
+
+    The page title and the heading may each carry the code or not (#405), so
+    the heading is a repeat when it matches the title with or without it."""
     heading = first_heading(body)
     if heading is None or title is None:
         return body
-    # The page title is `CODE: Title`; the heading may carry the code or not
-    # (#405). Strip only the one prefix the title was given.
     bare = re.sub(r"^[A-Z]+-[A-Za-z0-9]+: ", "", title, count=1)
-    if plain(heading.group(1)) not in (title, bare):
+    if code:
+        bare = title.removeprefix(f"{code}:").strip()
+    same = {title, bare} | ({f"{code}: {bare}"} if code else set())
+    if plain(heading.group(1)) not in same:
         return body
     return (body[:heading.start()] + body[heading.end():].lstrip("\n")).lstrip("\n")
