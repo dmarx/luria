@@ -1,0 +1,111 @@
+---
+status: Proposed
+title: 'luria export writes the record as a LadybugDB graph'
+version: 1
+tags:
+- architecture
+date: '2026-11-26'
+summary: >-
+  Proposed. `luria export --format ladybug` writes the same rows the SQLite
+  export does ([ADR-116](ADR-116.md)) into one LadybugDB file: documents and journal entries
+  as node tables, each declared relation as its own relationship table, and
+  citations as a relationship carrying file and line. A graph store lets a
+  path pattern run as Cypher, in Python and in the browser, so a view can be
+  computed where it is read. Verified: a file written by `ladybug` 0.23.0
+  (Python) is read by `@ladybugdb/wasm-core` 0.23.0, with the same answer.
+  Rejected: one generic edge table (it loses the relation as a type, which
+  Cypher's `[:a|b]` matches on), JSON instead of a database, and SQLite in
+  the browser (a join per hop).
+---
+
+# ADR-tmpc1dme: luria export writes the record as a LadybugDB graph
+
+## Context
+
+[ADR-116](ADR-116.md) made alternative backends generated views and `luria export` writes one:
+a SQLite file of documents, fields, edges, citations and journal entries.
+That answers SQL questions. But the questions a record's views ask are path
+patterns ([ADR-129](ADR-129.md), [ADR-132](ADR-132.md)): `(a:LIT)-[:extends|corrects]->(b:LIT)`, a chain
+walking a relation, a document's neighbourhood. In SQL each hop is a
+self-join on `edges`. In a property graph database the pattern *is* the
+query.
+
+The [site proposal](ADR-tmpj6kwd.md) needs views computed in the browser
+([the views ADR](ADR-tmpnqetk.md)), and that wants a database the browser can open.
+LadybugDB, the maintained continuation of Kuzu, is embedded, speaks Cypher,
+and ships both a Python package (`ladybug`) and an official WebAssembly build
+(`@ladybugdb/wasm-core`).
+
+**Checked before proposing** (2026-11-26):
+
+- `ladybug` 0.23.0 wrote a database, two nodes and one typed edge, to a
+  single 96 KB file. `@ladybugdb/wasm-core` 0.23.0 opened that file from an
+  in-memory filesystem, read-only, and returned the same edge for the same
+  Cypher query. This used the package's Node variant. The browser variant
+  loads the same way but was not run.
+- The WebAssembly package's default build is single-threaded and needs no
+  cross-origin isolation, so it runs on GitHub Pages. Its worker script is
+  25.7 MB, or 4.4 MB gzipped, fetched once and then cached.
+- The two packages move in lockstep (both 0.23.0 on 2026-11-25), and the file
+  format is versioned with them.
+
+## Decision
+
+*Proposed.* `luria export --format ladybug --out build/record.lbug` writes
+the record as one LadybugDB file, from the same readers the SQLite export
+uses: `load_scheme`, `edges.graph`, `ref_status.scan` and `journal`. It is a
+view: regenerated whole, never written back to ([DP-002](../principles.d/DP-002.md)).
+
+**Schema:**
+
+- `Document(code PK, scheme, number, title, status, version, date, path,
+  frontmatter, body)`. `frontmatter` is the whole mapping as a JSON string,
+  the same as SQLite's `documents.frontmatter`.
+- `Field(code, field, position, value)`, exploded the same way as `fields`,
+  kept as a node table joined by `HAS_FIELD` so `{tags: 'x'}` filters stay
+  cheap. *Open question:* a map or list property on `Document` might replace
+  this; decide on the first real query plan, not before.
+- **One relationship table per declared relation**, named for the relation
+  (`extends`, `corrects`, `superseded_by`, …), derived from `luria.yaml`'s
+  reference fields. Then luria's pattern syntax maps one-to-one onto Cypher:
+  `-[:extends|corrects]->` is the same text in both. A relation name that
+  isn't a valid identifier is quoted, not renamed.
+- `CITES(FROM Document TO Document, file, line, resolved, excused)` for the
+  citation scan, and `JournalEntry` / `TAGGED` for journals.
+- `Meta`: the luria version, the LadybugDB version written with, the source
+  commit, and when.
+
+**The file records the LadybugDB version that wrote it**, and the browser
+loads the matching `@ladybugdb/wasm-core`. A reader with a different version
+refuses with that sentence ([DP-001](../principles.d/DP-001.md)) instead of failing partway into a query.
+`ladybug` is an optional extra (`luria[ladybug]`), so a record that never
+exports one doesn't install a 10 MB wheel.
+
+## Alternatives considered
+
+- **One generic `EDGE(relation STRING)` table.** Simpler to create, but the
+  relation becomes a property. Every pattern then needs a `WHERE`, the
+  `[:a|b]` alternation that luria's patterns already use stops being
+  literal, and the query planner can't pick a table by type.
+- **JSON (nodes plus edges) for the browser.** No dependency and a smaller
+  first load. But every view would need a hand-written pattern matcher in
+  JavaScript, a second implementation of `patterns.lark`'s semantics, exactly
+  the drift [DP-004](../principles.d/DP-004.md) names. Worth keeping as the manifest of the site's first
+  increment, which only needs titles and edges.
+- **SQLite in the browser (sql.js, wa-sqlite).** Smaller (about 1 MB) and
+  already exported. But patterns become recursive CTEs, and one bug in
+  translating hops into joins silently returns the wrong set.
+- **DuckDB-Wasm with a property-graph extension.** DuckPGQ exists but is not
+  in the default Wasm build, and DuckDB-Wasm alone is a comparable download.
+  Revisit if LadybugDB stalls the way Kuzu did.
+
+## Consequences
+
+- Kuzu's archiving in 2025 is the standing risk: the record's browser story
+  then rests on a fork's maintainers. A version pin plus the SQLite export,
+  which stays, keeps a way out.
+- The 4.4 MB gzipped worker is a one-time cost a plain document page should
+  not pay. The shell loads it only when a page needs a query (a view, a
+  graph), never for reading one document.
+- Exporting adds a CI step. Its time is reported by `LURIA_TIMINGS`, like
+  every other phase.
