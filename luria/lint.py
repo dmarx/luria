@@ -187,7 +187,10 @@ def check_title(errors: list[str], rel: str, meta: dict, body: str) -> None:
         errors.append(f"{rel}: no `title:` in frontmatter (see ADR-013)")
         return
     first = next((ln for ln in body.splitlines() if ln.startswith("#")), "")
-    heading = builder.TITLE_RE.sub("", first).strip()
+    # `# CODE: Title` and `# Title` both agree with `title: Title` (#405): the
+    # property guarded is the agreement, not the prefix. Only the document's
+    # own code is stripped, so a title shaped like a code is compared whole.
+    heading = builder.heading_title(first, Path(rel).stem) if first else ""
     if heading and heading != title:
         errors.append(
             f"{rel}: `title:` and the body heading disagree — "

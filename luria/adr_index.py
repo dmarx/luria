@@ -58,6 +58,29 @@ from . import writes
 # The tail accepts a temporary code (`ADR-tmp47fje`, ADR-049) as well as a
 # number: both are codes a heading legitimately carries.
 TITLE_RE = re.compile(r"^#\s*[A-Z]+-[A-Za-z0-9]+\s*(?::|—|-)\s*")
+CODE_PREFIX_RE = re.compile(r"^[A-Z]+-[A-Za-z0-9]+\s*(?::|—|-)\s*")
+
+
+def heading_title(line: str, code: str | None = None) -> str:
+    """The title an H1 carries, whether written `# CODE: Title` or `# Title`
+    (#405). With `code`, only that document's own code is stripped, so a title
+    that merely starts like a code (`# GPT-4: what it can do`) is kept whole;
+    without it, any code-shaped prefix is."""
+    text = re.sub(r"^#\s*", "", line.strip())
+    if code is not None:
+        return re.sub(rf"^{re.escape(code)}\s*(?::|—|-)\s*", "", text,
+                      count=1).strip()
+    return CODE_PREFIX_RE.sub("", text, count=1).strip()
+
+
+def demote_heading(body: str, label: object, code: str | None = None) -> str:
+    """A fragment's H1, `# CODE: Title` or `# Title` (#405), as the assembled
+    document's `## <label>. Title`. Only a level-one heading at the very start
+    is touched."""
+    m = re.match(r"#(?!#)[^\n]*", body)
+    if not m:
+        return body
+    return f"## {label}. {heading_title(m.group(), code)}" + body[m.end():]
 TABLE_HEAD = "| # | Title | Summary | Status |\n|---|---|---|---|\n"
 
 # A literal `|` in a summary is a cell delimiter to the table parser: the row
@@ -232,7 +255,7 @@ class Adr:
         # hasn't adopted it — still renders a title rather than a blank cell
         # (ADR-013).
         first = next((ln for ln in body.splitlines() if ln.startswith("#")), "")
-        self.heading = TITLE_RE.sub("", first).strip()
+        self.heading = heading_title(first)
         self.title = str(self.meta.get("title") or "").strip() or self.heading
 
     @property
@@ -397,8 +420,7 @@ def render_document(scheme, docs: list[Adr]) -> str:
         # Demote the fragment's own H1 to the assembled document's H2, and
         # renumber it into the reader's numbering rather than the file's code.
         label = doc.number if doc.number is not None else doc.code
-        body = re.sub(r"^#\s*[A-Z]+-[A-Za-z0-9]+\s*(?::|—|-)\s*",
-                      f"## {label}. ", body, count=1)
+        body = demote_heading(body, label, doc.code)
         # A stable anchor, because the heading is not one. A principle is a
         # living document — two of the eight here have been reworded already —
         # and a heading-derived anchor stops resolving the moment the wording

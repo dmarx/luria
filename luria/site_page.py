@@ -288,6 +288,11 @@ def without_title(body: str, title: str | None) -> str:
     Quartz draws the title above the page, so a heading repeating it prints
     it twice."""
     heading = first_heading(body)
-    if heading is None or title is None or plain(heading.group(1)) != title:
+    if heading is None or title is None:
+        return body
+    # The page title is `CODE: Title`; the heading may carry the code or not
+    # (#405). Strip only the one prefix the title was given.
+    bare = re.sub(r"^[A-Z]+-[A-Za-z0-9]+: ", "", title, count=1)
+    if plain(heading.group(1)) not in (title, bare):
         return body
     return (body[:heading.start()] + body[heading.end():].lstrip("\n")).lstrip("\n")

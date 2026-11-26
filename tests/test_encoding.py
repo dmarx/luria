@@ -12,6 +12,7 @@ raising. Writing UTF-8 at a cp1252 console would trade a crash for mojibake.
 """
 
 import ast
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -42,6 +43,22 @@ def bare_io_calls(path: Path) -> list[str]:
     return found
 
 
+def ascii_env(tmp_path: Path) -> dict[str, str]:
+    """A console that cannot encode an arrow: an ASCII locale with UTF-8 mode
+    off, run from a scratch HOME and record root.
+
+    The parent's import path goes along as PYTHONPATH. A scratch HOME hides
+    the user site-packages, so where dependencies were installed there (pip as
+    a non-system user, or root's `~/.local`) the subprocess failed on `import
+    jinja2` before reaching any console write, and the test reported an
+    encoding crash that was an import error. The import path has nothing to do
+    with the encoding under test."""
+    return {"PATH": "/usr/bin:/bin", "LC_ALL": "C", "LANG": "C",
+            "PYTHONUTF8": "0", "LURIA_ROOT": str(tmp_path),
+            "HOME": str(tmp_path),
+            "PYTHONPATH": os.pathsep.join(p for p in sys.path if p)}
+
+
 def test_no_file_io_in_the_package_depends_on_the_locale():
     """The structural half. `Path.read_text()` with no encoding uses whatever
     the platform prefers, which is cp1252 on a default Windows install and
@@ -55,9 +72,7 @@ def test_a_generated_view_is_utf_8_whatever_the_console_is(tmp_path):
     """The behavioural half, run the way the bug arrived: a full scaffold and
     build under an ASCII locale, in a subprocess, because the interpreter
     settles its encodings at startup and no fixture can undo that."""
-    env = {"PATH": "/usr/bin:/bin", "LC_ALL": "C", "LANG": "C",
-           "PYTHONUTF8": "0", "LURIA_ROOT": str(tmp_path),
-           "HOME": str(tmp_path)}
+    env = ascii_env(tmp_path)
     def run(*args):
         return subprocess.run([sys.executable, "-m", "luria.cli", *args],
                               cwd=tmp_path, env=env, capture_output=True,
@@ -78,9 +93,7 @@ def test_the_console_degrades_rather_than_raising(tmp_path):
     """`luria init` prints an arrow. Under a console that cannot encode one
     the line still has to arrive, because the alternative is a traceback in
     place of a scaffold."""
-    env = {"PATH": "/usr/bin:/bin", "LC_ALL": "C", "LANG": "C",
-           "PYTHONUTF8": "0", "LURIA_ROOT": str(tmp_path),
-           "HOME": str(tmp_path)}
+    env = ascii_env(tmp_path)
     done = subprocess.run([sys.executable, "-m", "luria.cli", "init"],
                           cwd=tmp_path, env=env, capture_output=True, text=True)
     assert done.returncode == 0
