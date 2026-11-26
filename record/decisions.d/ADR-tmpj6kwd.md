@@ -6,8 +6,9 @@ tags:
 - architecture
 date: '2026-11-26'
 summary: >-
-  Proposed. Replace the Quartz build behind `actions/site` with a publisher
-  luria owns: a small static shell that fetches a document's markdown on
+  Proposed. Replace the Quartz build behind `actions/site` with mantle
+  (github.com/dmarx/mantle), a publisher of its own that luria feeds but
+  does not contain: a small static shell that fetches a document's markdown on
   demand and renders it in the visitor's browser, with search and graph data
   sharded so no page loads the whole record. Grounded in CI history:
   nucleation's site step grew from 61 s to 2731 s between 2026-09-25 and
@@ -115,6 +116,15 @@ committed markdown for now ([the views ADR](ADR-tmpnqetk.md) changes that), so t
 increment needs no new data format. Graph and search read the manifest,
 sharded by scheme. Brand settings ([ADR-043](ADR-043.md)) carry over as configuration.
 
+**Where it lives.** The shell is **mantle**
+(`https://github.com/dmarx/mantle`), a separate project meant to be usable
+without luria. That fixes the boundary: mantle defines the manifest it reads
+and renders any markdown tree described by one, while luria's side is a
+producer. `luria site` writes a mantle manifest from the record, the same
+readers and resolver as everything else ([DP-004](../principles.d/DP-004.md)), and `actions/site` calls
+mantle's build. luria-specific meaning (schemes, statuses, typed edges)
+travels as manifest data mantle displays generically, not as code in mantle.
+
 ## Alternatives considered
 
 - **Tune Quartz**: drop the social-card emitter, the graph or the content
@@ -142,9 +152,10 @@ sharded by scheme. Brand settings ([ADR-043](ADR-043.md)) carry over as configur
 - Search engines index a shell less well than static HTML. Where that
   matters, prerendering only the index pages is a bounded fix, not a return
   to rendering every page.
-- luria takes on a front-end package — a build, a test runner, a pinned
-  dependency set — in a repository that has been Python only. That is the
-  real cost of owning the publisher.
+- The front-end code (a build, a test runner, a pinned dependency set)
+  lives in mantle, so luria stays Python only. The cost moves to a contract:
+  the manifest schema is an interface between two repositories, versioned,
+  and a luria release names the mantle versions whose manifest it writes.
 - The Quartz-specific code (the `quartz.config.yaml` writer in `site.py`, and
   `site_page.py`'s frontmatter for `note-properties`, [ADR-121](ADR-121.md)) retires once the
   shell reaches parity. [ADR-042](ADR-042.md)'s path rules stay.
