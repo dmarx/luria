@@ -137,6 +137,7 @@ Without it, `docs/record.md` could say a scheme's codes look like
 | `cite` | `str` | `"view"` |
 | `allocate` | `str` | `"filing"` |
 | `titles_generalize` | `bool` | `False` |
+| `heading` | `str` | `"{code}: {title}"` |
 | `requires` | `tuple[str, ...]` | *unset* |
 | `tag_groups` | `tuple[TagGroup, ...]` | *unset* |
 | `statuses_vocab` | `str` | *unset* |

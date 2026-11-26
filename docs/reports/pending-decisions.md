@@ -5,11 +5,11 @@
 
 `Proposed` and `Deferred` both describe an open question. Neither says *since when*, and that is the signal: a decision proposed last week is pending; the same one a year later was either overdue or settled in code and never written back.
 
-**15 document(s) awaiting a decision.**
+**16 document(s) awaiting a decision.**
 
 ## ADRs
 
-14 of the 15.
+15 of the 16.
 
 | Open since | Status | Code | Cited | Unack. | Title |
 |---|---|---|--:|--:|---|
@@ -27,10 +27,11 @@
 | 2026-11-04 | Proposed | [ADR-139](../../record/decisions.d/ADR-139.md) | 0 | 0 | The record description is rendered from a template luria ships, with its prose in the template and its facts from the config |
 | 2026-11-21 | Proposed | [ADR-142](../../record/decisions.d/ADR-142.md) | 0 | 0 | A hands-free regime for an assistant working on a record: the owner switches it on and off, and while it is on the assistant files what the work develops as it goes, reports each filing, merges into an integration branch when its checks pass, and reverts when the owner interjects; the owner's review moves to the one merge that reaches the default branch |
 | 2026-11-21 | Proposed | [ADR-143](../../record/decisions.d/ADR-143.md) | 0 | 0 | luria new refuses a title that cites a code, since the repair links the code in the heading and not in the title |
+| 2026-11-26 | Proposed | [ADR-144](../../record/decisions.d/ADR-144.md) | 0 | 0 | A scheme sets its H1's form with a heading template |
 
 ## DPs
 
-1 of the 15.
+1 of the 16.
 
 | Open since | Status | Code | Cited | Unack. | Title |
 |---|---|---|--:|--:|---|
@@ -40,4 +41,4 @@ The citation count is the second axis, and it flips the priority: an old proposa
 
 This count and the reference-status report's will differ, and that is not an off-by-one. That report covers documents something actually **cites** and hasn't acknowledged; this one covers every **undecided** document. One here is missing from there for exactly one of two reasons: nothing cites it, or every citation carries an `inactive-ok` annotation.
 
-**Cited nowhere at all** (5): [ADR-128](../../record/decisions.d/ADR-128.md), [ADR-133](../../record/decisions.d/ADR-133.md), [ADR-139](../../record/decisions.d/ADR-139.md), [ADR-142](../../record/decisions.d/ADR-142.md), [ADR-143](../../record/decisions.d/ADR-143.md) — these are the cheapest to close, since nothing depends on the answer.
+**Cited nowhere at all** (6): [ADR-128](../../record/decisions.d/ADR-128.md), [ADR-133](../../record/decisions.d/ADR-133.md), [ADR-139](../../record/decisions.d/ADR-139.md), [ADR-142](../../record/decisions.d/ADR-142.md), [ADR-143](../../record/decisions.d/ADR-143.md), [ADR-144](../../record/decisions.d/ADR-144.md) — these are the cheapest to close, since nothing depends on the answer.
