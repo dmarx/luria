@@ -854,6 +854,7 @@ that doesn't is used as it is in both modes.
 | `logo` | `Path \| None` | *unset* |
 | `logo_dark` | `Path \| None` | *unset* |
 | `theme` | `dict` | *unset* |
+| `page_title` | `str` | `"{code}: {title}"` |
 
 ## Environment variables
 
