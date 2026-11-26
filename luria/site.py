@@ -607,9 +607,10 @@ def _page(text: str, path: Path, cfg, typed, known: dict[str, str],
                                + " ".join(unresolved))
     front = {k: meta[k] for k in site_page.QUARTZ_KEYS
              if k in meta and k != "title"}
-    if not landing and (title := site_page.title_of(meta, body, alias)):
+    if not landing and (title := site_page.title_of(meta, body, alias,
+                                                     cfg.site.page_title)):
         front = {"title": title, **front}
-        body = site_page.without_title(body, title)
+        body = site_page.without_title(body, title, alias)
     if alias:
         held = front.get("aliases") or []
         held = held if isinstance(held, list) else [held]

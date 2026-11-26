@@ -255,6 +255,8 @@ DEFAULTS: dict = {
         "logo": "",
         "logo_dark": "",
         "theme": {},
+        # How a page is titled: a template over {code} and {title} (#405).
+        "page_title": "{code}: {title}",
     },
 }
 
@@ -1161,23 +1163,28 @@ def _fold_uris(spec: dict, where: str) -> dict[str, str]:
     return declared
 
 
-def _heading_template(prefix: str, raw) -> str:
-    """A scheme's `heading:` template, checked: it must place `{title}`, and
-    may use `{code}` and nothing else, since those are the only values a
-    heading is written from (#405)."""
+def _code_title_template(where: str, raw, what: str) -> str:
+    """A template over `{code}` and `{title}`, checked: it must place
+    `{title}`, and may use `{code}` and nothing else, since those are the only
+    values it is written from (#405). `what` names the thing it writes."""
     if raw is None:
         return "{code}: {title}"
     template = str(raw)
-    where = f"luria.yaml: schemes.{prefix}.heading"
     names = set(re.findall(r"{([^{}]*)}", template))
     if "title" not in names:
         raise ValueError(f"{where}: {template!r} has no `{{title}}` — the "
-                         "heading repeats the title, so it has to place it")
+                         f"{what} repeats the title, so it has to place it")
     if strangers := sorted(names - {"code", "title"}):
         raise ValueError(f"{where}: {template!r} uses "
                          f"{', '.join('{' + s + '}' for s in strangers)} — a "
-                         "heading is written from `{code}` and `{title}` only")
+                         f"{what} is written from `{{code}}` and `{{title}}` only")
     return template
+
+
+def _heading_template(prefix: str, raw) -> str:
+    """A scheme's `heading:` template (#405, part 2)."""
+    return _code_title_template(f"luria.yaml: schemes.{prefix}.heading", raw,
+                                "heading")
 
 
 @dataclass(frozen=True)
@@ -2423,6 +2430,11 @@ class Site:
     logo: Path | None = None
     logo_dark: Path | None = None
     theme: dict = dcfield(default_factory=dict)
+    # How a page is titled, as a template over `{code}` and `{title}`
+    # (#405). The default keeps the code, so a graph node or search card can
+    # be matched to the code a reader followed; `"{title}"` titles a page by
+    # its title alone, which a record that labels by title may prefer.
+    page_title: str = "{code}: {title}"
 
 
 @dataclass(frozen=True)
@@ -3474,6 +3486,8 @@ def _site(raw: dict, root: Path) -> Site:
         logo=root / spec["logo"] if spec.get("logo") else None,
         logo_dark=root / spec["logo_dark"] if spec.get("logo_dark") else None,
         theme=spec.get("theme", {}) or {},
+        page_title=_code_title_template("luria.yaml: site.page_title",
+                                        spec.get("page_title"), "page title"),
     )
 
 
