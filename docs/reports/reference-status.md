@@ -9,7 +9,7 @@ Every reference in the record is a claim — "this is why things are the way the
 
 Only an `Active` document is in force. `Proposed` and `Deferred` mean *not in force yet* — an open question, being cited as if it were settled — while `Superseded` and `Rejected` mean *no longer in force*, which is often a perfectly good thing to cite: history, or a rejection worth pointing at. Either way the citation should be deliberate, and this section lists the ones nobody has vouched for yet.
 
-**13 documents cited without acknowledgement.** Not listed: 93 citations someone has already vouched for with an `inactive-ok:` comment at the citing site.
+**14 documents cited without acknowledgement.** Not listed: 93 citations someone has already vouched for with an `inactive-ok:` comment at the citing site.
 
 To vouch for one, put the reason where the citation is — `inactive-ok:` covers its own line and the line below it, `inactive-ok-block:` its paragraph, `inactive-ok-file:` the whole page:
 
@@ -161,6 +161,16 @@ A journal may be consumed into its books on the project's schedule, and consumpt
 - [`record/decisions.d/ADR-147.md:81`](../../record/decisions.d/ADR-147.md)
 - [`record/principles.d/DP-019.md:12`](../../record/principles.d/DP-019.md)
 - [`record/principles.d/DP-019.md:48`](../../record/principles.d/DP-019.md)
+
+### [ADR-147](../../record/decisions.d/ADR-147.md) — Proposed
+
+Every generated view is a template luria ships, rendered by one view engine
+
+3 citations in 3 files await a look.
+
+- [`luria/journal.py:180`](../../luria/journal.py)
+- [`luria/views.py:384`](../../luria/views.py)
+- [`tests/test_journal_book_view.py:2`](../../tests/test_journal_book_view.py)
 
 ### [ADR-135](../../record/decisions.d/ADR-135.md) — Proposed
 

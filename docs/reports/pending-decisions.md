@@ -30,9 +30,9 @@
 | 2026-11-26 | Proposed | [ADR-148](../../record/decisions.d/ADR-148.md) | 4 | 4 | The site is a bespoke shell that renders the record in the browser, replacing Quartz |
 | 2026-11-26 | Proposed | [ADR-149](../../record/decisions.d/ADR-149.md) | 4 | 4 | Views render in the visitor's browser from the graph, and are not committed as markdown by default |
 | 2026-11-26 | Proposed | [ADR-145](../../record/decisions.d/ADR-145.md) | 3 | 3 | A journal may be consumed into its books on the project's schedule, and consumption refuses entries a review still holds |
+| 2026-11-26 | Proposed | [ADR-147](../../record/decisions.d/ADR-147.md) | 3 | 3 | Every generated view is a template luria ships, rendered by one view engine |
 | 2026-11-26 | Proposed | [ADR-146](../../record/decisions.d/ADR-146.md) | 2 | 2 | luria export writes the record as a LadybugDB graph |
 | 2026-11-26 | Proposed | [ADR-144](../../record/decisions.d/ADR-144.md) | 0 | 0 | A scheme sets its H1's form with a heading template |
-| 2026-11-26 | Proposed | [ADR-147](../../record/decisions.d/ADR-147.md) | 0 | 0 | Every generated view is a template luria ships, rendered by one view engine |
 
 ## DPs
 
@@ -46,4 +46,4 @@ The citation count is the second axis, and it flips the priority: an old proposa
 
 This count and the reference-status report's will differ, and that is not an off-by-one. That report covers documents something actually **cites** and hasn't acknowledged; this one covers every **undecided** document. One here is missing from there for exactly one of two reasons: nothing cites it, or every citation carries an `inactive-ok` annotation.
 
-**Cited nowhere at all** (6): [ADR-128](../../record/decisions.d/ADR-128.md), [ADR-133](../../record/decisions.d/ADR-133.md), [ADR-142](../../record/decisions.d/ADR-142.md), [ADR-143](../../record/decisions.d/ADR-143.md), [ADR-144](../../record/decisions.d/ADR-144.md), [ADR-147](../../record/decisions.d/ADR-147.md) — these are the cheapest to close, since nothing depends on the answer.
+**Cited nowhere at all** (5): [ADR-128](../../record/decisions.d/ADR-128.md), [ADR-133](../../record/decisions.d/ADR-133.md), [ADR-142](../../record/decisions.d/ADR-142.md), [ADR-143](../../record/decisions.d/ADR-143.md), [ADR-144](../../record/decisions.d/ADR-144.md) — these are the cheapest to close, since nothing depends on the answer.

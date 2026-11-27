@@ -5,7 +5,7 @@
 
 <!-- luria:badges -->
 [![needs decision: 21](https://img.shields.io/badge/needs%20decision-21-orange)](docs/reports/pending-decisions.md)
-[![cited, not in force: 13](https://img.shields.io/badge/cited,%20not%20in%20force-13-orange)](docs/reports/reference-status.md)
+[![cited, not in force: 14](https://img.shields.io/badge/cited,%20not%20in%20force-14-orange)](docs/reports/reference-status.md)
 <!-- /luria:badges -->
 
 <!-- luria:site -->
