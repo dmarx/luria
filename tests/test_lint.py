@@ -713,3 +713,41 @@ def test_foreign_temp_codes_is_promotable(project, capsys):
     (project / "docs" / "notes.md").write_text("Per ADR-tmpab12c.\n")
     errors, _ = dial_errors(capsys)
     assert any("not minted here" in e for e in errors)
+
+
+# A `formerly:` list records the addresses a document used to have, so it can
+# never name the document's own code. The way it comes to (dmarx/nucleation's
+# pull request 757): a merge that rewrites temporary codes to their concrete
+# ones across a branch also rewrites the `formerly:` entry that recorded the
+# temporary code, leaving the document listing itself and its old address
+# lost. Nothing else notices: the entry still parses, and an alias to oneself
+# resolves.
+
+def _with_formerly(path: Path, *codes: str) -> None:
+    text = path.read_text()
+    block = "formerly:\n" + "".join(f"- {c}\n" for c in codes)
+    path.write_text(text.replace("status: ", block + "status: ", 1))
+
+
+def test_a_formerly_list_naming_the_document_itself_is_reported(project):
+    path = _scheme.decision(project, 1, "Active", title="A decision")
+    _with_formerly(path, "ADR-001")
+    errors = errors_for(project)
+    assert len(errors) == 1
+    assert "formerly" in errors[0] and "ADR-001" in errors[0]
+
+
+def test_a_self_reference_beside_the_old_code_is_still_reported(project):
+    """The half-damaged case: the temporary code survived beside the
+    self-reference, which is still wrong and still names nothing it was."""
+    path = _scheme.decision(project, 1, "Active", title="A decision")
+    _with_formerly(path, "ADR-tmpabcde", "ADR-001")
+    errors = errors_for(project)
+    assert len(errors) == 1
+    assert "ADR-001" in errors[0]
+
+
+def test_a_formerly_list_of_past_codes_passes(project):
+    path = _scheme.decision(project, 1, "Active", title="A decision")
+    _with_formerly(path, "ADR-tmpabcde")
+    assert errors_for(project) == []
