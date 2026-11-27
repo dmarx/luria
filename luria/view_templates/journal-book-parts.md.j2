@@ -1,0 +1,23 @@
+{#- luria/view_templates/journal-book-parts.md.j2
+
+The pieces of a journal book whose markup the slug pass also needs
+(`journal.entry_anchors`): the book's own headings and one entry's section.
+`journal-book.md.j2` imports them, and `luria/journal.py` renders them
+directly, so there is one copy of the markup (ADR-147).
+-#}
+{%- macro heading(title, label) -%}
+# {{ title }} — {{ label }}
+
+## Contents
+{% endmacro -%}
+{%- macro section(e) -%}
+---
+
+<a id="{{ e.anchor }}"></a>
+
+## {{ e.title }}
+
+*{{ e.created }}{% for t in e.tags %} · {{ t }}{% endfor %}*
+
+{{ e.body }}
+{% endmacro -%}
