@@ -28,7 +28,17 @@ on:
     workflows: [Docs]
     types: [completed]
     branches: [main]
+  # A weekly timed build: the `site-perf` artifact and job summary say where
+  # the build spends its time and what the site weighs. Delete the schedule
+  # to opt out; `timings` on a manual run does the same once.
+  schedule:
+    - cron: "23 4 * * 3"
   workflow_dispatch:
+    inputs:
+      timings:
+        description: Time the build and upload the site-perf report
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -50,6 +60,8 @@ jobs:
       - id: site
         # Pin a released tag once you depend on this in anger.
         uses: dmarx/luria/actions/site@main
+        with:
+          timings: ${{ (github.event_name == 'schedule' || inputs.timings) && 'true' || 'false' }}
       - uses: actions/upload-pages-artifact@v3
         with:
           path: ${{ steps.site.outputs.path }}
