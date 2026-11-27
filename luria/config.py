@@ -257,6 +257,10 @@ DEFAULTS: dict = {
         "theme": {},
         # How a page is titled: a template over {code} and {title} (#405).
         "page_title": "{code}: {title}",
+        # One generated social-card image per page. On by default; the
+        # first timed build found it was most of the build (DP-10's
+        # disclosure side: a cost a project can see and opt out of).
+        "social_cards": True,
     },
 }
 
@@ -2435,6 +2439,12 @@ class Site:
     # be matched to the code a reader followed; `"{title}"` titles a page by
     # its title alone, which a record that labels by title may prefer.
     page_title: str = "{code}: {title}"
+    # Whether Quartz renders a social-card image for every page. The first
+    # timed build of luria's own site (Pages run 368, 2026-11-27) found it
+    # was most of the build: page HTML was done at 18.5 s, the card emitter
+    # ran to 73.5 s, making 540 images, 8.66 MB of a 28.54 MB site. Off, Quartz
+    # points every page's preview at one site-wide image instead.
+    social_cards: bool = True
 
 
 @dataclass(frozen=True)
@@ -3488,7 +3498,18 @@ def _site(raw: dict, root: Path) -> Site:
         theme=spec.get("theme", {}) or {},
         page_title=_code_title_template("luria.yaml: site.page_title",
                                         spec.get("page_title"), "page title"),
+        social_cards=_site_bool(spec, "social_cards", True),
     )
+
+
+def _site_bool(spec: dict, key: str, default: bool) -> bool:
+    """A `site` switch, refused by name unless it is a real boolean: a quoted
+    `"false"` is truthy, and would publish what the record asked to drop."""
+    value = spec.get(key, default)
+    if not isinstance(value, bool):
+        raise ValueError(f"luria.yaml: site.{key} must be true or false, "
+                         f"not {value!r}")
+    return value
 
 
 @lru_cache(maxsize=1)

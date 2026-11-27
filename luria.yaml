@@ -55,6 +55,9 @@ journals:
 site:
   exclude:
   - template/**
+  # Social cards were 54 s of a 74 s Quartz build of this site, and 540 of
+  # its 1,642 files (Pages run 368, 2026-11-27).
+  social_cards: false
   icon: assets/branding/luria-brainslug/luria_project_memory_icon.svg
   logo: assets/branding/luria-brainslug/luria_project_memory_lockup_horizontal.svg
   theme:

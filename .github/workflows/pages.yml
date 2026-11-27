@@ -71,6 +71,10 @@ jobs:
 
   deploy:
     needs: build
+    # Only the default branch publishes. A run dispatched from another branch,
+    # to time a change to the site before it merges, builds and reports but
+    # never puts that branch's site in front of readers.
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
       pages: write

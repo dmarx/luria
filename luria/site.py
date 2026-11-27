@@ -224,8 +224,10 @@ plugins:
       enableRSS: true
   - source: "@quartz-community/favicon"
     enabled: true
+  # One social-card image per page, unless the record opts out with
+  # `site.social_cards: false`: on luria's own site it was most of the build.
   - source: "@quartz-community/og-image"
-    enabled: true
+    enabled: {social_cards}
   - source: "@quartz-community/content-page"
     enabled: true
   - source: "@quartz-community/folder-page"
@@ -856,7 +858,8 @@ def stage(out: Path, cfg=None, nested: bool = True,
                              base_url=cfg.site.base_url,
                              repo_url=repo_url or cfg.site.source_url,
                              colors=colors(cfg.site),
-                             hidden=", ".join(site_page.HIDDEN_PROPERTIES)))
+                             hidden=", ".join(site_page.HIDDEN_PROPERTIES),
+                             social_cards=str(cfg.site.social_cards).lower()))
     writes.write_text(out / "custom.scss", brand(out, cfg, report))
 
     if nested:
