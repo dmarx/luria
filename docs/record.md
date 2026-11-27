@@ -102,5 +102,6 @@ Everything not listed here is at Luria's default.
 | `site.icon` | `assets/branding/luria-brainslug/luria_project_memory_icon.svg` | *empty* |
 | `site.logo` | `assets/branding/luria-brainslug/luria_project_memory_lockup_horizontal.svg` | *empty* |
 | `site.theme` | *2 keys set* | *empty* |
+| `site.social_cards` | `False` | `True` |
 | `vocabularies.decision-tags` | *5 keys set* | *unset* |
 | `vocabularies.statuses` | *5 keys set* | *unset* |
