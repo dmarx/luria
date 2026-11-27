@@ -44,6 +44,7 @@ outline and a chain read the same.
 
 from __future__ import annotations
 
+import functools
 import hashlib
 import os
 import sys
@@ -370,6 +371,33 @@ def _environment() -> SandboxedEnvironment:
     from .adr_index import escape_cell
     env.filters["cell"] = escape_cell
     return env
+
+
+@functools.lru_cache(maxsize=None)
+def shipped(name: str) -> jinja2.Template:
+    """One of luria's own templates (`luria:NAME`), compiled once per process.
+
+    `_environment` is built per render because a project's template is read
+    from the tree as it is now. A shipped template is read from the package,
+    which does not change under a running process, so its compiled form can
+    be kept. Rendering it per book was the cost of the journal book's move to
+    a template (ADR-tmpg4gc4): compiling three templates for every book made
+    it about nine times slower than the generator it replaced. The sandbox,
+    the strict undefined and the filters are the same as `_environment`'s.
+    """
+    env = SandboxedEnvironment(
+        loader=jinja2.PrefixLoader(
+            {"luria": jinja2.FileSystemLoader(str(PACKAGE_TEMPLATES))},
+            delimiter=":"),
+        undefined=_Undefined,
+        autoescape=False,
+        keep_trailing_newline=True,
+        trim_blocks=True,
+        lstrip_blocks=True,
+    )
+    from .adr_index import escape_cell
+    env.filters["cell"] = escape_cell
+    return env.get_template(name)
 
 
 def _name(view) -> str:
