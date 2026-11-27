@@ -83,3 +83,4 @@ each is in the [design principles](docs/design-principles.md).
 - [DP-015](record/principles.d/DP-015.md): An absence reads exactly like a success — give the silent case a signal
 - [DP-016](record/principles.d/DP-016.md): An awkward structure is reporting a distinction the model has stopped expressing
 - [DP-017](record/principles.d/DP-017.md): A record states what is true now — git already keeps what was written then
+- [DP-019](record/principles.d/DP-019.md): Configuration says what the record is; CI says when the work runs

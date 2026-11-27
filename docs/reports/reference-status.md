@@ -9,7 +9,7 @@ Every reference in the record is a claim — "this is why things are the way the
 
 Only an `Active` document is in force. `Proposed` and `Deferred` mean *not in force yet* — an open question, being cited as if it were settled — while `Superseded` and `Rejected` mean *no longer in force*, which is often a perfectly good thing to cite: history, or a rejection worth pointing at. Either way the citation should be deliberate, and this section lists the ones nobody has vouched for yet.
 
-**8 documents cited without acknowledgement.** Not listed: 93 citations someone has already vouched for with an `inactive-ok:` comment at the citing site.
+**13 documents cited without acknowledgement.** Not listed: 93 citations someone has already vouched for with an `inactive-ok:` comment at the citing site.
 
 To vouch for one, put the reason where the citation is — `inactive-ok:` covers its own line and the line below it, `inactive-ok-block:` its paragraph, `inactive-ok-file:` the whole page:
 
@@ -21,7 +21,7 @@ To vouch for one, put the reason where the citation is — `inactive-ok:` covers
 
 A chain may walk a named path pattern
 
-13 citations in 5 files await a look; 2 other citations of it are acknowledged.
+15 citations in 7 files await a look; 2 other citations of it are acknowledged.
 
 - [`docs/project-memory.md:355`](../project-memory.md)
 - [`record/decisions.d/ADR-130.md:17`](../../record/decisions.d/ADR-130.md)
@@ -36,6 +36,8 @@ A chain may walk a named path pattern
 - [`record/decisions.d/ADR-135.md:35`](../../record/decisions.d/ADR-135.md)
 - [`record/decisions.d/ADR-135.md:150`](../../record/decisions.d/ADR-135.md)
 - [`record/decisions.d/ADR-135.md:151`](../../record/decisions.d/ADR-135.md)
+- [`record/decisions.d/ADR-145.md:126`](../../record/decisions.d/ADR-145.md)
+- [`record/decisions.d/ADR-146.md:31`](../../record/decisions.d/ADR-146.md)
 
 ### [ADR-127](../../record/decisions.d/ADR-127.md) — Proposed
 
@@ -58,7 +60,7 @@ A logic core in clingo, behind a procedural shell
 
 A named path pattern may render a page of its matches
 
-8 citations in 3 files await a look.
+9 citations in 4 files await a look.
 
 - [`docs/project-memory.md:359`](../project-memory.md)
 - [`record/decisions.d/ADR-129.md:204`](../../record/decisions.d/ADR-129.md)
@@ -68,6 +70,7 @@ A named path pattern may render a page of its matches
 - [`record/decisions.d/ADR-133.md:31`](../../record/decisions.d/ADR-133.md)
 - [`record/decisions.d/ADR-133.md:53`](../../record/decisions.d/ADR-133.md)
 - [`record/decisions.d/ADR-133.md:64`](../../record/decisions.d/ADR-133.md)
+- [`record/decisions.d/ADR-146.md:31`](../../record/decisions.d/ADR-146.md)
 
 ### [ADR-137](../../record/decisions.d/ADR-137.md) — Proposed
 
@@ -107,6 +110,28 @@ A relation declares its converse; symmetry is the self-converse case
 - [`docs/how-to/relations.md:100`](../how-to/relations.md)
 - [`record/decisions.d/ADR-122.md:144`](../../record/decisions.d/ADR-122.md)
 
+### [ADR-148](../../record/decisions.d/ADR-148.md) — Proposed
+
+The site is a bespoke shell that renders the record in the browser, replacing Quartz
+
+4 citations in 2 files await a look.
+
+- [`record/decisions.d/ADR-146.md:36`](../../record/decisions.d/ADR-146.md)
+- [`record/decisions.d/ADR-149.md:12`](../../record/decisions.d/ADR-149.md)
+- [`record/decisions.d/ADR-149.md:49`](../../record/decisions.d/ADR-149.md)
+- [`record/decisions.d/ADR-149.md:63`](../../record/decisions.d/ADR-149.md)
+
+### [ADR-149](../../record/decisions.d/ADR-149.md) — Proposed
+
+Views render in the visitor's browser from the graph, and are not committed as markdown by default
+
+4 citations in 3 files await a look.
+
+- [`record/decisions.d/ADR-146.md:37`](../../record/decisions.d/ADR-146.md)
+- [`record/decisions.d/ADR-147.md:22`](../../record/decisions.d/ADR-147.md)
+- [`record/decisions.d/ADR-147.md:49`](../../record/decisions.d/ADR-147.md)
+- [`record/decisions.d/ADR-148.md:118`](../../record/decisions.d/ADR-148.md)
+
 ### [ADR-136](../../record/decisions.d/ADR-136.md) — Proposed
 
 luria repair writes what the committed sources imply; link --fix writes what the working tree's change implies
@@ -117,6 +142,26 @@ luria repair writes what the committed sources imply; link --fix writes what the
 - [`record/decisions.d/ADR-137.md:84`](../../record/decisions.d/ADR-137.md)
 - [`record/decisions.d/ADR-137.md:161`](../../record/decisions.d/ADR-137.md)
 
+### [ADR-139](../../record/decisions.d/ADR-139.md) — Proposed
+
+The record description is rendered from a template luria ships, with its prose in the template and its facts from the config
+
+3 citations in 1 file await a look.
+
+- [`record/decisions.d/ADR-147.md:13`](../../record/decisions.d/ADR-147.md)
+- [`record/decisions.d/ADR-147.md:20`](../../record/decisions.d/ADR-147.md)
+- [`record/decisions.d/ADR-147.md:35`](../../record/decisions.d/ADR-147.md)
+
+### [ADR-145](../../record/decisions.d/ADR-145.md) — Proposed
+
+A journal may be consumed into its books on the project's schedule, and consumption refuses entries a review still holds
+
+3 citations in 2 files await a look.
+
+- [`record/decisions.d/ADR-147.md:81`](../../record/decisions.d/ADR-147.md)
+- [`record/principles.d/DP-019.md:12`](../../record/principles.d/DP-019.md)
+- [`record/principles.d/DP-019.md:48`](../../record/principles.d/DP-019.md)
+
 ### [ADR-135](../../record/decisions.d/ADR-135.md) — Proposed
 
 A pattern node may test its own field for inequality or membership
@@ -125,6 +170,15 @@ A pattern node may test its own field for inequality or membership
 
 - [`record/decisions.d/ADR-129.md:12`](../../record/decisions.d/ADR-129.md)
 - [`record/decisions.d/ADR-129.md:126`](../../record/decisions.d/ADR-129.md)
+
+### [ADR-146](../../record/decisions.d/ADR-146.md) — Proposed
+
+luria export writes the record as a LadybugDB graph
+
+2 citations in 1 file await a look.
+
+- [`record/decisions.d/ADR-149.md:13`](../../record/decisions.d/ADR-149.md)
+- [`record/decisions.d/ADR-149.md:38`](../../record/decisions.d/ADR-149.md)
 
 ## Codes that resolve to no document
 

@@ -6,6 +6,7 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 
 ## Currently — [November 2026](2026-11.md)
 
+- [26 Nov 18:52 — Measuring the Quartz site build from CI history, and a weekly timed build](2026-11.md#measuring-the-quartz-site-build-from-ci-history-and-a-weekly-timed-build)
 - [26 Nov 00:24 — A scratch HOME hides user site-packages from a subprocess test](2026-11.md#a-scratch-home-hides-user-site-packages-from-a-subprocess-test)
 - [21 Nov 04:29 — Fired once before trusting: luria new now refuses a title that cites a code](2026-11.md#fired-once-before-trusting-luria-new-now-refuses-a-title-that-cites-a-code)
 - [4 Nov 04:47 — unconcretize, fired on nucleation#387](2026-11.md#unconcretize-fired-on-nucleation387)
@@ -13,11 +14,11 @@ The narrative that doesn't fit a changelog entry: root-cause archaeology, failed
 
 ## All books
 
-161 entries across 4 books, newest first.
+162 entries across 4 books, newest first.
 
 | Book | Entries | First | Last |
 |---|--:|---|---|
-| [2026-11](2026-11.md) | 4 | 2026-11-04 | 2026-11-26 |
+| [2026-11](2026-11.md) | 5 | 2026-11-04 | 2026-11-26 |
 | [2026-10](2026-10.md) | 29 | 2026-10-01 | 2026-10-30 |
 | [2026-09](2026-09.md) | 82 | 2026-09-03 | 2026-09-30 |
 | [2026-08](2026-08.md) | 46 | 2026-08-03 | 2026-08-28 |

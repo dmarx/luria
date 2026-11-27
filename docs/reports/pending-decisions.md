@@ -5,33 +5,38 @@
 
 `Proposed` and `Deferred` both describe an open question. Neither says *since when*, and that is the signal: a decision proposed last week is pending; the same one a year later was either overdue or settled in code and never written back.
 
-**16 document(s) awaiting a decision.**
+**21 document(s) awaiting a decision.**
 
 ## ADRs
 
-15 of the 16.
+20 of the 21.
 
 | Open since | Status | Code | Cited | Unack. | Title |
 |---|---|---|--:|--:|---|
 | 2026-10-07 | Proposed | [ADR-127](../../record/decisions.d/ADR-127.md) | 12 | 10 | A logic core in clingo, behind a procedural shell |
 | 2026-10-07 | Proposed | [ADR-126](../../record/decisions.d/ADR-126.md) | 6 | 6 | A reference may name several schemes |
 | 2026-10-08 | Proposed | [ADR-128](../../record/decisions.d/ADR-128.md) | 0 | 0 | Configuration is the only source of relation semantics |
-| 2026-10-13 | Proposed | [ADR-129](../../record/decisions.d/ADR-129.md) | 15 | 13 | A chain may walk a named path pattern |
-| 2026-10-13 | Proposed | [ADR-132](../../record/decisions.d/ADR-132.md) | 8 | 8 | A named path pattern may render a page of its matches |
+| 2026-10-13 | Proposed | [ADR-129](../../record/decisions.d/ADR-129.md) | 17 | 15 | A chain may walk a named path pattern |
+| 2026-10-13 | Proposed | [ADR-132](../../record/decisions.d/ADR-132.md) | 9 | 9 | A named path pattern may render a page of its matches |
 | 2026-10-28 | Proposed | [ADR-133](../../record/decisions.d/ADR-133.md) | 0 | 0 | A pattern page nests its matches as an outline, and patterns may share one |
 | 2026-10-30 | Proposed | [ADR-137](../../record/decisions.d/ADR-137.md) | 7 | 7 | A directed converse pair stores its primary side; the derived side is computed |
 | 2026-10-30 | Proposed | [ADR-136](../../record/decisions.d/ADR-136.md) | 4 | 3 | luria repair writes what the committed sources imply; link --fix writes what the working tree's change implies |
 | 2026-10-30 | Proposed | [ADR-135](../../record/decisions.d/ADR-135.md) | 2 | 2 | A pattern node may test its own field for inequality or membership |
 | 2026-11-04 | Proposed | [ADR-138](../../record/decisions.d/ADR-138.md) | 3 | 0 | luria repair prunes acknowledgements that excuse nothing only when asked, and checks the findings did not move |
+| 2026-11-04 | Proposed | [ADR-139](../../record/decisions.d/ADR-139.md) | 3 | 3 | The record description is rendered from a template luria ships, with its prose in the template and its facts from the config |
 | 2026-11-04 | Proposed | [ADR-141](../../record/decisions.d/ADR-141.md) | 1 | 0 | luria unconcretize records the given-back code under formerly: by default, and --noformerly turns it off |
-| 2026-11-04 | Proposed | [ADR-139](../../record/decisions.d/ADR-139.md) | 0 | 0 | The record description is rendered from a template luria ships, with its prose in the template and its facts from the config |
 | 2026-11-21 | Proposed | [ADR-142](../../record/decisions.d/ADR-142.md) | 0 | 0 | A hands-free regime for an assistant working on a record: the owner switches it on and off, and while it is on the assistant files what the work develops as it goes, reports each filing, merges into an integration branch when its checks pass, and reverts when the owner interjects; the owner's review moves to the one merge that reaches the default branch |
 | 2026-11-21 | Proposed | [ADR-143](../../record/decisions.d/ADR-143.md) | 0 | 0 | luria new refuses a title that cites a code, since the repair links the code in the heading and not in the title |
+| 2026-11-26 | Proposed | [ADR-148](../../record/decisions.d/ADR-148.md) | 4 | 4 | The site is a bespoke shell that renders the record in the browser, replacing Quartz |
+| 2026-11-26 | Proposed | [ADR-149](../../record/decisions.d/ADR-149.md) | 4 | 4 | Views render in the visitor's browser from the graph, and are not committed as markdown by default |
+| 2026-11-26 | Proposed | [ADR-145](../../record/decisions.d/ADR-145.md) | 3 | 3 | A journal may be consumed into its books on the project's schedule, and consumption refuses entries a review still holds |
+| 2026-11-26 | Proposed | [ADR-146](../../record/decisions.d/ADR-146.md) | 2 | 2 | luria export writes the record as a LadybugDB graph |
 | 2026-11-26 | Proposed | [ADR-144](../../record/decisions.d/ADR-144.md) | 0 | 0 | A scheme sets its H1's form with a heading template |
+| 2026-11-26 | Proposed | [ADR-147](../../record/decisions.d/ADR-147.md) | 0 | 0 | Every generated view is a template luria ships, rendered by one view engine |
 
 ## DPs
 
-1 of the 16.
+1 of the 21.
 
 | Open since | Status | Code | Cited | Unack. | Title |
 |---|---|---|--:|--:|---|
@@ -41,4 +46,4 @@ The citation count is the second axis, and it flips the priority: an old proposa
 
 This count and the reference-status report's will differ, and that is not an off-by-one. That report covers documents something actually **cites** and hasn't acknowledged; this one covers every **undecided** document. One here is missing from there for exactly one of two reasons: nothing cites it, or every citation carries an `inactive-ok` annotation.
 
-**Cited nowhere at all** (6): [ADR-128](../../record/decisions.d/ADR-128.md), [ADR-133](../../record/decisions.d/ADR-133.md), [ADR-139](../../record/decisions.d/ADR-139.md), [ADR-142](../../record/decisions.d/ADR-142.md), [ADR-143](../../record/decisions.d/ADR-143.md), [ADR-144](../../record/decisions.d/ADR-144.md) — these are the cheapest to close, since nothing depends on the answer.
+**Cited nowhere at all** (6): [ADR-128](../../record/decisions.d/ADR-128.md), [ADR-133](../../record/decisions.d/ADR-133.md), [ADR-142](../../record/decisions.d/ADR-142.md), [ADR-143](../../record/decisions.d/ADR-143.md), [ADR-144](../../record/decisions.d/ADR-144.md), [ADR-147](../../record/decisions.d/ADR-147.md) — these are the cheapest to close, since nothing depends on the answer.

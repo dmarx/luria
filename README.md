@@ -4,8 +4,8 @@
 </p>
 
 <!-- luria:badges -->
-[![needs decision: 16](https://img.shields.io/badge/needs%20decision-16-orange)](docs/reports/pending-decisions.md)
-[![cited, not in force: 8](https://img.shields.io/badge/cited,%20not%20in%20force-8-orange)](docs/reports/reference-status.md)
+[![needs decision: 21](https://img.shields.io/badge/needs%20decision-21-orange)](docs/reports/pending-decisions.md)
+[![cited, not in force: 13](https://img.shields.io/badge/cited,%20not%20in%20force-13-orange)](docs/reports/reference-status.md)
 <!-- /luria:badges -->
 
 <!-- luria:site -->
